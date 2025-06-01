@@ -6,7 +6,7 @@
 
 マインドマップツールです。
 
-<!-- 🌐 **Live Demo**: [GitHub Pages](https://sk0ya.github.io/MindFlow/) -->
+🌐 **Live Demo**: [GitHub Pages](https://sk0ya.github.io/MindFlow/)
 📦 **Repository**: [GitHub](https://github.com/sk0ya/MindFlow)
 ## 🚀 セットアップ
 
