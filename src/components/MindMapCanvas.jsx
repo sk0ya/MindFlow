@@ -51,7 +51,8 @@ const MindMapCanvas = ({
             connections.push({ 
               from: node, 
               to: child, 
-              hasToggleButton: false
+              hasToggleButton: false,
+              color: child.color || '#666'
             });
           });
         } else {
@@ -68,7 +69,8 @@ const MindMapCanvas = ({
             from: node,
             to: { x: toggleX, y: toggleY },
             hasToggleButton: false,
-            isToggleConnection: true
+            isToggleConnection: true,
+            color: node.color || '#666'
           });
           
           // トグルボタン自体
@@ -85,7 +87,8 @@ const MindMapCanvas = ({
             connections.push({
               from: { x: toggleX, y: toggleY },
               to: child,
-              hasToggleButton: false
+              hasToggleButton: false,
+              color: node.color || '#666'
             });
           });
         }
@@ -102,7 +105,8 @@ const MindMapCanvas = ({
           from: node,
           to: { x: toggleX, y: toggleY },
           hasToggleButton: false,
-          isToggleConnection: true
+          isToggleConnection: true,
+          color: node.color || '#666'
         });
         
         // トグルボタン自体
@@ -242,6 +246,7 @@ const MindMapCanvas = ({
                 to={conn.to}
                 hasToggleButton={false}
                 isToggleConnection={conn.isToggleConnection}
+                color={conn.color}
               />
             ))}
           </g>

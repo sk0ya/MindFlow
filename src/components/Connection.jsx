@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 
-const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeId, isCollapsed = false, isToggleConnection = false }) => {
+const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeId, isCollapsed = false, isToggleConnection = false, color = '#666' }) => {
   const createPath = (from, to) => {
     if (hasToggleButton && from.x === to.x && from.y === to.y) {
       return '';
@@ -32,10 +32,10 @@ const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeI
       {path && (
         <path
           d={path}
-          stroke={isToggleConnection ? "#999" : "#666"}
-          strokeWidth={isToggleConnection ? "2" : "2"}
+          stroke={isToggleConnection ? "#999" : color}
+          strokeWidth={isToggleConnection ? "2" : "3"}
           fill="none"
-          opacity="0.7"
+          opacity={isToggleConnection ? "0.5" : "0.8"}
           strokeDasharray={isToggleConnection ? "5,5" : "none"}
         />
       )}

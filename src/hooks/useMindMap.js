@@ -1,10 +1,48 @@
 ﻿import { useState, useCallback, useEffect, useRef } from 'react';
 import { getCurrentMindMap, saveMindMap } from '../utils/storage.js';
-import { createNewNode, calculateNodePosition, deepClone } from '../utils/dataTypes.js';
+import { createNewNode, calculateNodePosition, deepClone, COLORS } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 
+// 既存のノードに色を自動割り当てする
+const assignColorsToExistingNodes = (mindMapData) => {
+  const assignColors = (node, parentColor = null, isRootChild = false, childIndex = 0) => {
+    const updatedNode = { ...node };
+    
+    if (node.id === 'root') {
+      // ルートノードには色を設定しない
+      updatedNode.color = undefined;
+    } else if (isRootChild) {
+      // ルートノードの子要素の場合、色が未設定なら順番に割り当て
+      if (!node.color) {
+        updatedNode.color = COLORS[childIndex % COLORS.length];
+      }
+    } else if (!node.color && parentColor) {
+      // 他の場合は親の色を継承
+      updatedNode.color = parentColor;
+    }
+    
+    // 子ノードも再帰的に処理
+    if (node.children) {
+      updatedNode.children = node.children.map((child, index) =>
+        assignColors(child, updatedNode.color, node.id === 'root', index)
+      );
+    }
+    
+    return updatedNode;
+  };
+  
+  return {
+    ...mindMapData,
+    rootNode: assignColors(mindMapData.rootNode)
+  };
+};
+
 export const useMindMap = () => {
-  const [data, setData] = useState(() => getCurrentMindMap());
+  const [data, setData] = useState(() => {
+    const mindMap = getCurrentMindMap();
+    // 既存のマインドマップに色が設定されていない場合は自動設定
+    return assignColorsToExistingNodes(mindMap);
+  });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -96,6 +134,17 @@ export const useMindMap = () => {
     });
   };
 
+  // ノードの色を取得する（親から継承または新規割り当て）
+  const getNodeColor = (parentNode, childIndex) => {
+    if (parentNode.id === 'root') {
+      // ルートノードの子要素の場合、順番に色を割り当て
+      return COLORS[childIndex % COLORS.length];
+    } else {
+      // 他の場合は親の色を継承
+      return parentNode.color || '#666';
+    }
+  };
+
   // 子ノードを追加
   const addChildNode = (parentId, nodeText = '新しいアイデア') => {
     const parentNode = findNode(parentId);
@@ -106,6 +155,9 @@ export const useMindMap = () => {
     const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
     newChild.x = position.x;
     newChild.y = position.y;
+    
+    // 色を設定
+    newChild.color = getNodeColor(parentNode, childrenCount);
     
     const addChildRecursive = (node) => {
       if (node.id === parentId) {
@@ -131,6 +183,22 @@ export const useMindMap = () => {
     if (!parentNode) return null;
     
     const newSibling = createNewNode(nodeText, parentNode);
+    
+    // 色の設定
+    if (parentNode.id === 'root') {
+      // メイントピックの子要素の場合は、新しい色を割り当て
+      const siblingIndex = parentNode.children?.length || 0;
+      newSibling.color = getNodeColor(parentNode, siblingIndex);
+    } else {
+      // 他の場合は既存の兄弟ノードと同じ色を継承
+      const existingSibling = findNode(nodeId);
+      if (existingSibling) {
+        newSibling.color = existingSibling.color;
+      } else {
+        // フォールバック: 親から色を取得
+        newSibling.color = parentNode.color || '#666';
+      }
+    }
     
     const addSiblingRecursive = (node) => {
       if (node.id === parentNode.id) {
