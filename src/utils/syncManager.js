@@ -1,7 +1,5 @@
 // オフライン対応とデータ同期管理
 
-import { cloudStorage } from './cloudStorage.js';
-import { loadFromStorage, saveToStorage, saveMindMap, getAllMindMaps } from './storage.js';
 import { STORAGE_KEYS } from './dataTypes.js';
 
 class SyncManager {
@@ -25,11 +23,21 @@ class SyncManager {
 
   // 同期キューの管理
   loadSyncQueue() {
-    return loadFromStorage(STORAGE_KEYS.SYNC_QUEUE, []);
+    try {
+      const item = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
+      return item ? JSON.parse(item) : [];
+    } catch (error) {
+      console.error('Sync queue load error:', error);
+      return [];
+    }
   }
 
   saveSyncQueue() {
-    saveToStorage(STORAGE_KEYS.SYNC_QUEUE, this.syncQueue);
+    try {
+      localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
+    } catch (error) {
+      console.error('Sync queue save error:', error);
+    }
   }
 
   addToSyncQueue(operation) {
@@ -78,6 +86,8 @@ class SyncManager {
   }
 
   async executeOperation(operation) {
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
     switch (operation.type) {
       case 'save':
         await cloudStorage.updateMindMap(operation.mindmapId, operation.data);
@@ -100,18 +110,20 @@ class SyncManager {
     }
 
     try {
+      const { cloudStorage } = await import('./cloudStorage.js');
+      
       // 1. ローカルの変更をクラウドに送信
       await this.processSyncQueue();
 
       // 2. クラウドから最新データを取得
       const cloudMaps = await cloudStorage.getAllMindMaps();
-      const localMaps = getAllMindMaps();
+      const localMaps = this.getAllMindMapsLocal();
 
       // 3. コンフリクト解決
       const resolvedMaps = this.resolveConflicts(localMaps, cloudMaps.mindmaps || []);
 
       // 4. ローカルストレージを更新
-      saveToStorage(STORAGE_KEYS.MINDMAPS, resolvedMaps);
+      this.saveToStorageLocal(STORAGE_KEYS.MINDMAPS, resolvedMaps);
       
       this.updateLastSyncTime();
       return { success: true, conflicts: this.getConflictCount(localMaps, cloudMaps.mindmaps || []) };
@@ -174,14 +186,39 @@ class SyncManager {
     return conflicts;
   }
 
+  // ローカルストレージ操作のヘルパーメソッド
+  getAllMindMapsLocal() {
+    try {
+      const item = localStorage.getItem(STORAGE_KEYS.MINDMAPS);
+      return item ? JSON.parse(item) : [];
+    } catch (error) {
+      console.error('Local mindmaps load error:', error);
+      return [];
+    }
+  }
+
+  saveToStorageLocal(key, data) {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error('Local storage save error:', error);
+    }
+  }
+
   // 最終同期時刻の管理
   getLastSyncTime() {
-    return loadFromStorage(STORAGE_KEYS.LAST_SYNC_TIME, null);
+    try {
+      const item = localStorage.getItem(STORAGE_KEYS.LAST_SYNC_TIME);
+      return item ? JSON.parse(item) : null;
+    } catch (error) {
+      console.error('Last sync time load error:', error);
+      return null;
+    }
   }
 
   updateLastSyncTime() {
     const now = new Date().toISOString();
-    saveToStorage(STORAGE_KEYS.LAST_SYNC_TIME, now);
+    this.saveToStorageLocal(STORAGE_KEYS.LAST_SYNC_TIME, now);
     this.lastSyncTime = now;
   }
 

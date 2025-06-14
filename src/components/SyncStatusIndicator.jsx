@@ -1,33 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { getSyncStatus, syncWithCloud } from '../utils/storage.js';
 
 const SyncStatusIndicator = () => {
-  const [syncStatus, setSyncStatus] = useState(getSyncStatus());
+  const [syncStatus, setSyncStatus] = useState({
+    isOnline: navigator.onLine,
+    queueLength: 0,
+    lastSyncTime: null,
+    needsSync: false
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncText, setLastSyncText] = useState('');
 
   useEffect(() => {
-    const updateStatus = () => {
-      const status = getSyncStatus();
-      setSyncStatus(status);
-      
-      if (status.lastSyncTime) {
-        const lastSync = new Date(status.lastSyncTime);
-        const now = new Date();
-        const diffMinutes = Math.floor((now - lastSync) / (1000 * 60));
+    const updateStatus = async () => {
+      try {
+        const { getSyncStatus } = await import('../utils/storage.js');
+        const status = getSyncStatus();
+        setSyncStatus(status);
         
-        if (diffMinutes < 1) {
-          setLastSyncText('今');
-        } else if (diffMinutes < 60) {
-          setLastSyncText(`${diffMinutes}分前`);
+        if (status.lastSyncTime) {
+          const lastSync = new Date(status.lastSyncTime);
+          const now = new Date();
+          const diffMinutes = Math.floor((now - lastSync) / (1000 * 60));
+          
+          if (diffMinutes < 1) {
+            setLastSyncText('今');
+          } else if (diffMinutes < 60) {
+            setLastSyncText(`${diffMinutes}分前`);
+          } else {
+            setLastSyncText(lastSync.toLocaleTimeString('ja-JP', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }));
+          }
         } else {
-          setLastSyncText(lastSync.toLocaleTimeString('ja-JP', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }));
+          setLastSyncText('未同期');
         }
-      } else {
-        setLastSyncText('未同期');
+      } catch (error) {
+        console.error('Failed to update sync status:', error);
       }
     };
 
@@ -42,6 +51,7 @@ const SyncStatusIndicator = () => {
     
     setIsSyncing(true);
     try {
+      const { syncWithCloud, getSyncStatus } = await import('../utils/storage.js');
       const result = await syncWithCloud();
       console.log('Manual sync completed:', result);
       setSyncStatus(getSyncStatus());

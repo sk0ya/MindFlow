@@ -1,7 +1,5 @@
 // Cloudflare Workers APIクライアント
 
-import { authManager } from './authManager.js';
-
 const API_BASE = process.env.NODE_ENV === 'production' 
   ? 'https://mindflow-api-prod.your-domain.workers.dev'
   : 'https://mindflow-api.your-domain.workers.dev';
@@ -24,32 +22,40 @@ class CloudStorageClient {
   async request(endpoint, options = {}) {
     const url = `${API_BASE}/api${endpoint}`;
     
-    // 認証が有効な場合は認証済みリクエストを使用
-    if (authManager.isAuthenticated()) {
-      try {
-        const response = await authManager.authenticatedFetch(url, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-          },
-          ...options
-        });
-        
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Network error' }));
-          throw new Error(error.error || `HTTP ${response.status}`);
+    // 認証マネージャーを動的にインポート（循環依存回避）
+    try {
+      const { authManager } = await import('./authManager.js');
+      
+      // 認証が有効な場合は認証済みリクエストを使用
+      if (authManager.isAuthenticated()) {
+        try {
+          const response = await authManager.authenticatedFetch(url, {
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            },
+            ...options
+          });
+          
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Network error' }));
+            throw new Error(error.error || `HTTP ${response.status}`);
+          }
+          
+          return await response.json();
+        } catch (error) {
+          if (error.message === 'Authentication expired') {
+            // 認証期限切れの場合は従来の方法にフォールバック
+            return await this.legacyRequest(endpoint, options);
+          }
+          throw error;
         }
-        
-        return await response.json();
-      } catch (error) {
-        if (error.message === 'Authentication expired') {
-          // 認証期限切れの場合は従来の方法にフォールバック
-          return await this.legacyRequest(endpoint, options);
-        }
-        throw error;
+      } else {
+        // 認証が無効な場合は従来の方法を使用
+        return await this.legacyRequest(endpoint, options);
       }
-    } else {
-      // 認証が無効な場合は従来の方法を使用
+    } catch (importError) {
+      // 認証マネージャーのインポートに失敗した場合は従来の方法を使用
       return await this.legacyRequest(endpoint, options);
     }
   }

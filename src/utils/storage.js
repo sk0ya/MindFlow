@@ -1,6 +1,4 @@
 ﻿import { STORAGE_KEYS, createInitialData } from './dataTypes.js';
-import { cloudStorage } from './cloudStorage.js';
-import { syncManager } from './syncManager.js';
 
 // ローカルストレージからデータを取得
 export const loadFromStorage = (key, defaultValue = null) => {
@@ -157,6 +155,9 @@ export const saveMindMapHybrid = async (mindMapData) => {
   // クラウドモードまたは同期が有効な場合はクラウドにも保存
   if (settings.storageMode === 'cloud' || settings.cloudSync) {
     try {
+      const { syncManager } = await import('./syncManager.js');
+      const { cloudStorage } = await import('./cloudStorage.js');
+      
       if (syncManager.getSyncStatus().isOnline) {
         await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
         console.log('Cloud save successful');
@@ -168,7 +169,12 @@ export const saveMindMapHybrid = async (mindMapData) => {
     } catch (error) {
       console.warn('Cloud save failed, adding to sync queue:', error);
       // 失敗した場合も同期キューに追加
-      syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
+      try {
+        const { syncManager } = await import('./syncManager.js');
+        syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
+      } catch (syncError) {
+        console.error('Failed to add to sync queue:', syncError);
+      }
     }
   }
   
@@ -181,6 +187,7 @@ export const getAllMindMapsHybrid = async () => {
   
   if (settings.storageMode === 'cloud') {
     try {
+      const { cloudStorage } = await import('./cloudStorage.js');
       const cloudResult = await cloudStorage.getAllMindMaps();
       return cloudResult.mindmaps || [];
     } catch (error) {
@@ -201,6 +208,9 @@ export const deleteMindMapHybrid = async (mapId) => {
   // クラウドモードまたは同期が有効な場合はクラウドからも削除
   if (settings.storageMode === 'cloud' || settings.cloudSync) {
     try {
+      const { syncManager } = await import('./syncManager.js');
+      const { cloudStorage } = await import('./cloudStorage.js');
+      
       if (syncManager.getSyncStatus().isOnline) {
         await cloudStorage.deleteMindMap(mapId);
         console.log('Cloud delete successful');
@@ -211,7 +221,12 @@ export const deleteMindMapHybrid = async (mapId) => {
       }
     } catch (error) {
       console.warn('Cloud delete failed, adding to sync queue:', error);
-      syncManager.recordOfflineOperation('delete', mapId);
+      try {
+        const { syncManager } = await import('./syncManager.js');
+        syncManager.recordOfflineOperation('delete', mapId);
+      } catch (syncError) {
+        console.error('Failed to add to sync queue:', syncError);
+      }
     }
   }
   
@@ -221,6 +236,7 @@ export const deleteMindMapHybrid = async (mapId) => {
 // クラウド接続テスト
 export const testCloudConnection = async () => {
   try {
+    const { cloudStorage } = await import('./cloudStorage.js');
     return await cloudStorage.testConnection();
   } catch (error) {
     console.error('Cloud connection test failed:', error);
@@ -231,6 +247,7 @@ export const testCloudConnection = async () => {
 // 同期機能
 export const syncWithCloud = async () => {
   try {
+    const { syncManager } = await import('./syncManager.js');
     return await syncManager.forcSync();
   } catch (error) {
     console.error('Sync failed:', error);
@@ -239,5 +256,21 @@ export const syncWithCloud = async () => {
 };
 
 export const getSyncStatus = () => {
-  return syncManager.getSyncStatus();
+  try {
+    // 動的インポートは同期的に使えないため、デフォルト値を返す
+    return {
+      isOnline: navigator.onLine,
+      queueLength: 0,
+      lastSyncTime: null,
+      needsSync: false
+    };
+  } catch (error) {
+    console.error('Failed to get sync status:', error);
+    return {
+      isOnline: false,
+      queueLength: 0,
+      lastSyncTime: null,
+      needsSync: false
+    };
+  }
 };

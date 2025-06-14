@@ -1,7 +1,5 @@
 // 認証管理システム
 
-import { loadFromStorage, saveToStorage } from './storage.js';
-
 const AUTH_STORAGE_KEY = 'mindflow_auth';
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ
 
@@ -19,26 +17,38 @@ class AuthManager {
 
   // 認証データをローカルストレージから読み込み
   loadAuthData() {
-    const authData = loadFromStorage(AUTH_STORAGE_KEY);
-    if (authData && authData.token) {
-      // トークンの有効性をチェック
-      const payload = this.decodeJWT(authData.token);
-      if (payload && payload.exp * 1000 > Date.now()) {
-        this.token = authData.token;
-        this.user = authData.user;
-      } else {
-        this.clearAuthData();
+    try {
+      const item = localStorage.getItem(AUTH_STORAGE_KEY);
+      const authData = item ? JSON.parse(item) : null;
+      
+      if (authData && authData.token) {
+        // トークンの有効性をチェック
+        const payload = this.decodeJWT(authData.token);
+        if (payload && payload.exp * 1000 > Date.now()) {
+          this.token = authData.token;
+          this.user = authData.user;
+        } else {
+          this.clearAuthData();
+        }
       }
+    } catch (error) {
+      console.error('Auth data load error:', error);
+      this.clearAuthData();
     }
   }
 
   // 認証データを保存
   saveAuthData() {
-    saveToStorage(AUTH_STORAGE_KEY, {
-      token: this.token,
-      user: this.user,
-      timestamp: Date.now()
-    });
+    try {
+      const authData = {
+        token: this.token,
+        user: this.user,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+    } catch (error) {
+      console.error('Auth data save error:', error);
+    }
   }
 
   // 認証データをクリア
