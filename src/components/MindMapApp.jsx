@@ -34,7 +34,9 @@ const MindMapApp = () => {
     updateTitle,
     saveMindMap,
     toggleCollapse,
-    navigateToDirection
+    navigateToDirection,
+    attachFileToNode,
+    removeFileFromNode
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -204,6 +206,27 @@ const MindMapApp = () => {
     setShowLayoutPanel(false);
   };
 
+  const handleFileUpload = async (nodeId, files) => {
+    if (!files || files.length === 0) return;
+    
+    try {
+      const file = files[0]; // 最初のファイルのみ処理
+      await attachFileToNode(nodeId, file);
+    } catch (error) {
+      console.error('ファイルアップロードエラー:', error);
+      alert('ファイルのアップロードに失敗しました: ' + error.message);
+    }
+  };
+  
+  const handleRemoveFile = (nodeId, fileId) => {
+    try {
+      removeFileFromNode(nodeId, fileId);
+    } catch (error) {
+      console.error('ファイル削除エラー:', error);
+      alert('ファイルの削除に失敗しました: ' + error.message);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -250,6 +273,8 @@ const MindMapApp = () => {
             onRightClick={handleRightClick}
             onToggleCollapse={toggleCollapse}
             onNavigateToDirection={navigateToDirection}
+            onFileUpload={handleFileUpload}
+            onRemoveFile={handleRemoveFile}
             zoom={zoom}
             setZoom={setZoom}
             pan={pan}

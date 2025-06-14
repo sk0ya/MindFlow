@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useRef } from 'react';
 import { getCurrentMindMap, saveMindMap } from '../utils/storage.js';
-import { createNewNode, calculateNodePosition, deepClone, COLORS } from '../utils/dataTypes.js';
+import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 
 // 既存のノードに色を自動割り当てする
@@ -441,6 +441,40 @@ export const useMindMap = () => {
     };
   }, []);
 
+  // ファイル添付機能
+  const attachFileToNode = async (nodeId, file) => {
+    try {
+      let dataURL = null;
+      
+      // 画像ファイルの場合はDataURLを生成
+      if (isImageFile(file)) {
+        dataURL = await readFileAsDataURL(file);
+      }
+      
+      const fileAttachment = createFileAttachment(file, dataURL);
+      const node = findNode(nodeId);
+      
+      if (node) {
+        const updatedAttachments = [...(node.attachments || []), fileAttachment];
+        updateNode(nodeId, { attachments: updatedAttachments });
+        return fileAttachment.id;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('ファイル添付エラー:', error);
+      throw error;
+    }
+  };
+  
+  const removeFileFromNode = (nodeId, fileId) => {
+    const node = findNode(nodeId);
+    if (node && node.attachments) {
+      const updatedAttachments = node.attachments.filter(file => file.id !== fileId);
+      updateNode(nodeId, { attachments: updatedAttachments });
+    }
+  };
+
   return {
     // データ
     data,
@@ -470,6 +504,10 @@ export const useMindMap = () => {
     
     // 折りたたみ
     toggleCollapse,
+    
+    // ファイル添付
+    attachFileToNode,
+    removeFileFromNode,
     
     // 履歴
     undo,

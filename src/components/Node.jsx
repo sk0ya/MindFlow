@@ -12,6 +12,8 @@ const Node = ({
   onAddChild,
   onDelete,
   onRightClick,
+  onFileUpload,
+  onRemoveFile,
   editText,
   setEditText,
   zoom,
@@ -168,8 +170,27 @@ const Node = ({
     }
   }, [node.id, editText, onFinishEdit, isComposing]);
 
-  const nodeWidth = Math.max(120, node.text.length * 8);
-  const nodeHeight = 40;
+  // ファイルアップロードのハンドラ
+  const handleFileUpload = useCallback((e) => {
+    const files = e.target.files;
+    if (files && files.length > 0 && onFileUpload) {
+      onFileUpload(node.id, files);
+    }
+    // ファイル入力をリセット
+    e.target.value = '';
+  }, [node.id, onFileUpload]);
+  
+  const handleRemoveFile = useCallback((fileId) => {
+    if (onRemoveFile) {
+      onRemoveFile(node.id, fileId);
+    }
+  }, [node.id, onRemoveFile]);
+  
+  // ノードのサイズ計算（画像を考慮）
+  const hasImages = node.attachments && node.attachments.some(file => file.isImage);
+  const imageHeight = hasImages ? 60 : 0; // 画像表示エリアの高さ
+  const nodeWidth = Math.max(120, node.text.length * 8, hasImages ? 150 : 0);
+  const nodeHeight = 40 + imageHeight;
 
   return (
     <g>
@@ -196,11 +217,113 @@ const Node = ({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleRightClick}
       />
+      
+      {/* 画像添付ファイルの表示 */}
+      {node.attachments && node.attachments.filter(file => file.isImage).map((file, index) => (
+        <g key={file.id}>
+          <foreignObject 
+            x={node.x - nodeWidth / 2 + 5} 
+            y={node.y - nodeHeight / 2 + 5} 
+            width={nodeWidth - 10} 
+            height={imageHeight - 5}
+          >
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              border: '1px solid #ddd'
+            }}>
+              <img 
+                src={file.dataURL} 
+                alt={file.name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+              {isSelected && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFile(file.id);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    right: '2px',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'rgba(234, 67, 53, 0.9)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </foreignObject>
+        </g>
+      ))}
+      
+      {/* 非画像ファイルの表示 */}
+      {node.attachments && node.attachments.filter(file => !file.isImage).map((file, index) => {
+        const yOffset = node.y - 15 + (index * 20);
+        return (
+          <g key={file.id}>
+            <rect
+              x={node.x + nodeWidth / 2 - 40}
+              y={yOffset - 8}
+              width={35}
+              height={16}
+              fill="#f5f5f5"
+              stroke="#ddd"
+              strokeWidth="1"
+              rx="3"
+              ry="3"
+            />
+            <text
+              x={node.x + nodeWidth / 2 - 22}
+              y={yOffset + 2}
+              textAnchor="middle"
+              fill="#666"
+              fontSize="10px"
+              style={{ pointerEvents: 'none' }}
+            >
+              📎
+            </text>
+            {isSelected && (
+              <circle
+                cx={node.x + nodeWidth / 2 - 10}
+                cy={yOffset}
+                r="6"
+                fill="#ea4335"
+                stroke="white"
+                strokeWidth="1"
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveFile(file.id);
+                }}
+              />
+            )}
+          </g>
+        );
+      })}
 
       {isEditing ? (
         <foreignObject 
           x={node.x - nodeWidth / 2 + 10} 
-          y={node.y - 10} 
+          y={node.y - 10 + imageHeight / 2} 
           width={nodeWidth - 20} 
           height="20"
         >
@@ -232,7 +355,7 @@ const Node = ({
       ) : (
         <text
           x={node.x}
-          y={node.y + 5}
+          y={node.y + 5 + imageHeight / 2}
           textAnchor="middle"
           fill="black"
           fontSize={node.fontSize || '14px'}
@@ -250,7 +373,7 @@ const Node = ({
       {isSelected && !isEditing && (
         <g>
           <circle
-            cx={node.x - 15}
+            cx={node.x - 35}
             cy={node.y + nodeHeight / 2 + 12}
             r="8"
             fill="#4285f4"
@@ -269,7 +392,7 @@ const Node = ({
             }}
           />
           <text
-            x={node.x - 15}
+            x={node.x - 35}
             y={node.y + nodeHeight / 2 + 12 + 3}
             textAnchor="middle"
             fill="white"
@@ -278,6 +401,42 @@ const Node = ({
             style={{ pointerEvents: 'none' }}
           >
             +
+          </text>
+          
+          {/* ファイルアップロードボタン */}
+          <circle
+            cx={node.x - 15}
+            cy={node.y + nodeHeight / 2 + 12}
+            r="8"
+            fill="#34a853"
+            stroke="white"
+            strokeWidth="2"
+            role="button"
+            tabIndex={0}
+            aria-label="Upload file"
+            style={{ 
+              cursor: 'pointer',
+              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.accept = 'image/*,text/plain,application/pdf,application/json';
+              fileInput.onchange = handleFileUpload;
+              fileInput.click();
+            }}
+          />
+          <text
+            x={node.x - 15}
+            y={node.y + nodeHeight / 2 + 12 + 3}
+            textAnchor="middle"
+            fill="white"
+            fontSize="10"
+            fontWeight="bold"
+            style={{ pointerEvents: 'none' }}
+          >
+            📎
           </text>
 
           {node.id !== 'root' && (
@@ -328,7 +487,8 @@ Node.propTypes = {
     y: PropTypes.number.isRequired,
     fontSize: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     fontWeight: PropTypes.string,
-    fontStyle: PropTypes.string
+    fontStyle: PropTypes.string,
+    attachments: PropTypes.arrayOf(PropTypes.object)
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,
   isEditing: PropTypes.bool.isRequired,
@@ -339,6 +499,8 @@ Node.propTypes = {
   onAddChild: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onRightClick: PropTypes.func,
+  onFileUpload: PropTypes.func.isRequired,
+  onRemoveFile: PropTypes.func.isRequired,
   editText: PropTypes.string.isRequired,
   setEditText: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,

@@ -1,5 +1,17 @@
 ﻿import { cloneDeep } from 'lodash-es';
 
+// ファイル関連の定数
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const ALLOWED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'text/plain',
+  'application/pdf',
+  'application/json'
+];
+
 export const COLORS = [
   '#4285f4',
   '#34a853',
@@ -56,7 +68,8 @@ export const createNewNode = (text = '新しいアイデア', parentNode = null)
     y: parentNode ? parentNode.y : 300,
     fontSize: 14,
     fontWeight: 'normal',
-    children: []
+    children: [],
+    attachments: [] // ファイル添付用
   };
 };
 
@@ -83,4 +96,76 @@ export const STORAGE_KEYS = {
   MINDMAPS: 'mindmaps',
   CURRENT_MAP: 'currentMap',
   SETTINGS: 'appSettings'
+};
+
+// ファイル関連のユーティリティ
+export const isImageFile = (file) => {
+  return file && file.type && file.type.startsWith('image/');
+};
+
+export const getFileIcon = (file) => {
+  if (isImageFile(file)) {
+    return '🖼️';
+  }
+  
+  switch (file.type) {
+    case 'text/plain':
+      return '📄';
+    case 'application/pdf':
+      return '📕';
+    case 'application/json':
+      return '📋';
+    default:
+      return '📎';
+  }
+};
+
+export const readFileAsDataURL = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(file);
+  });
+};
+
+export const createFileAttachment = (file, dataURL = null) => {
+  return {
+    id: generateId(),
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    dataURL: dataURL,
+    isImage: isImageFile(file),
+    createdAt: new Date().toISOString()
+  };
+};
+
+export const validateFile = (file) => {
+  const errors = [];
+  
+  if (!file) {
+    errors.push('ファイルが選択されていません');
+    return errors;
+  }
+  
+  if (file.size > MAX_FILE_SIZE) {
+    errors.push(`ファイルサイズが大きすぎます (${Math.round(file.size / 1024 / 1024)}MB > 10MB)`);
+  }
+  
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    errors.push(`サポートされていないファイル形式です: ${file.type}`);
+  }
+  
+  return errors;
+};
+
+export const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };

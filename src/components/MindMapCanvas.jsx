@@ -19,6 +19,8 @@ const MindMapCanvas = ({
   onRightClick,
   onToggleCollapse,
   onNavigateToDirection,
+  onFileUpload,
+  onRemoveFile,
   zoom,
   setZoom,
   pan,
@@ -299,6 +301,8 @@ const MindMapCanvas = ({
                 onRightClick={onRightClick}
                 editText={editText}
                 setEditText={setEditText}
+                onFileUpload={onFileUpload}
+                onRemoveFile={onRemoveFile}
                 zoom={zoom}
                 svgRef={svgRef}
               />
@@ -396,6 +400,8 @@ MindMapCanvas.propTypes = {
   onRightClick: PropTypes.func,
   onToggleCollapse: PropTypes.func.isRequired,
   onNavigateToDirection: PropTypes.func.isRequired,
+  onFileUpload: PropTypes.func.isRequired,
+  onRemoveFile: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,
   setZoom: PropTypes.func.isRequired,
   pan: PropTypes.shape({
