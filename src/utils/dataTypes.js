@@ -1,4 +1,6 @@
-﻿export const COLORS = [
+﻿import { cloneDeep } from 'lodash-es';
+
+export const COLORS = [
   '#4285f4',
   '#34a853',
   '#ea4335',
@@ -74,7 +76,7 @@ export const calculateNodePosition = (parentNode, childIndex, totalChildren) => 
 };
 
 export const deepClone = (obj) => {
-  return JSON.parse(JSON.stringify(obj));
+  return cloneDeep(obj);
 };
 
 export const STORAGE_KEYS = {

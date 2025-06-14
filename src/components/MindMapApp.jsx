@@ -5,6 +5,7 @@ import MindMapCanvas from './MindMapCanvas';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
 import ContextMenu from './ContextMenu';
 import LayoutPanel from './LayoutPanel';
+import ErrorBoundary from './ErrorBoundary';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -231,26 +232,28 @@ const MindMapApp = () => {
           onShowLayoutPanel={handleShowLayoutPanel}
         />
 
-        <MindMapCanvas
-          data={data}
-          selectedNodeId={selectedNodeId}
-          editingNodeId={editingNodeId}
-          editText={editText}
-          setEditText={setEditText}
-          onSelectNode={setSelectedNodeId}
-          onStartEdit={startEdit}
-          onFinishEdit={finishEdit}
-          onDragNode={dragNode}
-          onAddChild={handleAddChild}
-          onAddSibling={handleAddSibling}
-          onDeleteNode={deleteNode}
-          onRightClick={handleRightClick}
-          onToggleCollapse={toggleCollapse}
-          zoom={zoom}
-          setZoom={setZoom}
-          pan={pan}
-          setPan={setPan}
-        />
+        <ErrorBoundary>
+          <MindMapCanvas
+            data={data}
+            selectedNodeId={selectedNodeId}
+            editingNodeId={editingNodeId}
+            editText={editText}
+            setEditText={setEditText}
+            onSelectNode={setSelectedNodeId}
+            onStartEdit={startEdit}
+            onFinishEdit={finishEdit}
+            onDragNode={dragNode}
+            onAddChild={handleAddChild}
+            onAddSibling={handleAddSibling}
+            onDeleteNode={deleteNode}
+            onRightClick={handleRightClick}
+            onToggleCollapse={toggleCollapse}
+            zoom={zoom}
+            setZoom={setZoom}
+            pan={pan}
+            setPan={setPan}
+          />
+        </ErrorBoundary>
 
         {showCustomizationPanel && (
           <NodeCustomizationPanel

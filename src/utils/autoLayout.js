@@ -1,4 +1,5 @@
 ﻿// 自動レイアウト機能のユーティリティ
+import { cloneDeep } from 'lodash-es';
 
 /**
  * 放射状レイアウト - ルートノードを中心に子ノードを円形に配置
@@ -38,7 +39,7 @@ export const radialLayout = (rootNode, options = {}) => {
     }
   };
 
-  const newRootNode = JSON.parse(JSON.stringify(rootNode)); // ディープコピー
+  const newRootNode = cloneDeep(rootNode); // ディープコピー
   updateNodePositions(newRootNode);
   return newRootNode;
 };
@@ -89,7 +90,7 @@ export const hierarchicalLayout = (rootNode, options = {}) => {
     }
   };
 
-  const newRootNode = JSON.parse(JSON.stringify(rootNode));
+  const newRootNode = cloneDeep(rootNode);
   updateNodePositions(newRootNode);
   return newRootNode;
 };
@@ -275,7 +276,7 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
     });
   };
 
-  const newRootNode = JSON.parse(JSON.stringify(rootNode));
+  const newRootNode = cloneDeep(rootNode);
   updateNodePositions(newRootNode);
   adjustForCollisions(newRootNode);
   
@@ -372,7 +373,7 @@ export const gridLayout = (rootNode, options = {}) => {
     return nodes;
   };
 
-  const newRootNode = JSON.parse(JSON.stringify(rootNode));
+  const newRootNode = cloneDeep(rootNode);
   const allNodes = flattenNodes(newRootNode);
 
   // ルートノードは中心に配置
@@ -412,7 +413,7 @@ export const circularLayout = (rootNode, options = {}) => {
     return nodes;
   };
 
-  const newRootNode = JSON.parse(JSON.stringify(rootNode));
+  const newRootNode = cloneDeep(rootNode);
   const allNodes = flattenNodes(newRootNode);
 
   // ルートノードは中心に配置

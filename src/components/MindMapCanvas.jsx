@@ -1,4 +1,5 @@
 ﻿import React, { useRef, useCallback, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import Node from './Node';
 import Connection from './Connection';
 
@@ -325,6 +326,32 @@ const MindMapCanvas = ({
       `}</style>
     </div>
   );
+};
+
+MindMapCanvas.propTypes = {
+  data: PropTypes.shape({
+    rootNode: PropTypes.object.isRequired
+  }).isRequired,
+  selectedNodeId: PropTypes.string,
+  editingNodeId: PropTypes.string,
+  editText: PropTypes.string.isRequired,
+  setEditText: PropTypes.func.isRequired,
+  onSelectNode: PropTypes.func.isRequired,
+  onStartEdit: PropTypes.func.isRequired,
+  onFinishEdit: PropTypes.func.isRequired,
+  onDragNode: PropTypes.func.isRequired,
+  onAddChild: PropTypes.func.isRequired,
+  onAddSibling: PropTypes.func.isRequired,
+  onDeleteNode: PropTypes.func.isRequired,
+  onRightClick: PropTypes.func,
+  onToggleCollapse: PropTypes.func.isRequired,
+  zoom: PropTypes.number.isRequired,
+  setZoom: PropTypes.func.isRequired,
+  pan: PropTypes.shape({
+    x: PropTypes.number.isRequired,
+    y: PropTypes.number.isRequired
+  }).isRequired,
+  setPan: PropTypes.func.isRequired
 };
 
 export default MindMapCanvas;

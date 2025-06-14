@@ -1,4 +1,5 @@
 ﻿import React, { useRef, useState, useCallback, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 const Node = ({
   node,
@@ -115,6 +116,10 @@ const Node = ({
         strokeWidth={isSelected ? "2" : "1"}
         rx="8"
         ry="8"
+        role="button"
+        tabIndex={0}
+        aria-label={`Mind map node: ${node.text}`}
+        aria-selected={isSelected}
         style={{
           cursor: isDragging ? 'grabbing' : 'grab',
           filter: isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))'
@@ -181,6 +186,9 @@ const Node = ({
             fill="#4285f4"
             stroke="white"
             strokeWidth="2"
+            role="button"
+            tabIndex={0}
+            aria-label="Add child node"
             style={{ 
               cursor: 'pointer',
               filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
@@ -211,6 +219,9 @@ const Node = ({
                 fill="#ea4335"
                 stroke="white"
                 strokeWidth="2"
+                role="button"
+                tabIndex={0}
+                aria-label="Delete node"
                 style={{ 
                   cursor: 'pointer',
                   filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
@@ -237,6 +248,33 @@ const Node = ({
       )}
     </g>
   );
+};
+
+Node.propTypes = {
+  node: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    text: PropTypes.string.isRequired,
+    x: PropTypes.number.isRequired,
+    y: PropTypes.number.isRequired,
+    fontSize: PropTypes.string,
+    fontWeight: PropTypes.string,
+    fontStyle: PropTypes.string
+  }).isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  isEditing: PropTypes.bool.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  onStartEdit: PropTypes.func.isRequired,
+  onFinishEdit: PropTypes.func.isRequired,
+  onDrag: PropTypes.func.isRequired,
+  onAddChild: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onRightClick: PropTypes.func,
+  editText: PropTypes.string.isRequired,
+  setEditText: PropTypes.func.isRequired,
+  zoom: PropTypes.number.isRequired,
+  svgRef: PropTypes.shape({
+    current: PropTypes.instanceOf(Element)
+  }).isRequired
 };
 
 export default Node;
