@@ -156,9 +156,11 @@ const Node = ({
     
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
       finishEditImmediately();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       // Escapeの場合は元のテキストに戻す
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);

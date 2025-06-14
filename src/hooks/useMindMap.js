@@ -240,7 +240,7 @@ export const useMindMap = () => {
   };
 
   // 子ノードを追加
-  const addChildNode = (parentId, nodeText = '新しいアイデア') => {
+  const addChildNode = (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
@@ -266,12 +266,20 @@ export const useMindMap = () => {
     }
     
     updateData({ ...data, rootNode: newRootNode });
+    
+    // 編集状態を同時に設定
+    if (startEditing) {
+      setSelectedNodeId(newChild.id);
+      setEditingNodeId(newChild.id);
+      setEditText('');
+    }
+    
     return newChild.id;
   };
 
   // 兄弟ノードを追加
-  const addSiblingNode = (nodeId, nodeText = '新しいアイデア') => {
-    if (nodeId === 'root') return addChildNode('root', nodeText);
+  const addSiblingNode = (nodeId, nodeText = '', startEditing = false) => {
+    if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
     
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
@@ -312,6 +320,14 @@ export const useMindMap = () => {
     }
     
     updateData({ ...data, rootNode: newRootNode });
+    
+    // 編集状態を同時に設定
+    if (startEditing) {
+      setSelectedNodeId(newSibling.id);
+      setEditingNodeId(newSibling.id);
+      setEditText('');
+    }
+    
     return newSibling.id;
   };
 
@@ -451,6 +467,12 @@ export const useMindMap = () => {
     if (newText.trim() === '') {
       setEditingNodeId(null);
       setEditText('');
+      // 空の場合はノードを削除（ルートノード以外）
+      if (nodeId !== 'root') {
+        deleteNode(nodeId);
+        // 削除時は選択もクリア
+        setSelectedNodeId(null);
+      }
       return;
     }
     

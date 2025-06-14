@@ -63,7 +63,7 @@ export const createInitialData = () => ({
   }
 });
 
-export const createNewNode = (text = '新しいアイデア', parentNode = null) => {
+export const createNewNode = (text = '', parentNode = null) => {
   return {
     id: generateId(),
     text,

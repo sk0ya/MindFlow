@@ -144,11 +144,7 @@ const MindMapApp = () => {
   }, [handleSave, undo, redo]);
 
   const handleAddChild = (parentId) => {
-    const newNodeId = addChildNode(parentId);
-    if (newNodeId) {
-      setSelectedNodeId(newNodeId);
-      startEdit(newNodeId);
-    }
+    addChildNode(parentId, '', true); // startEditing = true で即座に編集開始
   };
 
   const handleShowCustomization = (node, position) => {
@@ -170,11 +166,7 @@ const MindMapApp = () => {
   };
 
   const handleAddSibling = (nodeId) => {
-    const newNodeId = addSiblingNode(nodeId);
-    if (newNodeId) {
-      setSelectedNodeId(newNodeId);
-      startEdit(newNodeId);
-    }
+    addSiblingNode(nodeId, '', true); // startEditing = true で即座に編集開始
   };
 
   const handleCopyNode = (node) => {
@@ -193,7 +185,7 @@ const MindMapApp = () => {
     const newNodeId = addChildNode(parentId);
     if (newNodeId) {
       updateNode(newNodeId, {
-        text: clipboard.text || '新しいノード',
+        text: clipboard.text || '',
         fontSize: clipboard.fontSize,
         fontWeight: clipboard.fontWeight,
         fontStyle: clipboard.fontStyle
