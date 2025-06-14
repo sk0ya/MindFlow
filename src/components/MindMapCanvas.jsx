@@ -26,15 +26,17 @@ const MindMapCanvas = ({
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
 
-  const flattenNodesFiltered = (node, result = []) => {
-    result.push(node);
+  const flattenVisibleNodes = (node) => {
+    const result = [node];
     if (!node.collapsed && node.children) {
-      node.children.forEach(child => flattenNodesFiltered(child, result));
+      node.children.forEach(child => 
+        result.push(...flattenVisibleNodes(child))
+      );
     }
     return result;
   };
   
-  const allNodes = flattenNodesFiltered(data.rootNode);
+  const allNodes = flattenVisibleNodes(data.rootNode);
   
   const connections = [];
   allNodes.forEach(node => {
@@ -114,7 +116,7 @@ const MindMapCanvas = ({
     }
   });
 
-  const handleWheel = useCallback((e) => {
+  const handleWheel = (e) => {
     e.preventDefault();
     
     if (svgRef.current) {
@@ -122,17 +124,17 @@ const MindMapCanvas = ({
       const newZoom = Math.min(Math.max(zoom * delta, 0.3), 5);
       setZoom(newZoom);
     }
-  }, [zoom, setZoom]);
+  };
 
-  const handleMouseDown = useCallback((e) => {
+  const handleMouseDown = (e) => {
     if (e.target === svgRef.current) {
       isPanningRef.current = true;
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
       e.preventDefault();
     }
-  }, []);
+  };
 
-  const handleMouseMove = useCallback((e) => {
+  const handleMouseMove = (e) => {
     if (isPanningRef.current) {
       const deltaX = e.clientX - lastPanPointRef.current.x;
       const deltaY = e.clientY - lastPanPointRef.current.y;
@@ -144,17 +146,17 @@ const MindMapCanvas = ({
       
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
     }
-  }, [zoom, setPan]);
+  };
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = () => {
     isPanningRef.current = false;
-  }, []);
+  };
 
-  const handleBackgroundClick = useCallback((e) => {
+  const handleBackgroundClick = (e) => {
     if (e.target === svgRef.current) {
       onSelectNode(null);
     }
-  }, [onSelectNode]);
+  };
 
   const handleKeyDown = useCallback((e) => {
     if (selectedNodeId && !editingNodeId) {
@@ -185,20 +187,16 @@ const MindMapCanvas = ({
   }, [selectedNodeId, editingNodeId, onAddChild, onAddSibling, onDeleteNode, onStartEdit, onSelectNode]);
 
   useEffect(() => {
-    const handleGlobalMouseMove = (e) => handleMouseMove(e);
-    const handleGlobalMouseUp = () => handleMouseUp();
-    const handleGlobalKeyDown = (e) => handleKeyDown(e);
-
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    document.addEventListener('keydown', handleGlobalKeyDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('keydown', handleGlobalKeyDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleMouseMove, handleMouseUp, handleKeyDown]);
+  }, [handleKeyDown]);
 
   return (
     <div className="mindmap-canvas-container">

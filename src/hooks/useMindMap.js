@@ -13,160 +13,119 @@ export const useMindMap = () => {
   const autoSaveTimeoutRef = useRef(null);
 
   // 履歴に追加
-  const addToHistory = useCallback((newData) => {
+  const addToHistory = (newData) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push(deepClone(newData));
-      return newHistory.slice(-50); // 最大50件保持
+      return newHistory.slice(-50);
     });
     setHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [historyIndex]);
-
-  // 自動保存
-  const autoSave = useCallback((newData) => {
-    if (!data.settings?.autoSave) return;
-    
-    // 前回のタイムアウトをクリア
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    
-    // 1秒後に保存
-    autoSaveTimeoutRef.current = setTimeout(() => {
-      saveMindMap(newData);
-    }, 1000);
-  }, [data.settings?.autoSave]);
+  };
 
   // データ更新の共通処理
-  const updateData = useCallback((newData) => {
+  const updateData = (newData) => {
     setData(newData);
     addToHistory(newData);
-    autoSave(newData);
-  }, [addToHistory, autoSave]);
+    
+    // 自動保存
+    if (data.settings?.autoSave) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveMindMap(newData);
+      }, 1000);
+    }
+  };
 
   // 全ノードを平坦化
-  const flattenNodes = useCallback((node, result = []) => {
+  const flattenNodes = (node, result = []) => {
     result.push(node);
     node.children?.forEach(child => flattenNodes(child, result));
     return result;
-  }, []);
+  };
 
   // ノードを検索
-  const findNode = useCallback((nodeId, rootNode = data.rootNode) => {
+  const findNode = (nodeId, rootNode = data.rootNode) => {
     if (rootNode.id === nodeId) return rootNode;
     
     for (const child of rootNode.children || []) {
       const found = findNode(nodeId, child);
       if (found) return found;
     }
-    
     return null;
-  }, [data.rootNode]);
+  };
 
   // ノードの親を検索
-  const findParentNode = useCallback((nodeId, rootNode = data.rootNode, parent = null) => {
+  const findParentNode = (nodeId, rootNode = data.rootNode, parent = null) => {
     if (rootNode.id === nodeId) return parent;
     
     for (const child of rootNode.children || []) {
       const found = findParentNode(nodeId, child, rootNode);
-      if (found !== null) return found;
+      if (found) return found;
     }
-    
     return null;
-  }, [data.rootNode]);
+  };
 
   // ノードを更新
-  const updateNode = useCallback((nodeId, updates) => {
+  const updateNode = (nodeId, updates) => {
     const updateNodeRecursive = (node) => {
-      if (node.id === nodeId) {
-        return { ...node, ...updates };
-      }
-      return {
-        ...node,
-        children: node.children?.map(updateNodeRecursive) || []
-      };
+      if (node.id === nodeId) return { ...node, ...updates };
+      return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
     };
     
-    const newData = {
-      ...data,
-      rootNode: updateNodeRecursive(data.rootNode)
-    };
-    
-    updateData(newData);
-  }, [data, updateData]);
+    updateData({ ...data, rootNode: updateNodeRecursive(data.rootNode) });
+  };
 
   // 設定を更新
-  const updateSettings = useCallback((newSettings) => {
-    const newData = {
+  const updateSettings = (newSettings) => {
+    updateData({
       ...data,
-      settings: {
-        ...data.settings,
-        ...newSettings
-      }
-    };
-    updateData(newData);
-  }, [data, updateData]);
+      settings: { ...data.settings, ...newSettings }
+    });
+  };
 
-  const applyAutoLayout = useCallback((rootNode) => {
-    const svgElement = document.querySelector('.mindmap-canvas-container svg');
-    const centerX = rootNode.x || (svgElement ? svgElement.clientWidth / 2 : 400);
-    const centerY = rootNode.y || (svgElement ? svgElement.clientHeight / 2 : 300);
+  const applyAutoLayout = (rootNode) => {
+    const svg = document.querySelector('.mindmap-canvas-container svg');
+    const centerX = rootNode.x || (svg?.clientWidth / 2) || 400;
+    const centerY = rootNode.y || (svg?.clientHeight / 2) || 300;
     
     return mindMapLayoutPreserveRoot(rootNode, {
-      centerX,
-      centerY,
-      baseRadius: 180,
-      levelSpacing: 200,
-      minVerticalSpacing: 60,
-      maxVerticalSpacing: 120
+      centerX, centerY, baseRadius: 180, levelSpacing: 200,
+      minVerticalSpacing: 60, maxVerticalSpacing: 120
     });
-  }, []);
+  };
 
   // 子ノードを追加
-  const addChildNode = useCallback((parentId, nodeText = '新しいアイデア') => {
+  const addChildNode = (parentId, nodeText = '新しいアイデア') => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
     const newChild = createNewNode(nodeText, parentNode);
     const childrenCount = parentNode.children?.length || 0;
-
     const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
     newChild.x = position.x;
     newChild.y = position.y;
     
     const addChildRecursive = (node) => {
       if (node.id === parentId) {
-        return {
-          ...node,
-          children: [...(node.children || []), newChild]
-        };
+        return { ...node, children: [...(node.children || []), newChild] };
       }
-      return {
-        ...node,
-        children: node.children?.map(addChildRecursive) || []
-      };
+      return { ...node, children: node.children?.map(addChildRecursive) || [] };
     };
     
     let newRootNode = addChildRecursive(data.rootNode);
-    
     if (data.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    const newData = {
-      ...data,
-      rootNode: newRootNode
-    };
-    
-    updateData(newData);
+    updateData({ ...data, rootNode: newRootNode });
     return newChild.id;
-  }, [data, findNode, updateData, applyAutoLayout]);
+  };
 
   // 兄弟ノードを追加
-  const addSiblingNode = useCallback((nodeId, nodeText = '新しいアイデア') => {
-    if (nodeId === 'root') {
-      return addChildNode('root', nodeText);
-    }
+  const addSiblingNode = (nodeId, nodeText = '新しいアイデア') => {
+    if (nodeId === 'root') return addChildNode('root', nodeText);
     
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
@@ -180,35 +139,22 @@ export const useMindMap = () => {
         
         const newChildren = [...(node.children || [])];
         newChildren.splice(currentIndex + 1, 0, newSibling);
-        
-        return {
-          ...node,
-          children: newChildren
-        };
+        return { ...node, children: newChildren };
       }
-      return {
-        ...node,
-        children: node.children?.map(addSiblingRecursive) || []
-      };
+      return { ...node, children: node.children?.map(addSiblingRecursive) || [] };
     };
     
     let newRootNode = addSiblingRecursive(data.rootNode);
-    
     if (data.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    const newData = {
-      ...data,
-      rootNode: newRootNode
-    };
-    
-    updateData(newData);
+    updateData({ ...data, rootNode: newRootNode });
     return newSibling.id;
-  }, [data, findNode, findParentNode, addChildNode, updateData, applyAutoLayout]);
+  };
 
   // ノードを削除
-  const deleteNode = useCallback((nodeId) => {
+  const deleteNode = (nodeId) => {
     if (nodeId === 'root') return false;
     
     const deleteNodeRecursive = (node) => {
@@ -221,45 +167,35 @@ export const useMindMap = () => {
     };
     
     let newRootNode = deleteNodeRecursive(data.rootNode);
-    
     if (data.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    const newData = {
-      ...data,
-      rootNode: newRootNode
-    };
+    updateData({ ...data, rootNode: newRootNode });
     
-    updateData(newData);
-    
-    if (selectedNodeId === nodeId) {
-      setSelectedNodeId(null);
-    }
-    if (editingNodeId === nodeId) {
-      setEditingNodeId(null);
-    }
+    if (selectedNodeId === nodeId) setSelectedNodeId(null);
+    if (editingNodeId === nodeId) setEditingNodeId(null);
     
     return true;
-  }, [data, selectedNodeId, editingNodeId, updateData, applyAutoLayout]);
+  };
 
   // ノードをドラッグで移動
-  const dragNode = useCallback((nodeId, x, y) => {
+  const dragNode = (nodeId, x, y) => {
     updateNode(nodeId, { x, y });
-  }, [updateNode]);
+  };
 
   // 編集開始
-  const startEdit = useCallback((nodeId) => {
+  const startEdit = (nodeId) => {
     const node = findNode(nodeId);
     if (node) {
       setEditingNodeId(nodeId);
       setEditText(node.text);
       setSelectedNodeId(nodeId);
     }
-  }, [findNode]);
+  };
 
   // 編集終了
-  const finishEdit = useCallback((nodeId, newText) => {
+  const finishEdit = (nodeId, newText) => {
     if (newText.trim() === '') {
       setEditingNodeId(null);
       setEditText('');
@@ -269,59 +205,47 @@ export const useMindMap = () => {
     updateNode(nodeId, { text: newText.trim() });
     setEditingNodeId(null);
     setEditText('');
-  }, [updateNode]);
+  };
 
   // Undo
-  const undo = useCallback(() => {
+  const undo = () => {
     if (historyIndex > 0) {
       const previousData = history[historyIndex - 1];
       setData(previousData);
       setHistoryIndex(prev => prev - 1);
       saveMindMap(previousData);
     }
-  }, [history, historyIndex]);
+  };
 
   // Redo
-  const redo = useCallback(() => {
+  const redo = () => {
     if (historyIndex < history.length - 1) {
       const nextData = history[historyIndex + 1];
       setData(nextData);
       setHistoryIndex(prev => prev + 1);
       saveMindMap(nextData);
     }
-  }, [history, historyIndex]);
+  };
 
   // 折りたたみ状態をトグル
-  const toggleCollapse = useCallback((nodeId) => {
+  const toggleCollapse = (nodeId) => {
     const toggleNodeRecursive = (node) => {
-      if (node.id === nodeId) {
-        return { ...node, collapsed: !node.collapsed };
-      }
-      return {
-        ...node,
-        children: node.children?.map(toggleNodeRecursive) || []
-      };
+      if (node.id === nodeId) return { ...node, collapsed: !node.collapsed };
+      return { ...node, children: node.children?.map(toggleNodeRecursive) || [] };
     };
     
-    const newData = {
-      ...data,
-      rootNode: toggleNodeRecursive(data.rootNode)
-    };
-    
-    updateData(newData);
-  }, [data, updateData]);
+    updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
+  };
 
   // マップタイトルを更新
-  const updateTitle = useCallback((newTitle) => {
-    const newData = { ...data, title: newTitle };
-    updateData(newData);
-  }, [data, updateData]);
+  const updateTitle = (newTitle) => {
+    updateData({ ...data, title: newTitle });
+  };
 
   // テーマを変更
-  const changeTheme = useCallback((themeName) => {
-    const newData = { ...data, theme: themeName };
-    updateData(newData);
-  }, [data, updateData]);
+  const changeTheme = (themeName) => {
+    updateData({ ...data, theme: themeName });
+  };
 
   // 初期化時に履歴を設定
   useEffect(() => {
@@ -329,10 +253,8 @@ export const useMindMap = () => {
       setHistory([deepClone(data)]);
       setHistoryIndex(0);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // クリーンアップ
-  useEffect(() => {
+    
+    // クリーンアップ
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
