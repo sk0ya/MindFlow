@@ -224,7 +224,7 @@ export const useMindMap = () => {
     
     return mindMapLayoutPreserveRoot(rootNode, {
       centerX, centerY, baseRadius: 180, levelSpacing: 200,
-      minVerticalSpacing: 60, maxVerticalSpacing: 120
+      minVerticalSpacing: 80, maxVerticalSpacing: 130
     });
   };
 
