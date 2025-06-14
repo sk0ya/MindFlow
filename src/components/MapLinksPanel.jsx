@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 const NodeMapLinksPanel = ({
@@ -14,6 +14,7 @@ const NodeMapLinksPanel = ({
 }) => {
   const [selectedMapId, setSelectedMapId] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
+  const panelRef = useRef(null);
 
   const handleAddLink = useCallback(() => {
     if (selectedMapId && selectedMapId !== currentMapId) {
@@ -27,22 +28,60 @@ const NodeMapLinksPanel = ({
   }, [selectedMapId, currentMapId, allMaps, linkDescription, onAddLink, selectedNode]);
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      onClose();
-    } else if (e.key === 'Enter' && e.ctrlKey) {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
       handleAddLink();
     }
-  }, [onClose, handleAddLink]);
+  }, [handleAddLink]);
 
   const availableMaps = allMaps.filter(map => 
     map.id !== currentMapId && 
     !selectedNode.mapLinks?.some(link => link.targetMapId === map.id)
   );
 
+  // クリック外し検出でパネルを閉じる
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      // パネルにフォーカスを当てる
+      if (panelRef.current) {
+        panelRef.current.focus();
+      }
+
+      // 少し遅延してイベントリスナーを追加（パネルが開いた直後のクリックを避けるため）
+      const timer = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscapeKey);
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="node-map-links-panel" style={{ left: position.x, top: position.y }}>
+    <div 
+      ref={panelRef}
+      className="node-map-links-panel" 
+      style={{ left: position.x, top: position.y }}
+      tabIndex={-1}
+    >
       <div className="panel-header">
         <h3>ノードマップリンク</h3>
         <p className="node-info">ノード: {selectedNode.text}</p>
@@ -57,7 +96,12 @@ const NodeMapLinksPanel = ({
             <div className="links-list">
               {selectedNode.mapLinks.map((link) => (
                 <div key={link.id} className="link-item">
-                  <div className="link-info">
+                  <div 
+                    className="link-info"
+                    onDoubleClick={() => onNavigateToMap(link.targetMapId)}
+                    style={{ cursor: 'pointer' }}
+                    title="ダブルクリックでマップに移動"
+                  >
                     <div className="link-title">{link.targetMapTitle}</div>
                     {link.description && (
                       <div className="link-description">{link.description}</div>
@@ -142,6 +186,12 @@ const NodeMapLinksPanel = ({
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
           z-index: 1000;
           overflow: hidden;
+          outline: none;
+        }
+
+        .node-map-links-panel:focus {
+          border-color: #4285f4;
+          box-shadow: 0 8px 32px rgba(66, 133, 244, 0.25);
         }
 
         .panel-header {
@@ -201,6 +251,13 @@ const NodeMapLinksPanel = ({
           color: #333;
         }
 
+        .help-text {
+          margin: 0 0 8px 0;
+          font-size: 12px;
+          color: #666;
+          font-style: italic;
+        }
+
         .links-list {
           display: flex;
           flex-direction: column;
@@ -219,13 +276,19 @@ const NodeMapLinksPanel = ({
         }
 
         .link-item:hover {
-          border-color: #4285f4;
-          box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+          border-color: #e1e5e9;
         }
 
         .link-info {
           flex: 1;
           min-width: 0;
+          padding: 4px;
+          border-radius: 4px;
+          transition: background-color 0.2s ease;
+        }
+
+        .link-info:hover {
+          background-color: #f0f8ff;
         }
 
         .link-title {
