@@ -93,11 +93,11 @@ const Node = ({
   const handleClick = useCallback((e) => {
     e.stopPropagation();
     e.preventDefault();
-    // 編集中でない場合のみ選択
-    if (!isEditing) {
-      onSelect(node.id);
-    }
-  }, [node.id, onSelect, isEditing]);
+    
+    // 常に選択処理を実行
+    // 編集中のノード自体をクリックした場合でも選択状態は更新
+    onSelect(node.id);
+  }, [node.id, onSelect]);
 
   const handleDoubleClick = useCallback((e) => {
     e.stopPropagation();

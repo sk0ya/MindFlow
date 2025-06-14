@@ -159,9 +159,22 @@ const MindMapCanvas = ({
 
   const handleBackgroundClick = (e) => {
     if (e.target === svgRef.current) {
+      // 編集中の場合は編集を確定してから選択をクリア
+      if (editingNodeId) {
+        onFinishEdit(editingNodeId, editText);
+      }
       onSelectNode(null);
     }
   };
+
+  // ノード選択時に編集を確定する処理
+  const handleNodeSelect = useCallback((nodeId) => {
+    // 編集中で、異なるノードが選択された場合は編集を確定
+    if (editingNodeId && editingNodeId !== nodeId) {
+      onFinishEdit(editingNodeId, editText);
+    }
+    onSelectNode(nodeId);
+  }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
 
   const handleKeyDown = useCallback((e) => {
     if (selectedNodeId && !editingNodeId) {
@@ -177,8 +190,11 @@ const MindMapCanvas = ({
           break;
         case 'Delete':
         case 'Backspace':
+          e.preventDefault();
           if (selectedNodeId !== 'root') {
             onDeleteNode(selectedNodeId);
+            // 削除後は選択をクリア
+            onSelectNode(null);
           }
           break;
         case ' ':
@@ -258,7 +274,7 @@ const MindMapCanvas = ({
                 node={node}
                 isSelected={selectedNodeId === node.id}
                 isEditing={editingNodeId === node.id}
-                onSelect={onSelectNode}
+                onSelect={handleNodeSelect}
                 onStartEdit={onStartEdit}
                 onFinishEdit={onFinishEdit}
                 onDrag={onDragNode}
