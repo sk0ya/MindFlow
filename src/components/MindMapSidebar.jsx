@@ -283,13 +283,24 @@ const MindMapSidebar = ({
       </div>
 
       <div className="search-container">
-        <input
-          type="text"
-          placeholder="マップ・カテゴリーで検索..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
+        <div className="search-input-wrapper">
+          <input
+            type="text"
+            placeholder="マップ・カテゴリーで検索..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          {searchTerm && (
+            <button
+              className="search-clear-btn"
+              onClick={() => setSearchTerm('')}
+              title="検索をクリア"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="maps-list">
@@ -497,11 +508,18 @@ const MindMapSidebar = ({
           border-bottom: 1px solid #e1e5e9;
         }
 
+        .search-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
         .search-input {
           width: 100%;
           border: 1px solid #e1e5e9;
           border-radius: 6px;
           padding: 8px 12px;
+          padding-right: 36px;
           font-size: 13px;
           outline: none;
           transition: border-color 0.2s ease;
@@ -509,6 +527,28 @@ const MindMapSidebar = ({
 
         .search-input:focus {
           border-color: #4285f4;
+        }
+
+        .search-clear-btn {
+          position: absolute;
+          right: 8px;
+          background: none;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          font-size: 14px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .search-clear-btn:hover {
+          background: #f0f0f0;
+          color: #333;
         }
 
         .maps-list {
