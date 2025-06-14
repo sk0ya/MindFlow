@@ -49,9 +49,7 @@ const Node = ({
         y: svgY - node.y
       });
     }
-    
-    onSelect(node.id);
-  }, [node.x, node.y, node.id, onSelect, zoom, svgRef]);
+  }, [node.x, node.y, zoom, svgRef]);
 
   const handleMouseMove = useCallback((e) => {
     if (mouseDownPos && !isDragging) {
@@ -132,10 +130,17 @@ const Node = ({
     e.stopPropagation();
     e.preventDefault();
     
-    // 常に選択処理を実行
-    // 編集中のノード自体をクリックした場合でも選択状態は更新
-    onSelect(node.id);
-  }, [node.id, onSelect]);
+    // ドラッグが発生していない場合のみクリック処理
+    if (!isDragging) {
+      if (isSelected && !isEditing) {
+        // 既に選択されている場合は編集モードに入る
+        onStartEdit(node.id);
+      } else {
+        // 未選択の場合は選択のみ
+        onSelect(node.id);
+      }
+    }
+  }, [node.id, isDragging, isSelected, isEditing, onStartEdit, onSelect]);
 
   const handleDoubleClick = useCallback((e) => {
     e.stopPropagation();
@@ -282,7 +287,7 @@ const Node = ({
         aria-label={`Mind map node: ${node.text}`}
         aria-selected={isSelected}
         style={{
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isDragging ? 'grabbing' : 'pointer',
           filter: isDragTarget 
             ? 'drop-shadow(0 4px 12px rgba(255,152,0,0.3))' 
             : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))')

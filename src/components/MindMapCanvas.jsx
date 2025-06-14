@@ -305,13 +305,8 @@ const MindMapCanvas = ({
           // IME変換中は何もしない
           break;
         default:
-          // 通常の文字入力の場合は編集モードに入る
-          // 単一文字、かつ修飾キーが押されていない場合
-          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            // 空文字で編集モードに入る（文字入力はinput要素に任せる）
-            onStartEdit(selectedNodeId, true);
-          }
+          // 文字入力での自動編集開始は無効化（IMEとの競合を避けるため）
+          // Spaceキーまたはダブルクリックでの編集開始を使用
           break;
       }
     }
