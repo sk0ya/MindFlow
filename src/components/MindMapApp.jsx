@@ -9,6 +9,7 @@ import ErrorBoundary from './ErrorBoundary';
 import ImageModal from './ImageModal';
 import FileActionMenu from './FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
+import NodeMapLinksPanel from './MapLinksPanel';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -51,7 +52,9 @@ const MindMapApp = () => {
     switchToMap,
     refreshAllMindMaps,
     changeMapCategory,
-    getAvailableCategories
+    getAvailableCategories,
+    addNodeMapLink,
+    removeNodeMapLink
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -69,6 +72,11 @@ const MindMapApp = () => {
   const [fileActionMenuPosition, setFileActionMenuPosition] = useState({ x: 0, y: 0 });
   const [actionMenuFile, setActionMenuFile] = useState(null);
   const [actionMenuNodeId, setActionMenuNodeId] = useState(null);
+  
+  // ノードマップリンクパネル状態
+  const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState(false);
+  const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState({ x: 0, y: 0 });
+  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState(null);
   
   // サイドバー状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -230,6 +238,7 @@ const MindMapApp = () => {
     setShowLayoutPanel(false);
     setShowImageModal(false);
     setShowFileActionMenu(false);
+    setShowNodeMapLinksPanel(false);
   };
 
   const handleShowImageModal = (image) => {
@@ -346,6 +355,33 @@ const MindMapApp = () => {
     changeMapCategory(mapId, newCategory);
   };
 
+  // ノードマップリンク関連のハンドラー
+  const handleShowNodeMapLinks = (node, position) => {
+    setSelectedNodeForLinks(node);
+    setNodeMapLinksPanelPosition(position);
+    setShowNodeMapLinksPanel(true);
+    handleCloseAllPanels();
+    setShowNodeMapLinksPanel(true);
+  };
+
+  const handleCloseNodeMapLinksPanel = () => {
+    setShowNodeMapLinksPanel(false);
+    setSelectedNodeForLinks(null);
+  };
+
+  const handleAddNodeMapLink = (nodeId, targetMapId, targetMapTitle, description) => {
+    addNodeMapLink(nodeId, targetMapId, targetMapTitle, description);
+  };
+
+  const handleRemoveNodeMapLink = (nodeId, linkId) => {
+    removeNodeMapLink(nodeId, linkId);
+  };
+
+  const handleNavigateToMap = (mapId) => {
+    switchToMap(mapId);
+    setShowNodeMapLinksPanel(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -410,6 +446,7 @@ const MindMapApp = () => {
             onRemoveFile={handleRemoveFile}
             onShowImageModal={handleShowImageModal}
             onShowFileActionMenu={handleShowFileActionMenu}
+            onShowNodeMapLinks={handleShowNodeMapLinks}
             zoom={zoom}
             setZoom={setZoom}
             pan={pan}
@@ -467,6 +504,20 @@ const MindMapApp = () => {
           onDelete={handleFileDelete}
           onView={handleShowImageModal}
         />
+
+        {selectedNodeForLinks && (
+          <NodeMapLinksPanel
+            isOpen={showNodeMapLinksPanel}
+            position={nodeMapLinksPanelPosition}
+            selectedNode={selectedNodeForLinks}
+            currentMapId={currentMapId}
+            allMaps={allMindMaps}
+            onClose={handleCloseNodeMapLinksPanel}
+            onAddLink={handleAddNodeMapLink}
+            onRemoveLink={handleRemoveNodeMapLink}
+            onNavigateToMap={handleNavigateToMap}
+          />
+        )}
 
         <footer className="footer">
           <p>

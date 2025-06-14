@@ -50,7 +50,9 @@ export const createInitialData = () => ({
     y: 300,
     fontSize: 16,
     fontWeight: 'normal',
-    children: []
+    children: [],
+    attachments: [],
+    mapLinks: []
   },
   settings: {
     autoSave: true,
@@ -70,7 +72,8 @@ export const createNewNode = (text = '新しいアイデア', parentNode = null)
     fontSize: 14,
     fontWeight: 'normal',
     children: [],
-    attachments: [] // ファイル添付用
+    attachments: [], // ファイル添付用
+    mapLinks: [] // 他のマインドマップへのリンク
   };
 };
 
@@ -170,3 +173,12 @@ export const formatFileSize = (bytes) => {
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
+
+// ノード用マインドマップリンクを作成
+export const createNodeMapLink = (targetMapId, targetMapTitle, description = '') => ({
+  id: generateId(),
+  targetMapId,
+  targetMapTitle,
+  description,
+  createdAt: new Date().toISOString()
+});

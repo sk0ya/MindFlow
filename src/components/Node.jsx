@@ -19,6 +19,7 @@ const Node = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onShowNodeMapLinks,
   editText,
   setEditText,
   zoom,
@@ -229,6 +230,17 @@ const Node = ({
       });
     }
   }, [onShowFileActionMenu, node.id]);
+
+  const handleShowMapLinks = useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onShowNodeMapLinks) {
+      onShowNodeMapLinks(node, {
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  }, [onShowNodeMapLinks, node]);
   
   // ノードのサイズ計算（画像を考慮）
   const hasImages = node.attachments && node.attachments.some(file => file.isImage);
@@ -481,10 +493,39 @@ const Node = ({
             📎
           </text>
 
+          {/* マップリンクボタン */}
+          <circle
+            cx={node.x + 15}
+            cy={node.y + nodeHeight / 2 + 15}
+            r="12"
+            fill="#9c27b0"
+            stroke="white"
+            strokeWidth="2"
+            role="button"
+            tabIndex={0}
+            aria-label="Map links"
+            style={{ 
+              cursor: 'pointer',
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
+            }}
+            onClick={handleShowMapLinks}
+          />
+          <text
+            x={node.x + 15}
+            y={node.y + nodeHeight / 2 + 15 + 4}
+            textAnchor="middle"
+            fill="white"
+            fontSize="14"
+            fontWeight="bold"
+            style={{ pointerEvents: 'none' }}
+          >
+            🔗
+          </text>
+
           {node.id !== 'root' && (
             <>
               <circle
-                cx={node.x + 15}
+                cx={node.x + 40}
                 cy={node.y + nodeHeight / 2 + 15}
                 r="12"
                 fill="#ea4335"
@@ -503,7 +544,7 @@ const Node = ({
                 }}
               />
               <text
-                x={node.x + 15}
+                x={node.x + 40}
                 y={node.y + nodeHeight / 2 + 15 + 4}
                 textAnchor="middle"
                 fill="white"
@@ -515,6 +556,33 @@ const Node = ({
               </text>
             </>
           )}
+        </g>
+      )}
+
+      {/* マップリンクインジケーター */}
+      {node.mapLinks && node.mapLinks.length > 0 && (
+        <g>
+          <circle
+            cx={node.x + nodeWidth / 2 - 8}
+            cy={node.y - nodeHeight / 2 + 8}
+            r="6"
+            fill="#9c27b0"
+            stroke="white"
+            strokeWidth="1"
+            style={{ cursor: 'pointer' }}
+            onClick={handleShowMapLinks}
+          />
+          <text
+            x={node.x + nodeWidth / 2 - 8}
+            y={node.y - nodeHeight / 2 + 8 + 2}
+            textAnchor="middle"
+            fill="white"
+            fontSize="8"
+            fontWeight="bold"
+            style={{ pointerEvents: 'none' }}
+          >
+            {node.mapLinks.length}
+          </text>
         </g>
       )}
     </g>
@@ -530,7 +598,8 @@ Node.propTypes = {
     fontSize: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     fontWeight: PropTypes.string,
     fontStyle: PropTypes.string,
-    attachments: PropTypes.arrayOf(PropTypes.object)
+    attachments: PropTypes.arrayOf(PropTypes.object),
+    mapLinks: PropTypes.arrayOf(PropTypes.object)
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,
   isEditing: PropTypes.bool.isRequired,
@@ -548,6 +617,7 @@ Node.propTypes = {
   onRemoveFile: PropTypes.func.isRequired,
   onShowImageModal: PropTypes.func.isRequired,
   onShowFileActionMenu: PropTypes.func.isRequired,
+  onShowNodeMapLinks: PropTypes.func.isRequired,
   editText: PropTypes.string.isRequired,
   setEditText: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,

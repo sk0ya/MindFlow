@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useRef } from 'react';
 import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap } from '../utils/storage.js';
-import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData } from '../utils/dataTypes.js';
+import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData, createNodeMapLink } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 
 // 既存のノードに色を自動割り当てする
@@ -625,6 +625,101 @@ export const useMindMap = () => {
     }
   };
 
+  // ノード用マップリンク管理機能
+  const addNodeMapLink = (nodeId, targetMapId, targetMapTitle, description = '') => {
+    const newLink = createNodeMapLink(targetMapId, targetMapTitle, description);
+    
+    const addLinkToNode = (node) => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          mapLinks: [...(node.mapLinks || []), newLink]
+        };
+      }
+      return {
+        ...node,
+        children: node.children?.map(addLinkToNode) || []
+      };
+    };
+    
+    updateData({
+      ...data,
+      rootNode: addLinkToNode(data.rootNode),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const removeNodeMapLink = (nodeId, linkId) => {
+    const removeLinkFromNode = (node) => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          mapLinks: (node.mapLinks || []).filter(link => link.id !== linkId)
+        };
+      }
+      return {
+        ...node,
+        children: node.children?.map(removeLinkFromNode) || []
+      };
+    };
+    
+    updateData({
+      ...data,
+      rootNode: removeLinkFromNode(data.rootNode),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const updateNodeMapLinkTargetTitle = (targetMapId, newTitle) => {
+    const updateLinksInNode = (node) => {
+      const updatedNode = {
+        ...node,
+        mapLinks: (node.mapLinks || []).map(link =>
+          link.targetMapId === targetMapId
+            ? { ...link, targetMapTitle: newTitle }
+            : link
+        )
+      };
+      
+      if (node.children) {
+        updatedNode.children = node.children.map(updateLinksInNode);
+      }
+      
+      return updatedNode;
+    };
+    
+    updateData({
+      ...data,
+      rootNode: updateLinksInNode(data.rootNode),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  // ヘルパー関数
+  const hasMapLinkInNodes = (node, targetMapId) => {
+    if (node.mapLinks && node.mapLinks.some(link => link.targetMapId === targetMapId)) {
+      return true;
+    }
+    return node.children ? node.children.some(child => hasMapLinkInNodes(child, targetMapId)) : false;
+  };
+
+  const updateMapLinksInNodes = (node, targetMapId, newTitle) => {
+    const updatedNode = {
+      ...node,
+      mapLinks: (node.mapLinks || []).map(link =>
+        link.targetMapId === targetMapId
+          ? { ...link, targetMapTitle: newTitle }
+          : link
+      )
+    };
+    
+    if (node.children) {
+      updatedNode.children = node.children.map(child => updateMapLinksInNodes(child, targetMapId, newTitle));
+    }
+    
+    return updatedNode;
+  };
+
   // マルチマップ管理機能
   const refreshAllMindMaps = () => {
     setAllMindMaps(getAllMindMaps());
@@ -656,9 +751,24 @@ export const useMindMap = () => {
       saveMindMap(updatedMap);
       refreshAllMindMaps();
       
-      // 現在編集中のマップの場合はタイトルを更新
+      // 他のマップのノードリンクタイトルも更新
+      allMaps.forEach(map => {
+        if (map.id !== mapId) {
+          const hasNodeLinkToRenamedMap = hasMapLinkInNodes(map.rootNode, mapId);
+          if (hasNodeLinkToRenamedMap) {
+            const updatedRootNode = updateMapLinksInNodes(map.rootNode, mapId, newTitle);
+            const updatedMapWithLinks = { ...map, rootNode: updatedRootNode, updatedAt: new Date().toISOString() };
+            saveMindMap(updatedMapWithLinks);
+          }
+        }
+      });
+      
+      // 現在編集中のマップの場合はタイトルとリンクを更新
       if (mapId === currentMapId) {
         updateTitle(newTitle);
+      } else {
+        // 現在のマップがリネームされたマップへのリンクを持っている場合、リンクタイトルを更新
+        updateNodeMapLinkTargetTitle(mapId, newTitle);
       }
     }
   };
@@ -801,6 +911,11 @@ export const useMindMap = () => {
     
     // カテゴリー管理
     changeMapCategory,
-    getAvailableCategories
+    getAvailableCategories,
+    
+    // ノード用マップリンク管理
+    addNodeMapLink,
+    removeNodeMapLink,
+    updateNodeMapLinkTargetTitle
   };
 };

@@ -24,6 +24,7 @@ const MindMapCanvas = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onShowNodeMapLinks,
   zoom,
   setZoom,
   pan,
@@ -386,6 +387,7 @@ const MindMapCanvas = ({
                 onRemoveFile={onRemoveFile}
                 onShowImageModal={onShowImageModal}
                 onShowFileActionMenu={onShowFileActionMenu}
+                onShowNodeMapLinks={onShowNodeMapLinks}
                 zoom={zoom}
                 pan={pan}
                 svgRef={svgRef}
@@ -489,6 +491,7 @@ MindMapCanvas.propTypes = {
   onRemoveFile: PropTypes.func.isRequired,
   onShowImageModal: PropTypes.func.isRequired,
   onShowFileActionMenu: PropTypes.func.isRequired,
+  onShowNodeMapLinks: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,
   setZoom: PropTypes.func.isRequired,
   pan: PropTypes.shape({
