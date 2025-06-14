@@ -189,10 +189,7 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
         const totalChildHeight = node.children.reduce((sum, child) => 
           sum + calculateSubtreeHeight(child), 0);
         
-        const spacing = Math.min(
-          maxVerticalSpacing, 
-          Math.max(minVerticalSpacing, 300 / Math.max(totalChildHeight, 1))
-        );
+        const spacing = minVerticalSpacing;
         
         let currentOffset = 0;
         node.children.forEach(child => {
