@@ -28,6 +28,7 @@ const Node = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [mouseDownPos, setMouseDownPos] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef(null);
   const blurTimeoutRef = useRef(null);
@@ -41,29 +42,39 @@ const Node = ({
       const svgX = (e.clientX - svgRect.left) / zoom;
       const svgY = (e.clientY - svgRect.top) / zoom;
       
-      setIsDragging(true);
+      // マウスダウン位置を記録（ドラッグ判定用）
+      setMouseDownPos({ x: e.clientX, y: e.clientY });
       setDragStart({
         x: svgX - node.x,
         y: svgY - node.y
       });
-      
-      // ドラッグ開始を通知
-      if (onDragStart) {
-        onDragStart(node.id);
-      }
     }
     
     onSelect(node.id);
-  }, [node.x, node.y, node.id, onSelect, onDragStart, zoom, svgRef]);
+  }, [node.x, node.y, node.id, onSelect, zoom, svgRef]);
 
   const handleMouseMove = useCallback((e) => {
-    if (isDragging) {
+    if (mouseDownPos && !isDragging) {
+      // ドラッグ開始判定（5px以上移動でドラッグとみなす）
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - mouseDownPos.x, 2) + 
+        Math.pow(e.clientY - mouseDownPos.y, 2)
+      );
+      
+      if (distance > 5) {
+        setIsDragging(true);
+        // ドラッグ開始を通知
+        if (onDragStart) {
+          onDragStart(node.id);
+        }
+      }
+    } else if (isDragging) {
       // ドラッグ中の位置を通知（ドロップターゲット検出用）
       if (onDragMove) {
         onDragMove(e.clientX, e.clientY);
       }
     }
-  }, [isDragging, onDragMove]);
+  }, [isDragging, mouseDownPos, onDragMove, onDragStart, node.id]);
 
   const handleMouseUp = useCallback((e) => {
     if (isDragging && svgRef.current) {
@@ -79,11 +90,14 @@ const Node = ({
         onDragEnd(node.id, newX, newY);
       }
     }
+    
+    // 状態をリセット
     setIsDragging(false);
+    setMouseDownPos(null);
   }, [isDragging, dragStart, node.id, onDragEnd, zoom, svgRef]);
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || mouseDownPos) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -91,7 +105,7 @@ const Node = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, mouseDownPos, handleMouseMove, handleMouseUp]);
 
   // 編集モードが終了した時にIME状態をリセット
   useEffect(() => {
