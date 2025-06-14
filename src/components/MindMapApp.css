@@ -2,15 +2,24 @@
   min-height: 100vh;
   background: white;
   position: relative;
-  padding: 2px;
   overflow-x: hidden;
+  display: flex;
 }
 
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
+  flex: 1;
   position: relative;
   z-index: 1;
+  transition: margin-left 0.3s ease;
+  padding: 2px;
+}
+
+.container.sidebar-expanded {
+  margin-left: 280px;
+}
+
+.container.sidebar-collapsed {
+  margin-left: 50px;
 }
 
 .footer {
@@ -67,8 +76,12 @@
 }
 
 @media (max-width: 1024px) {
-  .mindmap-app {
+  .container {
     padding: 6px;
+  }
+  
+  .container.sidebar-expanded {
+    margin-left: 250px;
   }
 
   .footer {
@@ -88,8 +101,12 @@
 }
 
 @media (max-width: 768px) {
-  .mindmap-app {
+  .container {
     padding: 4px;
+  }
+  
+  .container.sidebar-expanded {
+    margin-left: 250px;
   }
 
   .footer {

@@ -1,6 +1,6 @@
 ﻿import { useState, useCallback, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap } from '../utils/storage.js';
-import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile } from '../utils/dataTypes.js';
+import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap } from '../utils/storage.js';
+import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 
 // 既存のノードに色を自動割り当てする
@@ -49,6 +49,13 @@ export const useMindMap = () => {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
+  
+  // マルチマップ管理用の状態
+  const [allMindMaps, setAllMindMaps] = useState(() => getAllMindMaps());
+  const [currentMapId, setCurrentMapId] = useState(() => {
+    const currentMap = getCurrentMindMap();
+    return currentMap.id;
+  });
 
   // 履歴に追加
   const addToHistory = (newData) => {
@@ -618,6 +625,81 @@ export const useMindMap = () => {
     }
   };
 
+  // マルチマップ管理機能
+  const refreshAllMindMaps = () => {
+    setAllMindMaps(getAllMindMaps());
+  };
+
+  const createMindMap = (title = '新しいマインドマップ') => {
+    const newMap = createNewMindMap(title);
+    refreshAllMindMaps();
+    switchToMap(newMap.id);
+    return newMap.id;
+  };
+
+  const renameMindMap = (mapId, newTitle) => {
+    const allMaps = getAllMindMaps();
+    const mapIndex = allMaps.findIndex(map => map.id === mapId);
+    
+    if (mapIndex !== -1) {
+      const updatedMap = { ...allMaps[mapIndex], title: newTitle, updatedAt: new Date().toISOString() };
+      allMaps[mapIndex] = updatedMap;
+      
+      // ストレージに保存
+      saveMindMap(updatedMap);
+      refreshAllMindMaps();
+      
+      // 現在編集中のマップの場合はタイトルを更新
+      if (mapId === currentMapId) {
+        updateTitle(newTitle);
+      }
+    }
+  };
+
+  const deleteMindMapById = (mapId) => {
+    if (allMindMaps.length <= 1) {
+      console.warn('最後のマインドマップは削除できません');
+      return false;
+    }
+    
+    const newCurrentMap = deleteMindMap(mapId);
+    refreshAllMindMaps();
+    
+    // 削除されたマップが現在のマップだった場合、新しいマップに切り替え
+    if (mapId === currentMapId) {
+      switchToMap(newCurrentMap.id);
+    }
+    
+    return true;
+  };
+
+  const switchToMap = (mapId) => {
+    const allMaps = getAllMindMaps();
+    const targetMap = allMaps.find(map => map.id === mapId);
+    
+    if (targetMap) {
+      // 現在のマップを保存
+      saveMindMap(data);
+      
+      // 新しいマップに切り替え
+      const coloredMap = assignColorsToExistingNodes(targetMap);
+      setData(coloredMap);
+      setCurrentMapId(mapId);
+      
+      // 編集状態をリセット
+      setSelectedNodeId(null);
+      setEditingNodeId(null);
+      setEditText('');
+      
+      // 履歴をリセット
+      setHistory([deepClone(coloredMap)]);
+      setHistoryIndex(0);
+      
+      // ストレージの現在のマップを更新
+      localStorage.setItem('currentMindMap', JSON.stringify(coloredMap));
+    }
+  };
+
   return {
     // データ
     data,
@@ -665,6 +747,15 @@ export const useMindMap = () => {
     updateTitle,
     changeTheme,
     updateSettings,
-    saveMindMap: () => saveMindMap(data)
+    saveMindMap: () => saveMindMap(data),
+    
+    // マルチマップ管理
+    allMindMaps,
+    currentMapId,
+    createMindMap,
+    renameMindMap,
+    deleteMindMapById,
+    switchToMap,
+    refreshAllMindMaps
   };
 };

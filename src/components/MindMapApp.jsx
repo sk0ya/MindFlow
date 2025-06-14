@@ -8,6 +8,7 @@ import LayoutPanel from './LayoutPanel';
 import ErrorBoundary from './ErrorBoundary';
 import ImageModal from './ImageModal';
 import FileActionMenu from './FileActionMenu';
+import MindMapSidebar from './MindMapSidebar';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -41,7 +42,14 @@ const MindMapApp = () => {
     attachFileToNode,
     removeFileFromNode,
     renameFileInNode,
-    downloadFile
+    downloadFile,
+    allMindMaps,
+    currentMapId,
+    createMindMap,
+    renameMindMap,
+    deleteMindMapById,
+    switchToMap,
+    refreshAllMindMaps
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -59,6 +67,9 @@ const MindMapApp = () => {
   const [fileActionMenuPosition, setFileActionMenuPosition] = useState({ x: 0, y: 0 });
   const [actionMenuFile, setActionMenuFile] = useState(null);
   const [actionMenuNodeId, setActionMenuNodeId] = useState(null);
+  
+  // サイドバー状態
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleZoomReset = () => {
     setZoom(1);
@@ -294,6 +305,32 @@ const MindMapApp = () => {
     }
   };
 
+  // サイドバー関連のハンドラ
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  const handleSelectMap = (mapId) => {
+    switchToMap(mapId);
+  };
+
+  const handleCreateMap = () => {
+    const mapId = createMindMap();
+    return mapId;
+  };
+
+  const handleDeleteMap = (mapId) => {
+    if (allMindMaps.length <= 1) {
+      alert('最後のマインドマップは削除できません');
+      return false;
+    }
+    return deleteMindMapById(mapId);
+  };
+
+  const handleRenameMap = (mapId, newTitle) => {
+    renameMindMap(mapId, newTitle);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -307,7 +344,18 @@ const MindMapApp = () => {
 
   return (
     <div className="mindmap-app">
-      <div className="container">
+      <MindMapSidebar
+        mindMaps={allMindMaps}
+        currentMapId={currentMapId}
+        onSelectMap={handleSelectMap}
+        onCreateMap={handleCreateMap}
+        onDeleteMap={handleDeleteMap}
+        onRenameMap={handleRenameMap}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
+      />
+      
+      <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
         <Toolbar
           title={data.title}
           onTitleChange={updateTitle}
