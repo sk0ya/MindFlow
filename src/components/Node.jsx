@@ -295,32 +295,6 @@ const Node = ({
                 onDoubleClick={(e) => handleImageDoubleClick(e, file)}
                 onContextMenu={(e) => handleFileActionMenu(e, file)}
               />
-              {isSelected && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveFile(file.id);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: '2px',
-                    right: '2px',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'rgba(234, 67, 53, 0.9)',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  ×
-                </button>
-              )}
             </div>
           </foreignObject>
         </g>
@@ -384,21 +358,6 @@ const Node = ({
             >
               📎
             </text>
-            {isSelected && (
-              <circle
-                cx={node.x + nodeWidth / 2 - 10}
-                cy={yOffset}
-                r="6"
-                fill="#ea4335"
-                stroke="white"
-                strokeWidth="1"
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveFile(file.id);
-                }}
-              />
-            )}
           </g>
         );
       })}
