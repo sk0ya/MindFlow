@@ -1,0 +1,16 @@
+{
+  "name": "mindflow-api",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker API for MindFlow",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create mindflow-db",
+    "db:migrate": "wrangler d1 migrations apply mindflow-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply mindflow-db"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

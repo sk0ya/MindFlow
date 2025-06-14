@@ -1,4 +1,5 @@
 ﻿import { STORAGE_KEYS, createInitialData } from './dataTypes.js';
+import { cloudStorage } from './cloudStorage.js';
 
 // ローカルストレージからデータを取得
 export const loadFromStorage = (key, defaultValue = null) => {
@@ -129,10 +130,85 @@ export const getAppSettings = () => {
     theme: 'default',
     autoSave: true,
     showWelcome: true,
-    language: 'ja'
+    language: 'ja',
+    storageMode: 'local', // 'local' or 'cloud'
+    cloudSync: false
   });
 };
 
 export const saveAppSettings = (settings) => {
   return saveToStorage(STORAGE_KEYS.SETTINGS, settings);
+};
+
+// クラウドストレージ機能
+export const isCloudStorageEnabled = () => {
+  const settings = getAppSettings();
+  return settings.storageMode === 'cloud';
+};
+
+// ハイブリッド保存（ローカル+クラウド）
+export const saveMindMapHybrid = async (mindMapData) => {
+  const settings = getAppSettings();
+  
+  // ローカルに保存（常に実行）
+  const localResult = saveMindMap(mindMapData);
+  
+  // クラウドモードまたは同期が有効な場合はクラウドにも保存
+  if (settings.storageMode === 'cloud' || settings.cloudSync) {
+    try {
+      await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
+      console.log('Cloud save successful');
+    } catch (error) {
+      console.warn('Cloud save failed, continuing with local:', error);
+      // クラウド保存が失敗してもローカル保存は成功として扱う
+    }
+  }
+  
+  return localResult;
+};
+
+// ハイブリッド取得（クラウド優先、フォールバックでローカル）
+export const getAllMindMapsHybrid = async () => {
+  const settings = getAppSettings();
+  
+  if (settings.storageMode === 'cloud') {
+    try {
+      const cloudResult = await cloudStorage.getAllMindMaps();
+      return cloudResult.mindmaps || [];
+    } catch (error) {
+      console.warn('Cloud fetch failed, using local:', error);
+    }
+  }
+  
+  return getAllMindMaps();
+};
+
+// ハイブリッド削除
+export const deleteMindMapHybrid = async (mapId) => {
+  const settings = getAppSettings();
+  
+  // ローカルから削除
+  const localResult = deleteMindMap(mapId);
+  
+  // クラウドモードまたは同期が有効な場合はクラウドからも削除
+  if (settings.storageMode === 'cloud' || settings.cloudSync) {
+    try {
+      await cloudStorage.deleteMindMap(mapId);
+      console.log('Cloud delete successful');
+    } catch (error) {
+      console.warn('Cloud delete failed:', error);
+    }
+  }
+  
+  return localResult;
+};
+
+// クラウド接続テスト
+export const testCloudConnection = async () => {
+  try {
+    return await cloudStorage.testConnection();
+  } catch (error) {
+    console.error('Cloud connection test failed:', error);
+    return false;
+  }
 };

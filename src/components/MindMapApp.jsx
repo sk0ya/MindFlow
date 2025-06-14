@@ -10,6 +10,7 @@ import ImageModal from './ImageModal';
 import FileActionMenu from './FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from './MapLinksPanel';
+import CloudStoragePanel from './CloudStoragePanel';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -80,6 +81,9 @@ const MindMapApp = () => {
   
   // サイドバー状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // クラウドストレージパネル状態
+  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
 
   const handleZoomReset = () => {
     setZoom(1);
@@ -414,6 +418,7 @@ const MindMapApp = () => {
           zoom={zoom}
           onZoomReset={handleZoomReset}
           onShowLayoutPanel={handleShowLayoutPanel}
+          onShowCloudStoragePanel={() => setShowCloudStoragePanel(true)}
         />
 
         <ErrorBoundary>
@@ -510,6 +515,11 @@ const MindMapApp = () => {
             onNavigateToMap={handleNavigateToMap}
           />
         )}
+
+        <CloudStoragePanel
+          isVisible={showCloudStoragePanel}
+          onClose={() => setShowCloudStoragePanel(false)}
+        />
 
         <footer className="footer">
           <p>

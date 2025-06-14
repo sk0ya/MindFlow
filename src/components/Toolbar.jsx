@@ -14,7 +14,8 @@ const Toolbar = ({
   onZoomReset,
   theme,
   onThemeChange,
-  onShowLayoutPanel
+  onShowLayoutPanel,
+  onShowCloudStoragePanel
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -125,6 +126,17 @@ const Toolbar = ({
                 <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2"/>
               </svg>
               レイアウト
+            </button>
+            
+            <button
+              onClick={onShowCloudStoragePanel}
+              className="btn btn-feature"
+              title="クラウドストレージ設定"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              クラウド
             </button>
           </div>
 

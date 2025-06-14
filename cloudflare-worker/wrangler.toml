@@ -1,0 +1,15 @@
+name = "mindflow-api"
+main = "src/index.js"
+compatibility_date = "2023-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mindflow-db"
+database_id = ""
+
+[vars]
+CORS_ORIGIN = "http://localhost:3000"
+
+[[env.production]]
+name = "mindflow-api-prod"
+vars = { CORS_ORIGIN = "https://your-domain.com" }
