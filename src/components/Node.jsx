@@ -19,6 +19,9 @@ const Node = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isComposing, setIsComposing] = useState(false);
+  const inputRef = useRef(null);
+  const blurTimeoutRef = useRef(null);
 
   const handleMouseDown = useCallback((e) => {
     e.stopPropagation();
@@ -66,11 +69,35 @@ const Node = ({
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // 編集モードが終了した時にIME状態をリセット
+  useEffect(() => {
+    if (!isEditing) {
+      setIsComposing(false);
+      // タイマーもクリア
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    }
+  }, [isEditing]);
+
+  // コンポーネントのアンマウント時のクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleClick = useCallback((e) => {
     e.stopPropagation();
     e.preventDefault();
-    onSelect(node.id);
-  }, [node.id, onSelect]);
+    // 編集中でない場合のみ選択
+    if (!isEditing) {
+      onSelect(node.id);
+    }
+  }, [node.id, onSelect, isEditing]);
 
   const handleDoubleClick = useCallback((e) => {
     e.stopPropagation();
@@ -86,20 +113,60 @@ const Node = ({
     }
   }, [node.id, onRightClick]);
 
-  const handleKeyDown = useCallback((e) => {
-    e.stopPropagation();
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      onFinishEdit(node.id, editText);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      onFinishEdit(node.id, node.text);
+  // 編集終了を即座に実行する関数
+  const finishEditImmediately = useCallback(() => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
     }
-  }, [node.id, node.text, editText, onFinishEdit]);
-
-  const handleInputBlur = useCallback(() => {
     onFinishEdit(node.id, editText);
   }, [node.id, editText, onFinishEdit]);
+
+  const handleKeyDown = useCallback((e) => {
+    e.stopPropagation();
+    
+    // IME変換中は何もしない
+    if (isComposing) {
+      return;
+    }
+    
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      finishEditImmediately();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Escapeの場合は元のテキストに戻す
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      onFinishEdit(node.id, node.text);
+    }
+  }, [node.id, node.text, finishEditImmediately, isComposing]);
+
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true);
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    setIsComposing(false);
+  }, []);
+
+  const handleInputBlur = useCallback((e) => {
+    // IME変換中でない場合のみ編集を終了
+    if (!isComposing) {
+      // 既存のタイマーをクリア
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+      
+      // 短い遅延で編集を終了（マウスクリック等との競合を避ける）
+      blurTimeoutRef.current = setTimeout(() => {
+        onFinishEdit(node.id, editText);
+        blurTimeoutRef.current = null;
+      }, 50);
+    }
+  }, [node.id, editText, onFinishEdit, isComposing]);
 
   const nodeWidth = Math.max(120, node.text.length * 8);
   const nodeHeight = 40;
@@ -138,10 +205,13 @@ const Node = ({
           height="20"
         >
           <input
+            ref={inputRef}
             type="text"
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onBlur={handleInputBlur}
             autoFocus
             style={{
@@ -256,7 +326,7 @@ Node.propTypes = {
     text: PropTypes.string.isRequired,
     x: PropTypes.number.isRequired,
     y: PropTypes.number.isRequired,
-    fontSize: PropTypes.string,
+    fontSize: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     fontWeight: PropTypes.string,
     fontStyle: PropTypes.string
   }).isRequired,

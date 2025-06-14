@@ -161,6 +161,7 @@ const MindMapCanvas = ({
 
   const handleKeyDown = useCallback((e) => {
     if (selectedNodeId && !editingNodeId) {
+      // 特殊キーの処理
       switch (e.key) {
         case 'Tab':
           e.preventDefault();
@@ -182,6 +183,18 @@ const MindMapCanvas = ({
           break;
         case 'Escape':
           onSelectNode(null);
+          break;
+        case 'Process':
+          // IME変換中は何もしない
+          break;
+        default:
+          // 通常の文字入力の場合は編集モードに入る
+          // 単一文字、かつ修飾キーが押されていない場合
+          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            // 空文字で編集モードに入る（文字入力はinput要素に任せる）
+            onStartEdit(selectedNodeId, true);
+          }
           break;
       }
     }

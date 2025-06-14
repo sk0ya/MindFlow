@@ -185,11 +185,11 @@ export const useMindMap = () => {
   };
 
   // 編集開始
-  const startEdit = (nodeId) => {
+  const startEdit = (nodeId, clearText = false) => {
     const node = findNode(nodeId);
     if (node) {
       setEditingNodeId(nodeId);
-      setEditText(node.text);
+      setEditText(clearText ? '' : node.text);
       setSelectedNodeId(nodeId);
     }
   };
