@@ -49,7 +49,9 @@ const MindMapApp = () => {
     renameMindMap,
     deleteMindMapById,
     switchToMap,
-    refreshAllMindMaps
+    refreshAllMindMaps,
+    changeMapCategory,
+    getAvailableCategories
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -314,14 +316,15 @@ const MindMapApp = () => {
     switchToMap(mapId);
   };
 
-  const handleCreateMap = (providedName = null) => {
+  const handleCreateMap = (providedName = null, providedCategory = null) => {
     let mapName = providedName;
     if (!mapName) {
       mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
     }
     
     if (mapName && mapName.trim()) {
-      const mapId = createMindMap(mapName.trim());
+      const category = providedCategory || '未分類';
+      const mapId = createMindMap(mapName.trim(), category);
       return mapId;
     }
     return null;
@@ -337,6 +340,10 @@ const MindMapApp = () => {
 
   const handleRenameMap = (mapId, newTitle) => {
     renameMindMap(mapId, newTitle);
+  };
+
+  const handleChangeCategory = (mapId, newCategory) => {
+    changeMapCategory(mapId, newCategory);
   };
 
   useEffect(() => {
@@ -359,6 +366,8 @@ const MindMapApp = () => {
         onCreateMap={handleCreateMap}
         onDeleteMap={handleDeleteMap}
         onRenameMap={handleRenameMap}
+        onChangeCategory={handleChangeCategory}
+        availableCategories={getAvailableCategories()}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
       />

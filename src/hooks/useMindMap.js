@@ -630,10 +630,11 @@ export const useMindMap = () => {
     setAllMindMaps(getAllMindMaps());
   };
 
-  const createMindMap = (title = '新しいマインドマップ') => {
+  const createMindMap = (title = '新しいマインドマップ', category = '未分類') => {
     const newMap = createNewMindMap(title);
     // メイントピックをマップ名に基づいて設定
     newMap.rootNode.text = title;
+    newMap.category = category;
     
     // 更新されたマップを保存
     saveMindMap(newMap);
@@ -677,6 +678,35 @@ export const useMindMap = () => {
     }
     
     return true;
+  };
+
+  const changeMapCategory = (mapId, newCategory) => {
+    const allMaps = getAllMindMaps();
+    const mapIndex = allMaps.findIndex(map => map.id === mapId);
+    
+    if (mapIndex !== -1) {
+      const updatedMap = { ...allMaps[mapIndex], category: newCategory, updatedAt: new Date().toISOString() };
+      allMaps[mapIndex] = updatedMap;
+      
+      // ストレージに保存
+      saveMindMap(updatedMap);
+      refreshAllMindMaps();
+      
+      // 現在編集中のマップの場合はデータを更新
+      if (mapId === currentMapId) {
+        setData(prev => ({ ...prev, category: newCategory }));
+      }
+    }
+  };
+
+  const getAvailableCategories = () => {
+    const categories = new Set(['未分類']);
+    allMindMaps.forEach(map => {
+      if (map.category && map.category.trim()) {
+        categories.add(map.category);
+      }
+    });
+    return Array.from(categories).sort();
   };
 
   const switchToMap = (mapId, selectRoot = false) => {
@@ -767,6 +797,10 @@ export const useMindMap = () => {
     renameMindMap,
     deleteMindMapById,
     switchToMap,
-    refreshAllMindMaps
+    refreshAllMindMaps,
+    
+    // カテゴリー管理
+    changeMapCategory,
+    getAvailableCategories
   };
 };

@@ -8,11 +8,17 @@ const MindMapSidebar = ({
   onCreateMap, 
   onDeleteMap,
   onRenameMap,
+  onChangeCategory,
+  availableCategories,
   isCollapsed,
   onToggleCollapse 
 }) => {
   const [editingMapId, setEditingMapId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
+  const [draggedMap, setDraggedMap] = useState(null);
+  const [dragOverCategory, setDragOverCategory] = useState(null);
 
   const handleStartRename = useCallback((mapId, currentTitle) => {
     setEditingMapId(mapId);
@@ -65,6 +71,73 @@ const MindMapSidebar = ({
     return count(rootNode);
   };
 
+  // フィルター機能
+  const filteredMindMaps = mindMaps.filter(map => {
+    const searchLower = searchTerm.toLowerCase();
+    const titleMatch = map.title.toLowerCase().includes(searchLower);
+    const categoryMatch = (map.category || '未分類').toLowerCase().includes(searchLower);
+    return titleMatch || categoryMatch;
+  });
+
+  // カテゴリー別にグループ化
+  const groupedMaps = filteredMindMaps.reduce((groups, map) => {
+    const category = map.category || '未分類';
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(map);
+    return groups;
+  }, {});
+
+  // カテゴリー折りたたみトグル
+  const toggleCategoryCollapse = (category) => {
+    const newCollapsed = new Set(collapsedCategories);
+    if (newCollapsed.has(category)) {
+      newCollapsed.delete(category);
+    } else {
+      newCollapsed.add(category);
+    }
+    setCollapsedCategories(newCollapsed);
+  };
+
+  // ドラッグ&ドロップ機能
+  const handleDragStart = (e, map) => {
+    setDraggedMap(map);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, category) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCategory(category);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverCategory(null);
+    }
+  };
+
+  const handleDrop = (e, category) => {
+    e.preventDefault();
+    if (draggedMap && draggedMap.category !== category) {
+      onChangeCategory(draggedMap.id, category);
+    }
+    setDraggedMap(null);
+    setDragOverCategory(null);
+  };
+
+  // 新しいカテゴリー作成
+  const handleCreateCategory = () => {
+    const newCategory = prompt('新しいカテゴリー名を入力してください:', '');
+    if (newCategory && newCategory.trim()) {
+      const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+      if (mapName && mapName.trim()) {
+        onCreateMap(mapName.trim(), newCategory.trim());
+      }
+    }
+  };
+
   if (isCollapsed) {
     return (
       <div className="mindmap-sidebar collapsed">
@@ -88,6 +161,13 @@ const MindMapSidebar = ({
             title="新しいマインドマップ"
           >
             +
+          </button>
+          <button 
+            className="action-button category"
+            onClick={handleCreateCategory}
+            title="新しいカテゴリー"
+          >
+            📁
           </button>
         </div>
 
@@ -155,6 +235,14 @@ const MindMapSidebar = ({
             background: #2d8a47;
             transform: scale(1.05);
           }
+
+          .action-button.category {
+            background: #ff9800;
+          }
+
+          .action-button.category:hover {
+            background: #f57c00;
+          }
         `}</style>
       </div>
     );
@@ -178,6 +266,13 @@ const MindMapSidebar = ({
             +
           </button>
           <button 
+            className="action-button category"
+            onClick={handleCreateCategory}
+            title="新しいカテゴリー"
+          >
+            📁
+          </button>
+          <button 
             className="toggle-button"
             onClick={onToggleCollapse}
             aria-label="サイドバーを折りたたむ"
@@ -187,87 +282,127 @@ const MindMapSidebar = ({
         </div>
       </div>
 
-      <div className="maps-list">
-        {mindMaps.map(map => (
-          <div 
-            key={map.id}
-            className={`map-item ${currentMapId === map.id ? 'active' : ''}`}
-          >
-            <div 
-              className="map-content"
-              onClick={() => onSelectMap(map.id)}
-            >
-              <div className="map-main">
-                {editingMapId === map.id ? (
-                  <input
-                    type="text"
-                    value={editingTitle}
-                    onChange={(e) => setEditingTitle(e.target.value)}
-                    onBlur={() => handleFinishRename(map.id)}
-                    onKeyDown={(e) => handleKeyDown(e, map.id)}
-                    className="title-input"
-                    autoFocus
-                  />
-                ) : (
-                  <h3 className="map-title" title={map.title}>
-                    {map.title.length > 20 ? map.title.substring(0, 20) + '...' : map.title}
-                  </h3>
-                )}
-                
-                <div className="map-info">
-                  <span className="node-count">{getNodeCount(map.rootNode)} ノード</span>
-                  <span className="update-date">{formatDate(map.updatedAt)}</span>
-                </div>
-              </div>
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="マップ・カテゴリーで検索..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
 
-              {currentMapId === map.id && (
-                <div className="active-indicator">●</div>
+      <div className="maps-list">
+        {Object.keys(groupedMaps).length === 0 ? (
+          <div className="empty-state">
+            {searchTerm ? (
+              <p>「{searchTerm}」に一致するマップが見つかりません</p>
+            ) : (
+              <>
+                <p>マインドマップがありません</p>
+                <button 
+                  className="create-first-button"
+                  onClick={() => {
+                    const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+                    if (mapName && mapName.trim()) {
+                      onCreateMap(mapName.trim());
+                    }
+                  }}
+                >
+                  最初のマップを作成
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+          Object.entries(groupedMaps).map(([category, maps]) => (
+            <div key={category} className="category-group">
+              <div 
+                className={`category-header ${dragOverCategory === category ? 'drag-over' : ''}`}
+                onClick={() => toggleCategoryCollapse(category)}
+                onDragOver={(e) => handleDragOver(e, category)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, category)}
+              >
+                <span className="category-toggle">
+                  {collapsedCategories.has(category) ? '▶' : '▼'}
+                </span>
+                <span className="category-name">{category}</span>
+                <span className="category-count">({maps.length})</span>
+              </div>
+              
+              {!collapsedCategories.has(category) && (
+                <div className="category-maps">
+                  {maps.map(map => (
+                    <div 
+                      key={map.id}
+                      className={`map-item ${currentMapId === map.id ? 'active' : ''} ${draggedMap?.id === map.id ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, map)}
+                    >
+                      <div 
+                        className="map-content"
+                        onClick={() => onSelectMap(map.id)}
+                      >
+                        <div className="map-main">
+                          {editingMapId === map.id ? (
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onBlur={() => handleFinishRename(map.id)}
+                              onKeyDown={(e) => handleKeyDown(e, map.id)}
+                              className="title-input"
+                              autoFocus
+                            />
+                          ) : (
+                            <h3 className="map-title" title={map.title}>
+                              {map.title.length > 18 ? map.title.substring(0, 18) + '...' : map.title}
+                            </h3>
+                          )}
+                          
+                          <div className="map-info">
+                            <span className="node-count">{getNodeCount(map.rootNode)} ノード</span>
+                            <span className="update-date">{formatDate(map.updatedAt)}</span>
+                          </div>
+                        </div>
+
+                        {currentMapId === map.id && (
+                          <div className="active-indicator">●</div>
+                        )}
+                      </div>
+
+                      <div className="map-actions">
+                        <button
+                          className="action-btn rename"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartRename(map.id, map.title);
+                          }}
+                          title="名前を変更"
+                        >
+                          ✏️
+                        </button>
+                        
+                        <button
+                          className="action-btn delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`「${map.title}」を削除しますか？`)) {
+                              onDeleteMap(map.id);
+                            }
+                          }}
+                          title="削除"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            <div className="map-actions">
-              <button
-                className="action-btn rename"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartRename(map.id, map.title);
-                }}
-                title="名前を変更"
-              >
-                ✏️
-              </button>
-              
-              <button
-                className="action-btn delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`「${map.title}」を削除しますか？`)) {
-                    onDeleteMap(map.id);
-                  }
-                }}
-                title="削除"
-              >
-                🗑️
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {mindMaps.length === 0 && (
-          <div className="empty-state">
-            <p>マインドマップがありません</p>
-            <button 
-              className="create-first-button"
-              onClick={() => {
-                const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
-                if (mapName && mapName.trim()) {
-                  onCreateMap(mapName.trim());
-                }
-              }}
-            >
-              最初のマップを作成
-            </button>
-          </div>
+          ))
         )}
       </div>
 
@@ -304,8 +439,16 @@ const MindMapSidebar = ({
 
         .header-actions {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           align-items: center;
+        }
+
+        .action-button.category {
+          background: #ff9800;
+        }
+
+        .action-button.category:hover {
+          background: #f57c00;
         }
 
         .action-button {
@@ -349,10 +492,78 @@ const MindMapSidebar = ({
           transform: scale(1.05);
         }
 
+        .search-container {
+          padding: 12px;
+          border-bottom: 1px solid #e1e5e9;
+        }
+
+        .search-input {
+          width: 100%;
+          border: 1px solid #e1e5e9;
+          border-radius: 6px;
+          padding: 8px 12px;
+          font-size: 13px;
+          outline: none;
+          transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+          border-color: #4285f4;
+        }
+
         .maps-list {
           flex: 1;
           overflow-y: auto;
-          padding: 12px;
+          padding: 8px;
+        }
+
+        .category-group {
+          margin-bottom: 8px;
+        }
+
+        .category-header {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          background: #f5f5f5;
+          border: 1px solid #e1e5e9;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          margin-bottom: 4px;
+        }
+
+        .category-header:hover {
+          background: #e8f4f8;
+          border-color: #4285f4;
+        }
+
+        .category-header.drag-over {
+          background: #fff3cd;
+          border-color: #ffc107;
+          box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+        }
+
+        .category-toggle {
+          margin-right: 8px;
+          font-size: 12px;
+          color: #666;
+        }
+
+        .category-name {
+          flex: 1;
+          font-weight: 500;
+          color: #333;
+          font-size: 14px;
+        }
+
+        .category-count {
+          color: #666;
+          font-size: 12px;
+        }
+
+        .category-maps {
+          margin-left: 16px;
         }
 
         .map-item {
@@ -374,6 +585,11 @@ const MindMapSidebar = ({
           border-color: #4285f4;
           background: #f8f9ff;
           box-shadow: 0 2px 12px rgba(66, 133, 244, 0.15);
+        }
+
+        .map-item.dragging {
+          opacity: 0.5;
+          transform: scale(0.95);
         }
 
         .map-content {
@@ -538,6 +754,7 @@ MindMapSidebar.propTypes = {
   mindMaps: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.string.isRequired,
     title: PropTypes.string.isRequired,
+    category: PropTypes.string,
     rootNode: PropTypes.object.isRequired,
     updatedAt: PropTypes.string.isRequired
   })).isRequired,
@@ -546,6 +763,8 @@ MindMapSidebar.propTypes = {
   onCreateMap: PropTypes.func.isRequired,
   onDeleteMap: PropTypes.func.isRequired,
   onRenameMap: PropTypes.func.isRequired,
+  onChangeCategory: PropTypes.func.isRequired,
+  availableCategories: PropTypes.arrayOf(PropTypes.string).isRequired,
   isCollapsed: PropTypes.bool.isRequired,
   onToggleCollapse: PropTypes.func.isRequired
 };

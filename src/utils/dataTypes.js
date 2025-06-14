@@ -39,6 +39,7 @@ export const generateId = () => {
 export const createInitialData = () => ({
   id: generateId(),
   title: '新しいマインドマップ',
+  category: '未分類',
   theme: 'default',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
