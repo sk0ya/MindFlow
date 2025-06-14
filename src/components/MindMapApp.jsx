@@ -314,9 +314,17 @@ const MindMapApp = () => {
     switchToMap(mapId);
   };
 
-  const handleCreateMap = () => {
-    const mapId = createMindMap();
-    return mapId;
+  const handleCreateMap = (providedName = null) => {
+    let mapName = providedName;
+    if (!mapName) {
+      mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+    }
+    
+    if (mapName && mapName.trim()) {
+      const mapId = createMindMap(mapName.trim());
+      return mapId;
+    }
+    return null;
   };
 
   const handleDeleteMap = (mapId) => {

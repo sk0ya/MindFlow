@@ -632,8 +632,14 @@ export const useMindMap = () => {
 
   const createMindMap = (title = '新しいマインドマップ') => {
     const newMap = createNewMindMap(title);
+    // メイントピックをマップ名に基づいて設定
+    newMap.rootNode.text = title;
+    
+    // 更新されたマップを保存
+    saveMindMap(newMap);
     refreshAllMindMaps();
-    switchToMap(newMap.id);
+    // 新規作成時はルートノードを選択
+    switchToMap(newMap.id, true);
     return newMap.id;
   };
 
@@ -673,7 +679,7 @@ export const useMindMap = () => {
     return true;
   };
 
-  const switchToMap = (mapId) => {
+  const switchToMap = (mapId, selectRoot = false) => {
     const allMaps = getAllMindMaps();
     const targetMap = allMaps.find(map => map.id === mapId);
     
@@ -687,7 +693,12 @@ export const useMindMap = () => {
       setCurrentMapId(mapId);
       
       // 編集状態をリセット
-      setSelectedNodeId(null);
+      if (selectRoot) {
+        // 新規作成時はルートノードを選択
+        setSelectedNodeId('root');
+      } else {
+        setSelectedNodeId(null);
+      }
       setEditingNodeId(null);
       setEditText('');
       

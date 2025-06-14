@@ -79,7 +79,12 @@ const MindMapSidebar = ({
         <div className="collapsed-actions">
           <button 
             className="action-button create"
-            onClick={onCreateMap}
+            onClick={() => {
+              const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+              if (mapName && mapName.trim()) {
+                onCreateMap(mapName.trim());
+              }
+            }}
             title="新しいマインドマップ"
           >
             +
@@ -162,7 +167,12 @@ const MindMapSidebar = ({
         <div className="header-actions">
           <button 
             className="action-button create"
-            onClick={onCreateMap}
+            onClick={() => {
+              const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+              if (mapName && mapName.trim()) {
+                onCreateMap(mapName.trim());
+              }
+            }}
             title="新しいマインドマップ"
           >
             +
@@ -248,7 +258,12 @@ const MindMapSidebar = ({
             <p>マインドマップがありません</p>
             <button 
               className="create-first-button"
-              onClick={onCreateMap}
+              onClick={() => {
+                const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+                if (mapName && mapName.trim()) {
+                  onCreateMap(mapName.trim());
+                }
+              }}
             >
               最初のマップを作成
             </button>
