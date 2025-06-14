@@ -5,10 +5,13 @@ const Node = ({
   node,
   isSelected,
   isEditing,
+  isDragTarget,
   onSelect,
   onStartEdit,
   onFinishEdit,
-  onDrag,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
   onAddChild,
   onDelete,
   onRightClick,
@@ -39,12 +42,26 @@ const Node = ({
         x: svgX - node.x,
         y: svgY - node.y
       });
+      
+      // ドラッグ開始を通知
+      if (onDragStart) {
+        onDragStart(node.id);
+      }
     }
     
     onSelect(node.id);
-  }, [node.x, node.y, node.id, onSelect, zoom, svgRef]);
+  }, [node.x, node.y, node.id, onSelect, onDragStart, zoom, svgRef]);
 
   const handleMouseMove = useCallback((e) => {
+    if (isDragging) {
+      // ドラッグ中の位置を通知（ドロップターゲット検出用）
+      if (onDragMove) {
+        onDragMove(e.clientX, e.clientY);
+      }
+    }
+  }, [isDragging, onDragMove]);
+
+  const handleMouseUp = useCallback((e) => {
     if (isDragging && svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
       const svgX = (e.clientX - svgRect.left) / zoom;
@@ -52,13 +69,14 @@ const Node = ({
       
       const newX = svgX - dragStart.x;
       const newY = svgY - dragStart.y;
-      onDrag(node.id, newX, newY);
+      
+      // ドラッグ終了を通知（親要素変更またはノード移動）
+      if (onDragEnd) {
+        onDragEnd(node.id, newX, newY);
+      }
     }
-  }, [isDragging, dragStart, node.id, onDrag, zoom, svgRef]);
-
-  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  }, []);
+  }, [isDragging, dragStart, node.id, onDragEnd, zoom, svgRef]);
 
   useEffect(() => {
     if (isDragging) {
@@ -200,8 +218,9 @@ const Node = ({
         width={nodeWidth}
         height={nodeHeight}
         fill="white"
-        stroke={isSelected ? "#4285f4" : "#ddd"}
-        strokeWidth={isSelected ? "2" : "1"}
+        stroke={isDragTarget ? "#ff9800" : (isSelected ? "#4285f4" : "#ddd")}
+        strokeWidth={isDragTarget ? "3" : (isSelected ? "2" : "1")}
+        strokeDasharray={isDragTarget ? "5,5" : "none"}
         rx="8"
         ry="8"
         role="button"
@@ -210,7 +229,9 @@ const Node = ({
         aria-selected={isSelected}
         style={{
           cursor: isDragging ? 'grabbing' : 'grab',
-          filter: isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))'
+          filter: isDragTarget 
+            ? 'drop-shadow(0 4px 12px rgba(255,152,0,0.3))' 
+            : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))')
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
@@ -492,10 +513,13 @@ Node.propTypes = {
   }).isRequired,
   isSelected: PropTypes.bool.isRequired,
   isEditing: PropTypes.bool.isRequired,
+  isDragTarget: PropTypes.bool,
   onSelect: PropTypes.func.isRequired,
   onStartEdit: PropTypes.func.isRequired,
   onFinishEdit: PropTypes.func.isRequired,
-  onDrag: PropTypes.func.isRequired,
+  onDragStart: PropTypes.func,
+  onDragMove: PropTypes.func,
+  onDragEnd: PropTypes.func,
   onAddChild: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onRightClick: PropTypes.func,

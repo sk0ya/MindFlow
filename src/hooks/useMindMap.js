@@ -363,6 +363,72 @@ export const useMindMap = () => {
     updateNode(nodeId, { x, y });
   };
 
+  // ノードの親を変更
+  const changeParent = (nodeId, newParentId) => {
+    if (nodeId === 'root' || nodeId === newParentId) return false;
+    
+    // 新しい親が現在のノードの子孫でないかチェック（循環参照防止）
+    const isDescendant = (parentId, childId) => {
+      const parent = findNode(parentId);
+      if (!parent || !parent.children) return false;
+      
+      return parent.children.some(child => 
+        child.id === childId || isDescendant(child.id, childId)
+      );
+    };
+    
+    if (isDescendant(nodeId, newParentId)) {
+      console.warn('循環参照が発生するため、親要素を変更できません');
+      return false;
+    }
+    
+    const nodeToMove = findNode(nodeId);
+    const newParent = findNode(newParentId);
+    
+    if (!nodeToMove || !newParent) return false;
+    
+    // 現在の親から削除
+    const removeFromParent = (node) => {
+      return {
+        ...node,
+        children: (node.children || [])
+          .filter(child => child.id !== nodeId)
+          .map(removeFromParent)
+      };
+    };
+    
+    // 新しい親に追加（色を新しい親に合わせて更新）
+    const addToNewParent = (node) => {
+      if (node.id === newParentId) {
+        const childrenCount = node.children?.length || 0;
+        const updatedNode = {
+          ...nodeToMove,
+          color: getNodeColor(newParent, childrenCount)
+        };
+        
+        return {
+          ...node,
+          children: [...(node.children || []), updatedNode]
+        };
+      }
+      return {
+        ...node,
+        children: node.children?.map(addToNewParent) || []
+      };
+    };
+    
+    let newRootNode = removeFromParent(data.rootNode);
+    newRootNode = addToNewParent(newRootNode);
+    
+    // 自動レイアウトを適用
+    if (data.settings?.autoLayout !== false) {
+      newRootNode = applyAutoLayout(newRootNode);
+    }
+    
+    updateData({ ...data, rootNode: newRootNode });
+    return true;
+  };
+
   // 編集開始
   const startEdit = (nodeId, clearText = false) => {
     const node = findNode(nodeId);
@@ -492,6 +558,7 @@ export const useMindMap = () => {
     addSiblingNode,
     deleteNode,
     dragNode,
+    changeParent,
     findNode,
     findParentNode,
     flattenNodes,

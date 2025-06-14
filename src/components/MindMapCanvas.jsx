@@ -1,4 +1,4 @@
-﻿import React, { useRef, useCallback, useEffect } from 'react';
+﻿import React, { useRef, useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Node from './Node';
 import Connection from './Connection';
@@ -13,6 +13,7 @@ const MindMapCanvas = ({
   onStartEdit,
   onFinishEdit,
   onDragNode,
+  onChangeParent,
   onAddChild,
   onAddSibling,
   onDeleteNode,
@@ -29,6 +30,11 @@ const MindMapCanvas = ({
   const svgRef = useRef(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
+  const [dragState, setDragState] = useState({
+    isDragging: false,
+    draggedNodeId: null,
+    dropTargetId: null
+  });
 
   const flattenVisibleNodes = (node) => {
     const result = [node];
@@ -41,6 +47,76 @@ const MindMapCanvas = ({
   };
   
   const allNodes = flattenVisibleNodes(data.rootNode);
+  
+  // ドロップターゲット検出のためのヘルパー関数
+  const getNodeAtPosition = useCallback((x, y) => {
+    // SVG座標系での位置を取得
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    if (!svgRect) return null;
+    
+    // マウス座標をSVG内座標に変換（zoom, panを考慮）
+    const svgX = ((x - svgRect.left) / zoom) - pan.x;
+    const svgY = ((y - svgRect.top) / zoom) - pan.y;
+    
+    // 各ノードとの距離を計算して最も近いものを見つける
+    let closestNode = null;
+    let minDistance = Infinity;
+    const maxDropDistance = 80; // ドロップ可能な最大距離を増加
+    
+    allNodes.forEach(node => {
+      if (node.id === dragState.draggedNodeId) return; // 自分自身は除外
+      
+      const distance = Math.sqrt(
+        Math.pow(node.x - svgX, 2) + Math.pow(node.y - svgY, 2)
+      );
+      
+      if (distance < maxDropDistance && distance < minDistance) {
+        minDistance = distance;
+        closestNode = node;
+      }
+    });
+    
+    return closestNode;
+  }, [allNodes, zoom, pan, dragState.draggedNodeId]);
+
+  // ドラッグ開始時の処理
+  const handleDragStart = useCallback((nodeId) => {
+    setDragState({
+      isDragging: true,
+      draggedNodeId: nodeId,
+      dropTargetId: null
+    });
+  }, []);
+
+  // ドラッグ中の処理
+  const handleDragMove = useCallback((x, y) => {
+    if (!dragState.isDragging) return;
+    
+    const targetNode = getNodeAtPosition(x, y);
+    setDragState(prev => ({
+      ...prev,
+      dropTargetId: targetNode?.id || null
+    }));
+  }, [dragState.isDragging, getNodeAtPosition]);
+
+  // ドラッグ終了時の処理
+  const handleDragEnd = useCallback((nodeId, x, y) => {
+    if (dragState.dropTargetId && dragState.dropTargetId !== nodeId) {
+      // 親要素を変更
+      if (onChangeParent) {
+        onChangeParent(nodeId, dragState.dropTargetId);
+      }
+    } else {
+      // 通常の位置移動
+      onDragNode(nodeId, x, y);
+    }
+    
+    setDragState({
+      isDragging: false,
+      draggedNodeId: null,
+      dropTargetId: null
+    });
+  }, [dragState.dropTargetId, onChangeParent, onDragNode]);
   
   const connections = [];
   allNodes.forEach(node => {
@@ -292,10 +368,13 @@ const MindMapCanvas = ({
                 node={node}
                 isSelected={selectedNodeId === node.id}
                 isEditing={editingNodeId === node.id}
+                isDragTarget={dragState.dropTargetId === node.id}
                 onSelect={handleNodeSelect}
                 onStartEdit={onStartEdit}
                 onFinishEdit={onFinishEdit}
-                onDrag={onDragNode}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
                 onAddChild={onAddChild}
                 onDelete={onDeleteNode}
                 onRightClick={onRightClick}
@@ -394,6 +473,7 @@ MindMapCanvas.propTypes = {
   onStartEdit: PropTypes.func.isRequired,
   onFinishEdit: PropTypes.func.isRequired,
   onDragNode: PropTypes.func.isRequired,
+  onChangeParent: PropTypes.func,
   onAddChild: PropTypes.func.isRequired,
   onAddSibling: PropTypes.func.isRequired,
   onDeleteNode: PropTypes.func.isRequired,

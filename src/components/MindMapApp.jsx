@@ -23,6 +23,7 @@ const MindMapApp = () => {
     addSiblingNode,
     deleteNode,
     dragNode,
+    changeParent,
     findNode,
     flattenNodes,
     startEdit,
@@ -267,6 +268,7 @@ const MindMapApp = () => {
             onStartEdit={startEdit}
             onFinishEdit={finishEdit}
             onDragNode={dragNode}
+            onChangeParent={changeParent}
             onAddChild={handleAddChild}
             onAddSibling={handleAddSibling}
             onDeleteNode={deleteNode}
