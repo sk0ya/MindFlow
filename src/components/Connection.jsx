@@ -45,11 +45,14 @@ const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeI
           <circle
             cx={to.x}
             cy={to.y}
-            r="8"
+            r="12"
             fill={isCollapsed ? "#ff9800" : "#34a853"}
-            stroke="black"
+            stroke="white"
             strokeWidth="2"
-            style={{ cursor: 'pointer' }}
+            style={{ 
+              cursor: 'pointer',
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
+            }}
             onClick={(e) => {
               e.stopPropagation();
               onToggleCollapse(nodeId);
@@ -57,10 +60,10 @@ const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeI
           />
           <text
             x={to.x}
-            y={to.y + 3}
+            y={to.y + 4}
             textAnchor="middle"
             fill="white"
-            fontSize="10"
+            fontSize="14"
             fontWeight="bold"
             style={{ pointerEvents: 'none' }}
           >

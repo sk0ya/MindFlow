@@ -416,8 +416,8 @@ const Node = ({
         <g>
           <circle
             cx={node.x - 35}
-            cy={node.y + nodeHeight / 2 + 12}
-            r="8"
+            cy={node.y + nodeHeight / 2 + 15}
+            r="12"
             fill="#4285f4"
             stroke="white"
             strokeWidth="2"
@@ -426,7 +426,7 @@ const Node = ({
             aria-label="Add child node"
             style={{ 
               cursor: 'pointer',
-              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -435,10 +435,10 @@ const Node = ({
           />
           <text
             x={node.x - 35}
-            y={node.y + nodeHeight / 2 + 12 + 3}
+            y={node.y + nodeHeight / 2 + 15 + 4}
             textAnchor="middle"
             fill="white"
-            fontSize="12"
+            fontSize="16"
             fontWeight="bold"
             style={{ pointerEvents: 'none' }}
           >
@@ -447,9 +447,9 @@ const Node = ({
           
           {/* ファイルアップロードボタン */}
           <circle
-            cx={node.x - 15}
-            cy={node.y + nodeHeight / 2 + 12}
-            r="8"
+            cx={node.x - 10}
+            cy={node.y + nodeHeight / 2 + 15}
+            r="12"
             fill="#34a853"
             stroke="white"
             strokeWidth="2"
@@ -458,7 +458,7 @@ const Node = ({
             aria-label="Upload file"
             style={{ 
               cursor: 'pointer',
-              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -470,11 +470,11 @@ const Node = ({
             }}
           />
           <text
-            x={node.x - 15}
-            y={node.y + nodeHeight / 2 + 12 + 3}
+            x={node.x - 10}
+            y={node.y + nodeHeight / 2 + 15 + 4}
             textAnchor="middle"
             fill="white"
-            fontSize="10"
+            fontSize="14"
             fontWeight="bold"
             style={{ pointerEvents: 'none' }}
           >
@@ -485,8 +485,8 @@ const Node = ({
             <>
               <circle
                 cx={node.x + 15}
-                cy={node.y + nodeHeight / 2 + 12}
-                r="8"
+                cy={node.y + nodeHeight / 2 + 15}
+                r="12"
                 fill="#ea4335"
                 stroke="white"
                 strokeWidth="2"
@@ -495,7 +495,7 @@ const Node = ({
                 aria-label="Delete node"
                 style={{ 
                   cursor: 'pointer',
-                  filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
+                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -504,10 +504,10 @@ const Node = ({
               />
               <text
                 x={node.x + 15}
-                y={node.y + nodeHeight / 2 + 12 + 3}
+                y={node.y + nodeHeight / 2 + 15 + 4}
                 textAnchor="middle"
                 fill="white"
-                fontSize="12"
+                fontSize="16"
                 fontWeight="bold"
                 style={{ pointerEvents: 'none' }}
               >
