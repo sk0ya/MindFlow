@@ -17,6 +17,7 @@ const Node = ({
   onRightClick,
   onFileUpload,
   onRemoveFile,
+  onShowImageModal,
   editText,
   setEditText,
   zoom,
@@ -203,6 +204,14 @@ const Node = ({
       onRemoveFile(node.id, fileId);
     }
   }, [node.id, onRemoveFile]);
+
+  const handleImageDoubleClick = useCallback((e, file) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onShowImageModal && file.isImage) {
+      onShowImageModal(file);
+    }
+  }, [onShowImageModal]);
   
   // ノードのサイズ計算（画像を考慮）
   const hasImages = node.attachments && node.attachments.some(file => file.isImage);
@@ -262,8 +271,10 @@ const Node = ({
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover'
+                  objectFit: 'cover',
+                  cursor: 'pointer'
                 }}
+                onDoubleClick={(e) => handleImageDoubleClick(e, file)}
               />
               {isSelected && (
                 <button
@@ -525,6 +536,7 @@ Node.propTypes = {
   onRightClick: PropTypes.func,
   onFileUpload: PropTypes.func.isRequired,
   onRemoveFile: PropTypes.func.isRequired,
+  onShowImageModal: PropTypes.func.isRequired,
   editText: PropTypes.string.isRequired,
   setEditText: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,

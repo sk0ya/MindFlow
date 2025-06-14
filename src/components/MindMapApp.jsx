@@ -6,6 +6,7 @@ import NodeCustomizationPanel from './NodeCustomizationPanel';
 import ContextMenu from './ContextMenu';
 import LayoutPanel from './LayoutPanel';
 import ErrorBoundary from './ErrorBoundary';
+import ImageModal from './ImageModal';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -49,6 +50,8 @@ const MindMapApp = () => {
   const [showLayoutPanel, setShowLayoutPanel] = useState(false);
   const [layoutPanelPosition, setLayoutPanelPosition] = useState({ x: 100, y: 100 });
   const [clipboard, setClipboard] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImage, setModalImage] = useState(null);
 
   const handleZoomReset = () => {
     setZoom(1);
@@ -205,6 +208,19 @@ const MindMapApp = () => {
     setShowCustomizationPanel(false);
     setShowContextMenu(false);
     setShowLayoutPanel(false);
+    setShowImageModal(false);
+  };
+
+  const handleShowImageModal = (image) => {
+    setModalImage(image);
+    setShowImageModal(true);
+    handleCloseAllPanels();
+    setShowImageModal(true); // 再度trueにして画像モーダルだけ表示
+  };
+
+  const handleCloseImageModal = () => {
+    setShowImageModal(false);
+    setModalImage(null);
   };
 
   const handleFileUpload = async (nodeId, files) => {
@@ -277,6 +293,7 @@ const MindMapApp = () => {
             onNavigateToDirection={navigateToDirection}
             onFileUpload={handleFileUpload}
             onRemoveFile={handleRemoveFile}
+            onShowImageModal={handleShowImageModal}
             zoom={zoom}
             setZoom={setZoom}
             pan={pan}
@@ -317,6 +334,12 @@ const MindMapApp = () => {
             onClose={() => setShowLayoutPanel(false)}
           />
         )}
+
+        <ImageModal
+          isOpen={showImageModal}
+          image={modalImage}
+          onClose={handleCloseImageModal}
+        />
 
         <footer className="footer">
           <p>
