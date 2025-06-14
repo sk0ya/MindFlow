@@ -248,7 +248,6 @@ const MindMapApp = () => {
 
   const handleFileDownload = async (file) => {
     try {
-      console.log('handleFileDownload called with:', file);
       await downloadFile(file);
     } catch (error) {
       console.error('ファイルダウンロードエラー:', error);
@@ -258,7 +257,6 @@ const MindMapApp = () => {
 
   const handleFileRename = (fileId, newName) => {
     try {
-      console.log('handleFileRename called:', { fileId, newName, nodeId: actionMenuNodeId });
       renameFileInNode(actionMenuNodeId, fileId, newName);
     } catch (error) {
       console.error('ファイル名変更エラー:', error);

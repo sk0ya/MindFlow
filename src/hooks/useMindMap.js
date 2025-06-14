@@ -510,12 +510,8 @@ export const useMindMap = () => {
   // ファイル添付機能
   const attachFileToNode = async (nodeId, file) => {
     try {
-      let dataURL = null;
-      
-      // 画像ファイルの場合はDataURLを生成
-      if (isImageFile(file)) {
-        dataURL = await readFileAsDataURL(file);
-      }
+      // 全てのファイルでDataURLを生成（ダウンロードに必要）
+      const dataURL = await readFileAsDataURL(file);
       
       const fileAttachment = createFileAttachment(file, dataURL);
       const node = findNode(nodeId);
@@ -543,23 +539,18 @@ export const useMindMap = () => {
 
   // ファイル名を変更
   const renameFileInNode = (nodeId, fileId, newName) => {
-    console.log('renameFileInNode called:', { nodeId, fileId, newName });
     const node = findNode(nodeId);
     if (node && node.attachments) {
       const updatedAttachments = node.attachments.map(file => 
         file.id === fileId ? { ...file, name: newName } : file
       );
-      console.log('Updated attachments:', updatedAttachments);
       updateNode(nodeId, { attachments: updatedAttachments });
-    } else {
-      console.warn('Node not found or no attachments:', { node, nodeId });
     }
   };
 
   // ファイルをダウンロード
   const downloadFile = async (file) => {
     try {
-      console.log('downloadFile called with:', file);
       if (!file.dataURL) {
         console.warn('ファイルのダウンロードデータが見つかりません', file);
         return;
