@@ -193,8 +193,7 @@ const MindMapCanvas = ({
           e.preventDefault();
           if (selectedNodeId !== 'root') {
             onDeleteNode(selectedNodeId);
-            // 削除後は選択をクリア
-            onSelectNode(null);
+            // 削除後の選択はuseMindMapで自動的に処理される
           }
           break;
         case ' ':

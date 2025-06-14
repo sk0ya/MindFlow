@@ -225,6 +225,27 @@ export const useMindMap = () => {
   const deleteNode = (nodeId) => {
     if (nodeId === 'root') return false;
     
+    // 削除前に兄弟ノードを特定
+    let siblingToSelect = null;
+    const parentNode = findParentNode(nodeId);
+    
+    if (parentNode && parentNode.children) {
+      const currentIndex = parentNode.children.findIndex(child => child.id === nodeId);
+      if (currentIndex !== -1) {
+        // 次の兄弟を優先、なければ前の兄弟、なければ親を選択
+        if (currentIndex < parentNode.children.length - 1) {
+          // 次の兄弟が存在する場合
+          siblingToSelect = parentNode.children[currentIndex + 1].id;
+        } else if (currentIndex > 0) {
+          // 前の兄弟が存在する場合
+          siblingToSelect = parentNode.children[currentIndex - 1].id;
+        } else {
+          // 兄弟がいない場合は親を選択（ただし親がrootの場合はnull）
+          siblingToSelect = parentNode.id === 'root' ? null : parentNode.id;
+        }
+      }
+    }
+    
     const deleteNodeRecursive = (node) => {
       return {
         ...node,
@@ -241,7 +262,10 @@ export const useMindMap = () => {
     
     updateData({ ...data, rootNode: newRootNode });
     
-    if (selectedNodeId === nodeId) setSelectedNodeId(null);
+    // 削除されたノードが選択されていた場合、兄弟ノードを選択
+    if (selectedNodeId === nodeId) {
+      setSelectedNodeId(siblingToSelect);
+    }
     if (editingNodeId === nodeId) setEditingNodeId(null);
     
     return true;
