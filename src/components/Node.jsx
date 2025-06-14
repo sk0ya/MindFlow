@@ -18,9 +18,11 @@ const Node = ({
   onFileUpload,
   onRemoveFile,
   onShowImageModal,
+  onShowFileActionMenu,
   editText,
   setEditText,
   zoom,
+  pan,
   svgRef
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -212,6 +214,21 @@ const Node = ({
       onShowImageModal(file);
     }
   }, [onShowImageModal]);
+
+  const handleFileActionMenu = useCallback((e, file) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onShowFileActionMenu) {
+      // SVGイベントの場合は座標を適切に取得
+      const clientX = e.clientX || (e.nativeEvent && e.nativeEvent.clientX) || 0;
+      const clientY = e.clientY || (e.nativeEvent && e.nativeEvent.clientY) || 0;
+      
+      onShowFileActionMenu(file, node.id, {
+        x: clientX,
+        y: clientY
+      });
+    }
+  }, [onShowFileActionMenu, node.id]);
   
   // ノードのサイズ計算（画像を考慮）
   const hasImages = node.attachments && node.attachments.some(file => file.isImage);
@@ -274,7 +291,9 @@ const Node = ({
                   objectFit: 'cover',
                   cursor: 'pointer'
                 }}
+                onClick={(e) => handleFileActionMenu(e, file)}
                 onDoubleClick={(e) => handleImageDoubleClick(e, file)}
+                onContextMenu={(e) => handleFileActionMenu(e, file)}
               />
               {isSelected && (
                 <button
@@ -322,6 +341,38 @@ const Node = ({
               strokeWidth="1"
               rx="3"
               ry="3"
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                // SVGイベントの座標を取得
+                const svgRect = svgRef.current?.getBoundingClientRect();
+                if (svgRect) {
+                  const clientX = svgRect.left + (node.x + nodeWidth / 2 - 22) * zoom + pan.x * zoom;
+                  const clientY = svgRect.top + (yOffset + 8) * zoom + pan.y * zoom;
+                  
+                  const fakeEvent = {
+                    stopPropagation: () => e.stopPropagation(),
+                    preventDefault: () => e.preventDefault(),
+                    clientX,
+                    clientY
+                  };
+                  handleFileActionMenu(fakeEvent, file);
+                }
+              }}
+              onContextMenu={(e) => {
+                const svgRect = svgRef.current?.getBoundingClientRect();
+                if (svgRect) {
+                  const clientX = svgRect.left + (node.x + nodeWidth / 2 - 22) * zoom + pan.x * zoom;
+                  const clientY = svgRect.top + (yOffset + 8) * zoom + pan.y * zoom;
+                  
+                  const fakeEvent = {
+                    stopPropagation: () => e.stopPropagation(),
+                    preventDefault: () => e.preventDefault(),
+                    clientX,
+                    clientY
+                  };
+                  handleFileActionMenu(fakeEvent, file);
+                }
+              }}
             />
             <text
               x={node.x + nodeWidth / 2 - 22}
@@ -537,9 +588,14 @@ Node.propTypes = {
   onFileUpload: PropTypes.func.isRequired,
   onRemoveFile: PropTypes.func.isRequired,
   onShowImageModal: PropTypes.func.isRequired,
+  onShowFileActionMenu: PropTypes.func.isRequired,
   editText: PropTypes.string.isRequired,
   setEditText: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,
+  pan: PropTypes.shape({
+    x: PropTypes.number.isRequired,
+    y: PropTypes.number.isRequired
+  }).isRequired,
   svgRef: PropTypes.shape({
     current: PropTypes.instanceOf(Element)
   }).isRequired

@@ -541,6 +541,92 @@ export const useMindMap = () => {
     }
   };
 
+  // ファイル名を変更
+  const renameFileInNode = (nodeId, fileId, newName) => {
+    console.log('renameFileInNode called:', { nodeId, fileId, newName });
+    const node = findNode(nodeId);
+    if (node && node.attachments) {
+      const updatedAttachments = node.attachments.map(file => 
+        file.id === fileId ? { ...file, name: newName } : file
+      );
+      console.log('Updated attachments:', updatedAttachments);
+      updateNode(nodeId, { attachments: updatedAttachments });
+    } else {
+      console.warn('Node not found or no attachments:', { node, nodeId });
+    }
+  };
+
+  // ファイルをダウンロード
+  const downloadFile = async (file) => {
+    try {
+      console.log('downloadFile called with:', file);
+      if (!file.dataURL) {
+        console.warn('ファイルのダウンロードデータが見つかりません', file);
+        return;
+      }
+
+      // File System Access APIが利用可能かチェック
+      if (window.showSaveFilePicker) {
+        try {
+          // ファイル拡張子を取得
+          const extension = file.name.split('.').pop();
+          const mimeType = file.type || 'application/octet-stream';
+
+          // ファイル保存ダイアログを表示
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: file.name,
+            types: [{
+              description: `${extension.toUpperCase()} files`,
+              accept: { [mimeType]: [`.${extension}`] }
+            }]
+          });
+
+          // Base64データをBlobに変換
+          const response = await fetch(file.dataURL);
+          const blob = await response.blob();
+
+          // ファイルに書き込み
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+
+          console.log('ファイルが正常に保存されました:', file.name);
+          return;
+        } catch (saveError) {
+          // ユーザーがキャンセルした場合やエラーが発生した場合
+          if (saveError.name === 'AbortError') {
+            console.log('ファイル保存がキャンセルされました');
+            return;
+          }
+          console.warn('File System Access API でのダウンロードに失敗:', saveError);
+          // フォールバックに進む
+        }
+      }
+
+      // フォールバック: 従来の方法（保存場所選択なし）
+      const link = document.createElement('a');
+      link.href = file.dataURL;
+      link.download = file.name;
+      
+      // より確実にダウンロードを実行
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // ダウンロード実行
+      link.click();
+      
+      // クリーンアップ
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+    } catch (error) {
+      console.error('ファイルダウンロードエラー:', error);
+      throw error;
+    }
+  };
+
   return {
     // データ
     data,
@@ -575,6 +661,8 @@ export const useMindMap = () => {
     // ファイル添付
     attachFileToNode,
     removeFileFromNode,
+    renameFileInNode,
+    downloadFile,
     
     // 履歴
     undo,

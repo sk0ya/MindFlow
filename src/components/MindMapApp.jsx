@@ -7,6 +7,7 @@ import ContextMenu from './ContextMenu';
 import LayoutPanel from './LayoutPanel';
 import ErrorBoundary from './ErrorBoundary';
 import ImageModal from './ImageModal';
+import FileActionMenu from './FileActionMenu';
 import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -38,7 +39,9 @@ const MindMapApp = () => {
     toggleCollapse,
     navigateToDirection,
     attachFileToNode,
-    removeFileFromNode
+    removeFileFromNode,
+    renameFileInNode,
+    downloadFile
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -52,6 +55,10 @@ const MindMapApp = () => {
   const [clipboard, setClipboard] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImage, setModalImage] = useState(null);
+  const [showFileActionMenu, setShowFileActionMenu] = useState(false);
+  const [fileActionMenuPosition, setFileActionMenuPosition] = useState({ x: 0, y: 0 });
+  const [actionMenuFile, setActionMenuFile] = useState(null);
+  const [actionMenuNodeId, setActionMenuNodeId] = useState(null);
 
   const handleZoomReset = () => {
     setZoom(1);
@@ -209,6 +216,7 @@ const MindMapApp = () => {
     setShowContextMenu(false);
     setShowLayoutPanel(false);
     setShowImageModal(false);
+    setShowFileActionMenu(false);
   };
 
   const handleShowImageModal = (image) => {
@@ -221,6 +229,50 @@ const MindMapApp = () => {
   const handleCloseImageModal = () => {
     setShowImageModal(false);
     setModalImage(null);
+  };
+
+  const handleShowFileActionMenu = (file, nodeId, position) => {
+    setActionMenuFile(file);
+    setActionMenuNodeId(nodeId);
+    setFileActionMenuPosition(position);
+    setShowFileActionMenu(true);
+    handleCloseAllPanels();
+    setShowFileActionMenu(true); // 再度trueにしてファイルアクションメニューだけ表示
+  };
+
+  const handleCloseFileActionMenu = () => {
+    setShowFileActionMenu(false);
+    setActionMenuFile(null);
+    setActionMenuNodeId(null);
+  };
+
+  const handleFileDownload = async (file) => {
+    try {
+      console.log('handleFileDownload called with:', file);
+      await downloadFile(file);
+    } catch (error) {
+      console.error('ファイルダウンロードエラー:', error);
+      alert('ファイルのダウンロードに失敗しました: ' + error.message);
+    }
+  };
+
+  const handleFileRename = (fileId, newName) => {
+    try {
+      console.log('handleFileRename called:', { fileId, newName, nodeId: actionMenuNodeId });
+      renameFileInNode(actionMenuNodeId, fileId, newName);
+    } catch (error) {
+      console.error('ファイル名変更エラー:', error);
+      alert('ファイル名の変更に失敗しました: ' + error.message);
+    }
+  };
+
+  const handleFileDelete = (fileId) => {
+    try {
+      removeFileFromNode(actionMenuNodeId, fileId);
+    } catch (error) {
+      console.error('ファイル削除エラー:', error);
+      alert('ファイルの削除に失敗しました: ' + error.message);
+    }
   };
 
   const handleFileUpload = async (nodeId, files) => {
@@ -294,6 +346,7 @@ const MindMapApp = () => {
             onFileUpload={handleFileUpload}
             onRemoveFile={handleRemoveFile}
             onShowImageModal={handleShowImageModal}
+            onShowFileActionMenu={handleShowFileActionMenu}
             zoom={zoom}
             setZoom={setZoom}
             pan={pan}
@@ -339,6 +392,17 @@ const MindMapApp = () => {
           isOpen={showImageModal}
           image={modalImage}
           onClose={handleCloseImageModal}
+        />
+
+        <FileActionMenu
+          isOpen={showFileActionMenu}
+          file={actionMenuFile}
+          position={fileActionMenuPosition}
+          onClose={handleCloseFileActionMenu}
+          onDownload={handleFileDownload}
+          onRename={handleFileRename}
+          onDelete={handleFileDelete}
+          onView={handleShowImageModal}
         />
 
         <footer className="footer">
