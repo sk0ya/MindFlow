@@ -33,7 +33,8 @@ const MindMapApp = () => {
     canRedo,
     updateTitle,
     saveMindMap,
-    toggleCollapse
+    toggleCollapse,
+    navigateToDirection
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -248,6 +249,7 @@ const MindMapApp = () => {
             onDeleteNode={deleteNode}
             onRightClick={handleRightClick}
             onToggleCollapse={toggleCollapse}
+            onNavigateToDirection={navigateToDirection}
             zoom={zoom}
             setZoom={setZoom}
             pan={pan}

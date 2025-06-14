@@ -18,6 +18,7 @@ const MindMapCanvas = ({
   onDeleteNode,
   onRightClick,
   onToggleCollapse,
+  onNavigateToDirection,
   zoom,
   setZoom,
   pan,
@@ -203,6 +204,22 @@ const MindMapCanvas = ({
         case 'Escape':
           onSelectNode(null);
           break;
+        case 'ArrowUp':
+          e.preventDefault();
+          onNavigateToDirection('up');
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          onNavigateToDirection('down');
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          onNavigateToDirection('left');
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          onNavigateToDirection('right');
+          break;
         case 'Process':
           // IME変換中は何もしない
           break;
@@ -217,7 +234,7 @@ const MindMapCanvas = ({
           break;
       }
     }
-  }, [selectedNodeId, editingNodeId, onAddChild, onAddSibling, onDeleteNode, onStartEdit, onSelectNode]);
+  }, [selectedNodeId, editingNodeId, onAddChild, onAddSibling, onDeleteNode, onStartEdit, onSelectNode, onNavigateToDirection]);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
@@ -378,6 +395,7 @@ MindMapCanvas.propTypes = {
   onDeleteNode: PropTypes.func.isRequired,
   onRightClick: PropTypes.func,
   onToggleCollapse: PropTypes.func.isRequired,
+  onNavigateToDirection: PropTypes.func.isRequired,
   zoom: PropTypes.number.isRequired,
   setZoom: PropTypes.func.isRequired,
   pan: PropTypes.shape({
