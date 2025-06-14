@@ -1,4 +1,5 @@
 import { handleRequest } from './handlers/mindmaps.js';
+import { handleAuthRequest } from './handlers/auth.js';
 import { corsHeaders } from './utils/cors.js';
 
 export default {
@@ -17,6 +18,10 @@ export default {
       // Route handling
       if (path.startsWith('/api/mindmaps')) {
         return await handleRequest(request, env);
+      }
+      
+      if (path.startsWith('/api/auth')) {
+        return await handleAuthRequest(request, env);
       }
 
       return new Response('Not Found', { 

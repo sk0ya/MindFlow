@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, testCloudConnection } from '../utils/storage.js';
+import { getAppSettings, saveAppSettings, testCloudConnection, syncWithCloud, getSyncStatus } from '../utils/storage.js';
+import SyncStatusIndicator from './SyncStatusIndicator.jsx';
+import AuthModal from './AuthModal.jsx';
+import { authManager } from '../utils/authManager.js';
 
 const CloudStoragePanel = ({ isVisible, onClose }) => {
   const [settings, setSettings] = useState(getAppSettings());
   const [connectionStatus, setConnectionStatus] = useState('unknown');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(authManager.getCurrentUser());
 
   useEffect(() => {
     if (isVisible) {
@@ -28,6 +34,28 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const handleFullSync = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncWithCloud();
+      alert(`同期完了: ${result.conflicts > 0 ? `${result.conflicts}件の競合を解決` : '競合なし'}`);
+    } catch (error) {
+      alert(`同期失敗: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = async () => {
+    await authManager.logout();
+    setCurrentUser(null);
   };
 
   if (!isVisible) return null;
@@ -158,6 +186,101 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
           </small>
         </div>
 
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '8px'
+          }}>
+            <button
+              onClick={handleFullSync}
+              disabled={isSyncing || settings.storageMode !== 'cloud'}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: (isSyncing || settings.storageMode !== 'cloud') ? 'not-allowed' : 'pointer',
+                opacity: (isSyncing || settings.storageMode !== 'cloud') ? 0.6 : 1
+              }}
+            >
+              {isSyncing ? '同期中...' : '手動同期'}
+            </button>
+            
+            <SyncStatusIndicator />
+          </div>
+          <small style={{ color: '#666', fontSize: '12px' }}>
+            ローカルとクラウドのデータを双方向同期します
+          </small>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>アカウント</h4>
+          {currentUser ? (
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#e8f5e8',
+              borderRadius: '6px',
+              border: '1px solid #c3e6c3'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '8px'
+              }}>
+                <span style={{ fontWeight: 'bold', color: '#2d5a2d' }}>
+                  ✓ ログイン済み
+                </span>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '4px 8px',
+                    backgroundColor: 'transparent',
+                    color: '#666',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ログアウト
+                </button>
+              </div>
+              <div style={{ fontSize: '14px', color: '#555' }}>
+                {currentUser.email}
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#fff3cd',
+              borderRadius: '6px',
+              border: '1px solid #ffeaa7'
+            }}>
+              <div style={{ marginBottom: '8px', color: '#856404' }}>
+                クラウド同期にはログインが必要です
+              </div>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ログイン
+              </button>
+            </div>
+          )}
+        </div>
+
         <div style={{
           padding: '12px',
           backgroundColor: '#f8f9fa',
@@ -169,6 +292,12 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
           cloudflare-worker ディレクトリの README を参照してください。
         </div>
       </div>
+
+      <AuthModal
+        isVisible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };

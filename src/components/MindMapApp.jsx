@@ -11,7 +11,8 @@ import FileActionMenu from './FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from './MapLinksPanel';
 import CloudStoragePanel from './CloudStoragePanel';
-import { exportMindMapAsJSON, importMindMapFromJSON } from '../utils/storage';
+import SyncStatusIndicator from './SyncStatusIndicator';
+import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
 
@@ -528,6 +529,11 @@ const MindMapApp = () => {
               ノード数: {flattenNodes(data.rootNode).length} | 
               最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')}
             </span>
+            {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
+              <span className="sync-status">
+                <SyncStatusIndicator />
+              </span>
+            )}
           </p>
         </footer>
       </div>

@@ -1,5 +1,6 @@
 ﻿import { STORAGE_KEYS, createInitialData } from './dataTypes.js';
 import { cloudStorage } from './cloudStorage.js';
+import { syncManager } from './syncManager.js';
 
 // ローカルストレージからデータを取得
 export const loadFromStorage = (key, defaultValue = null) => {
@@ -156,11 +157,18 @@ export const saveMindMapHybrid = async (mindMapData) => {
   // クラウドモードまたは同期が有効な場合はクラウドにも保存
   if (settings.storageMode === 'cloud' || settings.cloudSync) {
     try {
-      await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
-      console.log('Cloud save successful');
+      if (syncManager.getSyncStatus().isOnline) {
+        await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
+        console.log('Cloud save successful');
+      } else {
+        // オフライン時は同期キューに追加
+        syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
+        console.log('Offline: Added to sync queue');
+      }
     } catch (error) {
-      console.warn('Cloud save failed, continuing with local:', error);
-      // クラウド保存が失敗してもローカル保存は成功として扱う
+      console.warn('Cloud save failed, adding to sync queue:', error);
+      // 失敗した場合も同期キューに追加
+      syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
     }
   }
   
@@ -193,10 +201,17 @@ export const deleteMindMapHybrid = async (mapId) => {
   // クラウドモードまたは同期が有効な場合はクラウドからも削除
   if (settings.storageMode === 'cloud' || settings.cloudSync) {
     try {
-      await cloudStorage.deleteMindMap(mapId);
-      console.log('Cloud delete successful');
+      if (syncManager.getSyncStatus().isOnline) {
+        await cloudStorage.deleteMindMap(mapId);
+        console.log('Cloud delete successful');
+      } else {
+        // オフライン時は同期キューに追加
+        syncManager.recordOfflineOperation('delete', mapId);
+        console.log('Offline: Added delete to sync queue');
+      }
     } catch (error) {
-      console.warn('Cloud delete failed:', error);
+      console.warn('Cloud delete failed, adding to sync queue:', error);
+      syncManager.recordOfflineOperation('delete', mapId);
     }
   }
   
@@ -211,4 +226,18 @@ export const testCloudConnection = async () => {
     console.error('Cloud connection test failed:', error);
     return false;
   }
+};
+
+// 同期機能
+export const syncWithCloud = async () => {
+  try {
+    return await syncManager.forcSync();
+  } catch (error) {
+    console.error('Sync failed:', error);
+    throw error;
+  }
+};
+
+export const getSyncStatus = () => {
+  return syncManager.getSyncStatus();
 };

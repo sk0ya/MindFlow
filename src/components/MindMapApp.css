@@ -52,14 +52,11 @@
 
 .stats {
   display: flex;
+}
+
+.sync-status {
+  display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 6px 12px;
-  background: #e1e5e9;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #374151;
-  position: relative;
 }
 
 .save-message {

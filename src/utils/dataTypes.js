@@ -99,7 +99,9 @@ export const deepClone = (obj) => {
 export const STORAGE_KEYS = {
   MINDMAPS: 'mindmaps',
   CURRENT_MAP: 'currentMap',
-  SETTINGS: 'appSettings'
+  SETTINGS: 'appSettings',
+  SYNC_QUEUE: 'mindflow_sync_queue',
+  LAST_SYNC_TIME: 'mindflow_last_sync_time'
 };
 
 // ファイル関連のユーティリティ

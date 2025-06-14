@@ -1,5 +1,7 @@
 // Cloudflare Workers APIクライアント
 
+import { authManager } from './authManager.js';
+
 const API_BASE = process.env.NODE_ENV === 'production' 
   ? 'https://mindflow-api-prod.your-domain.workers.dev'
   : 'https://mindflow-api.your-domain.workers.dev';
@@ -21,6 +23,39 @@ class CloudStorageClient {
 
   async request(endpoint, options = {}) {
     const url = `${API_BASE}/api${endpoint}`;
+    
+    // 認証が有効な場合は認証済みリクエストを使用
+    if (authManager.isAuthenticated()) {
+      try {
+        const response = await authManager.authenticatedFetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
+        });
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Network error' }));
+          throw new Error(error.error || `HTTP ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        if (error.message === 'Authentication expired') {
+          // 認証期限切れの場合は従来の方法にフォールバック
+          return await this.legacyRequest(endpoint, options);
+        }
+        throw error;
+      }
+    } else {
+      // 認証が無効な場合は従来の方法を使用
+      return await this.legacyRequest(endpoint, options);
+    }
+  }
+
+  async legacyRequest(endpoint, options = {}) {
+    const url = `${API_BASE}/api${endpoint}`;
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -30,14 +65,54 @@ class CloudStorageClient {
       ...options
     };
 
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
-    }
+    // リトライ機能付きのリクエスト
+    return await this.retryRequest(url, config, 3);
+  }
 
-    return await response.json();
+  async retryRequest(url, config, maxRetries = 3, delay = 1000) {
+    let lastError;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, config);
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Network error' }));
+          lastError = new Error(error.error || `HTTP ${response.status}`);
+          
+          // リトライ可能なエラーかチェック
+          if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) {
+            // 4xx エラー（リトライ不可）
+            throw lastError;
+          }
+          
+          if (attempt === maxRetries - 1) {
+            throw lastError;
+          }
+          
+          // 指数バックオフで待機
+          await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt)));
+          continue;
+        }
+
+        return await response.json();
+      } catch (error) {
+        lastError = error;
+        
+        // ネットワークエラーの場合はリトライ
+        if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
+          if (attempt === maxRetries - 1) {
+            throw new Error('ネットワークエラー: サーバーに接続できません');
+          }
+          await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt)));
+          continue;
+        }
+        
+        throw error;
+      }
+    }
+    
+    throw lastError;
   }
 
   // すべてのマインドマップを取得

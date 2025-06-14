@@ -1,9 +1,28 @@
 import { corsHeaders } from '../utils/cors.js';
+import { requireAuth } from '../utils/auth.js';
 
 export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const method = request.method;
-  const userId = request.headers.get('X-User-ID') || 'default-user';
+  
+  // 認証チェック（環境変数でON/OFF切り替え可能）
+  let userId = 'default-user';
+  if (env.ENABLE_AUTH === 'true') {
+    const authResult = await requireAuth(request);
+    if (!authResult.authenticated) {
+      return new Response(JSON.stringify({ error: authResult.error }), {
+        status: authResult.status,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders(env.CORS_ORIGIN)
+        }
+      });
+    }
+    userId = authResult.user.userId;
+  } else {
+    // 認証が無効の場合は従来の方法を使用
+    userId = request.headers.get('X-User-ID') || 'default-user';
+  }
 
   // Extract mindmap ID from path if present
   const pathParts = url.pathname.split('/');
