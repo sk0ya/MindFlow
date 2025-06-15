@@ -94,9 +94,11 @@ async function handleSendMagicLink(request, env) {
     await cleanupExpiredTokens(env);
     
     // メッセージを送信結果に応じて調整
-    let message = 'Authentication email sent successfully';
+    let message;
     if (emailResult.messageId === 'dev-mode' || emailResult.messageId === 'fallback-mode') {
-      message = 'Authentication link generated (check console for test link)';
+      message = 'Magic Linkを生成しました\n本番環境ではメールが送信されますが、\n現在はテスト環境のためリンクを直接表示しています。';
+    } else {
+      message = `${email}にログインリンクを送信しました。\nメールを確認してログインしてください。`;
     }
     
     const response = {

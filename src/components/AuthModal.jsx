@@ -28,12 +28,13 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
       setSuccess(result.message);
       setStep('sent');
       
-      // Magic Linkがレスポンスに含まれている場合は保存
-      if (result.magicLink) {
-        console.log('Setting magic link:', result.magicLink); // デバッグログ
+      // Magic Linkがレスポンスに含まれている場合は保存（テスト環境のみ）
+      if (result.magicLink && !result.emailSent) {
+        console.log('Setting magic link (test environment):', result.magicLink);
         setMagicLink(result.magicLink);
       } else {
-        console.log('No magic link in response'); // デバッグログ
+        console.log('Email sent successfully, no magic link displayed');
+        setMagicLink('');
       }
     } catch (error) {
       setError(error.message);
@@ -288,7 +289,9 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
                     テスト環境のためリンクを下記に表示しています。
                   </span>
                 ) : (
-                  'ログインリンクをメールで送信しました。'
+                  <span style={{ color: '#10b981', fontWeight: '500' }}>
+                    ログインリンクをメールで送信しました。
+                  </span>
                 )}
               </p>
               <p style={{
@@ -300,7 +303,7 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
                 {magicLink ? (
                   '🧪 下記のリンクをクリックしてログインしてください。'
                 ) : (
-                  '📱 メールを確認し、リンクをクリックしてログインしてください。'
+                  '📧 メールボックスを確認し、リンクをクリックしてログインしてください。'
                 )}
               </p>
               {magicLink && (
