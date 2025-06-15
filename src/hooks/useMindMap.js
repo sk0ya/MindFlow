@@ -896,6 +896,12 @@ export const useMindMap = () => {
       setHistoryIndex(0);
     }
     
+    // 初期化時にallMindMapsを更新（初回起動で新しいマップが作られた場合）
+    const maps = getAllMindMaps();
+    if (maps.length !== allMindMaps.length) {
+      setAllMindMaps(maps);
+    }
+    
     // クリーンアップ
     return () => {
       if (autoSaveTimeoutRef.current) {

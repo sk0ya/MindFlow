@@ -73,8 +73,16 @@ export const getCurrentMindMap = () => {
   let currentMap = loadFromStorage(STORAGE_KEYS.CURRENT_MAP);
   
   if (!currentMap) {
+    // 初回起動時: 新しいマップを作成して全体のリストにも追加
     currentMap = createInitialData();
     saveToStorage(STORAGE_KEYS.CURRENT_MAP, currentMap);
+    
+    // 全体のマップリストにも追加
+    const allMaps = getAllMindMaps();
+    if (!allMaps.find(map => map.id === currentMap.id)) {
+      allMaps.push(currentMap);
+      saveToStorage(STORAGE_KEYS.MINDMAPS, allMaps);
+    }
   }
   
   return currentMap;
