@@ -39,9 +39,18 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
   const handleFullSync = async () => {
     setIsSyncing(true);
     try {
+      console.log('手動同期開始...');
       const result = await syncWithCloud();
-      alert(`同期完了: ${result.conflicts > 0 ? `${result.conflicts}件の競合を解決` : '競合なし'}`);
+      console.log('手動同期結果:', result);
+      
+      const message = `同期完了!\n` +
+        `ローカル: ${result.localCount || 0}件\n` +
+        `クラウド: ${result.cloudCount || 0}件\n` +
+        `競合: ${result.conflicts > 0 ? `${result.conflicts}件を解決` : 'なし'}`;
+      
+      alert(message);
     } catch (error) {
+      console.error('手動同期エラー:', error);
       alert(`同期失敗: ${error.message}`);
     } finally {
       setIsSyncing(false);
@@ -195,15 +204,15 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
           }}>
             <button
               onClick={handleFullSync}
-              disabled={isSyncing || settings.storageMode !== 'cloud'}
+              disabled={isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)}
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#28a745',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: (isSyncing || settings.storageMode !== 'cloud') ? 'not-allowed' : 'pointer',
-                opacity: (isSyncing || settings.storageMode !== 'cloud') ? 0.6 : 1
+                cursor: (isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)) ? 'not-allowed' : 'pointer',
+                opacity: (isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)) ? 0.6 : 1
               }}
             >
               {isSyncing ? '同期中...' : '手動同期'}
@@ -212,7 +221,7 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
             <SyncStatusIndicator />
           </div>
           <small style={{ color: '#666', fontSize: '12px' }}>
-            ローカルとクラウドのデータを双方向同期します
+            ローカルとクラウドのデータを双方向同期します{(settings.storageMode !== 'cloud' && !settings.cloudSync) ? ' (クラウド同期を有効にしてください)' : ''}
           </small>
         </div>
 
