@@ -115,13 +115,11 @@ async function handleSendMagicLink(request, env) {
     
     return response;
   } catch (error) {
-    // セキュリティのため、許可されていないメールでも同じレスポンスを返す
+    // 許可されていないメールアドレスの場合
     if (error.message.includes('Access denied')) {
-      return {
-        success: true,
-        message: 'If this email is registered, an authentication link has been sent',
-        expiresIn: 600
-      };
+      const registrationError = new Error('このメールアドレスは登録されていません。\nアクセスには事前の承認が必要です。');
+      registrationError.status = 403;
+      throw registrationError;
     }
     throw error;
   }

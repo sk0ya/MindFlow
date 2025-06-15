@@ -37,7 +37,12 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
         setMagicLink('');
       }
     } catch (error) {
-      setError(error.message);
+      // エラーメッセージを表示
+      if (error.message.includes('登録されていません')) {
+        setError('このメールアドレスは登録されていません。\nアクセスには事前の承認が必要です。');
+      } else {
+        setError(error.message);
+      }
     } finally {
       setIsLoading(false);
     }
