@@ -2,7 +2,11 @@ import { handleRequest } from './handlers/mindmaps.js';
 import { handleAuthRequest } from './handlers/auth.js';
 import { handleRequest as handleNodesRequest } from './handlers/nodes.js';
 import { handleRequest as handleFilesRequest } from './handlers/files.js';
+import { handleRequest as handleRealtimeRequest } from './handlers/realtime.js';
 import { corsHeaders } from './utils/cors.js';
+
+// Durable Object export
+export { MindMapRoom } from './durable-objects/MindMapRoom.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -28,6 +32,10 @@ export default {
       
       if (path.startsWith('/api/files')) {
         return await handleFilesRequest(request, env);
+      }
+      
+      if (path.startsWith('/api/realtime')) {
+        return await handleRealtimeRequest(request, env);
       }
       
       if (path.startsWith('/api/auth')) {
