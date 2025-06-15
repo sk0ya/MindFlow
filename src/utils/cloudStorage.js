@@ -1,8 +1,8 @@
 // Cloudflare Workers APIクライアント
 
 const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://mindflow-api-prod.your-domain.workers.dev'
-  : 'https://mindflow-api.your-domain.workers.dev';
+  ? 'https://mindflow-api-prod.shigekazukoya.workers.dev'
+  : 'https://mindflow-api.shigekazukoya.workers.dev';
 
 class CloudStorageClient {
   constructor() {

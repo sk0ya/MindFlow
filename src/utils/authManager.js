@@ -8,8 +8,8 @@ class AuthManager {
     this.token = null;
     this.user = null;
     this.apiBase = process.env.NODE_ENV === 'production' 
-      ? 'https://mindflow-api-prod.your-domain.workers.dev'
-      : 'https://mindflow-api.your-domain.workers.dev';
+      ? 'https://mindflow-api-prod.shigekazukoya.workers.dev'
+      : 'https://mindflow-api.shigekazukoya.workers.dev';
     
     this.loadAuthData();
     this.setupTokenRefresh();
