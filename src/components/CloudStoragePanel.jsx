@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, testCloudConnection, syncWithCloud, getSyncStatus } from '../utils/storage.js';
+import { getAppSettings, saveAppSettings, testCloudConnection, getSyncStatus } from '../utils/storage.js';
+import { syncManager } from '../utils/syncManager.js';
 import SyncStatusIndicator from './SyncStatusIndicator.jsx';
 import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
@@ -40,7 +41,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     setIsSyncing(true);
     try {
       console.log('手動同期開始...');
-      const result = await syncWithCloud();
+      const result = await syncManager.forcSync();
       console.log('手動同期結果:', result);
       
       const message = `同期完了!\n` +
