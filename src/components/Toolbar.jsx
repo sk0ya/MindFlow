@@ -12,8 +12,6 @@ const Toolbar = ({
   canRedo,
   zoom,
   onZoomReset,
-  theme,
-  onThemeChange,
   onShowLayoutPanel,
   onShowCloudStoragePanel,
   authState,
@@ -230,19 +228,6 @@ const Toolbar = ({
             </button>
           </div>
 
-          <div className="theme-controls">
-            <select
-              value={theme}
-              onChange={(e) => onThemeChange(e.target.value)}
-              className="theme-selector"
-              title="テーマ変更"
-            >
-              <option value="default">✨ デフォルト</option>
-              <option value="ocean">🌊 オーシャン</option>
-              <option value="forest">🌲 フォレスト</option>
-              <option value="sunset">🌅 サンセット</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -482,39 +467,6 @@ const Toolbar = ({
           transform: scale(1.1);
         }
 
-        .theme-controls {
-          position: relative;
-        }
-
-        .theme-selector {
-          padding: 10px 16px;
-          border: 1px solid rgba(226, 232, 240, 0.5);
-          border-radius: 10px;
-          background: rgba(248, 250, 252, 0.7);
-          color: #374151;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-          background-position: right 12px center;
-          background-repeat: no-repeat;
-          background-size: 16px;
-          padding-right: 40px;
-        }
-
-        .theme-selector:hover {
-          background: rgba(255, 255, 255, 0.9);
-          border-color: #8b5cf6;
-          transform: translateY(-1px);
-        }
-
-        .theme-selector:focus {
-          outline: none;
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-        }
         
         .auth-section {
           display: flex;
