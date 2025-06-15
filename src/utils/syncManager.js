@@ -178,32 +178,16 @@ class SyncManager {
       const localMap = mapById.get(cloudMap.id);
       
       if (!localMap) {
-        // クラウドのみにある場合は追加（データ構造を変換）
-        const transformedCloudMap = {
-          ...cloudMap,
-          ...(cloudMap.data || {}), // dataフィールドが存在する場合は展開
-          updatedAt: cloudMap.updated_at || cloudMap.updatedAt,
-          source: 'cloud'
-        };
-        // dataフィールドは不要なので削除
-        delete transformedCloudMap.data;
-        mapById.set(cloudMap.id, transformedCloudMap);
+        // クラウドのみにある場合は追加（統一済みなので変換不要）
+        mapById.set(cloudMap.id, { ...cloudMap, source: 'cloud' });
       } else {
         // 両方にある場合は更新時刻で判定
         const localTime = new Date(localMap.updatedAt);
-        const cloudTime = new Date(cloudMap.updated_at || cloudMap.updatedAt);
+        const cloudTime = new Date(cloudMap.updatedAt); // 統一済みなのでupdatedAtを使用
         
         if (cloudTime > localTime) {
-          // クラウドデータの構造を正しく変換
-          const transformedCloudMap = {
-            ...cloudMap,
-            ...(cloudMap.data || {}), // dataフィールドが存在する場合は展開
-            updatedAt: cloudMap.updated_at || cloudMap.updatedAt,
-            source: 'cloud'
-          };
-          // dataフィールドは不要なので削除
-          delete transformedCloudMap.data;
-          mapById.set(cloudMap.id, transformedCloudMap);
+          // 統一済みなので構造変換不要
+          mapById.set(cloudMap.id, { ...cloudMap, source: 'cloud' });
         }
       }
     });
@@ -219,7 +203,7 @@ class SyncManager {
       const cloudMap = cloudMaps.find(m => m.id === localMap.id);
       if (cloudMap) {
         const localTime = new Date(localMap.updatedAt);
-        const cloudTime = new Date(cloudMap.updated_at || cloudMap.updatedAt);
+        const cloudTime = new Date(cloudMap.updatedAt); // 統一済みなのでupdatedAtを使用
         if (Math.abs(localTime - cloudTime) > 1000) { // 1秒以上の差があれば競合とみなす
           conflicts++;
         }

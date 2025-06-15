@@ -94,10 +94,45 @@ async function getAllMindMaps(db, userId) {
   await ensureUser(db, userId);
   
   const { results } = await db.prepare(
-    'SELECT id, title, created_at, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
+    'SELECT * FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
   ).bind(userId).all();
   
-  return { mindmaps: results };
+  // データ構造をローカル形式に統一
+  const mindmaps = results.map(row => {
+    try {
+      const data = JSON.parse(row.data);
+      return {
+        ...data,
+        // クラウド固有のフィールドをローカル形式に統一
+        updatedAt: row.updated_at,
+        createdAt: row.created_at
+      };
+    } catch (error) {
+      console.error('Failed to parse mindmap data:', error);
+      // パースに失敗した場合は基本情報のみ返す
+      return {
+        id: row.id,
+        title: row.title,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        category: '未分類',
+        theme: 'default',
+        rootNode: {
+          id: 'root',
+          text: 'メイントピック',
+          x: 400,
+          y: 300,
+          children: []
+        },
+        settings: {
+          autoSave: true,
+          autoLayout: true
+        }
+      };
+    }
+  });
+  
+  return { mindmaps };
 }
 
 async function getMindMap(db, userId, mindmapId) {
@@ -111,11 +146,38 @@ async function getMindMap(db, userId, mindmapId) {
     throw error;
   }
   
-  const mindmap = results[0];
-  return {
-    ...mindmap,
-    data: JSON.parse(mindmap.data)
-  };
+  const row = results[0];
+  try {
+    const data = JSON.parse(row.data);
+    return {
+      ...data,
+      // クラウド固有のフィールドをローカル形式に統一
+      updatedAt: row.updated_at,
+      createdAt: row.created_at
+    };
+  } catch (error) {
+    console.error('Failed to parse mindmap data:', error);
+    // パースに失敗した場合は基本情報のみ返す
+    return {
+      id: row.id,
+      title: row.title,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      category: '未分類',
+      theme: 'default',
+      rootNode: {
+        id: 'root',
+        text: 'メイントピック',
+        x: 400,
+        y: 300,
+        children: []
+      },
+      settings: {
+        autoSave: true,
+        autoLayout: true
+      }
+    };
+  }
 }
 
 async function createMindMap(db, userId, mindmapData) {
@@ -131,7 +193,12 @@ async function createMindMap(db, userId, mindmapData) {
     'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(id, userId, title, data, now, now).run();
   
-  return { id, title, created_at: now, updated_at: now };
+  // ローカル形式で返す
+  return {
+    ...mindmapData,
+    createdAt: now,
+    updatedAt: now
+  };
 }
 
 async function updateMindMap(db, userId, mindmapId, mindmapData) {
@@ -165,10 +232,19 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
     
     console.log('INSERT結果:', insertResult);
     
-    return { id: mindmapId, title, created_at: now, updated_at: now };
+    // ローカル形式で返す
+    return {
+      ...mindmapData,
+      createdAt: now,
+      updatedAt: now
+    };
   }
   
-  return { id: mindmapId, title, updated_at: now };
+  // ローカル形式で返す
+  return {
+    ...mindmapData,
+    updatedAt: now
+  };
 }
 
 async function deleteMindMap(db, userId, mindmapId) {
