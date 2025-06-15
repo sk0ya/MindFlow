@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { authManager } from '../utils/authManager.js';
+import MagicLinkNotification from './MagicLinkNotification.jsx';
 
 const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
   const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
   const [success, setSuccess] = useState('');
   const [authMode, setAuthMode] = useState('email'); // 'email' or 'oauth'
   const [step, setStep] = useState('email'); // 'email' or 'sent'
+  const [magicLink, setMagicLink] = useState('');
 
   const handleSendMagicLink = async (e) => {
     e.preventDefault();
@@ -24,6 +26,11 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
       const result = await authManager.sendMagicLink(email);
       setSuccess(result.message);
       setStep('sent');
+      
+      // Magic Linkがレスポンスに含まれている場合は保存
+      if (result.magicLink) {
+        setMagicLink(result.magicLink);
+      }
     } catch (error) {
       setError(error.message);
     } finally {
@@ -49,6 +56,7 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
     setError('');
     setSuccess('');
     setEmail('');
+    setMagicLink('');
   };
 
   if (!isVisible) return null;
@@ -358,6 +366,12 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
           </div>
         )}
       </div>
+      
+      <MagicLinkNotification 
+        isVisible={!!magicLink}
+        magicLink={magicLink}
+        onClose={() => setMagicLink('')}
+      />
     </div>
   );
 };

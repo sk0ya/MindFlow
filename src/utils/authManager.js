@@ -104,7 +104,8 @@ class AuthManager {
       return { 
         success: true, 
         message: data.message,
-        expiresIn: data.expiresIn 
+        expiresIn: data.expiresIn,
+        magicLink: data.magicLink
       };
     } catch (error) {
       console.error('Magic link sending error:', error);

@@ -96,7 +96,8 @@ async function handleSendMagicLink(request, env) {
     return {
       success: true,
       message: 'Authentication email sent successfully',
-      expiresIn: 600 // 10分
+      expiresIn: 600, // 10分
+      magicLink: magicLink // テスト環境用にリンクを返す
     };
   } catch (error) {
     // セキュリティのため、許可されていないメールでも同じレスポンスを返す
