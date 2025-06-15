@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, getSyncStatus } from '../utils/storage.js';
-import { performSync, testConnection } from '../utils/simpleSync.js';
+import { getAppSettings, saveAppSettings, loadFromStorage, saveToStorage } from '../utils/storage.js';
+import { STORAGE_KEYS } from '../utils/dataTypes.js';
 import SyncStatusIndicator from './SyncStatusIndicator.jsx';
 import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
@@ -25,11 +25,14 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     saveAppSettings(newSettings);
   };
 
+  // シンプルな接続テスト
   const handleTestConnection = async () => {
     setIsConnecting(true);
     try {
-      const isConnected = await testConnection();
-      setConnectionStatus(isConnected ? 'connected' : 'failed');
+      const response = await fetch('https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps', {
+        headers: { 'X-User-ID': 'test-user' }
+      });
+      setConnectionStatus(response.ok ? 'connected' : 'failed');
     } catch (error) {
       setConnectionStatus('failed');
     } finally {
@@ -37,24 +40,59 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     }
   };
 
+  // シンプルな手動同期
   const handleFullSync = async () => {
     setIsSyncing(true);
     try {
       console.log('手動同期開始...');
-      const result = await performSync();
-      console.log('手動同期結果:', result);
       
-      const message = `同期完了!\n` +
-        `ローカル: ${result.localCount || 0}件\n` +
-        `クラウド: ${result.cloudCount || 0}件\n` +
-        `競合: ${result.conflicts > 0 ? `${result.conflicts}件を解決` : 'なし'}`;
+      // 1. ローカルデータを取得
+      const localMaps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []).filter(map => 
+        map && map.id && map.rootNode
+      );
+      console.log('ローカルマップ:', localMaps.length);
+
+      // 2. ユーザーID取得
+      let userId = localStorage.getItem('mindflow_user_id');
+      if (!userId) {
+        userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('mindflow_user_id', userId);
+      }
+
+      // 3. ローカルマップをクラウドに送信
+      for (const map of localMaps) {
+        const response = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-ID': userId
+          },
+          body: JSON.stringify(map)
+        });
+        console.log(`${map.title}: ${response.ok ? '成功' : '失敗'}`);
+      }
+
+      // 4. クラウドからデータを取得
+      const cloudResponse = await fetch('https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps', {
+        headers: { 'X-User-ID': userId }
+      });
+      const cloudData = await cloudResponse.json();
+      const cloudMaps = cloudData.mindmaps || [];
+      console.log('クラウドマップ:', cloudMaps.length);
+
+      // 5. 有効なクラウドデータをローカルに保存
+      const validCloudMaps = cloudMaps.filter(map => map && map.id && map.rootNode);
+      if (validCloudMaps.length > 0) {
+        saveToStorage(STORAGE_KEYS.MINDMAPS, validCloudMaps);
+      }
+
+      alert(`同期完了!\nローカル: ${localMaps.length}件 → クラウド: ${cloudMaps.length}件`);
       
-      alert(result.message || message);
-      
-      // 同期完了後にマインドマップリストを更新
+      // UI更新
       if (refreshAllMindMaps) {
         refreshAllMindMaps();
       }
+      
     } catch (error) {
       console.error('手動同期エラー:', error);
       alert(`同期失敗: ${error.message}`);
