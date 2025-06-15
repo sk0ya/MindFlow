@@ -135,15 +135,18 @@ export const readFileAsDataURL = (file) => {
   });
 };
 
-export const createFileAttachment = (file, dataURL = null) => {
+export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = null) => {
   return {
-    id: generateId(),
+    id: uploadedFileInfo?.id || generateId(),
     name: file.name,
     type: file.type,
     size: file.size,
-    dataURL: dataURL,
+    dataURL: dataURL, // レガシー対応
+    downloadUrl: uploadedFileInfo?.downloadUrl, // R2からのダウンロードURL
+    storagePath: uploadedFileInfo?.storagePath, // R2のストレージパス
+    thumbnailUrl: uploadedFileInfo?.thumbnailUrl, // サムネイルURL
     isImage: isImageFile(file),
-    createdAt: new Date().toISOString()
+    createdAt: uploadedFileInfo?.uploadedAt || new Date().toISOString()
   };
 };
 
