@@ -5,6 +5,12 @@ import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 
 // 既存のノードに色を自動割り当てする
 const assignColorsToExistingNodes = (mindMapData) => {
+  // rootNodeが存在しない場合の対応
+  if (!mindMapData || !mindMapData.rootNode) {
+    console.warn('Invalid mindmap data or missing rootNode:', mindMapData);
+    return mindMapData || createInitialData();
+  }
+  
   const assignColors = (node, parentColor = null, isRootChild = false, childIndex = 0) => {
     const updatedNode = { ...node };
     
@@ -51,7 +57,18 @@ export const useMindMap = () => {
   const autoSaveTimeoutRef = useRef(null);
   
   // マルチマップ管理用の状態
-  const [allMindMaps, setAllMindMaps] = useState(() => getAllMindMaps());
+  const [allMindMaps, setAllMindMaps] = useState(() => {
+    const maps = getAllMindMaps();
+    // 無効なデータを除外してログ出力
+    const validMaps = maps.filter(map => {
+      if (!map || !map.id) {
+        console.warn('Invalid mindmap found and filtered out:', map);
+        return false;
+      }
+      return true;
+    });
+    return validMaps;
+  });
   const [currentMapId, setCurrentMapId] = useState(() => {
     const currentMap = getCurrentMindMap();
     return currentMap.id;
@@ -849,7 +866,7 @@ export const useMindMap = () => {
 
   const switchToMap = (mapId, selectRoot = false) => {
     const allMaps = getAllMindMaps();
-    const targetMap = allMaps.find(map => map.id === mapId);
+    const targetMap = allMaps.find(map => map && map.id === mapId);
     
     if (targetMap) {
       // 現在のマップを保存

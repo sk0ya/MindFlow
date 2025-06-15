@@ -24,7 +24,9 @@ export const saveToStorage = (key, data) => {
 
 // すべてのマインドマップを取得
 export const getAllMindMaps = () => {
-  return loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
+  const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
+  // 無効なデータをフィルターして除外
+  return maps.filter(map => map && map.id && typeof map.id === 'string');
 };
 
 // マインドマップを保存
