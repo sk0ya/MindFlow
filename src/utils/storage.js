@@ -1,6 +1,4 @@
 ﻿import { STORAGE_KEYS, createInitialData } from './dataTypes.js';
-import { syncManager } from './syncManager.js';
-import { cloudStorage } from './cloudStorage.js';
 
 // ローカルストレージからデータを取得
 export const loadFromStorage = (key, defaultValue = null) => {
@@ -168,106 +166,39 @@ export const isCloudStorageEnabled = () => {
   return settings.storageMode === 'cloud';
 };
 
-// ハイブリッド保存（ローカル+クラウド）
+// ハイブリッド保存（ローカル+クラウド）- 一時的に無効化
 export const saveMindMapHybrid = async (mindMapData) => {
-  const settings = getAppSettings();
-  
-  // ローカルに保存（常に実行）
-  const localResult = saveMindMap(mindMapData);
-  
-  // クラウドモードまたは同期が有効な場合はクラウドにも保存
-  if (settings.storageMode === 'cloud' || settings.cloudSync) {
-    try {
-      if (syncManager.getSyncStatus().isOnline) {
-        await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
-        console.log('Cloud save successful');
-      } else {
-        // オフライン時は同期キューに追加
-        syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
-        console.log('Offline: Added to sync queue');
-      }
-    } catch (error) {
-      console.warn('Cloud save failed, adding to sync queue:', error);
-      // 失敗した場合も同期キューに追加
-      try {
-        syncManager.recordOfflineOperation('save', mindMapData.id, mindMapData);
-      } catch (syncError) {
-        console.error('Failed to add to sync queue:', syncError);
-      }
-    }
-  }
-  
-  return localResult;
+  // 現在はローカルのみに保存
+  return saveMindMap(mindMapData);
 };
 
-// ハイブリッド取得（クラウド優先、フォールバックでローカル）
+// ハイブリッド取得（クラウド優先、フォールバックでローカル）- 一時的に無効化
 export const getAllMindMapsHybrid = async () => {
-  const settings = getAppSettings();
-  
-  if (settings.storageMode === 'cloud') {
-    try {
-      const cloudStorageModule = await import('./cloudStorage.js');
-    const cloudStorage = cloudStorageModule.cloudStorage;
-      const cloudResult = await cloudStorage.getAllMindMaps();
-      return cloudResult.mindmaps || [];
-    } catch (error) {
-      console.warn('Cloud fetch failed, using local:', error);
-    }
-  }
-  
+  // 現在はローカルのみから取得
   return getAllMindMaps();
 };
 
-// ハイブリッド削除
+// ハイブリッド削除 - 一時的に無効化
 export const deleteMindMapHybrid = async (mapId) => {
-  const settings = getAppSettings();
-  
-  // ローカルから削除
-  const localResult = deleteMindMap(mapId);
-  
-  // クラウドモードまたは同期が有効な場合はクラウドからも削除
-  if (settings.storageMode === 'cloud' || settings.cloudSync) {
-    try {
-      if (syncManager.getSyncStatus().isOnline) {
-        await cloudStorage.deleteMindMap(mapId);
-        console.log('Cloud delete successful');
-      } else {
-        // オフライン時は同期キューに追加
-        syncManager.recordOfflineOperation('delete', mapId);
-        console.log('Offline: Added delete to sync queue');
-      }
-    } catch (error) {
-      console.warn('Cloud delete failed, adding to sync queue:', error);
-      try {
-        syncManager.recordOfflineOperation('delete', mapId);
-      } catch (syncError) {
-        console.error('Failed to add to sync queue:', syncError);
-      }
-    }
-  }
-  
-  return localResult;
+  // 現在はローカルのみから削除
+  return deleteMindMap(mapId);
 };
 
-// クラウド接続テスト
+// クラウド接続テスト - 一時的に無効化
 export const testCloudConnection = async () => {
-  try {
-    return await cloudStorage.testConnection();
-  } catch (error) {
-    console.error('Cloud connection test failed:', error);
-    return false;
-  }
+  // 現在は常にfalseを返す（クラウド機能無効）
+  return false;
 };
 
-// 同期機能
-export const syncWithCloud = async () => {
-  try {
-    return await syncManager.forcSync();
-  } catch (error) {
-    console.error('Sync failed:', error);
-    throw error;
-  }
-};
+// 同期機能 - 削除予定（直接syncManagerを使用）
+// export const syncWithCloud = async () => {
+//   try {
+//     return await syncManager.forcSync();
+//   } catch (error) {
+//     console.error('Sync failed:', error);
+//     throw error;
+//   }
+// };
 
 export const getSyncStatus = () => {
   try {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, testCloudConnection, getSyncStatus } from '../utils/storage.js';
-import { syncManager } from '../utils/syncManager.js';
+import { getAppSettings, saveAppSettings, getSyncStatus } from '../utils/storage.js';
+import { performSync, testConnection } from '../utils/simpleSync.js';
 import SyncStatusIndicator from './SyncStatusIndicator.jsx';
 import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
@@ -28,7 +28,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
   const handleTestConnection = async () => {
     setIsConnecting(true);
     try {
-      const isConnected = await testCloudConnection();
+      const isConnected = await testConnection();
       setConnectionStatus(isConnected ? 'connected' : 'failed');
     } catch (error) {
       setConnectionStatus('failed');
@@ -41,7 +41,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     setIsSyncing(true);
     try {
       console.log('手動同期開始...');
-      const result = await syncManager.forcSync();
+      const result = await performSync();
       console.log('手動同期結果:', result);
       
       const message = `同期完了!\n` +
@@ -49,7 +49,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
         `クラウド: ${result.cloudCount || 0}件\n` +
         `競合: ${result.conflicts > 0 ? `${result.conflicts}件を解決` : 'なし'}`;
       
-      alert(message);
+      alert(result.message || message);
       
       // 同期完了後にマインドマップリストを更新
       if (refreshAllMindMaps) {

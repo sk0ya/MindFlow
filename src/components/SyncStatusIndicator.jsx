@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getSyncStatus } from '../utils/storage.js';
+import { syncManager } from '../utils/syncManager.js';
 
 const SyncStatusIndicator = () => {
   const [syncStatus, setSyncStatus] = useState({
@@ -13,7 +15,6 @@ const SyncStatusIndicator = () => {
   useEffect(() => {
     const updateStatus = async () => {
       try {
-        const { getSyncStatus } = await import('../utils/storage.js');
         const status = getSyncStatus();
         setSyncStatus(status);
         
@@ -51,8 +52,7 @@ const SyncStatusIndicator = () => {
     
     setIsSyncing(true);
     try {
-      const { syncWithCloud, getSyncStatus } = await import('../utils/storage.js');
-      const result = await syncWithCloud();
+      const result = await syncManager.forcSync();
       console.log('Manual sync completed:', result);
       setSyncStatus(getSyncStatus());
     } catch (error) {
