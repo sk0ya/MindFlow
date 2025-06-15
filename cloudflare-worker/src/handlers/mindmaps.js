@@ -233,18 +233,22 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
     console.log('INSERT結果:', insertResult);
     
     // ローカル形式で返す
-    return {
+    const response = {
       ...mindmapData,
       createdAt: now,
       updatedAt: now
     };
+    console.log('updateMindMap INSERT レスポンス:', JSON.stringify(response, null, 2));
+    return response;
   }
   
   // ローカル形式で返す
-  return {
+  const response = {
     ...mindmapData,
     updatedAt: now
   };
+  console.log('updateMindMap レスポンス:', JSON.stringify(response, null, 2));
+  return response;
 }
 
 async function deleteMindMap(db, userId, mindmapId) {

@@ -120,6 +120,12 @@ class SyncManager {
       console.log('手動同期: ローカルマップ数', localMaps.length);
       
       for (const map of localMaps) {
+        // 無効なデータをスキップ
+        if (!map.rootNode) {
+          console.warn('手動同期: rootNodeが存在しないためスキップ', map.id, map.title);
+          continue;
+        }
+        
         try {
           console.log('手動同期: マップを送信中', map.id, map.title);
           await cloudStorage.updateMindMap(map.id, map);

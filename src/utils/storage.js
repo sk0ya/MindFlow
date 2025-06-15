@@ -26,7 +26,25 @@ export const saveToStorage = (key, data) => {
 export const getAllMindMaps = () => {
   const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
   // 無効なデータをフィルターして除外
-  return maps.filter(map => map && map.id && typeof map.id === 'string');
+  const validMaps = maps.filter(map => {
+    if (!map || !map.id || typeof map.id !== 'string') {
+      console.warn('Invalid map filtered out (missing id):', map);
+      return false;
+    }
+    if (!map.rootNode) {
+      console.warn('Invalid map filtered out (missing rootNode):', map);
+      return false;
+    }
+    return true;
+  });
+  
+  // フィルター後のデータを保存（破損データをクリーンアップ）
+  if (validMaps.length !== maps.length) {
+    console.log('Cleaning up corrupted mindmaps from localStorage');
+    saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
+  }
+  
+  return validMaps;
 };
 
 // マインドマップを保存
