@@ -1,0 +1,28 @@
+name = "mindflow-api"
+main = "src/index.js"
+compatibility_date = "2023-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mindflow-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+[vars]
+CORS_ORIGIN = "http://localhost:3000"
+ENABLE_AUTH = "false"
+API_BASE_URL = "http://localhost:8787"
+FRONTEND_URL = "http://localhost:3000"
+
+[[env.production]]
+name = "mindflow-api-prod"
+
+[env.production.vars]
+CORS_ORIGIN = "https://your-domain.com"
+ENABLE_AUTH = "true"
+API_BASE_URL = "https://mindflow-api-prod.your-domain.workers.dev"
+FRONTEND_URL = "https://your-domain.com"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "mindflow-db"
+database_id = "YOUR_DATABASE_ID_HERE" 

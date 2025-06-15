@@ -1,32 +1,74 @@
 // JWT認証ユーティリティ
 
-import { SignJWT, jwtVerify } from 'jose';
+// import { SignJWT, jwtVerify } from 'jose';
 
 const JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_ALGORITHM = 'HS256';
 
-// JWTトークンを生成
+// JWTトークンを生成（簡易実装）
 export async function generateJWT(payload, expiresIn = '24h') {
-  const secret = new TextEncoder().encode(JWT_SECRET);
+  // 簡易的な実装（本番環境では proper JWTライブラリを使用）
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + (24 * 60 * 60); // 24時間後
   
-  const jwt = await new SignJWT(payload)
-    .setProtectedHeader({ alg: JWT_ALGORITHM })
-    .setIssuedAt()
-    .setExpirationTime(expiresIn)
-    .sign(secret);
-    
-  return jwt;
+  const jwtPayload = {
+    ...payload,
+    iat: now,
+    exp: exp
+  };
+  
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(jwtPayload));
+  const signature = await simpleSign(`${encodedHeader}.${encodedPayload}`, JWT_SECRET);
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
 
-// JWTトークンを検証
+// JWTトークンを検証（簡易実装）
 export async function verifyJWT(token) {
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return { valid: true, payload };
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return { valid: false, error: 'Invalid token format' };
+    }
+    
+    const [header, payload, signature] = parts;
+    const expectedSignature = await simpleSign(`${header}.${payload}`, JWT_SECRET);
+    
+    if (signature !== expectedSignature) {
+      return { valid: false, error: 'Invalid signature' };
+    }
+    
+    const decodedPayload = JSON.parse(atob(payload));
+    
+    // 有効期限チェック
+    if (decodedPayload.exp && decodedPayload.exp < Math.floor(Date.now() / 1000)) {
+      return { valid: false, error: 'Token expired' };
+    }
+    
+    return { valid: true, payload: decodedPayload };
   } catch (error) {
     return { valid: false, error: error.message };
   }
+}
+
+// 簡易署名関数
+async function simpleSign(data, secret) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+  return btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 // リクエストからJWTトークンを抽出
