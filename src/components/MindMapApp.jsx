@@ -23,6 +23,13 @@ const MindMapApp = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const authToken = urlParams.get('token');
   const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
+  
+  // 認証状態を管理
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    user: null,
+    isLoading: true
+  });
 
   const {
     data,
@@ -397,14 +404,20 @@ const MindMapApp = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleCloseAllPanels]);
 
-  // 認証検証中の場合は専用画面を表示
-  if (isAuthVerification) {
+  // 認証検証中の場合は専用画面を表示（まだ認証していない場合のみ）
+  if (isAuthVerification && !authState.isAuthenticated) {
     return (
       <AuthVerification 
         onAuthSuccess={(user) => {
           console.log('Authentication successful:', user);
-          // 認証成功後、通常のアプリケーションを表示
-          window.location.href = '/MindFlow/';
+          // 認証状態を更新
+          setAuthState({
+            isAuthenticated: true,
+            user: user,
+            isLoading: false
+          });
+          // URLからトークンを除去
+          window.history.replaceState({}, document.title, window.location.pathname);
         }}
         onAuthError={(error) => {
           console.error('Authentication failed:', error);

@@ -30,6 +30,11 @@ const AuthVerification = ({ onAuthSuccess, onAuthError }) => {
         // 成功コールバック
         onAuthSuccess && onAuthSuccess(result.user);
         
+        // 3秒後にホームページにリダイレクト
+        setTimeout(() => {
+          window.location.href = '/MindFlow/';
+        }, 3000);
+        
       } catch (error) {
         console.error('Authentication verification failed:', error);
         setStatus('error');
