@@ -24,12 +24,16 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
 
     try {
       const result = await authManager.sendMagicLink(email);
+      console.log('AuthModal received result:', result); // デバッグログ
       setSuccess(result.message);
       setStep('sent');
       
       // Magic Linkがレスポンスに含まれている場合は保存
       if (result.magicLink) {
+        console.log('Setting magic link:', result.magicLink); // デバッグログ
         setMagicLink(result.magicLink);
+      } else {
+        console.log('No magic link in response'); // デバッグログ
       }
     } catch (error) {
       setError(error.message);
@@ -289,6 +293,51 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
               }}>
                 📱 メール内のリンクをクリックしてログインしてください。
               </p>
+              {magicLink && (
+                <div style={{
+                  backgroundColor: '#f0f8ff',
+                  padding: '15px',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  border: '1px solid #4a90e2'
+                }}>
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#4a90e2',
+                    marginBottom: '10px',
+                    fontWeight: '500'
+                  }}>
+                    🔗 テスト用 Magic Link:
+                  </p>
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#333',
+                    wordBreak: 'break-all',
+                    marginBottom: '10px',
+                    fontFamily: 'monospace',
+                    backgroundColor: 'white',
+                    padding: '8px',
+                    borderRadius: '4px'
+                  }}>
+                    {magicLink}
+                  </div>
+                  <button
+                    onClick={() => window.open(magicLink, '_blank')}
+                    style={{
+                      backgroundColor: '#4a90e2',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '8px 16px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    🚀 今すぐログイン
+                  </button>
+                </div>
+              )}
               <div style={{
                 backgroundColor: '#f8f9fa',
                 padding: '12px',

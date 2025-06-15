@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 
 const MagicLinkNotification = ({ isVisible, onClose, magicLink }) => {
   const [copied, setCopied] = useState(false);
+  
+  console.log('MagicLinkNotification props:', { isVisible, magicLink }); // デバッグログ
 
   const copyToClipboard = async () => {
     try {

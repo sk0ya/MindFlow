@@ -97,6 +97,8 @@ class AuthManager {
 
       const data = await response.json();
       
+      console.log('Magic Link API response:', data); // デバッグログ
+      
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send magic link');
       }
