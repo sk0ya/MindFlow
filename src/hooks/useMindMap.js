@@ -2,6 +2,9 @@
 import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMapHybrid, getAllMindMapsHybrid, deleteMindMapHybrid } from '../utils/storage.js';
 import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData, createNodeMapLink } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
+import { getRealtimeClient } from '../utils/realtimeClient.js';
+import { authManager } from '../utils/authManager.js';
+import { useRealtimeOptimization, usePerformanceMonitor } from './useRealtimeOptimization.js';
 
 // 既存のノードに色を自動割り当てする
 const assignColorsToExistingNodes = (mindMapData) => {
@@ -74,6 +77,31 @@ export const useMindMap = () => {
     return currentMap.id;
   });
 
+  // リアルタイム同期用の状態
+  const [realtimeClient, setRealtimeClient] = useState(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [connectedUsers, setConnectedUsers] = useState([]);
+  const [userCursors, setUserCursors] = useState(new Map());
+  const [realtimeStatus, setRealtimeStatus] = useState('disconnected'); // disconnected, connecting, connected, reconnecting
+  const [pendingOperations, setPendingOperations] = useState([]);
+  const isApplyingRealtimeOperation = useRef(false);
+
+  // パフォーマンス最適化
+  const { 
+    batchUpdates, 
+    optimizeCursorUpdates, 
+    optimizePresenceUpdates,
+    optimizeWebSocketMessages,
+    cleanup: cleanupOptimization 
+  } = useRealtimeOptimization();
+  
+  const { 
+    startRenderMeasure, 
+    endRenderMeasure, 
+    recordWebSocketMessage, 
+    logPerformanceSummary 
+  } = usePerformanceMonitor();
+
   // 履歴に追加
   const addToHistory = (newData) => {
     setHistory(prev => {
@@ -85,9 +113,20 @@ export const useMindMap = () => {
   };
 
   // データ更新の共通処理
-  const updateData = (newData) => {
-    setData(newData);
-    addToHistory(newData);
+  const updateData = (newData, options = {}) => {
+    const startTime = startRenderMeasure();
+    
+    // バッチ更新を使用
+    batchUpdates(() => {
+      setData(newData);
+      
+      // リアルタイム操作の適用中でない場合のみ履歴に追加
+      if (!isApplyingRealtimeOperation.current) {
+        addToHistory(newData);
+      }
+    }, options.priority || 'normal');
+    
+    endRenderMeasure(startTime);
     
     // 自動保存
     if (data.settings?.autoSave) {
@@ -104,7 +143,273 @@ export const useMindMap = () => {
         }
       }, 1000);
     }
+
+    // リアルタイム同期が有効な場合、操作を送信
+    if (realtimeClient && isRealtimeConnected && !isApplyingRealtimeOperation.current && options.sendToRealtime !== false) {
+      sendRealtimeOperation(options.operationType, options.operationData);
+    }
   };
+
+  // リアルタイム同期の初期化
+  const initializeRealtime = useCallback(async () => {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
+      
+      const client = getRealtimeClient(apiBaseUrl, authManager);
+      setRealtimeClient(client);
+
+      // イベントハンドラーの設定
+      client.on('connected', () => {
+        setIsRealtimeConnected(true);
+        setRealtimeStatus('connected');
+        console.log('Realtime connected');
+      });
+
+      client.on('disconnected', () => {
+        setIsRealtimeConnected(false);
+        setRealtimeStatus('disconnected');
+        setConnectedUsers([]);
+        setUserCursors(new Map());
+      });
+
+      client.on('initial_data', (data) => {
+        // 初期データを受信した場合、ローカル状態を更新
+        if (data.mindmapState) {
+          isApplyingRealtimeOperation.current = true;
+          const newData = { ...assignColorsToExistingNodes(data.mindmapState), id: currentMapId };
+          setData(newData);
+          isApplyingRealtimeOperation.current = false;
+        }
+        setConnectedUsers(data.connectedUsers || []);
+      });
+
+      client.on('operation_received', (data) => {
+        // リモート操作を適用
+        applyRealtimeOperation(data.operation);
+      });
+
+      client.on('cursor_update', (data) => {
+        // カーソル更新の最適化
+        if (optimizeCursorUpdates(data.userId, data.cursor)) {
+          batchUpdates(() => {
+            setUserCursors(prev => {
+              const newCursors = new Map(prev);
+              newCursors.set(data.userId, {
+                userId: data.userId,
+                userName: data.userName,
+                userColor: data.userColor,
+                cursor: data.cursor
+              });
+              return newCursors;
+            });
+          }, 'low'); // カーソル更新は低優先度
+        }
+      });
+
+      client.on('user_joined', (data) => {
+        const optimizedUsers = optimizePresenceUpdates(data.connectedUsers || []);
+        batchUpdates(() => {
+          setConnectedUsers(optimizedUsers);
+        }, 'normal');
+      });
+
+      client.on('user_left', (data) => {
+        const optimizedUsers = optimizePresenceUpdates(data.connectedUsers || []);
+        batchUpdates(() => {
+          setConnectedUsers(optimizedUsers);
+          setUserCursors(prev => {
+            const newCursors = new Map(prev);
+            newCursors.delete(data.user.id);
+            return newCursors;
+          });
+        }, 'normal');
+      });
+
+      client.on('reconnect_failed', () => {
+        setRealtimeStatus('disconnected');
+        setIsRealtimeConnected(false);
+      });
+
+      // 接続開始
+      setRealtimeStatus('connecting');
+      await client.connect(currentMapId);
+
+    } catch (error) {
+      console.error('Realtime initialization failed:', error);
+      setRealtimeStatus('disconnected');
+    }
+  }, [currentMapId]);
+
+  // リアルタイム操作の送信
+  const sendRealtimeOperation = useCallback((operationType, operationData) => {
+    if (!realtimeClient || !isRealtimeConnected) {
+      // 接続していない場合は保留キューに追加
+      setPendingOperations(prev => [...prev, { type: operationType, data: operationData }]);
+      return;
+    }
+
+    try {
+      switch (operationType) {
+        case 'node_update':
+          realtimeClient.updateNode(operationData.nodeId, operationData.updates);
+          break;
+        case 'node_create':
+          realtimeClient.createNode(operationData.parentId, operationData);
+          break;
+        case 'node_delete':
+          realtimeClient.deleteNode(operationData.nodeId, operationData.preserveChildren);
+          break;
+        case 'node_move':
+          realtimeClient.moveNode(operationData.nodeId, operationData.newPosition, operationData.newParentId);
+          break;
+        default:
+          console.warn('Unknown operation type:', operationType);
+      }
+    } catch (error) {
+      console.error('Failed to send realtime operation:', error);
+    }
+  }, [realtimeClient, isRealtimeConnected]);
+
+  // リアルタイム操作の適用
+  const applyRealtimeOperation = useCallback((operation) => {
+    isApplyingRealtimeOperation.current = true;
+
+    try {
+      setData(currentData => {
+        const newData = deepClone(currentData);
+
+        switch (operation.type) {
+          case 'node_update':
+            applyNodeUpdateOperation(newData, operation.data);
+            break;
+          case 'node_create':
+            applyNodeCreateOperation(newData, operation.data);
+            break;
+          case 'node_delete':
+            applyNodeDeleteOperation(newData, operation.data);
+            break;
+          case 'node_move':
+            applyNodeMoveOperation(newData, operation.data);
+            break;
+          default:
+            console.warn('Unknown realtime operation:', operation.type);
+            return currentData;
+        }
+
+        return newData;
+      });
+    } catch (error) {
+      console.error('Failed to apply realtime operation:', error);
+    } finally {
+      isApplyingRealtimeOperation.current = false;
+    }
+  }, []);
+
+  // 個別操作の適用関数
+  const applyNodeUpdateOperation = (data, operationData) => {
+    const node = findNodeInData(data, operationData.nodeId);
+    if (node && operationData.updates) {
+      Object.assign(node, operationData.updates);
+    }
+  };
+
+  const applyNodeCreateOperation = (data, operationData) => {
+    const parentNode = findNodeInData(data, operationData.parentId);
+    if (parentNode) {
+      const newNode = {
+        id: operationData.nodeId,
+        text: operationData.text || '',
+        x: operationData.position?.x || 0,
+        y: operationData.position?.y || 0,
+        fontSize: operationData.style?.fontSize || 14,
+        fontWeight: operationData.style?.fontWeight || 'normal',
+        children: [],
+        attachments: [],
+        mapLinks: []
+      };
+      parentNode.children.push(newNode);
+    }
+  };
+
+  const applyNodeDeleteOperation = (data, operationData) => {
+    const parentNode = findParentNodeInData(data, operationData.nodeId);
+    if (parentNode) {
+      const nodeIndex = parentNode.children.findIndex(child => child.id === operationData.nodeId);
+      if (nodeIndex !== -1) {
+        const deletedNode = parentNode.children[nodeIndex];
+        if (operationData.preserveChildren && deletedNode.children) {
+          // 子ノードを親に移動
+          parentNode.children.splice(nodeIndex, 1, ...deletedNode.children);
+        } else {
+          // ノードを完全削除
+          parentNode.children.splice(nodeIndex, 1);
+        }
+      }
+    }
+  };
+
+  const applyNodeMoveOperation = (data, operationData) => {
+    // まず古い親から削除
+    const oldParent = findParentNodeInData(data, operationData.nodeId);
+    const node = findNodeInData(data, operationData.nodeId);
+    
+    if (!node || !oldParent) return;
+
+    const oldIndex = oldParent.children.findIndex(child => child.id === operationData.nodeId);
+    if (oldIndex !== -1) {
+      oldParent.children.splice(oldIndex, 1);
+    }
+
+    // 位置更新
+    if (operationData.newPosition) {
+      node.x = operationData.newPosition.x;
+      node.y = operationData.newPosition.y;
+    }
+
+    // 新しい親に追加
+    if (operationData.newParentId) {
+      const newParent = findNodeInData(data, operationData.newParentId);
+      if (newParent) {
+        newParent.children.push(node);
+      }
+    }
+  };
+
+  // データ内のノード検索ヘルパー
+  const findNodeInData = (data, nodeId) => {
+    const findNode = (node) => {
+      if (node.id === nodeId) return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = findNode(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findNode(data.rootNode);
+  };
+
+  const findParentNodeInData = (data, nodeId) => {
+    const findParent = (node) => {
+      if (node.children) {
+        for (const child of node.children) {
+          if (child.id === nodeId) return node;
+          const found = findParent(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findParent(data.rootNode);
+  };
+
+  // カーソル位置の更新
+  const updateCursorPosition = useCallback((nodeId) => {
+    if (realtimeClient && isRealtimeConnected) {
+      realtimeClient.updateCursor(nodeId, { timestamp: Date.now() });
+    }
+  }, [realtimeClient, isRealtimeConnected]);
 
   // 全ノードを平坦化
   const flattenNodes = (node, result = []) => {
@@ -229,7 +534,13 @@ export const useMindMap = () => {
       return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
     };
     
-    updateData({ ...data, rootNode: updateNodeRecursive(data.rootNode) });
+    updateData(
+      { ...data, rootNode: updateNodeRecursive(data.rootNode) },
+      {
+        operationType: 'node_update',
+        operationData: { nodeId, updates }
+      }
+    );
   };
 
   // 設定を更新
@@ -288,7 +599,23 @@ export const useMindMap = () => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData({ ...data, rootNode: newRootNode });
+    updateData(
+      { ...data, rootNode: newRootNode },
+      {
+        operationType: 'node_create',
+        operationData: {
+          nodeId: newChild.id,
+          parentId: parentId,
+          text: nodeText,
+          position: { x: newChild.x, y: newChild.y },
+          style: {
+            fontSize: newChild.fontSize,
+            fontWeight: newChild.fontWeight,
+            color: newChild.color
+          }
+        }
+      }
+    );
     
     // 編集状態を同時に設定
     if (startEditing) {
@@ -393,7 +720,13 @@ export const useMindMap = () => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData({ ...data, rootNode: newRootNode });
+    updateData(
+      { ...data, rootNode: newRootNode },
+      {
+        operationType: 'node_delete',
+        operationData: { nodeId, preserveChildren: false }
+      }
+    );
     
     // 削除されたノードが選択されていた場合、兄弟ノードを選択
     if (selectedNodeId === nodeId) {
@@ -407,6 +740,9 @@ export const useMindMap = () => {
   // ノードをドラッグで移動
   const dragNode = (nodeId, x, y) => {
     updateNode(nodeId, { x, y });
+    
+    // カーソル位置も同時に更新
+    updateCursorPosition(nodeId);
   };
 
   // ノードの親を変更
@@ -471,7 +807,17 @@ export const useMindMap = () => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData({ ...data, rootNode: newRootNode });
+    updateData(
+      { ...data, rootNode: newRootNode },
+      {
+        operationType: 'node_move',
+        operationData: {
+          nodeId,
+          newPosition: { x: nodeToMove.x, y: nodeToMove.y },
+          newParentId
+        }
+      }
+    );
     return true;
   };
 
@@ -920,6 +1266,53 @@ export const useMindMap = () => {
     }
   };
 
+  // リアルタイム同期の初期化（マウント時）
+  useEffect(() => {
+    // 認証されている場合のみリアルタイム機能を初期化
+    if (authManager && authManager.isAuthenticated()) {
+      initializeRealtime();
+    }
+
+    // クリーンアップ
+    return () => {
+      if (realtimeClient) {
+        realtimeClient.disconnect();
+      }
+      cleanupOptimization();
+    };
+  }, [initializeRealtime]);
+
+  // マインドマップ切り替え時にリアルタイム再接続
+  useEffect(() => {
+    if (realtimeClient && currentMapId) {
+      realtimeClient.disconnect();
+      setTimeout(() => {
+        initializeRealtime();
+      }, 100);
+    }
+  }, [currentMapId]);
+
+  // 保留中操作の送信
+  useEffect(() => {
+    if (isRealtimeConnected && pendingOperations.length > 0) {
+      pendingOperations.forEach(op => {
+        sendRealtimeOperation(op.type, op.data);
+      });
+      setPendingOperations([]);
+    }
+  }, [isRealtimeConnected, pendingOperations, sendRealtimeOperation]);
+
+  // パフォーマンス監視
+  useEffect(() => {
+    const performanceInterval = setInterval(() => {
+      if (process.env.NODE_ENV === 'development') {
+        logPerformanceSummary();
+      }
+    }, 30000); // 30秒ごと
+
+    return () => clearInterval(performanceInterval);
+  }, [logPerformanceSummary]);
+
   return {
     // データ
     data,
@@ -985,6 +1378,15 @@ export const useMindMap = () => {
     // ノード用マップリンク管理
     addNodeMapLink,
     removeNodeMapLink,
-    updateNodeMapLinkTargetTitle
+    updateNodeMapLinkTargetTitle,
+    
+    // リアルタイム同期
+    realtimeClient,
+    isRealtimeConnected,
+    realtimeStatus,
+    connectedUsers,
+    userCursors,
+    initializeRealtime,
+    updateCursorPosition
   };
 };

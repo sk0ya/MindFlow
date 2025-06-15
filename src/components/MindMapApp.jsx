@@ -12,6 +12,12 @@ import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from './MapLinksPanel';
 import CloudStoragePanel from './CloudStoragePanel';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import UserPresence from './UserPresence';
+import UserCursors from './UserCursors';
+import ConnectionStatus from './ConnectionStatus';
+import ConflictNotification from './ConflictNotification';
+import CollaborativeFeatures from './CollaborativeFeatures';
+import PerformanceDashboard from './PerformanceDashboard';
 import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings } from '../utils/storage';
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
@@ -75,7 +81,15 @@ const MindMapApp = () => {
     changeMapCategory,
     getAvailableCategories,
     addNodeMapLink,
-    removeNodeMapLink
+    removeNodeMapLink,
+    // リアルタイム機能
+    realtimeClient,
+    isRealtimeConnected,
+    realtimeStatus,
+    connectedUsers,
+    userCursors,
+    initializeRealtime,
+    updateCursorPosition
   } = useMindMap();
 
   const [zoom, setZoom] = useState(1);
@@ -104,6 +118,15 @@ const MindMapApp = () => {
   
   // クラウドストレージパネル状態
   const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
+  
+  // 競合通知状態
+  const [conflicts, setConflicts] = useState([]);
+  
+  // 共同編集機能パネル状態
+  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState(false);
+  
+  // パフォーマンスダッシュボード状態（開発環境のみ）
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   
   // 認証状態を監視して更新
   useEffect(() => {
@@ -461,16 +484,100 @@ const MindMapApp = () => {
     }
   };
 
+  // リアルタイム機能関連ハンドラー
+  const handleRealtimeReconnect = () => {
+    if (initializeRealtime) {
+      initializeRealtime();
+    }
+  };
+
+  const handleRealtimeDisconnect = () => {
+    // リアルタイムクライアントがあれば切断
+    // この機能は必要に応じて useMindMap hook に追加
+  };
+
+  const handleToggleRealtime = () => {
+    if (isRealtimeConnected) {
+      handleRealtimeDisconnect();
+    } else {
+      handleRealtimeReconnect();
+    }
+  };
+
+  const handleUserClick = (user) => {
+    // ユーザークリック時の処理（必要に応じて実装）
+    console.log('User clicked:', user);
+  };
+
+  // カーソル更新（ノード選択時）
+  const handleNodeSelect = (nodeId) => {
+    setSelectedNodeId(nodeId);
+    if (updateCursorPosition && nodeId) {
+      updateCursorPosition(nodeId);
+    }
+  };
+
+  // 競合処理関連
+  const handleConflictResolved = (conflict) => {
+    setConflicts(prev => [...prev, {
+      ...conflict,
+      id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now()
+    }]);
+  };
+
+  const handleDismissConflict = (conflictId) => {
+    setConflicts(prev => prev.filter(c => c.id !== conflictId));
+  };
+
+  // デモ用の競合シミュレーション（開発時のテスト用）
+  const simulateConflict = (type = 'concurrent_update') => {
+    const demoConflict = {
+      id: `demo_${Date.now()}`,
+      type: type,
+      resolutionType: 'field_merge',
+      metadata: {
+        mergedFields: ['text', 'color'],
+        conflictCount: 2
+      },
+      affectedNodes: [selectedNodeId || 'root'],
+      involvedUsers: [
+        { id: 'user1', name: 'Alice', color: '#FF6B6B' },
+        { id: 'user2', name: 'Bob', color: '#4ECDC4' }
+      ]
+    };
+    
+    handleConflictResolved(demoConflict);
+  };
+
+  // 共同編集機能の表示切り替え
+  const handleToggleCollaborativeFeatures = () => {
+    setShowCollaborativeFeatures(!showCollaborativeFeatures);
+  };
+
+  // パフォーマンスダッシュボードの表示切り替え（開発環境のみ）
+  const handleTogglePerformanceDashboard = () => {
+    if (process.env.NODE_ENV === 'development') {
+      setShowPerformanceDashboard(!showPerformanceDashboard);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         handleCloseAllPanels();
       }
+      
+      // パフォーマンスダッシュボードのトグル（開発環境のみ、Ctrl+Shift+P）
+      if (e.ctrlKey && e.shiftKey && e.key === 'P' && process.env.NODE_ENV === 'development') {
+        e.preventDefault();
+        handleTogglePerformanceDashboard();
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleCloseAllPanels]);
+  }, [handleCloseAllPanels, handleTogglePerformanceDashboard]);
 
   // 認証検証中の場合は専用画面を表示（まだ認証していない場合のみ）
   if (isAuthVerification && !authState.isAuthenticated) {
@@ -540,7 +647,7 @@ const MindMapApp = () => {
             editingNodeId={editingNodeId}
             editText={editText}
             setEditText={setEditText}
-            onSelectNode={setSelectedNodeId}
+            onSelectNode={handleNodeSelect}
             onStartEdit={startEdit}
             onFinishEdit={finishEdit}
             onDragNode={dragNode}
@@ -562,6 +669,66 @@ const MindMapApp = () => {
             setPan={setPan}
           />
         </ErrorBoundary>
+
+        {/* リアルタイム機能UI */}
+        {authState.isAuthenticated && (
+          <>
+            <UserPresence
+              connectedUsers={connectedUsers}
+              currentUserId={authState.user?.id}
+              realtimeStatus={realtimeStatus}
+              onUserClick={handleUserClick}
+            />
+            
+            <UserCursors
+              userCursors={userCursors}
+              currentUserId={authState.user?.id}
+              zoom={zoom}
+              pan={pan}
+              findNode={findNode}
+            />
+            
+            <ConnectionStatus
+              realtimeStatus={realtimeStatus}
+              isRealtimeConnected={isRealtimeConnected}
+              connectedUsers={connectedUsers}
+              pendingOperations={0} // TODO: get from hook if available
+              reconnectAttempts={0} // TODO: get from hook if available
+              lastError={null} // TODO: get from hook if available
+              onReconnect={handleRealtimeReconnect}
+              onDisconnect={handleRealtimeDisconnect}
+              onToggleRealtime={handleToggleRealtime}
+              onShowCollaborativeFeatures={handleToggleCollaborativeFeatures}
+            />
+          </>
+        )}
+
+        {/* 競合解決通知 */}
+        <ConflictNotification
+          conflicts={conflicts}
+          onDismiss={handleDismissConflict}
+          position="top-center"
+        />
+
+        {/* 共同編集機能パネル */}
+        <CollaborativeFeatures
+          isVisible={showCollaborativeFeatures}
+          onClose={() => setShowCollaborativeFeatures(false)}
+          selectedNodeId={selectedNodeId}
+          findNode={findNode}
+          currentUserId={authState.user?.id}
+          connectedUsers={connectedUsers}
+          realtimeClient={realtimeClient}
+        />
+
+        {/* パフォーマンスダッシュボード（開発環境のみ） */}
+        {process.env.NODE_ENV === 'development' && (
+          <PerformanceDashboard
+            isVisible={showPerformanceDashboard}
+            onClose={() => setShowPerformanceDashboard(false)}
+            position="bottom-left"
+          />
+        )}
 
         {showCustomizationPanel && (
           <NodeCustomizationPanel
