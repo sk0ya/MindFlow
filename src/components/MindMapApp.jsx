@@ -506,7 +506,6 @@ const MindMapApp = () => {
 
   const handleUserClick = (user) => {
     // ユーザークリック時の処理（必要に応じて実装）
-    console.log('User clicked:', user);
   };
 
   // カーソル更新（ノード選択時）
@@ -530,25 +529,6 @@ const MindMapApp = () => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId));
   };
 
-  // デモ用の競合シミュレーション（開発時のテスト用）
-  const simulateConflict = (type = 'concurrent_update') => {
-    const demoConflict = {
-      id: `demo_${Date.now()}`,
-      type: type,
-      resolutionType: 'field_merge',
-      metadata: {
-        mergedFields: ['text', 'color'],
-        conflictCount: 2
-      },
-      affectedNodes: [selectedNodeId || 'root'],
-      involvedUsers: [
-        { id: 'user1', name: 'Alice', color: '#FF6B6B' },
-        { id: 'user2', name: 'Bob', color: '#4ECDC4' }
-      ]
-    };
-    
-    handleConflictResolved(demoConflict);
-  };
 
   // 共同編集機能の表示切り替え
   const handleToggleCollaborativeFeatures = () => {
@@ -584,7 +564,6 @@ const MindMapApp = () => {
     return (
       <AuthVerification 
         onAuthSuccess={(user) => {
-          console.log('Authentication successful:', user);
           // 認証状態を更新
           setAuthState({
             isAuthenticated: true,

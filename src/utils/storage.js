@@ -40,8 +40,6 @@ export const getAllMindMaps = () => {
   
   // フィルター後のデータを保存（破損データをクリーンアップ）
   if (validMaps.length !== maps.length) {
-    console.log(`Cleaning up corrupted mindmaps from localStorage: ${maps.length - validMaps.length} 件削除`);
-    console.log('有効なマップ数:', validMaps.length);
     saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
   }
   
@@ -177,7 +175,6 @@ export const saveMindMapHybrid = async (mindMapData) => {
     if (authManager.isAuthenticated()) {
       try {
         const result = await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
-        console.log('Cloud save successful:', result);
         
         // クラウド保存成功時でもローカルにもバックアップとして保存
         const localResult = saveMindMap(mindMapData);
@@ -209,7 +206,6 @@ export const getAllMindMapsHybrid = async () => {
     if (authManager.isAuthenticated()) {
       try {
         const cloudMaps = await cloudStorage.getAllMindMaps();
-        console.log('Cloud maps loaded:', cloudMaps);
         
         // クラウドデータが有効な場合はそれを使用
         if (cloudMaps && cloudMaps.length > 0) {
@@ -248,7 +244,6 @@ export const deleteMindMapHybrid = async (mapId) => {
     if (authManager.isAuthenticated()) {
       try {
         await cloudStorage.deleteMindMap(mapId);
-        console.log('Cloud delete successful for:', mapId);
       } catch (cloudError) {
         console.warn('Cloud delete failed:', cloudError);
         // クラウド削除失敗でもローカル削除は続行
@@ -284,15 +279,6 @@ export const testCloudConnection = async () => {
   }
 };
 
-// 同期機能 - 削除予定（直接syncManagerを使用）
-// export const syncWithCloud = async () => {
-//   try {
-//     return await syncManager.forcSync();
-//   } catch (error) {
-//     console.error('Sync failed:', error);
-//     throw error;
-//   }
-// };
 
 export const getSyncStatus = () => {
   try {
@@ -318,14 +304,9 @@ export const getSyncStatus = () => {
 export const cleanupCorruptedData = () => {
   try {
     const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
-    console.log('クリーンアップ前のマップ数:', maps.length);
-    
     // 破損データを特定
     const corruptedMaps = maps.filter(map => !map || !map.id || !map.rootNode);
     const validMaps = maps.filter(map => map && map.id && map.rootNode);
-    
-    console.log('破損したマップ:', corruptedMaps);
-    console.log('有効なマップ数:', validMaps.length);
     
     // 有効なデータのみ保存
     saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
@@ -346,18 +327,8 @@ export const cleanupCorruptedData = () => {
 export const debugStorageData = () => {
   try {
     const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
-    console.log('=== LocalStorage Debug ===');
-    console.log('Total maps:', maps.length);
-    
     maps.forEach((map, index) => {
-      console.log(`Map ${index + 1}:`, {
-        id: map?.id,
-        title: map?.title,
-        hasRootNode: !!map?.rootNode,
-        source: map?.source,
-        createdAt: map?.createdAt || map?.created_at,
-        updatedAt: map?.updatedAt || map?.updated_at
-      });
+      // Debug info available in returned data
     });
     
     return maps;

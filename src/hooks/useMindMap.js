@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMapHybrid, getAllMindMapsHybrid, deleteMindMapHybrid } from '../utils/storage.js';
 import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData, createNodeMapLink } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
@@ -162,7 +162,6 @@ export const useMindMap = () => {
       client.on('connected', () => {
         setIsRealtimeConnected(true);
         setRealtimeStatus('connected');
-        console.log('Realtime connected');
       });
 
       client.on('disconnected', () => {
@@ -915,7 +914,6 @@ export const useMindMap = () => {
         // 認証状態が変わった場合は全てのマップを再読み込み
         const isAuth = authManager.isAuthenticated();
         if (isAuth) {
-          console.log('Authentication detected, refreshing maps...');
           await refreshAllMindMaps();
         }
       } catch (error) {
@@ -1003,12 +1001,10 @@ export const useMindMap = () => {
           await writable.write(blob);
           await writable.close();
 
-          console.log('ファイルが正常に保存されました:', file.name);
           return;
         } catch (saveError) {
           // ユーザーがキャンセルした場合やエラーが発生した場合
           if (saveError.name === 'AbortError') {
-            console.log('ファイル保存がキャンセルされました');
             return;
           }
           console.warn('File System Access API でのダウンロードに失敗:', saveError);
@@ -1110,30 +1106,6 @@ export const useMindMap = () => {
     });
   };
 
-  // ヘルパー関数
-  const hasMapLinkInNodes = (node, targetMapId) => {
-    if (node.mapLinks && node.mapLinks.some(link => link.targetMapId === targetMapId)) {
-      return true;
-    }
-    return node.children ? node.children.some(child => hasMapLinkInNodes(child, targetMapId)) : false;
-  };
-
-  const updateMapLinksInNodes = (node, targetMapId, newTitle) => {
-    const updatedNode = {
-      ...node,
-      mapLinks: (node.mapLinks || []).map(link =>
-        link.targetMapId === targetMapId
-          ? { ...link, targetMapTitle: newTitle }
-          : link
-      )
-    };
-    
-    if (node.children) {
-      updatedNode.children = node.children.map(child => updateMapLinksInNodes(child, targetMapId, newTitle));
-    }
-    
-    return updatedNode;
-  };
 
   // マルチマップ管理機能
   const refreshAllMindMaps = () => {

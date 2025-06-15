@@ -198,12 +198,6 @@ class AuthManager {
     this.clearAuthData();
     
     // 必要に応じてサーバーサイドでのトークン無効化
-    // await fetch(`${this.apiBase}/api/auth/logout`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': this.getAuthHeader()
-    //   }
-    // });
   }
 
   // トークンリフレッシュ

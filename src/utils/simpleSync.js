@@ -15,20 +15,7 @@ async function apiRequest(endpoint, options = {}) {
     ...options
   };
 
-  console.log('API Request:', {
-    url,
-    method: config.method || 'GET',
-    userId,
-    headers: config.headers
-  });
-
   const response = await fetch(url, config);
-  
-  console.log('API Response:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok
-  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -84,23 +71,19 @@ async function uploadMindMap(mindmap) {
 
 // **メイン同期関数**
 export async function performSync() {
-  console.log('=== シンプル同期開始 ===');
   
   try {
     // 1. ローカルデータを取得
     const localMaps = getLocalMindMaps().filter(map => 
       map && map.id && map.rootNode
     );
-    console.log('ローカルマップ数:', localMaps.length);
 
     // 2. ローカルマップをクラウドに送信
     const uploadResults = [];
     for (const map of localMaps) {
       try {
-        console.log('アップロード中:', map.title);
         const result = await uploadMindMap(map);
         uploadResults.push({ success: true, id: map.id, result });
-        console.log('アップロード成功:', map.id);
       } catch (error) {
         console.error('アップロード失敗:', map.id, error);
         uploadResults.push({ success: false, id: map.id, error: error.message });
@@ -109,7 +92,6 @@ export async function performSync() {
 
     // 3. クラウドからデータを取得
     const cloudMaps = await getCloudMindMaps();
-    console.log('クラウドマップ数:', cloudMaps.length);
 
     // 4. 有効なクラウドデータをローカルに保存
     const validCloudMaps = cloudMaps.filter(map => 
@@ -118,10 +100,7 @@ export async function performSync() {
     
     if (validCloudMaps.length > 0) {
       saveLocalMindMaps(validCloudMaps);
-      console.log('ローカルストレージ更新:', validCloudMaps.length, '件');
     }
-
-    console.log('=== 同期完了 ===');
     return {
       success: true,
       localCount: localMaps.length,

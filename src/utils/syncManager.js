@@ -117,25 +117,19 @@ class SyncManager {
 
       // 2. ローカルのすべてのマインドマップをクラウドに送信
       const localMaps = this.getAllMindMapsLocal();
-      console.log('手動同期: ローカルマップ数', localMaps.length);
       
       for (const map of localMaps) {
         // 無効なデータをスキップ
         if (!map.rootNode) {
-          console.warn('手動同期: rootNodeが存在しないためスキップ', map.id, map.title);
           continue;
         }
         
         try {
-          console.log('手動同期: マップを送信中', map.id, map.title);
           await cloudStorage.updateMindMap(map.id, map);
-          console.log('手動同期: マップ送信成功', map.id);
         } catch (updateError) {
           // 更新に失敗した場合は新規作成を試行
-          console.log('手動同期: 更新失敗、新規作成を試行', map.id, updateError.message);
           try {
             const createResult = await cloudStorage.createMindMap(map);
-            console.log('手動同期: マップ作成成功', map.id, createResult);
           } catch (createError) {
             console.error('手動同期: マップ作成失敗', map.id, createError.message);
             throw createError; // エラーを再スロー
@@ -145,7 +139,6 @@ class SyncManager {
 
       // 3. クラウドから最新データを取得
       const cloudMaps = await cloudStorage.getAllMindMaps();
-      console.log('手動同期: クラウドマップ数', cloudMaps.mindmaps ? cloudMaps.mindmaps.length : 0);
 
       // 4. コンフリクト解決
       const resolvedMaps = this.resolveConflicts(localMaps, cloudMaps.mindmaps || []);
@@ -155,7 +148,6 @@ class SyncManager {
       
       this.updateLastSyncTime();
       const conflicts = this.getConflictCount(localMaps, cloudMaps.mindmaps || []);
-      console.log('手動同期完了: 競合数', conflicts);
       
       return { 
         success: true, 
