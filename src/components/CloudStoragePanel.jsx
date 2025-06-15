@@ -25,15 +25,21 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     saveAppSettings(newSettings);
   };
 
-  // シンプルな接続テスト
+  // 認証済み接続テスト
   const handleTestConnection = async () => {
     setIsConnecting(true);
     try {
-      const response = await fetch('https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps', {
-        headers: { 'X-User-ID': 'test-user' }
-      });
+      if (!authManager.isAuthenticated()) {
+        setConnectionStatus('not_authenticated');
+        return;
+      }
+      
+      const response = await authManager.authenticatedFetch(
+        'https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps'
+      );
       setConnectionStatus(response.ok ? 'connected' : 'failed');
     } catch (error) {
+      console.error('Connection test error:', error);
       setConnectionStatus('failed');
     } finally {
       setIsConnecting(false);
@@ -52,30 +58,39 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
       );
       console.log('ローカルマップ:', localMaps.length);
 
-      // 2. ユーザーID取得
-      let userId = localStorage.getItem('mindflow_user_id');
+      // 2. 認証されたユーザーIDを取得
+      let userId;
+      if (authManager.isAuthenticated() && authManager.getCurrentUser()) {
+        // 認証済みの場合は認証ユーザーのIDを使用
+        const user = authManager.getCurrentUser();
+        userId = user.userId || user.email || user.id;
+        console.log('認証済みユーザーID:', userId);
+      } else {
+        // 認証されていない場合はエラー
+        throw new Error('クラウド同期には認証が必要です。先にログインしてください。');
+      }
+      
       if (!userId) {
-        userId = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('mindflow_user_id', userId);
+        throw new Error('ユーザーIDを取得できませんでした');
       }
 
-      // 3. ローカルマップをクラウドに送信
+      // 3. ローカルマップをクラウドに送信（認証済みリクエスト）
       for (const map of localMaps) {
-        const response = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`, {
+        const response = await authManager.authenticatedFetch(
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
-            'X-User-ID': userId
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(map)
         });
         console.log(`${map.title}: ${response.ok ? '成功' : '失敗'}`);
       }
 
-      // 4. クラウドからデータを取得
-      const cloudResponse = await fetch('https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps', {
-        headers: { 'X-User-ID': userId }
-      });
+      // 4. クラウドからデータを取得（認証済みリクエスト）
+      const cloudResponse = await authManager.authenticatedFetch(
+        'https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps'
+      );
       const cloudData = await cloudResponse.json();
       const cloudMaps = cloudData.mindmaps || [];
       console.log('クラウドマップ:', cloudMaps.length);
@@ -100,6 +115,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
       setIsSyncing(false);
     }
   };
+
 
   const handleAuthSuccess = (user) => {
     setCurrentUser(user);
@@ -154,6 +170,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
             ×
           </button>
         </div>
+
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{
