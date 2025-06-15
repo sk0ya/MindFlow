@@ -283,7 +283,13 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
                 fontSize: '15px'
               }}>
                 <strong style={{ color: '#333' }}>{email}</strong> に<br/>
-                ログインリンクを送信しました。
+                {magicLink ? (
+                  <span style={{ color: '#4a90e2', fontWeight: '500' }}>
+                    テスト環境のためリンクを下記に表示しています。
+                  </span>
+                ) : (
+                  'ログインリンクをメールで送信しました。'
+                )}
               </p>
               <p style={{
                 color: '#666',
@@ -291,23 +297,44 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
                 lineHeight: '1.6',
                 fontSize: '14px'
               }}>
-                📱 メール内のリンクをクリックしてログインしてください。
+                {magicLink ? (
+                  '🧪 下記のリンクをクリックしてログインしてください。'
+                ) : (
+                  '📱 メールを確認し、リンクをクリックしてログインしてください。'
+                )}
               </p>
               {magicLink && (
-                <div style={{
-                  backgroundColor: '#f0f8ff',
-                  padding: '15px',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
-                  border: '1px solid #4a90e2'
-                }}>
+                <>
+                  <div style={{
+                    backgroundColor: '#fff3cd',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    marginBottom: '15px',
+                    border: '1px solid #ffeaa7'
+                  }}>
+                    <p style={{
+                      fontSize: '12px',
+                      color: '#856404',
+                      margin: '0',
+                      fontWeight: '500'
+                    }}>
+                      ⚠️ 開発・テスト環境です。本番環境ではメールが送信されます。
+                    </p>
+                  </div>
+                  <div style={{
+                    backgroundColor: '#f0f8ff',
+                    padding: '15px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    border: '1px solid #4a90e2'
+                  }}>
                   <p style={{
                     fontSize: '12px',
                     color: '#4a90e2',
                     marginBottom: '10px',
                     fontWeight: '500'
                   }}>
-                    🔗 テスト用 Magic Link:
+                    🧪 テスト環境用 Magic Link:
                   </p>
                   <div style={{
                     fontSize: '11px',
@@ -336,7 +363,8 @@ const AuthModal = ({ isVisible, onClose, onAuthSuccess }) => {
                   >
                     🚀 今すぐログイン
                   </button>
-                </div>
+                  </div>
+                </>
               )}
               <div style={{
                 backgroundColor: '#f8f9fa',

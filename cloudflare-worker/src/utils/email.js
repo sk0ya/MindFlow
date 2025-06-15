@@ -3,7 +3,7 @@
 
 export async function sendMagicLinkEmail(email, magicLink, env) {
   // Resend.com APIを使用してメール送信
-  if (!env.RESEND_KEY || env.RESEND_KEY === 're_placeholder_key') {
+  if (!env.RESEND_API_KEY || env.RESEND_API_KEY === 're_placeholder_key') {
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
@@ -19,7 +19,7 @@ Magic Link: ${magicLink}
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${env.RESEND_KEY}`,
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

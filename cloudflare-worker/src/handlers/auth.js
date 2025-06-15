@@ -99,13 +99,19 @@ async function handleSendMagicLink(request, env) {
       message = 'Authentication link generated (check console for test link)';
     }
     
-    return {
+    const response = {
       success: true,
       message: message,
       expiresIn: 600, // 10分
-      magicLink: magicLink, // テスト環境用にリンクを返す
       emailSent: emailResult.messageId !== 'dev-mode' && emailResult.messageId !== 'fallback-mode'
     };
+    
+    // メール送信に失敗した場合のみ Magic Link を返す
+    if (!response.emailSent) {
+      response.magicLink = magicLink;
+    }
+    
+    return response;
   } catch (error) {
     // セキュリティのため、許可されていないメールでも同じレスポンスを返す
     if (error.message.includes('Access denied')) {
