@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSyncStatus } from '../utils/storage.js';
 import { syncManager } from '../utils/syncManager.js';
+import { authManager } from '../utils/authManager.js';
 
 const SyncStatusIndicator = () => {
   const [syncStatus, setSyncStatus] = useState({
@@ -11,10 +12,27 @@ const SyncStatusIndicator = () => {
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncText, setLastSyncText] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(authManager.isAuthenticated());
 
   useEffect(() => {
     const updateStatus = async () => {
       try {
+        // 認証状態を更新
+        const authStatus = authManager.isAuthenticated();
+        setIsAuthenticated(authStatus);
+        
+        // 認証されていない場合は同期状態をリセット
+        if (!authStatus) {
+          setSyncStatus({
+            isOnline: navigator.onLine,
+            queueLength: 0,
+            lastSyncTime: null,
+            needsSync: false
+          });
+          setLastSyncText('ローカルのみ');
+          return;
+        }
+        
         const status = getSyncStatus();
         setSyncStatus(status);
         
@@ -48,7 +66,7 @@ const SyncStatusIndicator = () => {
   }, []);
 
   const handleManualSync = async () => {
-    if (isSyncing) return;
+    if (isSyncing || !isAuthenticated) return;
     
     setIsSyncing(true);
     try {
@@ -63,6 +81,16 @@ const SyncStatusIndicator = () => {
   };
 
   const getStatusIcon = () => {
+    if (!isAuthenticated) {
+      return (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#6c757d">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M16 8v4a4 4 0 01-8 0V8a4 4 0 018 0z" fill="white"/>
+          <path d="M12 14v2" stroke="white" strokeWidth="2"/>
+        </svg>
+      );
+    }
+    
     if (isSyncing) {
       return (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="sync-spinning">
@@ -100,6 +128,7 @@ const SyncStatusIndicator = () => {
   };
 
   const getStatusText = () => {
+    if (!isAuthenticated) return 'ローカルモード';
     if (isSyncing) return '同期中...';
     if (!syncStatus.isOnline) return 'オフライン';
     if (syncStatus.needsSync) return `待機中 (${syncStatus.queueLength})`;
@@ -118,7 +147,7 @@ const SyncStatusIndicator = () => {
       borderRadius: '4px',
       border: '1px solid #e9ecef',
       cursor: syncStatus.needsSync ? 'pointer' : 'default'
-    }} onClick={syncStatus.needsSync ? handleManualSync : undefined}>
+    }} onClick={syncStatus.needsSync && isAuthenticated ? handleManualSync : undefined}>
       {getStatusIcon()}
       <span>{getStatusText()}</span>
       {lastSyncText && (

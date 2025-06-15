@@ -15,7 +15,10 @@ const Toolbar = ({
   theme,
   onThemeChange,
   onShowLayoutPanel,
-  onShowCloudStoragePanel
+  onShowCloudStoragePanel,
+  authState,
+  onShowAuthModal,
+  onLogout
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -179,6 +182,40 @@ const Toolbar = ({
         </div>
 
         <div className="toolbar-right">
+          <div className="auth-section">
+            {authState.isAuthenticated ? (
+              <div className="auth-info">
+                <div className="user-info">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  <span className="user-name">{authState.user?.email}</span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="btn btn-auth"
+                  title="ログアウト"
+                >
+                  ログアウト
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onShowAuthModal}
+                className="btn btn-auth-login"
+                title="ログイン"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2"/>
+                  <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                ログイン
+              </button>
+            )}
+          </div>
+          
           <div className="zoom-controls">
             <span className="zoom-label">{Math.round(zoom * 100)}%</span>
             <button
@@ -477,6 +514,63 @@ const Toolbar = ({
           outline: none;
           border-color: #8b5cf6;
           box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .auth-section {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .auth-info {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 12px;
+          background: rgba(16, 185, 129, 0.1);
+          border-radius: 10px;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #10b981;
+        }
+        
+        .user-name {
+          font-size: 12px;
+          font-weight: 500;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
+        .btn-auth {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          padding: 6px 10px;
+          font-size: 11px;
+        }
+        
+        .btn-auth:hover {
+          background: rgba(239, 68, 68, 0.15);
+          transform: translateY(-1px);
+        }
+        
+        .btn-auth-login {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          padding: 8px 16px;
+        }
+        
+        .btn-auth-login:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
 
         @media (max-width: 1024px) {

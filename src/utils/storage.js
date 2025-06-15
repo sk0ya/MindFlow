@@ -166,28 +166,122 @@ export const isCloudStorageEnabled = () => {
   return settings.storageMode === 'cloud';
 };
 
-// ハイブリッド保存（ローカル+クラウド）- 一時的に無効化
+// ハイブリッド保存（ローカル+クラウド）
 export const saveMindMapHybrid = async (mindMapData) => {
-  // 現在はローカルのみに保存
-  return saveMindMap(mindMapData);
+  try {
+    // 認証マネージャーを動的にインポート
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    // 認証されている場合はクラウドに保存を試行
+    if (authManager.isAuthenticated()) {
+      try {
+        const result = await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
+        console.log('Cloud save successful:', result);
+        
+        // クラウド保存成功時でもローカルにもバックアップとして保存
+        const localResult = saveMindMap(mindMapData);
+        return { ...localResult, source: 'cloud' };
+      } catch (cloudError) {
+        console.warn('Cloud save failed, falling back to local:', cloudError);
+        // クラウド保存失敗時はローカルに保存
+        return saveMindMap(mindMapData);
+      }
+    } else {
+      // 認証されていない場合はローカルのみに保存
+      return saveMindMap(mindMapData);
+    }
+  } catch (error) {
+    console.error('Hybrid save error:', error);
+    // エラー時はローカルに保存
+    return saveMindMap(mindMapData);
+  }
 };
 
-// ハイブリッド取得（クラウド優先、フォールバックでローカル）- 一時的に無効化
+// ハイブリッド取得（クラウド優先、フォールバックでローカル）
 export const getAllMindMapsHybrid = async () => {
-  // 現在はローカルのみから取得
-  return getAllMindMaps();
+  try {
+    // 認証マネージャーを動的にインポート
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    // 認証されている場合はクラウドから取得を試行
+    if (authManager.isAuthenticated()) {
+      try {
+        const cloudMaps = await cloudStorage.getAllMindMaps();
+        console.log('Cloud maps loaded:', cloudMaps);
+        
+        // クラウドデータが有効な場合はそれを使用
+        if (cloudMaps && cloudMaps.length > 0) {
+          // クラウドデータをローカルにもキャッシュ
+          const validMaps = cloudMaps.filter(map => map && map.id && map.rootNode);
+          if (validMaps.length > 0) {
+            saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
+            return validMaps;
+          }
+        }
+        
+        // クラウドデータが空の場合はローカルデータを使用
+        return getAllMindMaps();
+      } catch (cloudError) {
+        console.warn('Cloud fetch failed, using local data:', cloudError);
+        return getAllMindMaps();
+      }
+    } else {
+      // 認証されていない場合はローカルデータのみを使用
+      return getAllMindMaps();
+    }
+  } catch (error) {
+    console.error('Hybrid fetch error:', error);
+    return getAllMindMaps();
+  }
 };
 
-// ハイブリッド削除 - 一時的に無効化
+// ハイブリッド削除
 export const deleteMindMapHybrid = async (mapId) => {
-  // 現在はローカルのみから削除
-  return deleteMindMap(mapId);
+  try {
+    // 認証マネージャーを動的にインポート
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    // 認証されている場合はクラウドからも削除を試行
+    if (authManager.isAuthenticated()) {
+      try {
+        await cloudStorage.deleteMindMap(mapId);
+        console.log('Cloud delete successful for:', mapId);
+      } catch (cloudError) {
+        console.warn('Cloud delete failed:', cloudError);
+        // クラウド削除失敗でもローカル削除は続行
+      }
+    }
+    
+    // ローカルから削除
+    return deleteMindMap(mapId);
+  } catch (error) {
+    console.error('Hybrid delete error:', error);
+    // エラー時でもローカル削除は実行
+    return deleteMindMap(mapId);
+  }
 };
 
-// クラウド接続テスト - 一時的に無効化
+// クラウド接続テスト
 export const testCloudConnection = async () => {
-  // 現在は常にfalseを返す（クラウド機能無効）
-  return false;
+  try {
+    // 認証マネージャーを動的にインポート
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    // 認証されていない場合は接続テスト不可
+    if (!authManager.isAuthenticated()) {
+      return false;
+    }
+    
+    // クラウドストレージ接続テスト
+    return await cloudStorage.testConnection();
+  } catch (error) {
+    console.error('Cloud connection test failed:', error);
+    return false;
+  }
 };
 
 // 同期機能 - 削除予定（直接syncManagerを使用）

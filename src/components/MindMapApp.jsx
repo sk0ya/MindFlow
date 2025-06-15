@@ -17,6 +17,8 @@ import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
 
 import AuthVerification from './AuthVerification.jsx';
+import AuthModal from './AuthModal.jsx';
+import { authManager } from '../utils/authManager.js';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -26,10 +28,13 @@ const MindMapApp = () => {
   
   // 認証状態を管理
   const [authState, setAuthState] = useState({
-    isAuthenticated: false,
-    user: null,
-    isLoading: true
+    isAuthenticated: authManager.isAuthenticated(),
+    user: authManager.getCurrentUser(),
+    isLoading: false
   });
+  
+  // 認証モーダル状態
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const {
     data,
@@ -99,6 +104,34 @@ const MindMapApp = () => {
   
   // クラウドストレージパネル状態
   const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
+  
+  // 認証状態を監視して更新
+  useEffect(() => {
+    // 認証状態の変更を監視
+    const checkAuthStatus = () => {
+      const isAuth = authManager.isAuthenticated();
+      const user = authManager.getCurrentUser();
+      
+      setAuthState(prev => {
+        if (prev.isAuthenticated !== isAuth || prev.user !== user) {
+          return {
+            isAuthenticated: isAuth,
+            user: user,
+            isLoading: false
+          };
+        }
+        return prev;
+      });
+    };
+    
+    // 初回チェック
+    checkAuthStatus();
+    
+    // 定期的にチェック
+    const interval = setInterval(checkAuthStatus, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleZoomReset = () => {
     setZoom(1);
@@ -392,6 +425,41 @@ const MindMapApp = () => {
     switchToMap(mapId);
     setShowNodeMapLinksPanel(false);
   };
+  
+  // 認証関連ハンドラー
+  const handleShowAuthModal = () => {
+    setShowAuthModal(true);
+  };
+  
+  const handleCloseAuthModal = () => {
+    setShowAuthModal(false);
+  };
+  
+  const handleAuthSuccess = (user) => {
+    setAuthState({
+      isAuthenticated: true,
+      user: user,
+      isLoading: false
+    });
+    setShowAuthModal(false);
+    // 認証後にマインドマップをリフレッシュ
+    refreshAllMindMaps();
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await authManager.logout();
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        isLoading: false
+      });
+      // ログアウト後にページをリロードしてローカルデータを表示
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -460,6 +528,9 @@ const MindMapApp = () => {
           onZoomReset={handleZoomReset}
           onShowLayoutPanel={handleShowLayoutPanel}
           onShowCloudStoragePanel={() => setShowCloudStoragePanel(true)}
+          authState={authState}
+          onShowAuthModal={handleShowAuthModal}
+          onLogout={handleLogout}
         />
 
         <ErrorBoundary>
@@ -561,6 +632,12 @@ const MindMapApp = () => {
           isVisible={showCloudStoragePanel}
           onClose={() => setShowCloudStoragePanel(false)}
           refreshAllMindMaps={refreshAllMindMaps}
+        />
+        
+        <AuthModal
+          isVisible={showAuthModal}
+          onClose={handleCloseAuthModal}
+          onAuthSuccess={handleAuthSuccess}
         />
 
         <footer className="footer">

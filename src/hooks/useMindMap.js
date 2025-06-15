@@ -558,6 +558,30 @@ export const useMindMap = () => {
       }
     };
   }, []);
+  
+  // 認証状態の変更を監視してデータを再読み込み
+  useEffect(() => {
+    const checkAuthAndRefresh = async () => {
+      try {
+        // 認証マネージャーを動的にインポート
+        const { authManager } = await import('../utils/authManager.js');
+        
+        // 認証状態が変わった場合は全てのマップを再読み込み
+        const isAuth = authManager.isAuthenticated();
+        if (isAuth) {
+          console.log('Authentication detected, refreshing maps...');
+          await refreshAllMindMaps();
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    };
+    
+    // 5秒ごとに認証状態をチェック
+    const authCheckInterval = setInterval(checkAuthAndRefresh, 5000);
+    
+    return () => clearInterval(authCheckInterval);
+  }, []);
 
   // ファイル添付機能
   const attachFileToNode = async (nodeId, file) => {
