@@ -126,12 +126,13 @@ class SyncManager {
           console.log('手動同期: マップ送信成功', map.id);
         } catch (updateError) {
           // 更新に失敗した場合は新規作成を試行
-          console.log('手動同期: 更新失敗、新規作成を試行', map.id);
+          console.log('手動同期: 更新失敗、新規作成を試行', map.id, updateError.message);
           try {
-            await cloudStorage.createMindMap(map);
-            console.log('手動同期: マップ作成成功', map.id);
+            const createResult = await cloudStorage.createMindMap(map);
+            console.log('手動同期: マップ作成成功', map.id, createResult);
           } catch (createError) {
-            console.error('手動同期: マップ作成失敗', map.id, createError);
+            console.error('手動同期: マップ作成失敗', map.id, createError.message);
+            throw createError; // エラーを再スロー
           }
         }
       }

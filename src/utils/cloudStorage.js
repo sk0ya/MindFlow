@@ -143,11 +143,13 @@ class CloudStorageClient {
   // マインドマップを更新
   async updateMindMap(id, mindmapData) {
     console.log('cloudStorage.updateMindMap() 開始:', id, mindmapData.title);
+    console.log('送信データ:', JSON.stringify(mindmapData, null, 2));
     const result = await this.request(`/mindmaps/${id}`, {
       method: 'PUT',
       body: JSON.stringify(mindmapData)
     });
     console.log('cloudStorage.updateMindMap() 結果:', result);
+    console.log('結果の詳細:', JSON.stringify(result, null, 2));
     return result;
   }
 
