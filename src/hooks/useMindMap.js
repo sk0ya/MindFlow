@@ -684,25 +684,33 @@ export const useMindMap = () => {
   const deleteNode = (nodeId) => {
     if (nodeId === 'root') return false;
     
-    // 削除前に兄弟ノードを特定
-    let siblingToSelect = null;
+    // 削除後に選択するノードを決定
+    let nodeToSelect = null;
     const parentNode = findParentNode(nodeId);
     
     if (parentNode && parentNode.children) {
       const currentIndex = parentNode.children.findIndex(child => child.id === nodeId);
       if (currentIndex !== -1) {
-        // 次の兄弟を優先、なければ前の兄弟、なければ親を選択
-        if (currentIndex < parentNode.children.length - 1) {
-          // 次の兄弟が存在する場合
-          siblingToSelect = parentNode.children[currentIndex + 1].id;
-        } else if (currentIndex > 0) {
-          // 前の兄弟が存在する場合
-          siblingToSelect = parentNode.children[currentIndex - 1].id;
-        } else {
-          // 兄弟がいない場合は親を選択（ただし親がrootの場合はnull）
-          siblingToSelect = parentNode.id === 'root' ? null : parentNode.id;
+        const siblings = parentNode.children;
+        
+        // 1. 次の兄弟を優先
+        if (currentIndex < siblings.length - 1) {
+          nodeToSelect = siblings[currentIndex + 1].id;
+        } 
+        // 2. 前の兄弟を次に優先
+        else if (currentIndex > 0) {
+          nodeToSelect = siblings[currentIndex - 1].id;
+        } 
+        // 3. 兄弟がいない場合は親を選択
+        else {
+          nodeToSelect = parentNode.id;
         }
       }
+    }
+    
+    // フォールバック: 何も決まらない場合はrootノードを選択
+    if (!nodeToSelect) {
+      nodeToSelect = 'root';
     }
     
     const deleteNodeRecursive = (node) => {
@@ -727,9 +735,9 @@ export const useMindMap = () => {
       }
     );
     
-    // 削除されたノードが選択されていた場合、兄弟ノードを選択
+    // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {
-      setSelectedNodeId(siblingToSelect);
+      setSelectedNodeId(nodeToSelect);
     }
     if (editingNodeId === nodeId) setEditingNodeId(null);
     
@@ -838,8 +846,7 @@ export const useMindMap = () => {
       // 空の場合はノードを削除（ルートノード以外）
       if (nodeId !== 'root') {
         deleteNode(nodeId);
-        // 削除時は選択もクリア
-        setSelectedNodeId(null);
+        // deleteNode内で適切なフォーカス移動が行われるため、ここでは何もしない
       }
       return;
     }
