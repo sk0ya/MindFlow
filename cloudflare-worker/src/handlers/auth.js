@@ -2,6 +2,8 @@
 
 import { corsHeaders } from '../utils/cors.js';
 import { authenticateUser, generateJWT, verifyJWT } from '../utils/auth.js';
+import { sendMagicLinkEmail } from '../utils/email.js';
+import { createAuthToken, verifyAuthToken, cleanupExpiredTokens } from '../utils/authTokens.js';
 
 export async function handleAuthRequest(request, env) {
   const url = new URL(request.url);
@@ -15,9 +17,11 @@ export async function handleAuthRequest(request, env) {
     switch (method) {
       case 'POST':
         if (action === 'login') {
-          response = await handleLogin(request, env);
+          response = await handleSendMagicLink(request, env);
         } else if (action === 'register') {
-          response = await handleRegister(request, env);
+          response = await handleSendMagicLink(request, env);
+        } else if (action === 'verify') {
+          response = await handleVerifyMagicLink(request, env);
         } else if (action === 'refresh') {
           response = await handleRefreshToken(request, env);
         } else {
@@ -28,6 +32,8 @@ export async function handleAuthRequest(request, env) {
       case 'GET':
         if (action === 'me') {
           response = await handleGetCurrentUser(request, env);
+        } else if (action === 'verify') {
+          response = await handleVerifyMagicLink(request, env);
         } else if (action === 'google') {
           response = await handleGoogleAuth(request, env);
         } else if (action === 'google-callback') {
@@ -60,61 +66,87 @@ export async function handleAuthRequest(request, env) {
   }
 }
 
-// ログイン処理
-async function handleLogin(request, env) {
-  const { email, password } = await request.json();
+// Magic Link送信処理
+async function handleSendMagicLink(request, env) {
+  const { email } = await request.json();
   
   if (!email) {
     throw new Error('Email is required');
   }
+
+  // メールアドレスの形式チェック
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error('Invalid email format');
+  }
   
-  // 許可されたメールアドレスかチェック
-  const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
-  if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
-    const error = new Error('Access denied: Email not authorized');
-    error.status = 403;
+  try {
+    // 認証トークンを生成（許可チェック含む）
+    const authToken = await createAuthToken(email, request, env);
+    
+    // Magic Linkを生成
+    const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}`;
+    
+    // メール送信
+    await sendMagicLinkEmail(email, magicLink, env);
+    
+    // 期限切れトークンのクリーンアップ
+    await cleanupExpiredTokens(env);
+    
+    return {
+      success: true,
+      message: 'Authentication email sent successfully',
+      expiresIn: 600 // 10分
+    };
+  } catch (error) {
+    // セキュリティのため、許可されていないメールでも同じレスポンスを返す
+    if (error.message.includes('Access denied')) {
+      return {
+        success: true,
+        message: 'If this email is registered, an authentication link has been sent',
+        expiresIn: 600
+      };
+    }
     throw error;
   }
-  
-  // データベースからユーザーを検索
-  const { results } = await env.DB.prepare(
-    'SELECT * FROM users WHERE email = ?'
-  ).bind(email).all();
-  
-  let user;
-  if (results.length === 0) {
-    // ユーザーが存在しない場合は自動作成（簡易実装）
-    const userId = await hashString(email);
-    const now = new Date().toISOString();
-    
-    await env.DB.prepare(
-      'INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)'
-    ).bind(userId, email, now, now).run();
-    
-    user = { id: userId, email, created_at: now };
-  } else {
-    user = results[0];
-  }
-  
-  // JWTトークンを生成
-  const authResult = await authenticateUser(email);
-  
-  return {
-    success: true,
-    token: authResult.token,
-    user: {
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at
-    }
-  };
 }
 
-// ユーザー登録処理
-async function handleRegister(request, env) {
-  // 現在の実装ではログインと同じ処理
-  return await handleLogin(request, env);
+// Magic Link検証処理
+async function handleVerifyMagicLink(request, env) {
+  const url = new URL(request.url);
+  let token;
+  
+  if (request.method === 'GET') {
+    token = url.searchParams.get('token');
+  } else {
+    const body = await request.json();
+    token = body.token;
+  }
+  
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+  
+  try {
+    const result = await verifyAuthToken(token, env);
+    
+    if (request.method === 'GET') {
+      // GETリクエストの場合はフロントエンドにリダイレクト
+      const redirectUrl = `${env.FRONTEND_URL}/auth/success?token=${result.token}`;
+      return Response.redirect(redirectUrl, 302);
+    }
+    
+    return result;
+  } catch (error) {
+    if (request.method === 'GET') {
+      // GETリクエストの場合はエラーページにリダイレクト
+      const redirectUrl = `${env.FRONTEND_URL}/auth/error?message=${encodeURIComponent(error.message)}`;
+      return Response.redirect(redirectUrl, 302);
+    }
+    throw error;
+  }
 }
+
 
 // トークン更新処理
 async function handleRefreshToken(request, env) {
@@ -282,11 +314,3 @@ async function handleGoogleCallback(request, env) {
   return Response.redirect(redirectUrl, 302);
 }
 
-// 文字列のハッシュ化（ユーザーID生成用）
-async function hashString(str) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
-}

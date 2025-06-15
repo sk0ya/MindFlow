@@ -16,7 +16,14 @@ import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings } from '../u
 import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
 
+import AuthVerification from './AuthVerification.jsx';
+
 const MindMapApp = () => {
+  // URL パラメータで認証トークンをチェック
+  const urlParams = new URLSearchParams(window.location.search);
+  const authToken = urlParams.get('token');
+  const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
+
   const {
     data,
     selectedNodeId,
@@ -389,6 +396,26 @@ const MindMapApp = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleCloseAllPanels]);
+
+  // 認証検証中の場合は専用画面を表示
+  if (isAuthVerification) {
+    return (
+      <AuthVerification 
+        onAuthSuccess={(user) => {
+          console.log('Authentication successful:', user);
+          // 認証成功後、通常のアプリケーションを表示
+          window.location.href = '/MindFlow/';
+        }}
+        onAuthError={(error) => {
+          console.error('Authentication failed:', error);
+          // エラー時もホームに戻る
+          setTimeout(() => {
+            window.location.href = '/MindFlow/';
+          }, 3000);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="mindmap-app">

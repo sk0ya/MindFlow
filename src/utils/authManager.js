@@ -86,30 +86,59 @@ class AuthManager {
     return this.token ? `Bearer ${this.token}` : null;
   }
 
-  // メールアドレスでログイン
-  async loginWithEmail(email, password = '') {
+  // Magic Linkを送信
+  async sendMagicLink(email) {
     try {
       const response = await fetch(`${this.apiBase}/api/auth/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email })
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || 'Failed to send magic link');
       }
 
+      return { 
+        success: true, 
+        message: data.message,
+        expiresIn: data.expiresIn 
+      };
+    } catch (error) {
+      console.error('Magic link sending error:', error);
+      throw error;
+    }
+  }
+
+  // Magic Linkトークンを検証してログイン
+  async verifyMagicLink(token) {
+    try {
+      const response = await fetch(`${this.apiBase}/api/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Token verification failed');
+      }
+
+      // トークンとユーザー情報を保存
       this.token = data.token;
       this.user = data.user;
       this.saveAuthData();
 
       return { success: true, user: this.user };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Token verification error:', error);
       throw error;
     }
   }
