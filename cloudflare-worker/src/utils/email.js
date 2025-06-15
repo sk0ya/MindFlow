@@ -2,8 +2,8 @@
 // Resend.com APIを使用してメール送信
 
 export async function sendMagicLinkEmail(email, magicLink, env) {
-  // 本番環境では EmailJS APIを使用、開発環境ではコンソール出力
-  if (env.NODE_ENV === 'development' || !env.EMAILJS_API_KEY) {
+  // Resend.com APIを使用してメール送信
+  if (!env.RESEND_KEY || env.RESEND_KEY === 're_placeholder_key') {
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
@@ -15,32 +15,31 @@ Magic Link: ${magicLink}
   }
 
   try {
-    // EmailJS APIを使用してメール送信
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    // Resend API を使用してメール送信
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${env.RESEND_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        service_id: env.EMAILJS_SERVICE_ID,
-        template_id: env.EMAILJS_TEMPLATE_ID,
-        user_id: env.EMAILJS_USER_ID,
-        accessToken: env.EMAILJS_API_KEY,
-        template_params: {
-          to_email: email,
-          to_name: email.split('@')[0],
-          subject: 'MindFlow - ログインリンク',
-          magic_link: magicLink,
-          message: createMagicLinkEmailText(magicLink)
-        }
+        from: 'MindFlow <onboarding@resend.dev>', // Resendの検証済みドメイン
+        to: [email],
+        subject: 'MindFlow - ログインリンク',
+        html: createMagicLinkEmailHTML(magicLink),
+        text: createMagicLinkEmailText(magicLink)
       })
     });
 
+    const result = await response.json();
+    
     if (!response.ok) {
-      throw new Error(`EmailJS API error: ${response.status}`);
+      console.error('Resend API error:', result);
+      throw new Error(`Email API error: ${result.message || 'Unknown error'}`);
     }
 
-    return { success: true, messageId: 'emailjs-sent' };
+    console.log('Email sent successfully:', result.id);
+    return { success: true, messageId: result.id };
   } catch (error) {
     console.error('Email sending failed:', error);
     

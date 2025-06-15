@@ -88,16 +88,23 @@ async function handleSendMagicLink(request, env) {
     const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}`;
     
     // メール送信
-    await sendMagicLinkEmail(email, magicLink, env);
+    const emailResult = await sendMagicLinkEmail(email, magicLink, env);
     
     // 期限切れトークンのクリーンアップ
     await cleanupExpiredTokens(env);
     
+    // メッセージを送信結果に応じて調整
+    let message = 'Authentication email sent successfully';
+    if (emailResult.messageId === 'dev-mode' || emailResult.messageId === 'fallback-mode') {
+      message = 'Authentication link generated (check console for test link)';
+    }
+    
     return {
       success: true,
-      message: 'Authentication email sent successfully',
+      message: message,
       expiresIn: 600, // 10分
-      magicLink: magicLink // テスト環境用にリンクを返す
+      magicLink: magicLink, // テスト環境用にリンクを返す
+      emailSent: emailResult.messageId !== 'dev-mode' && emailResult.messageId !== 'fallback-mode'
     };
   } catch (error) {
     // セキュリティのため、許可されていないメールでも同じレスポンスを返す
