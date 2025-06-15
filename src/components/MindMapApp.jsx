@@ -560,6 +560,7 @@ const MindMapApp = () => {
         <CloudStoragePanel
           isVisible={showCloudStoragePanel}
           onClose={() => setShowCloudStoragePanel(false)}
+          refreshAllMindMaps={refreshAllMindMaps}
         />
 
         <footer className="footer">

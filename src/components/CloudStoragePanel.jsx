@@ -4,7 +4,7 @@ import SyncStatusIndicator from './SyncStatusIndicator.jsx';
 import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
 
-const CloudStoragePanel = ({ isVisible, onClose }) => {
+const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
   const [settings, setSettings] = useState(getAppSettings());
   const [connectionStatus, setConnectionStatus] = useState('unknown');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -49,6 +49,11 @@ const CloudStoragePanel = ({ isVisible, onClose }) => {
         `競合: ${result.conflicts > 0 ? `${result.conflicts}件を解決` : 'なし'}`;
       
       alert(message);
+      
+      // 同期完了後にマインドマップリストを更新
+      if (refreshAllMindMaps) {
+        refreshAllMindMaps();
+      }
     } catch (error) {
       console.error('手動同期エラー:', error);
       alert(`同期失敗: ${error.message}`);

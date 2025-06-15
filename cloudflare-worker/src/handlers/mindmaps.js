@@ -202,52 +202,51 @@ async function createMindMap(db, userId, mindmapData) {
 }
 
 async function updateMindMap(db, userId, mindmapId, mindmapData) {
+  console.log('updateMindMap 開始 - 受信データ:', JSON.stringify({
+    userId, 
+    mindmapId, 
+    title: mindmapData.title,
+    hasRootNode: !!mindmapData.rootNode
+  }, null, 2));
+  
   const title = mindmapData.title || 'Untitled Mind Map';
   const data = JSON.stringify(mindmapData);
   const now = new Date().toISOString();
   
-  console.log('updateMindMap 実行:', { userId, mindmapId, title });
+  // まず既存レコードを確認
+  const existingRecord = await db.prepare(
+    'SELECT id FROM mindmaps WHERE user_id = ? AND id = ?'
+  ).bind(userId, mindmapId).first();
   
-  const result = await db.prepare(
-    'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?'
-  ).bind(title, data, now, userId, mindmapId).run();
+  console.log('既存レコード確認:', existingRecord ? 'あり' : 'なし');
   
-  console.log('UPDATE結果:', result);
-  console.log('result.changes:', result.changes, 'typeof:', typeof result.changes);
-  console.log('result.meta.changes:', result.meta?.changes, 'typeof:', typeof result.meta?.changes);
-  
-  const changesCount = result.changes ?? result.meta?.changes ?? 0;
-  console.log('実際のchanges値:', changesCount);
-  
-  if (changesCount === 0) {
-    // 更新対象が見つからない場合は新規作成
-    console.log('マインドマップが見つからないため新規作成:', mindmapId);
+  if (existingRecord) {
+    // 既存レコードを更新
+    const result = await db.prepare(
+      'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?'
+    ).bind(title, data, now, userId, mindmapId).run();
     
-    // Ensure user exists
+    console.log('UPDATE結果:', result);
+  } else {
+    // 新規作成
+    console.log('新規レコード作成:', mindmapId);
     await ensureUser(db, userId);
     
-    const insertResult = await db.prepare(
+    const result = await db.prepare(
       'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(mindmapId, userId, title, data, now, now).run();
     
-    console.log('INSERT結果:', insertResult);
-    
-    // ローカル形式で返す
-    const response = {
-      ...mindmapData,
-      createdAt: now,
-      updatedAt: now
-    };
-    console.log('updateMindMap INSERT レスポンス:', JSON.stringify(response, null, 2));
-    return response;
+    console.log('INSERT結果:', result);
   }
   
-  // ローカル形式で返す
+  // 常に完全なマインドマップオブジェクトを返す
   const response = {
     ...mindmapData,
-    updatedAt: now
+    updatedAt: now,
+    ...(existingRecord ? {} : { createdAt: now })
   };
-  console.log('updateMindMap レスポンス:', JSON.stringify(response, null, 2));
+  
+  console.log('updateMindMap 最終レスポンス:', JSON.stringify(response, null, 2));
   return response;
 }
 
