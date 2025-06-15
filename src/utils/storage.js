@@ -40,7 +40,8 @@ export const getAllMindMaps = () => {
   
   // フィルター後のデータを保存（破損データをクリーンアップ）
   if (validMaps.length !== maps.length) {
-    console.log('Cleaning up corrupted mindmaps from localStorage');
+    console.log(`Cleaning up corrupted mindmaps from localStorage: ${maps.length - validMaps.length} 件削除`);
+    console.log('有効なマップ数:', validMaps.length);
     saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
   }
   
@@ -292,5 +293,58 @@ export const getSyncStatus = () => {
       lastSyncTime: null,
       needsSync: false
     };
+  }
+};
+
+// デバッグ用：破損データをクリーンアップ
+export const cleanupCorruptedData = () => {
+  try {
+    const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
+    console.log('クリーンアップ前のマップ数:', maps.length);
+    
+    // 破損データを特定
+    const corruptedMaps = maps.filter(map => !map || !map.id || !map.rootNode);
+    const validMaps = maps.filter(map => map && map.id && map.rootNode);
+    
+    console.log('破損したマップ:', corruptedMaps);
+    console.log('有効なマップ数:', validMaps.length);
+    
+    // 有効なデータのみ保存
+    saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
+    
+    return {
+      before: maps.length,
+      after: validMaps.length,
+      removed: corruptedMaps.length,
+      corruptedMaps
+    };
+  } catch (error) {
+    console.error('Cleanup failed:', error);
+    return null;
+  }
+};
+
+// デバッグ用：全データを表示
+export const debugStorageData = () => {
+  try {
+    const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
+    console.log('=== LocalStorage Debug ===');
+    console.log('Total maps:', maps.length);
+    
+    maps.forEach((map, index) => {
+      console.log(`Map ${index + 1}:`, {
+        id: map?.id,
+        title: map?.title,
+        hasRootNode: !!map?.rootNode,
+        source: map?.source,
+        createdAt: map?.createdAt || map?.created_at,
+        updatedAt: map?.updatedAt || map?.updated_at
+      });
+    });
+    
+    return maps;
+  } catch (error) {
+    console.error('Debug failed:', error);
+    return null;
   }
 };
