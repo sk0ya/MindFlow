@@ -175,7 +175,7 @@ const NodeMapLinksPanel = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .node-map-links-panel {
           position: fixed;
           width: 400px;

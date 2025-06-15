@@ -172,7 +172,7 @@ const MindMapSidebar = ({
           </button>
         </div>
 
-        <style jsx>{`
+        <style>{`
           .mindmap-sidebar.collapsed {
             width: 50px;
             height: 100vh;
@@ -418,7 +418,7 @@ const MindMapSidebar = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .mindmap-sidebar {
           width: 280px;
           height: 100vh;

@@ -1,4 +1,5 @@
 ﻿import React, { useState } from 'react';
+import { ShortcutTooltip } from './KeyboardShortcutHelper';
 
 const Toolbar = ({
   title,
@@ -16,7 +17,8 @@ const Toolbar = ({
   onShowCloudStoragePanel,
   authState,
   onShowAuthModal,
-  onLogout
+  onLogout,
+  onShowShortcutHelper
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -92,28 +94,30 @@ const Toolbar = ({
 
         <div className="toolbar-center">
           <div className="action-group">
-            <button
-              onClick={onUndo}
-              disabled={!canUndo}
-              className="btn btn-action"
-              title="元に戻す (Ctrl+Z)"
-            >
+            <ShortcutTooltip shortcut="Ctrl+Z" description="元に戻す">
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="btn btn-action"
+              >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M3 7v6h6" stroke="currentColor" strokeWidth="2" fill="none"/>
                 <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" stroke="currentColor" strokeWidth="2" fill="none"/>
               </svg>
-            </button>
-            <button
-              onClick={onRedo}
-              disabled={!canRedo}
-              className="btn btn-action"
-              title="やり直し (Ctrl+Y)"
-            >
+              </button>
+            </ShortcutTooltip>
+            <ShortcutTooltip shortcut="Ctrl+Y" description="やり直し">
+              <button
+                onClick={onRedo}
+                disabled={!canRedo}
+                className="btn btn-action"
+              >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M21 7v6h-6" stroke="currentColor" strokeWidth="2" fill="none"/>
-                <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13" stroke="currentColor" strokeWidth="2" fill="none"/>
+                <path d="M3 17a9 9 0 919-9 9 9 0 016 2.3L21 13" stroke="currentColor" strokeWidth="2" fill="none"/>
               </svg>
-            </button>
+              </button>
+            </ShortcutTooltip>
           </div>
 
           <div className="action-group">
@@ -142,18 +146,19 @@ const Toolbar = ({
           </div>
 
           <div className="action-group primary-actions">
-            <button
-              onClick={onSave}
-              className="btn btn-primary"
-              title="保存 (Ctrl+S)"
-            >
+            <ShortcutTooltip shortcut="Ctrl+S" description="保存">
+              <button
+                onClick={onSave}
+                className="btn btn-primary"
+              >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2"/>
                 <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" strokeWidth="2"/>
                 <polyline points="7,3 7,8 15,8" stroke="currentColor" strokeWidth="2"/>
               </svg>
               保存
-            </button>
+              </button>
+            </ShortcutTooltip>
             <button
               onClick={onExport}
               className="btn btn-secondary"
@@ -214,6 +219,22 @@ const Toolbar = ({
             )}
           </div>
           
+          <div className="help-controls">
+            <ShortcutTooltip shortcut="F1 or ?" description="ショートカット一覧を表示">
+              <button
+                onClick={onShowShortcutHelper}
+                className="btn btn-help"
+                title="ヘルプ"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" stroke="currentColor" strokeWidth="2"/>
+                  <circle cx="12" cy="17" r="1" stroke="currentColor" strokeWidth="2" fill="currentColor"/>
+                </svg>
+              </button>
+            </ShortcutTooltip>
+          </div>
+
           <div className="zoom-controls">
             <span className="zoom-label">{Math.round(zoom * 100)}%</span>
             <button
@@ -231,7 +252,7 @@ const Toolbar = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .toolbar {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
           backdrop-filter: blur(20px);
@@ -523,6 +544,50 @@ const Toolbar = ({
         .btn-auth-login:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .help-controls {
+          display: flex;
+          align-items: center;
+          margin-right: 12px;
+        }
+
+        .btn-help {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+          padding: 8px;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-help:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .zoom-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .zoom-label {
+          font-size: 12px;
+          font-weight: 500;
+          color: #64748b;
+          min-width: 40px;
+          text-align: center;
+        }
+
+        .btn-zoom {
+          background: transparent;
+          color: #64748b;
+          padding: 6px;
+        }
+
+        .btn-zoom:hover {
+          background: rgba(99, 102, 241, 0.1);
+          color: #6366f1;
+          transform: translateY(-1px);
         }
 
         @media (max-width: 1024px) {

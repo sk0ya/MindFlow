@@ -415,7 +415,7 @@ const MindMapCanvas = ({
         </p>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .mindmap-canvas-container {
           position: relative;
         }

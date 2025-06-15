@@ -201,7 +201,7 @@ const ConnectionStatus = ({
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .connection-status {
           position: fixed;
           bottom: 20px;

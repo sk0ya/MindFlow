@@ -181,7 +181,7 @@ const FileActionMenu = ({
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .file-action-menu {
           position: fixed;
           background: white;

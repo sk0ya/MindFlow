@@ -52,7 +52,7 @@ class ErrorBoundary extends React.Component {
             )}
           </div>
 
-          <style jsx>{`
+          <style>{`
             .error-boundary {
               display: flex;
               justify-content: center;

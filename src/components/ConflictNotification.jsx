@@ -151,7 +151,7 @@ const ConflictNotification = ({
           />
         ))}
 
-      <style jsx>{`
+      <style>{`
         .conflict-notifications {
           position: fixed;
           z-index: 2000;
@@ -276,7 +276,7 @@ const ConflictItem = ({ conflict, onDismiss }) => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .conflict-item {
           background: white;
           border: 1px solid #e1e1e1;

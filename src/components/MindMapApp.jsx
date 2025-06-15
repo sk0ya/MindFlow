@@ -25,6 +25,8 @@ import './MindMapApp.css';
 import AuthVerification from './AuthVerification.jsx';
 import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
+import TutorialOverlay from './TutorialOverlay.jsx';
+import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -41,6 +43,12 @@ const MindMapApp = () => {
   
   // 認証モーダル状態
   const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // チュートリアル状態
+  const [showTutorial, setShowTutorial] = useState(false);
+  
+  // キーボードショートカットヘルパー状態
+  const [showShortcutHelper, setShowShortcutHelper] = useState(false);
 
   const {
     data,
@@ -128,6 +136,14 @@ const MindMapApp = () => {
   // パフォーマンスダッシュボード状態（開発環境のみ）
   const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   
+  // 初回アクセス時のチュートリアル表示チェック
+  useEffect(() => {
+    const isFirstVisit = !localStorage.getItem('mindflow_tutorial_completed');
+    if (isFirstVisit) {
+      setShowTutorial(true);
+    }
+  }, []);
+
   // 認証状態を監視して更新
   useEffect(() => {
     // 認証状態の変更を監視
@@ -212,11 +228,22 @@ const MindMapApp = () => {
             break;
         }
       }
+      
+      // ショートカットヘルプの表示/非表示
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShowShortcutHelper(!showShortcutHelper);
+      }
+      
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowShortcutHelper(!showShortcutHelper);
+      }
     };
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleSave, undo, redo]);
+  }, [handleSave, undo, redo, showShortcutHelper]);
 
   const handleAddChild = (parentId) => {
     addChildNode(parentId, '', true); // startEditing = true で即座に編集開始
@@ -617,6 +644,7 @@ const MindMapApp = () => {
           authState={authState}
           onShowAuthModal={handleShowAuthModal}
           onLogout={handleLogout}
+          onShowShortcutHelper={() => setShowShortcutHelper(true)}
         />
 
         <ErrorBoundary>
@@ -786,8 +814,21 @@ const MindMapApp = () => {
           onAuthSuccess={handleAuthSuccess}
         />
 
+        {/* チュートリアルオーバーレイ */}
+        <TutorialOverlay
+          isVisible={showTutorial}
+          onComplete={() => setShowTutorial(false)}
+          onSkip={() => setShowTutorial(false)}
+        />
+
+        {/* キーボードショートカットヘルパー */}
+        <KeyboardShortcutHelper
+          isVisible={showShortcutHelper}
+          onClose={() => setShowShortcutHelper(false)}
+        />
+
         <footer className="footer">
-          <p>
+          <div>
             <span className="footer-brand">© 2024 MindFlow</span>
             <span className="stats">
               ノード数: {flattenNodes(data.rootNode).length} | 
@@ -798,7 +839,7 @@ const MindMapApp = () => {
                 <SyncStatusIndicator />
               </span>
             )}
-          </p>
+          </div>
         </footer>
       </div>
     </div>

@@ -223,7 +223,7 @@ const PerformanceDashboard = memo(({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .performance-dashboard {
           position: fixed;
           width: 300px;

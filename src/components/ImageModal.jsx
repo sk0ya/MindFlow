@@ -50,7 +50,7 @@ const ImageModal = ({ isOpen, image, onClose }) => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .image-modal-overlay {
           position: fixed;
           top: 0;

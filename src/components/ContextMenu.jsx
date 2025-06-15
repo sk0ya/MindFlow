@@ -193,7 +193,7 @@ const ContextMenu = ({
         {menuItems.map(renderMenuItem)}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .context-menu {
           background: white;
           border-radius: 8px;

@@ -177,7 +177,7 @@ const NodeCustomizationPanel = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .customization-panel {
           background: white;
           border-radius: 12px;

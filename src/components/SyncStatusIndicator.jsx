@@ -156,7 +156,7 @@ const SyncStatusIndicator = () => {
         </span>
       )}
       
-      <style jsx>{`
+      <style>{`
         .sync-spinning {
           animation: spin 1s linear infinite;
         }

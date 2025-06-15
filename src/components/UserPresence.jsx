@@ -95,7 +95,7 @@ const UserPresence = memo(({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .user-presence {
           position: fixed;
           top: 20px;

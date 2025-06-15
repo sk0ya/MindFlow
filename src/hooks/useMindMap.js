@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMapHybrid, getAllMindMapsHybrid, deleteMindMapHybrid } from '../utils/storage.js';
 import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData, createNodeMapLink } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';

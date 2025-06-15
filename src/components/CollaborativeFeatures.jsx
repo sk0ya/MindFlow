@@ -258,7 +258,7 @@ const CollaborativeFeatures = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .collaborative-features {
           position: fixed;
           top: 20px;
@@ -510,7 +510,7 @@ const CommentsTab = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .comments-tab {
           display: flex;
           flex-direction: column;
@@ -722,7 +722,7 @@ const HistoryTab = ({
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .history-tab {
           display: flex;
           flex-direction: column;
@@ -824,7 +824,7 @@ const UsersTab = ({ connectedUsers, currentUserId }) => {
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .users-tab {
           display: flex;
           flex-direction: column;

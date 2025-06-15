@@ -158,7 +158,7 @@ const UserCursor = memo(({ cursor, zoom, pan, findNode }) => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .user-cursor {
           position: absolute;
           z-index: 999;

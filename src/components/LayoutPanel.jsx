@@ -189,7 +189,7 @@ const LayoutPanel = ({ onApplyLayout, onClose, visible, position, data, onToggle
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .layout-panel {
           background: white;
           border-radius: 16px;
