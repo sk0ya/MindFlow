@@ -1,5 +1,6 @@
 import { handleRequest } from './handlers/mindmaps.js';
 import { handleAuthRequest } from './handlers/auth.js';
+import { handleRequest as handleNodesRequest } from './handlers/nodes.js';
 import { corsHeaders } from './utils/cors.js';
 
 export default {
@@ -18,6 +19,10 @@ export default {
       // Route handling
       if (path.startsWith('/api/mindmaps')) {
         return await handleRequest(request, env);
+      }
+      
+      if (path.startsWith('/api/nodes')) {
+        return await handleNodesRequest(request, env);
       }
       
       if (path.startsWith('/api/auth')) {
