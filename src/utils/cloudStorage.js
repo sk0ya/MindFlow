@@ -121,7 +121,10 @@ class CloudStorageClient {
 
   // すべてのマインドマップを取得
   async getAllMindMaps() {
-    return await this.request('/mindmaps');
+    console.log('cloudStorage.getAllMindMaps() 開始');
+    const result = await this.request('/mindmaps');
+    console.log('cloudStorage.getAllMindMaps() 結果:', result);
+    return result;
   }
 
   // 特定のマインドマップを取得
@@ -139,10 +142,13 @@ class CloudStorageClient {
 
   // マインドマップを更新
   async updateMindMap(id, mindmapData) {
-    return await this.request(`/mindmaps/${id}`, {
+    console.log('cloudStorage.updateMindMap() 開始:', id, mindmapData.title);
+    const result = await this.request(`/mindmaps/${id}`, {
       method: 'PUT',
       body: JSON.stringify(mindmapData)
     });
+    console.log('cloudStorage.updateMindMap() 結果:', result);
+    return result;
   }
 
   // マインドマップを削除
