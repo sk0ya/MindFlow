@@ -5,18 +5,35 @@ const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
 // 基本的なAPI呼び出し
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}/api${endpoint}`;
+  const userId = getUserId();
   const config = {
     headers: {
       'Content-Type': 'application/json',
-      'X-User-ID': getUserId(),
+      'X-User-ID': userId,
       ...options.headers
     },
     ...options
   };
 
+  console.log('API Request:', {
+    url,
+    method: config.method || 'GET',
+    userId,
+    headers: config.headers
+  });
+
   const response = await fetch(url, config);
+  
+  console.log('API Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    const errorText = await response.text();
+    console.error('API Error Details:', errorText);
+    throw new Error(`API Error: ${response.status} - ${errorText}`);
   }
   return await response.json();
 }
