@@ -178,19 +178,32 @@ class SyncManager {
       const localMap = mapById.get(cloudMap.id);
       
       if (!localMap) {
-        // クラウドのみにある場合は追加
-        mapById.set(cloudMap.id, { ...cloudMap, source: 'cloud' });
+        // クラウドのみにある場合は追加（データ構造を変換）
+        const transformedCloudMap = {
+          ...cloudMap,
+          ...(cloudMap.data || {}), // dataフィールドが存在する場合は展開
+          updatedAt: cloudMap.updated_at || cloudMap.updatedAt,
+          source: 'cloud'
+        };
+        // dataフィールドは不要なので削除
+        delete transformedCloudMap.data;
+        mapById.set(cloudMap.id, transformedCloudMap);
       } else {
         // 両方にある場合は更新時刻で判定
         const localTime = new Date(localMap.updatedAt);
         const cloudTime = new Date(cloudMap.updated_at || cloudMap.updatedAt);
         
         if (cloudTime > localTime) {
-          mapById.set(cloudMap.id, { 
-            ...cloudMap, 
+          // クラウドデータの構造を正しく変換
+          const transformedCloudMap = {
+            ...cloudMap,
+            ...(cloudMap.data || {}), // dataフィールドが存在する場合は展開
             updatedAt: cloudMap.updated_at || cloudMap.updatedAt,
-            source: 'cloud' 
-          });
+            source: 'cloud'
+          };
+          // dataフィールドは不要なので削除
+          delete transformedCloudMap.data;
+          mapById.set(cloudMap.id, transformedCloudMap);
         }
       }
     });
