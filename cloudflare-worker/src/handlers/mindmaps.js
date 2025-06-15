@@ -70,7 +70,15 @@ export async function handleRequest(request, env) {
     });
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('=== API ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Request method:', method);
+    console.error('Request URL:', url.pathname);
+    console.error('User ID:', userId);
+    console.error('Mindmap ID:', mindmapId);
+    console.error('================');
+    
     return new Response(JSON.stringify({ error: error.message }), {
       status: error.status || 500,
       headers: {
@@ -131,14 +139,33 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
   const data = JSON.stringify(mindmapData);
   const now = new Date().toISOString();
   
+  console.log('updateMindMap 実行:', { userId, mindmapId, title });
+  
   const result = await db.prepare(
     'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?'
   ).bind(title, data, now, userId, mindmapId).run();
   
-  if (result.changes === 0) {
-    const error = new Error('Mind map not found');
-    error.status = 404;
-    throw error;
+  console.log('UPDATE結果:', result);
+  console.log('result.changes:', result.changes, 'typeof:', typeof result.changes);
+  console.log('result.meta.changes:', result.meta?.changes, 'typeof:', typeof result.meta?.changes);
+  
+  const changesCount = result.changes ?? result.meta?.changes ?? 0;
+  console.log('実際のchanges値:', changesCount);
+  
+  if (changesCount === 0) {
+    // 更新対象が見つからない場合は新規作成
+    console.log('マインドマップが見つからないため新規作成:', mindmapId);
+    
+    // Ensure user exists
+    await ensureUser(db, userId);
+    
+    const insertResult = await db.prepare(
+      'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(mindmapId, userId, title, data, now, now).run();
+    
+    console.log('INSERT結果:', insertResult);
+    
+    return { id: mindmapId, title, created_at: now, updated_at: now };
   }
   
   return { id: mindmapId, title, updated_at: now };

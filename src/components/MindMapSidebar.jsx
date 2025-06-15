@@ -59,6 +59,7 @@ const MindMapSidebar = ({
   };
 
   const getNodeCount = (rootNode) => {
+    if (!rootNode) return 0;
     const count = (node) => {
       let total = 1;
       if (node.children) {
