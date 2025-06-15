@@ -1,7 +1,7 @@
 // Cloudflare Workers APIクライアント
 
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://mindflow-api-prod.shigekazukoya.workers.dev'
+const API_BASE = window.location.hostname === 'sk0ya.github.io'
+  ? 'https://mindflow-api-production.shigekazukoya.workers.dev'
   : 'https://mindflow-api.shigekazukoya.workers.dev';
 
 class CloudStorageClient {
