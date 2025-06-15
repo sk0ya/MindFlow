@@ -12,6 +12,7 @@ CORS_ORIGIN = "http://localhost:3000"
 ENABLE_AUTH = "false"
 API_BASE_URL = "http://localhost:8787"
 FRONTEND_URL = "http://localhost:3000"
+ALLOWED_EMAILS = "user1@example.com,user2@example.com"
 
 [[env.production]]
 name = "mindflow-api-prod"
@@ -21,6 +22,7 @@ CORS_ORIGIN = "https://your-domain.com"
 ENABLE_AUTH = "true"
 API_BASE_URL = "https://mindflow-api-prod.your-domain.workers.dev"
 FRONTEND_URL = "https://your-domain.com"
+ALLOWED_EMAILS = "admin@your-domain.com"
 
 [[env.production.d1_databases]]
 binding = "DB"

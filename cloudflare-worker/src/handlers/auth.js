@@ -68,6 +68,14 @@ async function handleLogin(request, env) {
     throw new Error('Email is required');
   }
   
+  // 許可されたメールアドレスかチェック
+  const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
+  if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
+    const error = new Error('Access denied: Email not authorized');
+    error.status = 403;
+    throw error;
+  }
+  
   // データベースからユーザーを検索
   const { results } = await env.DB.prepare(
     'SELECT * FROM users WHERE email = ?'
@@ -241,6 +249,14 @@ async function handleGoogleCallback(request, env) {
   
   if (!userResponse.ok) {
     throw new Error('Failed to fetch user data');
+  }
+  
+  // 許可されたメールアドレスかチェック
+  const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
+  if (allowedEmails.length > 0 && !allowedEmails.includes(userData.email)) {
+    const error = new Error('Access denied: Email not authorized');
+    error.status = 403;
+    throw error;
   }
   
   // ユーザーをデータベースに保存/更新
