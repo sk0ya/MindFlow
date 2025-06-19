@@ -56,9 +56,20 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
   };
 
 
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = async (user) => {
     setCurrentUser(user);
     setShowAuthModal(false);
+    
+    // ログイン成功時にマップ一覧を同期
+    if (refreshAllMindMaps) {
+      console.log('🔄 ログイン時マップ一覧同期実行...');
+      try {
+        await refreshAllMindMaps();
+        console.log('✅ ログイン時マップ一覧同期完了');
+      } catch (error) {
+        console.error('❌ ログイン時マップ一覧同期失敗:', error);
+      }
+    }
   };
 
   const handleLogout = async () => {

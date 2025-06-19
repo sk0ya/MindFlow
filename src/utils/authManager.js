@@ -25,6 +25,18 @@ class AuthManager {
         if (payload && payload.exp * 1000 > Date.now()) {
           this.token = authData.token;
           this.user = authData.user;
+          
+          // 自動ログイン成功時にマップ一覧を同期（非同期で実行してブロックを避ける）
+          setTimeout(async () => {
+            try {
+              console.log('🔄 自動ログイン時マップ一覧同期開始...');
+              const { getAllMindMapsHybrid } = await import('./storage.js');
+              await getAllMindMapsHybrid();
+              console.log('✅ 自動ログイン時マップ一覧同期完了');
+            } catch (syncError) {
+              console.warn('⚠️ 自動ログイン時マップ一覧同期失敗:', syncError);
+            }
+          }, 1000); // 1秒後に実行してアプリ初期化を優先
         } else {
           this.clearAuthData();
         }
@@ -141,6 +153,16 @@ class AuthManager {
       this.token = data.token;
       this.user = data.user;
       this.saveAuthData();
+
+      // ログイン成功時にマップ一覧を同期
+      try {
+        console.log('🔄 ログイン成功時マップ一覧同期開始...');
+        const { getAllMindMapsHybrid } = await import('./storage.js');
+        await getAllMindMapsHybrid();
+        console.log('✅ ログイン成功時マップ一覧同期完了');
+      } catch (syncError) {
+        console.warn('⚠️ ログイン成功時マップ一覧同期失敗:', syncError);
+      }
 
       return { success: true, user: this.user };
     } catch (error) {
