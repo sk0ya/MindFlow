@@ -199,14 +199,14 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
           <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
             <input
               type="checkbox"
-              checked={settings.realtimeSync || false}
-              onChange={(e) => handleRealtimeToggle(e.target.checked)}
+              checked={false}
+              disabled={true}
               style={{ marginRight: '8px' }}
             />
-            <span style={{ color: '#333' }}>リアルタイム同期</span>
+            <span style={{ color: '#999' }}>リアルタイム同期（一時的に無効）</span>
           </label>
-          <small style={{ color: '#666', fontSize: '12px' }}>
-            他のデバイスとの変更をリアルタイムで同期します（要認証）
+          <small style={{ color: '#999', fontSize: '12px' }}>
+            WebSocket接続の問題により一時的に無効化されています
           </small>
         </div>
 
