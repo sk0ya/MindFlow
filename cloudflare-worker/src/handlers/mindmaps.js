@@ -94,90 +94,323 @@ async function getAllMindMaps(db, userId) {
   await ensureUser(db, userId);
   
   const { results } = await db.prepare(
-    'SELECT * FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
+    'SELECT id, title, category, theme, node_count, created_at, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
   ).bind(userId).all();
   
-  // データ構造をローカル形式に統一
-  const mindmaps = results.map(row => {
-    try {
-      const data = JSON.parse(row.data);
-      return {
-        ...data,
-        // クラウド固有のフィールドをローカル形式に統一
-        updatedAt: row.updated_at,
-        createdAt: row.created_at
-      };
-    } catch (error) {
-      console.error('Failed to parse mindmap data:', error);
-      // パースに失敗した場合は基本情報のみ返す
-      return {
-        id: row.id,
-        title: row.title,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        category: '未分類',
-        theme: 'default',
-        rootNode: {
-          id: 'root',
-          text: 'メイントピック',
-          x: 400,
-          y: 300,
-          children: []
-        },
-        settings: {
-          autoSave: true,
-          autoLayout: true
-        }
-      };
-    }
-  });
+  // 軽量な一覧形式で返す
+  const mindmaps = results.map(row => ({
+    id: row.id,
+    title: row.title,
+    category: row.category || '未分類',
+    theme: row.theme || 'default',
+    nodeCount: row.node_count || 1,
+    updatedAt: row.updated_at,
+    createdAt: row.created_at
+  }));
   
   return { mindmaps };
 }
 
-async function getMindMap(db, userId, mindmapId) {
-  const { results } = await db.prepare(
-    'SELECT * FROM mindmaps WHERE user_id = ? AND id = ?'
-  ).bind(userId, mindmapId).all();
+// ノード数をカウントするヘルパー関数
+function countNodesInData(data) {
+  if (!data.rootNode) return 1;
   
-  if (results.length === 0) {
+  function countNodes(node) {
+    let count = 1;
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach(child => {
+        count += countNodes(child);
+      });
+    }
+    return count;
+  }
+  
+  return countNodes(data.rootNode);
+}
+
+async function getMindMap(db, userId, mindmapId) {
+  // リレーショナル形式から直接読み込み
+  return await getMindMapRelational(db, userId, mindmapId);
+}
+
+// リレーショナル形式からの読み込み
+async function getMindMapRelational(db, userId, mindmapId) {
+  // マインドマップ基本情報取得
+  const mindmap = await db.prepare(
+    'SELECT * FROM mindmaps WHERE user_id = ? AND id = ?'
+  ).bind(userId, mindmapId).first();
+  
+  if (!mindmap) {
     const error = new Error('Mind map not found');
     error.status = 404;
     throw error;
   }
   
-  const row = results[0];
-  try {
-    const data = JSON.parse(row.data);
-    return {
-      ...data,
-      // クラウド固有のフィールドをローカル形式に統一
-      updatedAt: row.updated_at,
-      createdAt: row.created_at
+  // ノード取得
+  const { results: nodes } = await db.prepare(
+    'SELECT * FROM nodes WHERE mindmap_id = ? ORDER BY created_at'
+  ).bind(mindmapId).all();
+  
+  // 添付ファイル取得
+  const { results: attachments } = await db.prepare(
+    'SELECT * FROM attachments WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)'
+  ).bind(mindmapId).all();
+  
+  // リンク取得
+  const { results: links } = await db.prepare(
+    'SELECT * FROM node_links WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)'
+  ).bind(mindmapId).all();
+  
+  // 階層構造を再構築
+  const rootNode = buildHierarchicalStructure(nodes, attachments, links);
+  
+  return {
+    id: mindmap.id,
+    title: mindmap.title,
+    category: mindmap.category || '未分類',
+    theme: mindmap.theme || 'default',
+    rootNode: rootNode,
+    settings: JSON.parse(mindmap.settings || '{}'),
+    createdAt: mindmap.created_at,
+    updatedAt: mindmap.updated_at,
+  };
+}
+
+// リレーショナルデータから階層構造を再構築
+function buildHierarchicalStructure(nodes, attachments, links) {
+  const nodeMap = new Map();
+  const attachmentMap = new Map();
+  const linkMap = new Map();
+  
+  // 添付ファイルをノードIDでグループ化
+  attachments.forEach(att => {
+    if (!attachmentMap.has(att.node_id)) {
+      attachmentMap.set(att.node_id, []);
+    }
+    attachmentMap.get(att.node_id).push({
+      id: att.id,
+      name: att.file_name,
+      type: att.mime_type,
+      size: att.file_size,
+      dataURL: att.legacy_data_url,
+      isImage: att.attachment_type === 'image'
+    });
+  });
+  
+  // リンクをノードIDでグループ化
+  links.forEach(link => {
+    if (!linkMap.has(link.node_id)) {
+      linkMap.set(link.node_id, []);
+    }
+    linkMap.get(link.node_id).push({
+      id: link.id,
+      url: link.url,
+      title: link.title,
+      description: link.description
+    });
+  });
+  
+  // ノードを階層構造に変換
+  nodes.forEach(node => {
+    const styleSettings = JSON.parse(node.style_settings || '{}');
+    
+    const hierarchicalNode = {
+      id: node.id,
+      text: node.text,
+      x: node.position_x,
+      y: node.position_y,
+      fontSize: styleSettings.fontSize,
+      fontWeight: styleSettings.fontWeight,
+      backgroundColor: styleSettings.backgroundColor,
+      textColor: styleSettings.textColor,
+      color: styleSettings.color,
+      notes: node.notes,
+      tags: JSON.parse(node.tags || '[]'),
+      collapsed: node.collapsed,
+      children: [],
+      attachments: attachmentMap.get(node.id) || [],
+      mapLinks: linkMap.get(node.id) || []
     };
-  } catch (error) {
-    console.error('Failed to parse mindmap data:', error);
-    // パースに失敗した場合は基本情報のみ返す
-    return {
-      id: row.id,
-      title: row.title,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      category: '未分類',
-      theme: 'default',
-      rootNode: {
-        id: 'root',
-        text: 'メイントピック',
-        x: 400,
-        y: 300,
-        children: []
-      },
-      settings: {
-        autoSave: true,
-        autoLayout: true
+    
+    nodeMap.set(node.id, hierarchicalNode);
+  });
+  
+  // 親子関係を構築
+  let rootNode = null;
+  nodes.forEach(node => {
+    const hierarchicalNode = nodeMap.get(node.id);
+    
+    if (node.parent_id) {
+      const parent = nodeMap.get(node.parent_id);
+      if (parent) {
+        parent.children.push(hierarchicalNode);
       }
-    };
+    } else {
+      rootNode = hierarchicalNode;
+    }
+  });
+  
+  return rootNode || {
+    id: 'root',
+    text: 'メイントピック',
+    x: 400,
+    y: 300,
+    children: []
+  };
+}
+
+// リレーショナル形式での新規作成
+async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) {
+  const statements = [];
+  
+  // マインドマップ作成
+  statements.push(
+    db.prepare(
+      'INSERT INTO mindmaps (id, user_id, title, category, theme, settings, node_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(
+      mindmapId,
+      userId,
+      mindmapData.title || 'Untitled Mind Map',
+      mindmapData.category || 'general',
+      mindmapData.theme || 'default',
+      JSON.stringify(mindmapData.settings || {}),
+      countNodesInData(mindmapData),
+      now,
+      now
+    )
+  );
+  
+  // ノード作成
+  if (mindmapData.rootNode) {
+    const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
+    statements.push(...nodeStatements);
   }
+  
+  // 一括実行
+  await db.batch(statements);
+}
+
+// リレーショナル形式での更新
+async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) {
+  const statements = [];
+  
+  // マインドマップ更新
+  statements.push(
+    db.prepare(
+      'UPDATE mindmaps SET title = ?, category = ?, theme = ?, settings = ?, node_count = ?, updated_at = ? WHERE id = ?'
+    ).bind(
+      mindmapData.title || 'Untitled Mind Map',
+      mindmapData.category || 'general',
+      mindmapData.theme || 'default',
+      JSON.stringify(mindmapData.settings || {}),
+      countNodesInData(mindmapData),
+      now,
+      mindmapId
+    )
+  );
+  
+  // 既存ノードを削除（カスケード削除で関連データも削除）
+  statements.push(
+    db.prepare('DELETE FROM nodes WHERE mindmap_id = ?').bind(mindmapId)
+  );
+  
+  // 新しいノードを作成
+  if (mindmapData.rootNode) {
+    const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
+    statements.push(...nodeStatements);
+  }
+  
+  // 一括実行
+  await db.batch(statements);
+}
+
+// ノード作成文を再帰的に生成
+function createNodeStatements(db, node, mindmapId, parentId, now) {
+  const statements = [];
+  
+  // ノード作成
+  statements.push(
+    db.prepare(
+      'INSERT INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(
+      node.id,
+      mindmapId,
+      parentId,
+      node.text || '',
+      parentId ? 'branch' : 'root',
+      node.x || 0,
+      node.y || 0,
+      JSON.stringify({
+        fontSize: node.fontSize,
+        fontWeight: node.fontWeight,
+        backgroundColor: node.backgroundColor,
+        textColor: node.textColor,
+        color: node.color
+      }),
+      node.notes || '',
+      JSON.stringify(node.tags || []),
+      node.collapsed || false,
+      now,
+      now
+    )
+  );
+  
+  // 添付ファイル
+  if (node.attachments && Array.isArray(node.attachments)) {
+    node.attachments.forEach(att => {
+      const attachmentId = att.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      statements.push(
+        db.prepare(
+          'INSERT INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(
+          attachmentId,
+          node.id,
+          att.name || 'untitled',
+          att.name || 'untitled',
+          att.size || 0,
+          att.type || 'application/octet-stream',
+          `legacy/${attachmentId}`,
+          att.isImage ? 'image' : 'file',
+          now
+        )
+      );
+    });
+  }
+  
+  // リンク
+  if (node.mapLinks && Array.isArray(node.mapLinks)) {
+    node.mapLinks.forEach(link => {
+      const linkId = link.id || `link_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      try {
+        const url = new URL(link.url);
+        statements.push(
+          db.prepare(
+            'INSERT INTO node_links (id, node_id, url, title, description, domain, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          ).bind(
+            linkId,
+            node.id,
+            link.url,
+            link.title || link.url,
+            link.description || '',
+            url.hostname,
+            now
+          )
+        );
+      } catch (e) {
+        console.warn('Invalid URL in mapLinks:', link.url);
+      }
+    });
+  }
+  
+  // 子ノード処理
+  if (node.children && Array.isArray(node.children)) {
+    node.children.forEach(child => {
+      const childStatements = createNodeStatements(db, child, mindmapId, node.id, now);
+      statements.push(...childStatements);
+    });
+  }
+  
+  return statements;
 }
 
 async function createMindMap(db, userId, mindmapData) {
@@ -209,11 +442,9 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
     hasRootNode: !!mindmapData.rootNode
   }, null, 2));
   
-  const title = mindmapData.title || 'Untitled Mind Map';
-  const data = JSON.stringify(mindmapData);
   const now = new Date().toISOString();
   
-  // まず既存レコードを確認
+  // 既存レコードを確認
   const existingRecord = await db.prepare(
     'SELECT id FROM mindmaps WHERE user_id = ? AND id = ?'
   ).bind(userId, mindmapId).first();
@@ -222,24 +453,17 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
   
   if (existingRecord) {
     // 既存レコードを更新
-    const result = await db.prepare(
-      'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?'
-    ).bind(title, data, now, userId, mindmapId).run();
-    
-    console.log('UPDATE結果:', result);
+    await updateMindMapRelational(db, userId, mindmapId, mindmapData, now);
+    console.log('UPDATE結果: リレーショナル形式で更新完了');
   } else {
     // 新規作成
     console.log('新規レコード作成:', mindmapId);
     await ensureUser(db, userId);
-    
-    const result = await db.prepare(
-      'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(mindmapId, userId, title, data, now, now).run();
-    
-    console.log('INSERT結果:', result);
+    await createMindMapRelational(db, userId, mindmapId, mindmapData, now);
+    console.log('INSERT結果: リレーショナル形式で作成完了');
   }
   
-  // 常に完全なマインドマップオブジェクトを返す
+  // 完全なマインドマップオブジェクトを返す
   const response = {
     ...mindmapData,
     updatedAt: now,
@@ -248,6 +472,30 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
   
   console.log('updateMindMap 最終レスポンス:', JSON.stringify(response, null, 2));
   return response;
+}
+
+// リレーショナル形式への移行
+async function migrateToRelational(db, userId, mindmapId, mindmapData) {
+  const { MigrationScript } = await import('../migration-scripts/migrate-to-relational.js');
+  const migration = new MigrationScript(db);
+  
+  // 現在のデータを一時保存
+  const tempData = {
+    id: mindmapId,
+    title: mindmapData.title,
+    data: JSON.stringify(mindmapData),
+    user_id: userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  
+  try {
+    await migration.migrateSingleMindmap(tempData);
+    console.log('自動移行完了:', mindmapId);
+  } catch (error) {
+    console.error('自動移行失敗:', error);
+    throw error;
+  }
 }
 
 async function deleteMindMap(db, userId, mindmapId) {
