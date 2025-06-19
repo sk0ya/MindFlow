@@ -158,7 +158,8 @@ export const getAppSettings = () => {
     showWelcome: true,
     language: 'ja',
     storageMode: 'local', // 'local' or 'cloud'
-    cloudSync: true // デフォルトで自動同期を有効に
+    cloudSync: true, // デフォルトで自動同期を有効に
+    realtimeSync: false // リアルタイム同期はデフォルト無効
   });
 };
 

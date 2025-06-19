@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
-import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMapHybrid, getAllMindMapsHybrid, deleteMindMapHybrid } from '../utils/storage.js';
+import { getCurrentMindMap, saveMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMapHybrid, getAllMindMapsHybrid, deleteMindMapHybrid, getAppSettings } from '../utils/storage.js';
 import { createNewNode, calculateNodePosition, deepClone, COLORS, readFileAsDataURL, createFileAttachment, isImageFile, createInitialData, createNodeMapLink } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 import { getRealtimeClient } from '../utils/realtimeClient.js';
@@ -1256,8 +1256,15 @@ export const useMindMap = () => {
 
   // リアルタイム同期の初期化（マウント時）
   useEffect(() => {
-    // リアルタイム機能を一時的に無効化
-    console.log('リアルタイム機能は一時的に無効化されています');
+    const settings = getAppSettings();
+    
+    // リアルタイム同期が有効で認証済みの場合のみ初期化
+    if (settings.realtimeSync && authManager.isAuthenticated()) {
+      console.log('🔄 リアルタイム同期を初期化中...');
+      initializeRealtime();
+    } else {
+      console.log('📴 リアルタイム同期は無効または未認証のためスキップ');
+    }
     
     // クリーンアップ
     return () => {

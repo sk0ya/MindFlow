@@ -46,91 +46,12 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
     }
   };
 
-  // シンプルな手動同期
-  const handleFullSync = async () => {
-    setIsSyncing(true);
-    try {
-      console.log('手動同期開始...');
-      
-      // 1. ローカルデータを取得
-      const localMaps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []).filter(map => 
-        map && map.id && map.rootNode
-      );
-      console.log('ローカルマップ:', localMaps.length);
-
-      // 2. 認証されたユーザーIDを取得
-      let userId;
-      if (authManager.isAuthenticated() && authManager.getCurrentUser()) {
-        // 認証済みの場合は認証ユーザーのIDを使用
-        const user = authManager.getCurrentUser();
-        userId = user.userId || user.email || user.id;
-        console.log('認証済みユーザーID:', userId);
-      } else {
-        // 認証されていない場合はエラー
-        throw new Error('クラウド同期には認証が必要です。先にログインしてください。');
-      }
-      
-      if (!userId) {
-        throw new Error('ユーザーIDを取得できませんでした');
-      }
-
-      // 3. ローカルマップをクラウドに送信（認証済みリクエスト）
-      for (const map of localMaps) {
-        const response = await authManager.authenticatedFetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(map)
-        });
-        console.log(`${map.title}: ${response.ok ? '成功' : '失敗'}`);
-      }
-
-      // 4. クラウドからデータを取得（認証済みリクエスト）
-      const cloudResponse = await authManager.authenticatedFetch(
-        'https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps'
-      );
-      const cloudData = await cloudResponse.json();
-      const cloudMaps = cloudData.mindmaps || [];
-      console.log('クラウドマップ:', cloudMaps.length, 'マップ一覧は更新されてません');
-
-      // 5. 詳細データを取得してローカルに保存
-      const detailedMaps = [];
-      for (const map of cloudMaps) {
-        try {
-          console.log('📄 マップ詳細取得:', map.id, map.title);
-          const detailResponse = await authManager.authenticatedFetch(
-            `https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`
-          );
-          const detailed = await detailResponse.json();
-          if (detailed && detailed.rootNode) {
-            detailedMaps.push(detailed);
-          }
-        } catch (detailError) {
-          console.warn('📄 マップ詳細取得失敗:', map.id, detailError);
-        }
-      }
-      
-      console.log('📄 詳細データ取得完了、件数:', detailedMaps.length);
-      
-      if (detailedMaps.length > 0) {
-        saveToStorage(STORAGE_KEYS.MINDMAPS, detailedMaps);
-        console.log('💾 ローカルキャッシュ保存完了');
-      }
-
-      alert(`同期完了!\nローカル: ${localMaps.length}件 → クラウド: ${cloudMaps.length}件`);
-      
-      // UI更新
-      if (refreshAllMindMaps) {
-        refreshAllMindMaps();
-      }
-      
-    } catch (error) {
-      console.error('手動同期エラー:', error);
-      alert(`同期失敗: ${error.message}`);
-    } finally {
-      setIsSyncing(false);
+  // リアルタイム同期の有効化/無効化
+  const handleRealtimeToggle = (enabled) => {
+    handleSettingChange('realtimeSync', enabled);
+    if (enabled && !authManager.isAuthenticated()) {
+      alert('リアルタイム同期には認証が必要です。先にログインしてください。');
+      setShowAuthModal(true);
     }
   };
 
@@ -275,32 +196,31 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+            <input
+              type="checkbox"
+              checked={settings.realtimeSync || false}
+              onChange={(e) => handleRealtimeToggle(e.target.checked)}
+              style={{ marginRight: '8px' }}
+            />
+            <span style={{ color: '#333' }}>リアルタイム同期</span>
+          </label>
+          <small style={{ color: '#666', fontSize: '12px' }}>
+            他のデバイスとの変更をリアルタイムで同期します（要認証）
+          </small>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             marginBottom: '8px'
           }}>
-            <button
-              onClick={handleFullSync}
-              disabled={isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: (isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)) ? 'not-allowed' : 'pointer',
-                opacity: (isSyncing || (settings.storageMode !== 'cloud' && !settings.cloudSync)) ? 0.6 : 1
-              }}
-            >
-              {isSyncing ? '同期中...' : '手動同期'}
-            </button>
-            
             <SyncStatusIndicator />
           </div>
           <small style={{ color: '#666', fontSize: '12px' }}>
-            ローカルとクラウドのデータを双方向同期します{(settings.storageMode !== 'cloud' && !settings.cloudSync) ? ' (クラウド同期を有効にしてください)' : ''}
+            自動同期は変更から1秒後に実行されます
           </small>
         </div>
 
