@@ -48,7 +48,7 @@ export const useMindMapData = () => {
           console.error('❌ オートセーブ失敗:', error);
           // フォールバックとしてローカル保存
           console.log('🏠 ローカル保存にフォールバック');
-          saveMindMap(newData);
+          await saveMindMap(newData);
         }
       }, 1000);
     }
@@ -60,22 +60,22 @@ export const useMindMapData = () => {
   };
 
   // Undo
-  const undo = () => {
+  const undo = async () => {
     if (historyIndex > 0) {
       const previousData = history[historyIndex - 1];
       setData(previousData);
       setHistoryIndex(prev => prev - 1);
-      saveMindMap(previousData);
+      await saveMindMap(previousData);
     }
   };
 
   // Redo
-  const redo = () => {
+  const redo = async () => {
     if (historyIndex < history.length - 1) {
       const nextData = history[historyIndex + 1];
       setData(nextData);
       setHistoryIndex(prev => prev + 1);
-      saveMindMap(nextData);
+      await saveMindMap(nextData);
     }
   };
 
@@ -123,6 +123,6 @@ export const useMindMapData = () => {
     updateSettings,
     updateTitle,
     changeTheme,
-    saveMindMap: () => saveMindMap(data)
+    saveMindMap: async () => await saveMindMap(data)
   };
 };

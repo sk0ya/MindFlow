@@ -16,11 +16,11 @@ export const useMindMapNodes = (data, updateData) => {
       return result;
     };
     
-    return data.rootNode ? flatten(data.rootNode) : [];
-  }, [data.rootNode]);
+    return data?.rootNode ? flatten(data.rootNode) : [];
+  }, [data?.rootNode]);
 
   // ノードを検索（メモ化）
-  const findNode = useCallback((nodeId, rootNode = data.rootNode) => {
+  const findNode = useCallback((nodeId, rootNode = data?.rootNode) => {
     if (!rootNode || !nodeId) return null;
     if (rootNode.id === nodeId) return rootNode;
     
@@ -29,7 +29,7 @@ export const useMindMapNodes = (data, updateData) => {
       if (found) return found;
     }
     return null;
-  }, [data.rootNode]);
+  }, [data?.rootNode]);
 
   // ノードの親を検索（メモ化）
   const findParentNode = useCallback((nodeId, rootNode = data.rootNode, parent = null) => {
@@ -41,7 +41,7 @@ export const useMindMapNodes = (data, updateData) => {
       if (found) return found;
     }
     return null;
-  }, [data.rootNode]);
+  }, [data?.rootNode]);
 
   // オートレイアウトを適用
   const applyAutoLayout = (rootNode) => {

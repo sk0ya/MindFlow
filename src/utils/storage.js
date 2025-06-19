@@ -7,42 +7,47 @@ export const loadFromStorage = (key, defaultValue = null) => {
 };
 
 // ローカルストレージにデータを保存（安全版）
-export const saveToStorage = (key, data) => {
-  const result = safeSetItem(key, data);
-  
-  if (!result.success) {
-    // 保存失敗時の通知
-    console.error('ストレージ保存失敗:', result.error);
+export const saveToStorage = async (key, data) => {
+  try {
+    const result = await safeSetItem(key, data);
     
-    // ユーザーに通知（可能な場合）
-    if (typeof window !== 'undefined' && window.dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('storage-error', {
-        detail: {
-          key,
-          error: result.error,
-          suggestion: 'ファイル添付や古いマップを削除して容量を確保してください'
-        }
-      }));
+    if (!result.success) {
+      // 保存失敗時の通知
+      console.error('ストレージ保存失敗:', result.error);
+    
+      // ユーザーに通知（可能な場合）
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('storage-error', {
+          detail: {
+            key,
+            error: result.error,
+            suggestion: 'ファイル添付や古いマップを削除して容量を確保してください'
+          }
+        }));
+      }
+      
+      return false;
     }
     
+    // 警告レベルの場合
+    if (result.warning) {
+      console.warn('ストレージ警告:', result.warning);
+    
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('storage-warning', {
+          detail: {
+            message: result.warning,
+            suggestion: 'ストレージ容量が不足してきています。不要なファイルを削除することをお勧めします。'
+          }
+        }));
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('ストレージ保存中にエラーが発生:', error);
     return false;
   }
-  
-  // 警告レベルの場合
-  if (result.warning) {
-    console.warn('ストレージ警告:', result.warning);
-    
-    if (typeof window !== 'undefined' && window.dispatchEvent) {
-      window.dispatchEvent(new CustomEvent('storage-warning', {
-        detail: {
-          message: result.warning,
-          suggestion: 'ストレージ容量が不足してきています。不要なファイルを削除することをお勧めします。'
-        }
-      }));
-    }
-  }
-  
-  return true;
 };
 
 // すべてのマインドマップを取得
@@ -70,7 +75,7 @@ export const getAllMindMaps = () => {
 };
 
 // マインドマップを保存
-export const saveMindMap = (mindMapData) => {
+export const saveMindMap = async (mindMapData) => {
   const allMaps = getAllMindMaps();
   const existingIndex = allMaps.findIndex(map => map.id === mindMapData.id);
   
@@ -85,8 +90,8 @@ export const saveMindMap = (mindMapData) => {
     allMaps.push(updatedData);
   }
   
-  saveToStorage(STORAGE_KEYS.MINDMAPS, allMaps);
-  saveToStorage(STORAGE_KEYS.CURRENT_MAP, updatedData);
+  await saveToStorage(STORAGE_KEYS.MINDMAPS, allMaps);
+  await saveToStorage(STORAGE_KEYS.CURRENT_MAP, updatedData);
   
   return updatedData;
 };

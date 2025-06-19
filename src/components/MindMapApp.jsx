@@ -194,8 +194,8 @@ const MindMapApp = () => {
     setTimeout(() => saveMessage.remove(), 3000);
   };
 
-  const handleSave = () => {
-    saveMindMap();
+  const handleSave = async () => {
+    await saveMindMap();
     showSaveMessage();
   };
 
@@ -205,20 +205,20 @@ const MindMapApp = () => {
         switch (e.key) {
           case 's':
             e.preventDefault();
-            handleSave();
+            handleSave().catch(console.error);
             break;
           case 'z':
             if (e.shiftKey) {
               e.preventDefault();
-              redo();
+              redo().catch(console.error);
             } else {
               e.preventDefault();
-              undo();
+              undo().catch(console.error);
             }
             break;
           case 'y':
             e.preventDefault();
-            redo();
+            redo().catch(console.error);
             break;
           default:
             break;
@@ -793,8 +793,8 @@ const MindMapApp = () => {
           <div>
             <span className="footer-brand">© 2024 MindFlow</span>
             <span className="stats">
-              ノード数: {flattenNodes(data.rootNode).length} | 
-              最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')}
+              ノード数: {flattenNodes && data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
+              最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
             </span>
             {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
               <span className="sync-status">
