@@ -135,10 +135,13 @@ export const useMindMap = () => {
       }
       autoSaveTimeoutRef.current = setTimeout(async () => {
         try {
+          console.log('🔄 オートセーブ開始:', newData.id, newData.title);
           await saveMindMapHybrid(newData);
+          console.log('✅ オートセーブ成功');
         } catch (error) {
-          console.error('Auto-save failed:', error);
+          console.error('❌ オートセーブ失敗:', error);
           // フォールバックとしてローカル保存
+          console.log('🏠 ローカル保存にフォールバック');
           saveMindMap(newData);
         }
       }, 1000);

@@ -179,25 +179,42 @@ export const saveMindMapHybrid = async (mindMapData) => {
     const { authManager } = await import('./authManager.js');
     const { cloudStorage } = await import('./cloudStorage.js');
     
+    const isAuthenticated = authManager.isAuthenticated();
+    const currentUser = authManager.getCurrentUser();
+    
+    console.log('🔄 saveMindMapHybrid 実行:', {
+      mapId: mindMapData.id,
+      mapTitle: mindMapData.title,
+      isAuthenticated,
+      currentUser: currentUser ? {
+        userId: currentUser.userId,
+        email: currentUser.email,
+        id: currentUser.id
+      } : null
+    });
+    
     // 認証されている場合はクラウドに保存を試行
-    if (authManager.isAuthenticated()) {
+    if (isAuthenticated) {
       try {
+        console.log('☁️ クラウド保存開始:', mindMapData.id);
         const result = await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
+        console.log('✅ クラウド保存成功:', result);
         
         // クラウド保存成功時でもローカルにもバックアップとして保存
         const localResult = saveMindMap(mindMapData);
         return { ...localResult, source: 'cloud' };
       } catch (cloudError) {
-        console.warn('Cloud save failed, falling back to local:', cloudError);
+        console.warn('❌ クラウド保存失敗、ローカルにフォールバック:', cloudError);
         // クラウド保存失敗時はローカルに保存
         return saveMindMap(mindMapData);
       }
     } else {
+      console.log('🏠 未認証のためローカル保存のみ');
       // 認証されていない場合はローカルのみに保存
       return saveMindMap(mindMapData);
     }
   } catch (error) {
-    console.error('Hybrid save error:', error);
+    console.error('💥 Hybrid save error:', error);
     // エラー時はローカルに保存
     return saveMindMap(mindMapData);
   }
