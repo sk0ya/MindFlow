@@ -465,6 +465,10 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
     hasRootNode: !!mindmapData.rootNode
   }, null, 2));
   
+  console.log('=== ユーザーID確認 ===');
+  console.log('使用中のuserId:', userId);
+  console.log('mindmapId:', mindmapId);
+  
   const now = new Date().toISOString();
   
   // 既存レコードを確認
