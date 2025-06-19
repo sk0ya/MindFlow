@@ -93,12 +93,30 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
       );
       const cloudData = await cloudResponse.json();
       const cloudMaps = cloudData.mindmaps || [];
-      console.log('クラウドマップ:', cloudMaps.length);
+      console.log('クラウドマップ:', cloudMaps.length, 'マップ一覧は更新されてません');
 
-      // 5. 有効なクラウドデータをローカルに保存
-      const validCloudMaps = cloudMaps.filter(map => map && map.id && map.rootNode);
-      if (validCloudMaps.length > 0) {
-        saveToStorage(STORAGE_KEYS.MINDMAPS, validCloudMaps);
+      // 5. 詳細データを取得してローカルに保存
+      const detailedMaps = [];
+      for (const map of cloudMaps) {
+        try {
+          console.log('📄 マップ詳細取得:', map.id, map.title);
+          const detailResponse = await authManager.authenticatedFetch(
+            `https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps/${map.id}`
+          );
+          const detailed = await detailResponse.json();
+          if (detailed && detailed.rootNode) {
+            detailedMaps.push(detailed);
+          }
+        } catch (detailError) {
+          console.warn('📄 マップ詳細取得失敗:', map.id, detailError);
+        }
+      }
+      
+      console.log('📄 詳細データ取得完了、件数:', detailedMaps.length);
+      
+      if (detailedMaps.length > 0) {
+        saveToStorage(STORAGE_KEYS.MINDMAPS, detailedMaps);
+        console.log('💾 ローカルキャッシュ保存完了');
       }
 
       alert(`同期完了!\nローカル: ${localMaps.length}件 → クラウド: ${cloudMaps.length}件`);

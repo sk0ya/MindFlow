@@ -190,7 +190,9 @@ export const saveMindMapHybrid = async (mindMapData) => {
         userId: currentUser.userId,
         email: currentUser.email,
         id: currentUser.id
-      } : null
+      } : null,
+      authManagerType: typeof authManager,
+      authManagerMethods: authManager ? Object.keys(authManager) : 'null'
     });
     
     // 認証されている場合はクラウドに保存を試行
