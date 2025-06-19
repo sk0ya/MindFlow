@@ -84,6 +84,11 @@ class AuthManager {
     return this.token ? `Bearer ${this.token}` : null;
   }
 
+  // 認証トークンを取得
+  getAuthToken() {
+    return this.token;
+  }
+
   // Magic Linkを送信
   async sendMagicLink(email) {
     try {
