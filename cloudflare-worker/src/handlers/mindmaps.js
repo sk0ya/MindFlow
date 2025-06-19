@@ -386,7 +386,7 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       const attachmentId = att.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       statements.push(
         db.prepare(
-          'INSERT OR REPLACE INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, legacy_data_url, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           attachmentId,
           node.id,
@@ -396,6 +396,7 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
           att.type || 'application/octet-stream',
           `legacy/${attachmentId}`,
           att.isImage ? 'image' : 'file',
+          att.dataURL || '',
           now
         )
       );
