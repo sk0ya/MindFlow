@@ -1123,9 +1123,18 @@ export const useMindMap = () => {
   };
 
 
-  // マルチマップ管理機能
-  const refreshAllMindMaps = () => {
-    setAllMindMaps(getAllMindMaps());
+  // マルチマップ管理機能（ハイブリッド同期対応）
+  const refreshAllMindMaps = async () => {
+    try {
+      console.log('🔄 マップ一覧を同期中...');
+      const maps = await getAllMindMapsHybrid();
+      setAllMindMaps(maps);
+      console.log('✅ マップ一覧同期完了:', maps.length, '件');
+    } catch (error) {
+      console.error('❌ マップ一覧同期失敗:', error);
+      // エラー時はローカルデータを使用
+      setAllMindMaps(getAllMindMaps());
+    }
   };
 
   const createMindMap = (title = '新しいマインドマップ', category = '未分類') => {
@@ -1294,6 +1303,32 @@ export const useMindMap = () => {
 
     return () => clearInterval(performanceInterval);
   }, [logPerformanceSummary]);
+
+  // 初期化時のマップ一覧同期
+  useEffect(() => {
+    // 認証済みの場合は初期化時にマップ一覧を同期
+    if (authManager.isAuthenticated()) {
+      console.log('🔄 初期マップ一覧同期実行...');
+      refreshAllMindMaps();
+    }
+  }, []);
+
+  // マップ一覧の定期同期（認証済みユーザーのみ）
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        const { authManager } = await import('../utils/authManager.js');
+        if (authManager.isAuthenticated()) {
+          console.log('🔄 定期マップ一覧同期実行...');
+          await refreshAllMindMaps();
+        }
+      } catch (error) {
+        console.warn('定期同期スキップ:', error);
+      }
+    }, 30000); // 30秒ごと
+
+    return () => clearInterval(syncInterval);
+  }, []);
 
   return {
     // データ

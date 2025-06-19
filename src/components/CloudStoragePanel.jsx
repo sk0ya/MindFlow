@@ -220,7 +220,7 @@ const CloudStoragePanel = ({ isVisible, onClose, refreshAllMindMaps }) => {
             <SyncStatusIndicator />
           </div>
           <small style={{ color: '#666', fontSize: '12px' }}>
-            自動同期は変更から1秒後に実行されます
+            自動同期は変更から1秒後、マップ一覧は30秒ごとに同期されます
           </small>
         </div>
 
