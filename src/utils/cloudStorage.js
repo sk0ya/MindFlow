@@ -4,11 +4,26 @@ const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
 class CloudStorageClient {
   constructor() {
-    this.userId = this.getUserId();
+    // ユーザーIDは動的に取得するため、ここでは初期化しない
   }
 
-  getUserId() {
-    // 簡易的なユーザーID生成（実際の認証システムに置き換え）
+  async getUserId() {
+    // 認証マネージャーから動的にインポート
+    try {
+      const { authManager } = await import('./authManager.js');
+      
+      // 認証済みの場合は認証ユーザーIDを使用
+      if (authManager.isAuthenticated()) {
+        const user = authManager.getCurrentUser();
+        if (user && (user.userId || user.email || user.id)) {
+          return user.userId || user.email || user.id;
+        }
+      }
+    } catch (error) {
+      console.warn('認証マネージャーの取得に失敗:', error);
+    }
+    
+    // 認証が無効または失敗の場合は従来の方法
     let userId = localStorage.getItem('mindflow_user_id');
     if (!userId) {
       userId = 'user_' + Math.random().toString(36).substr(2, 9);
@@ -62,11 +77,14 @@ class CloudStorageClient {
   async legacyRequest(endpoint, options = {}) {
     const url = `${API_BASE}/api${endpoint}`;
     
+    // 動的にユーザーIDを取得
+    const userId = await this.getUserId();
+    
     // 認証が無効な場合でも適切なヘッダーを設定
     const config = {
       headers: {
         'Content-Type': 'application/json',
-        'X-User-ID': this.userId,
+        'X-User-ID': userId,
         ...options.headers
       },
       ...options
