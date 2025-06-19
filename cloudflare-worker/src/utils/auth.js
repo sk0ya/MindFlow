@@ -117,8 +117,8 @@ export async function authenticateUser(email, password = null) {
     throw new Error('Valid email address required');
   }
   
-  // ユーザーIDを生成（メールアドレスのハッシュ）
-  const userId = await hashString(email);
+  // ユーザーIDを生成（メールアドレスをそのまま使用して同期を確実に）
+  const userId = email;
   
   const payload = {
     userId,

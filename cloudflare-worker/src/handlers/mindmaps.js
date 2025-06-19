@@ -13,13 +13,16 @@ export async function handleRequest(request, env) {
     const authResult = await requireAuth(request);
     if (authResult.authenticated) {
       userId = authResult.user.userId;
+      console.log('JWT認証成功 - userId:', userId, 'email:', authResult.user.email);
     } else {
       // JWT認証失敗時、X-User-IDを確認（後方互換性）
       const xUserId = request.headers.get('X-User-ID');
       if (xUserId) {
         userId = xUserId;
+        console.log('X-User-ID使用 - userId:', userId);
       } else {
         // どちらも無い場合はエラー
+        console.log('認証失敗:', authResult.error);
         return new Response(JSON.stringify({ error: authResult.error }), {
           status: authResult.status,
           headers: {
@@ -32,6 +35,7 @@ export async function handleRequest(request, env) {
   } else {
     // 認証が無効の場合は従来の方法を使用
     userId = request.headers.get('X-User-ID') || 'default-user';
+    console.log('認証無効モード - userId:', userId);
   }
 
   // Extract mindmap ID from path if present

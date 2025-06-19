@@ -104,8 +104,8 @@ async function getOrCreateUser(email, env) {
     return results[0];
   }
 
-  // 新規ユーザーを作成
-  const userId = await hashString(email);
+  // 新規ユーザーを作成（メールアドレスをそのまま使用）
+  const userId = email;
   const now = new Date().toISOString();
 
   await env.DB.prepare(

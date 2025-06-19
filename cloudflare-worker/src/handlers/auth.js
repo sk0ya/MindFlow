@@ -305,8 +305,8 @@ async function handleGoogleCallback(request, env) {
     throw error;
   }
   
-  // ユーザーをデータベースに保存/更新
-  const userId = await hashString(userData.email);
+  // ユーザーをデータベースに保存/更新（メールアドレスをそのまま使用）
+  const userId = userData.email;
   const now = new Date().toISOString();
   
   const { results } = await env.DB.prepare(
