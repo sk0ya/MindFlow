@@ -135,7 +135,7 @@ export const readFileAsDataURL = (file) => {
   });
 };
 
-export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = null) => {
+export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = null, optimizationInfo = null) => {
   return {
     id: uploadedFileInfo?.id || generateId(),
     name: file.name,
@@ -146,8 +146,53 @@ export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = nu
     storagePath: uploadedFileInfo?.storagePath, // R2のストレージパス
     thumbnailUrl: uploadedFileInfo?.thumbnailUrl, // サムネイルURL
     isImage: isImageFile(file),
-    createdAt: uploadedFileInfo?.uploadedAt || new Date().toISOString()
+    createdAt: uploadedFileInfo?.uploadedAt || new Date().toISOString(),
+    // 最適化情報
+    isOptimized: optimizationInfo?.isOptimized || false,
+    originalSize: optimizationInfo?.originalSize || file.size,
+    optimizedSize: optimizationInfo?.optimizedSize || file.size,
+    compressionRatio: optimizationInfo?.compressionRatio || '0',
+    optimizedType: optimizationInfo?.optimizedType || file.type
   };
+};
+
+// 既存のノードに色を自動割り当てする
+export const assignColorsToExistingNodes = (mindMapData) => {
+  // rootNodeが存在しない場合の対応
+  if (!mindMapData || !mindMapData.rootNode) {
+    console.warn('Invalid mindmap data or missing rootNode:', mindMapData);
+    return mindMapData || createInitialData();
+  }
+  
+  const assignColors = (node, parentColor = null, isRootChild = false, childIndex = 0) => {
+    const updatedNode = { ...node };
+    
+    if (node.id === 'root') {
+      // ルートノードには色を設定しない
+      updatedNode.color = undefined;
+    } else if (isRootChild) {
+      // ルートノードの子要素の場合、色が未設定なら順番に割り当て
+      if (!node.color) {
+        updatedNode.color = COLORS[childIndex % COLORS.length];
+      }
+    } else if (!node.color && parentColor) {
+      // 他の場合は親の色を継承
+      updatedNode.color = parentColor;
+    }
+    
+    // 子ノードも再帰的に処理
+    if (node.children) {
+      updatedNode.children = node.children.map((child, index) =>
+        assignColors(child, updatedNode.color, node.id === 'root', index)
+      );
+    }
+    
+    return updatedNode;
+  };
+  
+  return {
+    ...mindMapData,
+    rootNode: assignColors(mindMapData.rootNode)
 };
 
 export const validateFile = (file) => {

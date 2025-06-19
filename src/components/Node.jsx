@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState, useCallback, useEffect } from 'react';
+﻿import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
 import PropTypes from 'prop-types';
 
 const Node = ({
@@ -651,4 +651,45 @@ Node.propTypes = {
   }).isRequired
 };
 
-export default Node;
+// React.memoでパフォーマンス最適化
+// propsの浅い比較で再レンダリングを防ぐ
+export default memo(Node, (prevProps, nextProps) => {
+  // ノードの基本情報が変わった場合は再レンダリング
+  if (prevProps.node.id !== nextProps.node.id ||
+      prevProps.node.text !== nextProps.node.text ||
+      prevProps.node.x !== nextProps.node.x ||
+      prevProps.node.y !== nextProps.node.y ||
+      prevProps.node.fontSize !== nextProps.node.fontSize ||
+      prevProps.node.fontWeight !== nextProps.node.fontWeight ||
+      prevProps.node.color !== nextProps.node.color ||
+      prevProps.node.collapsed !== nextProps.node.collapsed) {
+    return false;
+  }
+
+  // 添付ファイルが変わった場合は再レンダリング
+  if (JSON.stringify(prevProps.node.attachments) !== JSON.stringify(nextProps.node.attachments)) {
+    return false;
+  }
+
+  // 選択・編集状態が変わった場合は再レンダリング
+  if (prevProps.isSelected !== nextProps.isSelected ||
+      prevProps.isEditing !== nextProps.isEditing ||
+      prevProps.isDragTarget !== nextProps.isDragTarget) {
+    return false;
+  }
+
+  // 編集テキストが変わった場合は再レンダリング
+  if (prevProps.editText !== nextProps.editText) {
+    return false;
+  }
+
+  // ズーム・パンが変わった場合は再レンダリング
+  if (prevProps.zoom !== nextProps.zoom ||
+      prevProps.pan.x !== nextProps.pan.x ||
+      prevProps.pan.y !== nextProps.pan.y) {
+    return false;
+  }
+
+  // その他の場合は再レンダリングしない
+  return true;
+});

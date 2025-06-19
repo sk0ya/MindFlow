@@ -1,25 +1,48 @@
 ﻿import { STORAGE_KEYS, createInitialData } from './dataTypes.js';
+import { safeGetItem, safeSetItem, getStorageInfo, checkStorageSpace } from './storageManager.js';
 
-// ローカルストレージからデータを取得
+// ローカルストレージからデータを取得（安全版）
 export const loadFromStorage = (key, defaultValue = null) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error('Storage load error:', error);
-    return defaultValue;
-  }
+  return safeGetItem(key, defaultValue);
 };
 
-// ローカルストレージにデータを保存
+// ローカルストレージにデータを保存（安全版）
 export const saveToStorage = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error('Storage save error:', error);
+  const result = safeSetItem(key, data);
+  
+  if (!result.success) {
+    // 保存失敗時の通知
+    console.error('ストレージ保存失敗:', result.error);
+    
+    // ユーザーに通知（可能な場合）
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('storage-error', {
+        detail: {
+          key,
+          error: result.error,
+          suggestion: 'ファイル添付や古いマップを削除して容量を確保してください'
+        }
+      }));
+    }
+    
     return false;
   }
+  
+  // 警告レベルの場合
+  if (result.warning) {
+    console.warn('ストレージ警告:', result.warning);
+    
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('storage-warning', {
+        detail: {
+          message: result.warning,
+          suggestion: 'ストレージ容量が不足してきています。不要なファイルを削除することをお勧めします。'
+        }
+      }));
+    }
+  }
+  
+  return true;
 };
 
 // すべてのマインドマップを取得
