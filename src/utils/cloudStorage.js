@@ -42,8 +42,9 @@ class CloudStorageClient {
           
           return await response.json();
         } catch (error) {
-          if (error.message === 'Authentication expired') {
-            // 認証期限切れの場合は従来の方法にフォールバック
+          if (error.message === 'Authentication expired' || error.message === 'Not authenticated') {
+            // 認証期限切れまたは未認証の場合は従来の方法にフォールバック
+            console.log('認証エラー、X-User-IDでフォールバック:', error.message);
             return await this.legacyRequest(endpoint, options);
           }
           throw error;
@@ -60,6 +61,8 @@ class CloudStorageClient {
 
   async legacyRequest(endpoint, options = {}) {
     const url = `${API_BASE}/api${endpoint}`;
+    
+    // 認証が無効な場合でも適切なヘッダーを設定
     const config = {
       headers: {
         'Content-Type': 'application/json',
