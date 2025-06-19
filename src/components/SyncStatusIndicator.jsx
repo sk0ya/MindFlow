@@ -85,7 +85,7 @@ const SyncStatusIndicator = () => {
       return (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#6c757d">
           <circle cx="12" cy="12" r="10"/>
-          <path d="M16 8v4a4 4 0 01-8 0V8a4 4 0 018 0z" fill="white"/>
+          <path d="M16 8v4a4 4 0 0 1-8 0V8a4 4 0 0 1 8 0z" fill="white"/>
           <path d="M12 14v2" stroke="white" strokeWidth="2"/>
         </svg>
       );
