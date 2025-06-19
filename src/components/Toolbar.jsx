@@ -4,7 +4,6 @@ import { ShortcutTooltip } from './KeyboardShortcutHelper';
 const Toolbar = ({
   title,
   onTitleChange,
-  onSave,
   onExport,
   onImport,
   onUndo,
@@ -13,7 +12,6 @@ const Toolbar = ({
   canRedo,
   zoom,
   onZoomReset,
-  onShowLayoutPanel,
   onShowCloudStoragePanel,
   authState,
   onShowAuthModal,
@@ -122,21 +120,9 @@ const Toolbar = ({
 
           <div className="action-group">
             <button
-              onClick={onShowLayoutPanel}
-              className="btn btn-feature"
-              title="自動レイアウト"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M21 16V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" stroke="currentColor" strokeWidth="2"/>
-                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              レイアウト
-            </button>
-            
-            <button
               onClick={onShowCloudStoragePanel}
               className="btn btn-feature"
-              title="クラウドストレージ設定"
+              title="クラウドストレージとマップ管理"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2"/>
@@ -146,19 +132,6 @@ const Toolbar = ({
           </div>
 
           <div className="action-group primary-actions">
-            <ShortcutTooltip shortcut="Ctrl+S" description="保存">
-              <button
-                onClick={onSave}
-                className="btn btn-primary"
-              >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" strokeWidth="2"/>
-                <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" strokeWidth="2"/>
-                <polyline points="7,3 7,8 15,8" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              保存
-              </button>
-            </ShortcutTooltip>
             <button
               onClick={onExport}
               className="btn btn-secondary"

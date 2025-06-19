@@ -1,4 +1,4 @@
-﻿import { cloneDeep } from 'lodash-es';
+import { cloneDeep } from 'lodash-es';
 
 // ファイル関連の定数
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -193,6 +193,7 @@ export const assignColorsToExistingNodes = (mindMapData) => {
   return {
     ...mindMapData,
     rootNode: assignColors(mindMapData.rootNode)
+  };
 };
 
 export const validateFile = (file) => {

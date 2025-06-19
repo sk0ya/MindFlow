@@ -4,13 +4,12 @@ import Toolbar from './Toolbar';
 import MindMapCanvas from './MindMapCanvas';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
 import ContextMenu from './ContextMenu';
-import LayoutPanel from './LayoutPanel';
 import ErrorBoundary from './ErrorBoundary';
 import ImageModal from './ImageModal';
 import FileActionMenu from './FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from './MapLinksPanel';
-import CloudStoragePanel from './CloudStoragePanel';
+import CloudStoragePanelEnhanced from './CloudStoragePanelEnhanced';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import UserPresence from './UserPresence';
 import UserCursors from './UserCursors';
@@ -19,7 +18,6 @@ import ConflictNotification from './ConflictNotification';
 import CollaborativeFeatures from './CollaborativeFeatures';
 import PerformanceDashboard from './PerformanceDashboard';
 import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings } from '../utils/storage';
-import { layoutPresets } from '../utils/autoLayout';
 import './MindMapApp.css';
 
 import AuthVerification from './AuthVerification.jsx';
@@ -106,8 +104,6 @@ const MindMapApp = () => {
   const [customizationPosition, setCustomizationPosition] = useState({ x: 0, y: 0 });
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [showLayoutPanel, setShowLayoutPanel] = useState(false);
-  const [layoutPanelPosition, setLayoutPanelPosition] = useState({ x: 100, y: 100 });
   const [clipboard, setClipboard] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImage, setModalImage] = useState(null);
@@ -296,40 +292,11 @@ const MindMapApp = () => {
     }
   };
 
-  const handleShowLayoutPanel = () => {
-    setLayoutPanelPosition({ x: 100, y: 100 });
-    setShowLayoutPanel(true);
-    setShowCustomizationPanel(false);
-    setShowContextMenu(false);
-  };
 
-  const handleApplyLayout = async (layoutKey) => {
-    const preset = layoutPresets[layoutKey];
-    if (!preset?.func) return;
-
-    try {
-      const newRootNode = preset.func(data.rootNode, {
-        centerX: 400,
-        centerY: 300
-      });
-      
-      const updateNodePositions = (node) => {
-        updateNode(node.id, { x: node.x, y: node.y });
-        if (node.children) node.children.forEach(updateNodePositions);
-      };
-      
-      updateNodePositions(newRootNode);
-      setPan({ x: 0, y: 0 });
-    } catch (error) {
-      console.error('レイアウト適用エラー:', error);
-      throw error;
-    }
-  };
 
   const handleCloseAllPanels = () => {
     setShowCustomizationPanel(false);
     setShowContextMenu(false);
-    setShowLayoutPanel(false);
     setShowImageModal(false);
     setShowFileActionMenu(false);
     setShowNodeMapLinksPanel(false);
@@ -630,7 +597,6 @@ const MindMapApp = () => {
         <Toolbar
           title={data.title}
           onTitleChange={updateTitle}
-          onSave={handleSave}
           onExport={handleExport}
           onImport={handleImport}
           onUndo={undo}
@@ -639,7 +605,6 @@ const MindMapApp = () => {
           canRedo={canRedo}
           zoom={zoom}
           onZoomReset={handleZoomReset}
-          onShowLayoutPanel={handleShowLayoutPanel}
           onShowCloudStoragePanel={() => setShowCloudStoragePanel(true)}
           authState={authState}
           onShowAuthModal={handleShowAuthModal}
@@ -761,15 +726,6 @@ const MindMapApp = () => {
           />
         )}
 
-        {showLayoutPanel && (
-          <LayoutPanel
-            visible={true}
-            position={layoutPanelPosition}
-            data={data}
-            onApplyLayout={handleApplyLayout}
-            onClose={() => setShowLayoutPanel(false)}
-          />
-        )}
 
         <ImageModal
           isOpen={showImageModal}
@@ -802,10 +758,16 @@ const MindMapApp = () => {
           />
         )}
 
-        <CloudStoragePanel
+        <CloudStoragePanelEnhanced
           isVisible={showCloudStoragePanel}
           onClose={() => setShowCloudStoragePanel(false)}
+          allMindMaps={allMindMaps}
           refreshAllMindMaps={refreshAllMindMaps}
+          currentMapId={currentMapId}
+          switchToMap={switchToMap}
+          deleteMindMapById={deleteMindMapById}
+          renameMindMap={renameMindMap}
+          createMindMap={createMindMap}
         />
         
         <AuthModal

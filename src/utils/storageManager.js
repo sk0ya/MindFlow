@@ -79,7 +79,7 @@ export const checkItemSize = (data) => {
 };
 
 // 安全なLocalStorage保存
-export const safeSetItem = (key, data) => {
+export const safeSetItem = async (key, data) => {
   try {
     // データサイズチェック
     const sizeCheck = checkItemSize(data);
