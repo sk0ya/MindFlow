@@ -117,6 +117,8 @@ export const useMindMapFiles = (findNode, updateNode) => {
     try {
       if (!file.dataURL) {
         console.warn('ファイルのダウンロードデータが見つかりません', file);
+        // ユーザーに分かりやすいエラーメッセージを表示
+        alert(`ファイル「${file.name}」のダウンロードデータが見つかりません。\nこのファイルは古いバージョンで添付されたため、ダウンロードできない可能性があります。\n再度ファイルを添付し直してください。`);
         return;
       }
 
@@ -180,10 +182,50 @@ export const useMindMapFiles = (findNode, updateNode) => {
     }
   };
 
+  // ファイルの再添付（dataURLが欠損している場合の修復用）
+  const reattachFile = async (nodeId, fileId) => {
+    try {
+      const node = findNode(nodeId);
+      if (!node || !node.attachments) return false;
+      
+      const file = node.attachments.find(f => f.id === fileId);
+      if (!file) return false;
+      
+      // ファイル再選択ダイアログを表示
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = file.type ? `${file.type}` : '*/*';
+      
+      return new Promise((resolve) => {
+        input.onchange = async (e) => {
+          const newFile = e.target.files[0];
+          if (newFile && newFile.name === file.name) {
+            try {
+              // 既存ファイルを削除して新しいファイルを添付
+              removeFileFromNode(nodeId, fileId);
+              const newFileId = await attachFileToNode(nodeId, newFile);
+              resolve(newFileId);
+            } catch (error) {
+              console.error('ファイル再添付エラー:', error);
+              resolve(false);
+            }
+          } else {
+            resolve(false);
+          }
+        };
+        input.click();
+      });
+    } catch (error) {
+      console.error('ファイル再添付処理エラー:', error);
+      return false;
+    }
+  };
+
   return {
     attachFileToNode,
     removeFileFromNode,
     renameFileInNode,
-    downloadFile
+    downloadFile,
+    reattachFile
   };
 };

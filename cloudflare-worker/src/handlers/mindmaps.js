@@ -206,7 +206,7 @@ function buildHierarchicalStructure(nodes, attachments, links) {
       name: att.file_name,
       type: att.mime_type,
       size: att.file_size,
-      dataURL: att.legacy_data_url,
+      dataURL: att.legacy_data_url || null, // 空の場合はnullを明示的に設定
       isImage: att.attachment_type === 'image'
     });
   });
