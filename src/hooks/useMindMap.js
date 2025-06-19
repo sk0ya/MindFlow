@@ -1330,6 +1330,55 @@ export const useMindMap = () => {
     return () => clearInterval(syncInterval);
   }, []);
 
+  // 現在のマップの定期同期（認証済みユーザーのみ）
+  useEffect(() => {
+    const currentMapSyncInterval = setInterval(async () => {
+      try {
+        const { authManager } = await import('../utils/authManager.js');
+        const { cloudStorage } = await import('../utils/cloudStorage.js');
+        
+        if (authManager.isAuthenticated() && currentMapId) {
+          console.log('🔄 現在のマップ同期実行:', currentMapId);
+          
+          try {
+            const cloudMap = await cloudStorage.getMindMap(currentMapId);
+            
+            if (cloudMap && cloudMap.updatedAt) {
+              // クラウドの更新時刻とローカルの更新時刻を比較
+              const cloudTime = new Date(cloudMap.updatedAt).getTime();
+              const localTime = new Date(data.updatedAt || 0).getTime();
+              
+              if (cloudTime > localTime) {
+                console.log('🔄 クラウドのマップが新しいため更新:', {
+                  cloud: cloudMap.updatedAt,
+                  local: data.updatedAt
+                });
+                
+                // 色を再割り当てしてから更新
+                const coloredMap = assignColorsToExistingNodes(cloudMap);
+                
+                // リアルタイム操作適用中フラグを設定して履歴に追加されないようにする
+                isApplyingRealtimeOperation.current = true;
+                setData(coloredMap);
+                isApplyingRealtimeOperation.current = false;
+                
+                console.log('✅ 現在のマップ同期完了');
+              } else {
+                console.log('📋 ローカルマップが最新');
+              }
+            }
+          } catch (mapError) {
+            console.warn('⚠️ 現在のマップ同期失敗:', mapError);
+          }
+        }
+      } catch (error) {
+        console.warn('現在のマップ同期スキップ:', error);
+      }
+    }, 15000); // 15秒ごと（マップ一覧より頻繁に）
+
+    return () => clearInterval(currentMapSyncInterval);
+  }, [currentMapId, data.updatedAt]);
+
   return {
     // データ
     data,
