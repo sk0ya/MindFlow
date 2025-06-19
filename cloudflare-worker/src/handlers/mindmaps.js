@@ -474,29 +474,6 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
   return response;
 }
 
-// リレーショナル形式への移行
-async function migrateToRelational(db, userId, mindmapId, mindmapData) {
-  const { MigrationScript } = await import('../migration-scripts/migrate-to-relational.js');
-  const migration = new MigrationScript(db);
-  
-  // 現在のデータを一時保存
-  const tempData = {
-    id: mindmapId,
-    title: mindmapData.title,
-    data: JSON.stringify(mindmapData),
-    user_id: userId,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-  
-  try {
-    await migration.migrateSingleMindmap(tempData);
-    console.log('自動移行完了:', mindmapId);
-  } catch (error) {
-    console.error('自動移行失敗:', error);
-    throw error;
-  }
-}
 
 async function deleteMindMap(db, userId, mindmapId) {
   const result = await db.prepare(
