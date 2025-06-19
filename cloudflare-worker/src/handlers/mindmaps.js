@@ -273,10 +273,10 @@ function buildHierarchicalStructure(nodes, attachments, links) {
 async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) {
   const statements = [];
   
-  // マインドマップ作成
+  // マインドマップ作成（重複時は置換）
   statements.push(
     db.prepare(
-      'INSERT INTO mindmaps (id, user_id, title, category, theme, settings, node_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT OR REPLACE INTO mindmaps (id, user_id, title, category, theme, settings, node_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       mindmapId,
       userId,
@@ -302,46 +302,57 @@ async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) 
 
 // リレーショナル形式での更新
 async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) {
-  const statements = [];
+  console.log('updateMindMapRelational 開始:', mindmapId);
   
-  // マインドマップ更新
-  statements.push(
-    db.prepare(
-      'UPDATE mindmaps SET title = ?, category = ?, theme = ?, settings = ?, node_count = ?, updated_at = ? WHERE id = ?'
-    ).bind(
-      mindmapData.title || 'Untitled Mind Map',
-      mindmapData.category || 'general',
-      mindmapData.theme || 'default',
-      JSON.stringify(mindmapData.settings || {}),
-      countNodesInData(mindmapData),
-      now,
-      mindmapId
-    )
-  );
-  
-  // 既存ノードを削除（カスケード削除で関連データも削除）
-  statements.push(
-    db.prepare('DELETE FROM nodes WHERE mindmap_id = ?').bind(mindmapId)
-  );
-  
-  // 新しいノードを作成
-  if (mindmapData.rootNode) {
-    const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
-    statements.push(...nodeStatements);
+  try {
+    // 既存ノードの削除を個別に実行
+    console.log('既存ノード削除開始');
+    const deleteResult = await db.prepare('DELETE FROM nodes WHERE mindmap_id = ?').bind(mindmapId).run();
+    console.log('ノード削除結果:', deleteResult.changes, 'rows deleted');
+    
+    const statements = [];
+    
+    // マインドマップ更新
+    statements.push(
+      db.prepare(
+        'UPDATE mindmaps SET title = ?, category = ?, theme = ?, settings = ?, node_count = ?, updated_at = ? WHERE id = ?'
+      ).bind(
+        mindmapData.title || 'Untitled Mind Map',
+        mindmapData.category || 'general',
+        mindmapData.theme || 'default',
+        JSON.stringify(mindmapData.settings || {}),
+        countNodesInData(mindmapData),
+        now,
+        mindmapId
+      )
+    );
+    
+    // 新しいノードを作成
+    if (mindmapData.rootNode) {
+      console.log('新しいノード作成開始');
+      const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
+      console.log('作成するノード文の数:', nodeStatements.length);
+      statements.push(...nodeStatements);
+    }
+    
+    // 一括実行
+    console.log('バッチ実行開始');
+    await db.batch(statements);
+    console.log('updateMindMapRelational 完了');
+  } catch (error) {
+    console.error('updateMindMapRelational エラー:', error);
+    throw error;
   }
-  
-  // 一括実行
-  await db.batch(statements);
 }
 
 // ノード作成文を再帰的に生成
 function createNodeStatements(db, node, mindmapId, parentId, now) {
   const statements = [];
   
-  // ノード作成
+  // ノード作成（重複時は置換）
   statements.push(
     db.prepare(
-      'INSERT INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT OR REPLACE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       node.id,
       mindmapId,
@@ -371,7 +382,7 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       const attachmentId = att.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       statements.push(
         db.prepare(
-          'INSERT INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           attachmentId,
           node.id,
@@ -395,7 +406,7 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
         const url = new URL(link.url);
         statements.push(
           db.prepare(
-            'INSERT INTO node_links (id, node_id, url, title, description, domain, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT OR REPLACE INTO node_links (id, node_id, url, title, description, domain, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
           ).bind(
             linkId,
             node.id,
