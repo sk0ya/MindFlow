@@ -1256,11 +1256,9 @@ export const useMindMap = () => {
 
   // リアルタイム同期の初期化（マウント時）
   useEffect(() => {
-    // 認証されている場合のみリアルタイム機能を初期化
-    if (authManager && authManager.isAuthenticated()) {
-      initializeRealtime();
-    }
-
+    // リアルタイム機能を一時的に無効化
+    console.log('リアルタイム機能は一時的に無効化されています');
+    
     // クリーンアップ
     return () => {
       if (realtimeClient) {
@@ -1270,14 +1268,10 @@ export const useMindMap = () => {
     };
   }, [initializeRealtime]);
 
-  // マインドマップ切り替え時にリアルタイム再接続
+  // マインドマップ切り替え時にリアルタイム再接続（無効化）
   useEffect(() => {
-    if (realtimeClient && currentMapId) {
-      realtimeClient.disconnect();
-      setTimeout(() => {
-        initializeRealtime();
-      }, 100);
-    }
+    // リアルタイム機能は無効化
+    console.log('リアルタイム再接続は無効化されています');
   }, [currentMapId]);
 
   // 保留中操作の送信
