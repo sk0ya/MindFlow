@@ -223,37 +223,68 @@ export const saveMindMapHybrid = async (mindMapData) => {
 // ハイブリッド取得（クラウド優先、フォールバックでローカル）
 export const getAllMindMapsHybrid = async () => {
   try {
+    console.log('🔍 getAllMindMapsHybrid 開始');
+    
     // 認証マネージャーを動的にインポート
     const { authManager } = await import('./authManager.js');
     const { cloudStorage } = await import('./cloudStorage.js');
     
+    const isAuthenticated = authManager.isAuthenticated();
+    console.log('🔍 認証状態:', isAuthenticated);
+    
     // 認証されている場合はクラウドから取得を試行
-    if (authManager.isAuthenticated()) {
+    if (isAuthenticated) {
       try {
+        console.log('☁️ クラウドからマップ一覧取得開始');
         const cloudMaps = await cloudStorage.getAllMindMaps();
+        console.log('☁️ クラウドから取得したrawデータ:', cloudMaps);
+        
+        // cloudMapsの構造を確認
+        const actualMaps = cloudMaps?.mindmaps || cloudMaps;
+        console.log('☁️ 実際のマップ配列:', actualMaps);
         
         // クラウドデータが有効な場合はそれを使用
-        if (cloudMaps && cloudMaps.length > 0) {
-          // クラウドデータをローカルにもキャッシュ
-          const validMaps = cloudMaps.filter(map => map && map.id && map.rootNode);
-          if (validMaps.length > 0) {
-            saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
-            return validMaps;
+        if (actualMaps && actualMaps.length > 0) {
+          console.log('☁️ クラウドデータ有効、件数:', actualMaps.length);
+          
+          // マップ詳細を取得してローカルキャッシュ
+          const detailedMaps = [];
+          for (const map of actualMaps) {
+            try {
+              console.log('📄 マップ詳細取得:', map.id, map.title);
+              const detailed = await cloudStorage.getMindMap(map.id);
+              if (detailed && detailed.rootNode) {
+                detailedMaps.push(detailed);
+              }
+            } catch (detailError) {
+              console.warn('📄 マップ詳細取得失敗:', map.id, detailError);
+            }
+          }
+          
+          console.log('📄 詳細データ取得完了、件数:', detailedMaps.length);
+          
+          if (detailedMaps.length > 0) {
+            // クラウドデータをローカルにもキャッシュ
+            saveToStorage(STORAGE_KEYS.MINDMAPS, detailedMaps);
+            console.log('💾 ローカルキャッシュ保存完了');
+            return detailedMaps;
           }
         }
         
         // クラウドデータが空の場合はローカルデータを使用
+        console.log('📱 クラウドデータが空、ローカルデータを使用');
         return getAllMindMaps();
       } catch (cloudError) {
-        console.warn('Cloud fetch failed, using local data:', cloudError);
+        console.warn('❌ クラウド取得失敗、ローカルデータを使用:', cloudError);
         return getAllMindMaps();
       }
     } else {
       // 認証されていない場合はローカルデータのみを使用
+      console.log('🔒 未認証、ローカルデータのみ使用');
       return getAllMindMaps();
     }
   } catch (error) {
-    console.error('Hybrid fetch error:', error);
+    console.error('💥 Hybrid fetch error:', error);
     return getAllMindMaps();
   }
 };

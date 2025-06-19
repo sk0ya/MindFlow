@@ -12,11 +12,14 @@ class CloudStorageClient {
     try {
       const { authManager } = await import('./authManager.js');
       
-      // 認証済みの場合は認証ユーザーIDを使用
+      // 認証済みの場合は認証ユーザーIDを使用（emailを優先してサーバーと一致させる）
       if (authManager.isAuthenticated()) {
         const user = authManager.getCurrentUser();
-        if (user && (user.userId || user.email || user.id)) {
-          return user.userId || user.email || user.id;
+        console.log('cloudStorage.getUserId - 認証ユーザー情報:', user);
+        if (user && (user.email || user.userId || user.id)) {
+          const finalUserId = user.email || user.userId || user.id;
+          console.log('cloudStorage.getUserId - 使用するuserId:', finalUserId);
+          return finalUserId;
         }
       }
     } catch (error) {
