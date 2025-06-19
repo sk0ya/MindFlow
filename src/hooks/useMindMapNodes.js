@@ -9,14 +9,16 @@ export const useMindMapNodes = (data, updateData) => {
   const [editText, setEditText] = useState('');
 
   // 全ノードを平坦化（メモ化）
-  const flattenNodes = useMemo(() => {
+  const flattenNodes = useCallback((rootNode = data?.rootNode) => {
+    if (!rootNode) return [];
+    
     const flatten = (node, result = []) => {
       result.push(node);
       node.children?.forEach(child => flatten(child, result));
       return result;
     };
     
-    return data?.rootNode ? flatten(data.rootNode) : [];
+    return flatten(rootNode);
   }, [data?.rootNode]);
 
   // ノードを検索（メモ化）
