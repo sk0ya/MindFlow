@@ -5,7 +5,7 @@ import { validateFile } from '../utils/fileValidation.js';
 import { logger } from '../utils/logger.js';
 
 export const useMindMapFiles = (findNode, updateNode) => {
-  // ファイル添付機能（セキュリティ強化・最適化対応）
+  // ファイル添付機能（R2ストレージ対応）
   const attachFileToNode = async (nodeId, file) => {
     try {
       logger.info(`📎 ファイル添付開始: ${file.name} (${formatFileSize(file.size)})`, {
@@ -42,24 +42,51 @@ export const useMindMapFiles = (findNode, updateNode) => {
         validationPassed: true
       });
       
-      // 2. ファイル最適化
-      const optimizedFile = await optimizeFile(file);
+      // 2. R2ストレージにアップロード
+      const { authManager } = await import('../utils/authManager.js');
+      const authHeader = authManager.getAuthHeader();
       
-      logger.info(`🔧 ファイル最適化完了: ${formatFileSize(optimizedFile.originalSize)} → ${formatFileSize(optimizedFile.optimizedSize)} (${optimizedFile.compressionRatio}% 削減)`, {
+      if (!authHeader) {
+        throw new Error('認証が必要です');
+      }
+
+      // 現在のマインドマップIDを取得
+      const { getCurrentMindMap } = await import('../utils/storage.js');
+      const currentMap = getCurrentMindMap();
+      if (!currentMap) {
+        throw new Error('現在のマインドマップが見つかりません');
+      }
+
+      // FormDataでファイルをアップロード
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${nodeId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader
+        },
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`ファイルアップロードに失敗しました: ${uploadResponse.statusText}`);
+      }
+
+      const uploadResult = await uploadResponse.json();
+      
+      logger.info(`☁️ R2アップロード完了: ${file.name}`, {
         nodeId,
-        originalSize: optimizedFile.originalSize,
-        optimizedSize: optimizedFile.optimizedSize,
-        compressionRatio: optimizedFile.compressionRatio
+        fileId: uploadResult.id,
+        downloadUrl: uploadResult.downloadUrl
       });
       
-      // 3. ファイル添付作成
-      const fileAttachment = createFileAttachment(file, optimizedFile.dataURL, null, {
-        isOptimized: true,
-        originalSize: optimizedFile.originalSize,
-        optimizedSize: optimizedFile.optimizedSize,
-        compressionRatio: optimizedFile.compressionRatio,
-        optimizedType: optimizedFile.type,
-        // セキュリティ情報を追加
+      // 3. ローカルのノードに添付情報を追加
+      const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult.id, {
+        isR2Storage: true,
+        storagePath: uploadResult.storagePath,
+        thumbnailPath: uploadResult.thumbnailPath,
+        downloadUrl: uploadResult.downloadUrl,
         securityValidated: true,
         validationTimestamp: new Date().toISOString(),
         warnings: validationResult.warnings
@@ -74,7 +101,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
         logger.info(`✅ ファイル添付完了: ${file.name}`, {
           nodeId,
           attachmentId: fileAttachment.id,
-          finalSize: optimizedFile.optimizedSize
+          r2FileId: uploadResult.id
         });
         
         return fileAttachment.id;
@@ -93,9 +120,38 @@ export const useMindMapFiles = (findNode, updateNode) => {
     }
   };
   
-  const removeFileFromNode = (nodeId, fileId) => {
+  const removeFileFromNode = async (nodeId, fileId) => {
     const node = findNode(nodeId);
     if (node && node.attachments) {
+      const fileToRemove = node.attachments.find(file => file.id === fileId);
+      
+      // R2ストレージのファイルの場合、サーバーからも削除
+      if (fileToRemove && fileToRemove.isR2Storage && fileToRemove.r2FileId) {
+        try {
+          const { authManager } = await import('../utils/authManager.js');
+          const authHeader = authManager.getAuthHeader();
+          
+          if (authHeader) {
+            const { getCurrentMindMap } = await import('../utils/storage.js');
+            const currentMap = getCurrentMindMap();
+            
+            if (currentMap) {
+              await fetch(
+                `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${nodeId}/${fileToRemove.r2FileId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Authorization': authHeader
+                  }
+                }
+              );
+            }
+          }
+        } catch (error) {
+          console.warn('R2ファイル削除に失敗しましたが、ローカルからは削除します:', error);
+        }
+      }
+      
       const updatedAttachments = node.attachments.filter(file => file.id !== fileId);
       updateNode(nodeId, { attachments: updatedAttachments });
     }
@@ -112,9 +168,50 @@ export const useMindMapFiles = (findNode, updateNode) => {
     }
   };
 
-  // ファイルをダウンロード
+  // ファイルをダウンロード（R2ストレージ対応）
   const downloadFile = async (file) => {
     try {
+      // R2ストレージのファイルの場合
+      if (file.isR2Storage && file.r2FileId) {
+        // R2からダウンロードURLを取得
+        const { authManager } = await import('../utils/authManager.js');
+        const authHeader = authManager.getAuthHeader();
+        
+        if (!authHeader) {
+          throw new Error('認証が必要です');
+        }
+
+        const { getCurrentMindMap } = await import('../utils/storage.js');
+        const currentMap = getCurrentMindMap();
+        if (!currentMap) {
+          throw new Error('現在のマインドマップが見つかりません');
+        }
+
+        // ダウンロード用の署名付きURLを取得
+        const downloadResponse = await fetch(
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${file.nodeId || 'unknown'}/${file.r2FileId}?type=download`,
+          {
+            headers: {
+              'Authorization': authHeader
+            }
+          }
+        );
+
+        if (!downloadResponse.ok) {
+          throw new Error(`ダウンロードURLの取得に失敗しました: ${downloadResponse.statusText}`);
+        }
+
+        // リダイレクト先のURLでダウンロード
+        const downloadUrl = downloadResponse.url;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = file.name;
+        link.click();
+        
+        return;
+      }
+
+      // 従来のdataURL方式（後方互換性）
       if (!file.dataURL) {
         console.warn('ファイルのダウンロードデータが見つかりません', file);
         // ユーザーに分かりやすいエラーメッセージを表示
