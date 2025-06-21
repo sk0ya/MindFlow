@@ -9,16 +9,8 @@ export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const method = request.method;
   
-  // 認証チェック（テスト用に一時的に無効化）
-  let userId = 'test-user';
-  
-  // デバッグ用: X-User-IDヘッダーがあればそれを使用
-  const userIdHeader = request.headers.get('X-User-ID');
-  if (userIdHeader) {
-    userId = userIdHeader;
-  }
-  
-  /*
+  // 認証チェック
+  let userId = 'default-user';
   if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
     if (!authResult.authenticated) {
@@ -29,7 +21,6 @@ export async function handleRequest(request, env) {
     }
     userId = authResult.user.userId;
   }
-  */
 
   const pathParts = url.pathname.split('/');
   const mindmapId = pathParts[3]; // /api/files/{mindmapId}
@@ -154,46 +145,22 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
       thumbnailPath = await generateThumbnail(env.FILES, fileBuffer, storagePath, file.type);
     }
 
-    // データベースに記録（テスト用に外部キー制約を一時的に無効化）
+    // データベースに記録
     const now = new Date().toISOString();
-    
-    // テスト用: attachments テーブルが存在しない場合は作成
-    try {
-      await env.DB.prepare(`
-        CREATE TABLE IF NOT EXISTS attachments (
-          id TEXT PRIMARY KEY,
-          node_id TEXT,
-          file_name TEXT NOT NULL,
-          original_name TEXT NOT NULL,
-          file_size INTEGER NOT NULL,
-          mime_type TEXT NOT NULL,
-          storage_path TEXT NOT NULL,
-          thumbnail_path TEXT,
-          attachment_type TEXT NOT NULL,
-          uploaded_at TEXT NOT NULL
-        )
-      `).run();
-      
-      await env.DB.prepare(`
-        INSERT INTO attachments 
-        (id, node_id, file_name, original_name, file_size, mime_type, 
-         storage_path, thumbnail_path, attachment_type, uploaded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        fileId, nodeId, file.name, file.name, file.size, file.type,
-        storagePath, thumbnailPath, attachmentType, now
-      ).run();
-    } catch (dbError) {
-      console.error('Database operation failed:', dbError);
-      // データベース操作が失敗してもファイルアップロードは成功とみなす（テスト用）
-    }
+    await env.DB.prepare(`
+      INSERT INTO attachments 
+      (id, node_id, file_name, original_name, file_size, mime_type, 
+       storage_path, thumbnail_path, attachment_type, uploaded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      fileId, nodeId, file.name, file.name, file.size, file.type,
+      storagePath, thumbnailPath, attachmentType, now
+    ).run();
 
-    // マインドマップの更新日時を更新（テスト用にスキップ）
-    /*
+    // マインドマップの更新日時を更新
     await env.DB.prepare(
       'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
     ).bind(now, mindmapId).run();
-    */
 
     return {
       id: fileId,
@@ -462,11 +429,6 @@ async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
  */
 
 async function verifyOwnership(db, userId, mindmapId, nodeId) {
-  // テスト用に一時的に所有権確認をスキップ
-  console.log(`Ownership verification bypassed for testing: userId=${userId}, mindmapId=${mindmapId}, nodeId=${nodeId}`);
-  return true;
-  
-  /*
   const result = await db.prepare(`
     SELECT m.id 
     FROM mindmaps m 
@@ -479,7 +441,6 @@ async function verifyOwnership(db, userId, mindmapId, nodeId) {
     error.status = 403;
     throw error;
   }
-  */
 }
 
 function getAttachmentType(mimeType) {

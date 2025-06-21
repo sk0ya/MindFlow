@@ -169,7 +169,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
   };
 
   // ファイルをダウンロード（R2ストレージ対応）
-  const downloadFile = async (file) => {
+  const downloadFile = async (file, nodeId = null) => {
     try {
       // R2ストレージのファイルの場合
       if (file.isR2Storage && file.r2FileId) {
@@ -187,9 +187,34 @@ export const useMindMapFiles = (findNode, updateNode) => {
           throw new Error('現在のマインドマップが見つかりません');
         }
 
+        // nodeIdを特定（優先順位: 引数 > file.nodeId > ファイル検索）
+        let actualNodeId = nodeId || file.nodeId;
+        
+        if (!actualNodeId) {
+          // マインドマップ内でファイルを検索してnodeIdを特定
+          const findFileInNodes = (node) => {
+            if (node.attachments && node.attachments.some(att => att.id === file.id || att.r2FileId === file.r2FileId)) {
+              return node.id;
+            }
+            if (node.children) {
+              for (const child of node.children) {
+                const foundNodeId = findFileInNodes(child);
+                if (foundNodeId) return foundNodeId;
+              }
+            }
+            return null;
+          };
+          
+          actualNodeId = findFileInNodes(currentMap.rootNode);
+        }
+        
+        if (!actualNodeId) {
+          throw new Error('ファイルが関連付けられているノードが見つかりません');
+        }
+
         // ダウンロード用の署名付きURLを取得
         const downloadResponse = await fetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${file.nodeId || 'unknown'}/${file.r2FileId}?type=download`,
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${actualNodeId}/${file.r2FileId}?type=download`,
           {
             headers: {
               'Authorization': authHeader

@@ -176,7 +176,7 @@ async function getMindMapRelational(db, userId, mindmapId) {
   ).bind(mindmapId).all();
   
   // 階層構造を再構築
-  const rootNode = buildHierarchicalStructure(nodes, attachments, links);
+  const rootNode = buildHierarchicalStructure(nodes, attachments, links, mindmapId);
   
   return {
     id: mindmap.id,
@@ -191,7 +191,7 @@ async function getMindMapRelational(db, userId, mindmapId) {
 }
 
 // リレーショナルデータから階層構造を再構築
-function buildHierarchicalStructure(nodes, attachments, links) {
+function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null) {
   const nodeMap = new Map();
   const attachmentMap = new Map();
   const linkMap = new Map();
@@ -206,8 +206,14 @@ function buildHierarchicalStructure(nodes, attachments, links) {
       name: att.file_name,
       type: att.mime_type,
       size: att.file_size,
-      dataURL: att.legacy_data_url || null, // 空の場合はnullを明示的に設定
-      isImage: att.attachment_type === 'image'
+      dataURL: null, // R2ストレージではdataURLは使用しない
+      isImage: att.attachment_type === 'image',
+      // R2ストレージのメタデータ
+      isR2Storage: true,
+      r2FileId: att.id,
+      nodeId: att.node_id, // nodeIdを明示的に追加
+      storagePath: att.storage_path,
+      downloadUrl: mindmapId ? `/api/files/${mindmapId}/${att.node_id}/${att.id}?type=download` : null
     });
   });
   
@@ -386,7 +392,7 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       const attachmentId = att.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       statements.push(
         db.prepare(
-          'INSERT OR REPLACE INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, legacy_data_url, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           attachmentId,
           node.id,
@@ -394,9 +400,8 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
           att.name || 'untitled',
           att.size || 0,
           att.type || 'application/octet-stream',
-          `legacy/${attachmentId}`,
+          att.storagePath || `legacy/${attachmentId}`,
           att.isImage ? 'image' : 'file',
-          att.dataURL || '',
           now
         )
       );
