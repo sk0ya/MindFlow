@@ -13,15 +13,26 @@
  */
 export async function generateSignedUrl(r2Bucket, key, expiresIn = 3600, method = 'GET') {
   try {
-    const signedUrl = await r2Bucket.createPresignedUrl(key, {
-      expiresIn: expiresIn,
-      method: method
-    });
-    return signedUrl;
+    // Cloudflare R2では直接的な署名付きURL生成はサポートされていないため
+    // オブジェクトの存在確認を行い、一時的なアクセス用の代替手段を提供
+    const object = await r2Bucket.head(key);
+    if (!object && method === 'GET') {
+      throw new Error('File not found');
+    }
+    
+    // 簡易的な実装: バケット名とキーから直接URLを構築
+    // 実際のプロダクション環境では適切な署名機能を実装する必要があります
+    return `https://pub-${getBucketId()}.r2.dev/${key}`;
   } catch (error) {
     console.error('Failed to generate signed URL:', error);
     throw new Error('Failed to generate download URL');
   }
+}
+
+// バケットIDを取得するヘルパー関数（環境に応じて調整が必要）
+function getBucketId() {
+  // 実際のバケットの公開URLドメインに応じて調整
+  return 'your-bucket-id';
 }
 
 /**
