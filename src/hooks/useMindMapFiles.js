@@ -7,9 +7,18 @@ import { logger } from '../utils/logger.js';
 export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
-    return !currentMapId || 
+    const initializing = !currentMapId || 
            currentMapId === 'loading-placeholder' || 
            currentMapId === 'cloud-loading-placeholder';
+    
+    if (initializing) {
+      console.log('🔄 アプリ初期化状態:', {
+        currentMapId,
+        isInitializing: initializing
+      });
+    }
+    
+    return initializing;
   };
 
   // ファイル添付機能（R2ストレージ対応）
