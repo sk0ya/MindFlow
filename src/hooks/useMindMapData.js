@@ -9,9 +9,22 @@ export const useMindMapData = () => {
     const settings = getAppSettings();
     
     if (settings.storageMode === 'cloud') {
-      // クラウドモードの場合は空のデータから開始
-      console.log('☁️ クラウドモード: 空データで初期化');
-      return createInitialData();
+      // クラウドモードの場合はプレースホルダーデータで初期化（認証完了まで待機）
+      console.log('☁️ クラウドモード: プレースホルダーで初期化（認証待機中）');
+      return {
+        id: 'loading-placeholder',
+        title: '読み込み中...',
+        rootNode: {
+          id: 'root',
+          text: 'クラウドデータを読み込み中...',
+          x: 400,
+          y: 300,
+          children: [],
+          color: '#e8f4fd'
+        },
+        settings: { autoSave: false, autoLayout: false },
+        isPlaceholder: true // プレースホルダーフラグ
+      };
     } else if (settings.storageMode === 'local') {
       // ローカルモードの場合は既存データを読み込み
       const mindMap = getCurrentMindMap();
@@ -70,7 +83,20 @@ export const useMindMapData = () => {
             console.log('✅ クラウド同期完了');
           }
         } else {
-          console.log('📭 クラウドにマップが見つかりません。新規作成します。');
+          // クラウドにデータがない場合は新規マップを作成
+          console.log('📭 クラウドにマップが見つかりません。新規マップを作成します。');
+          const newMap = createInitialData();
+          newMap.title = '新しいマインドマップ';
+          setData(newMap);
+          
+          // 新規作成したマップをクラウドに保存
+          try {
+            const { saveMindMapHybrid } = await import('../utils/storage.js');
+            await saveMindMapHybrid(newMap);
+            console.log('✅ 新規マップをクラウドに保存完了');
+          } catch (saveError) {
+            console.warn('❌ 新規マップのクラウド保存失敗:', saveError);
+          }
         }
       } catch (error) {
         console.warn('❌ クラウド初期化失敗:', error);
@@ -110,6 +136,20 @@ export const useMindMapData = () => {
               setData(processedData);
               console.log('✅ 認証後のクラウド同期完了');
             }
+          } else {
+            // 認証後もクラウドにデータがない場合は新規作成
+            console.log('📭 認証後もマップなし: 新規作成します');
+            const newMap = createInitialData();
+            newMap.title = '新しいマインドマップ';
+            setData(newMap);
+            
+            try {
+              const { saveMindMapHybrid } = await import('../utils/storage.js');
+              await saveMindMapHybrid(newMap);
+              console.log('✅ 認証後新規マップ保存完了');
+            } catch (saveError) {
+              console.warn('❌ 認証後新規マップ保存失敗:', saveError);
+            }
           }
         }
       } catch (error) {
@@ -125,8 +165,8 @@ export const useMindMapData = () => {
         const { authManager } = await import('../utils/authManager.js');
         const isAuth = authManager.isAuthenticated();
         
-        // 認証済みかつ、まだデータが空の場合は同期実行
-        if (isAuth && isCloudStorageEnabled() && data && !data.rootNode?.children?.length) {
+        // 認証済みかつ、プレースホルダーデータの場合は同期実行
+        if (isAuth && isCloudStorageEnabled() && data?.isPlaceholder) {
           await syncOnAuthChange();
         }
       } catch (error) {
@@ -149,6 +189,12 @@ export const useMindMapData = () => {
 
   // データ更新の共通処理
   const updateData = (newData, options = {}) => {
+    // プレースホルダーデータの場合は更新を無視
+    if (data?.isPlaceholder) {
+      console.log('⏳ プレースホルダー中: データ更新をスキップ');
+      return;
+    }
+    
     setData(newData);
     
     // リアルタイム操作の適用中でない場合のみ履歴に追加
