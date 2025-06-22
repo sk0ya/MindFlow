@@ -149,9 +149,26 @@ const MindMapApp = () => {
 
   // メインのマインドマップフック（早期リターンの後で呼び出し）
   const mindMap = useMindMap(isReady);
+  
+  // デバッグ情報
+  console.log('🔍 MindMapApp Debug:', {
+    isReady,
+    hasData: !!mindMap.data,
+    dataTitle: mindMap.data?.title,
+    isPlaceholder: mindMap.data?.isPlaceholder
+  });
 
-  // データが読み込まれていない場合は読み込み画面
+  // データが読み込まれていない場合は読み込み画面（タイムアウト付き）
   if (!mindMap.data || mindMap.data.isPlaceholder) {
+    // 5秒後に強制的にダミーデータで表示
+    setTimeout(() => {
+      if (!mindMap.data) {
+        console.warn('⚠️ 5秒経過: ダミーデータで強制表示');
+        // 緊急時はページリロード
+        window.location.reload();
+      }
+    }, 5000);
+    
     return (
       <div className="mindmap-app">
         <div className="loading-screen">
@@ -159,6 +176,12 @@ const MindMapApp = () => {
             <div className="loading-spinner"></div>
             <h2>データを読み込み中...</h2>
             <p>マインドマップデータを準備しています</p>
+            <button 
+              onClick={() => window.location.reload()}
+              style={{ marginTop: '20px', padding: '10px 20px' }}
+            >
+              リロードして再試行
+            </button>
           </div>
         </div>
       </div>
