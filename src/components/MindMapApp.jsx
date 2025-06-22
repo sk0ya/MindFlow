@@ -181,24 +181,33 @@ const MindMapApp = () => {
     );
   }
 
-  // デバッグ情報
-  console.log('🔍 MindMapApp Debug:', {
-    isReady,
-    hasData: !!mindMap.data,
-    dataTitle: mindMap.data?.title,
-    isPlaceholder: mindMap.data?.isPlaceholder
-  });
+  // デバッグ情報（初回のみ）
+  useEffect(() => {
+    console.log('🔍 MindMapApp Debug:', {
+      isReady,
+      hasData: !!mindMap.data,
+      dataTitle: mindMap.data?.title,
+      isPlaceholder: mindMap.data?.isPlaceholder
+    });
+  }, [isReady, mindMap.data?.id]); // データIDが変わった時のみログ
 
-  // データが読み込まれていない場合は読み込み画面（タイムアウト付き）
+  // データ読み込みタイムアウト処理
+  useEffect(() => {
+    if (!mindMap.data || mindMap.data.isPlaceholder) {
+      const timeoutId = setTimeout(() => {
+        if (!mindMap.data) {
+          console.warn('⚠️ 5秒経過: ダミーデータで強制表示');
+          // 緊急時はページリロード
+          window.location.reload();
+        }
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [mindMap.data]);
+
+  // データが読み込まれていない場合は読み込み画面
   if (!mindMap.data || mindMap.data.isPlaceholder) {
-    // 5秒後に強制的にダミーデータで表示
-    setTimeout(() => {
-      if (!mindMap.data) {
-        console.warn('⚠️ 5秒経過: ダミーデータで強制表示');
-        // 緊急時はページリロード
-        window.location.reload();
-      }
-    }, 5000);
     
     return (
       <div className="mindmap-app">

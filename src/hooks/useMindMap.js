@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMindMapData } from './useMindMapData_OLD.js';
 import { useMindMapNodes } from './useMindMapNodes_OLD.js';
 import { useMindMapFiles } from './useMindMapFiles_OLD.js';
@@ -6,11 +6,20 @@ import { useMindMapMulti } from './useMindMapMulti.js';
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
 export const useMindMap = (isAppReady = false) => {
-  console.log('🔧 useMindMap called with isAppReady:', isAppReady);
+  // デバッグログを制限（初回のみ）
+  const [debugLogged, setDebugLogged] = useState(false);
   
   // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
   const dataHook = useMindMapData(isAppReady);
-  console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
+  
+  // デバッグログ（初回または状態変化時のみ）
+  useEffect(() => {
+    if (!debugLogged || (dataHook.data?.id && !debugLogged)) {
+      console.log('🔧 useMindMap called with isAppReady:', isAppReady);
+      console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
+      setDebugLogged(true);
+    }
+  }, [isAppReady, dataHook.data?.id, debugLogged]);
   
   // ノード操作（dataがある場合のみ）
   const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData);
