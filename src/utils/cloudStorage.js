@@ -167,17 +167,16 @@ class CloudStorageClient {
   async updateMindMap(id, mindmapData) {
     console.log('cloudStorage.updateMindMap() 開始:', id, mindmapData.title);
     
-    // マップIDの一貫性を確保（ローカルIDがクラウドIDと異なる場合があるため）
-    const consistentData = {
+    // IDの一貫性を保つ - データはそのまま送信
+    const dataToSend = {
       ...mindmapData,
-      id: id, // クラウドIDに統一
-      originalLocalId: mindmapData.id !== id ? mindmapData.id : null // ローカルIDを記録
+      id: id // リクエストURLのIDと一致させる
     };
     
-    console.log('送信データ:', JSON.stringify(consistentData, null, 2));
+    console.log('送信データ:', JSON.stringify(dataToSend, null, 2));
     const result = await this.request(`/mindmaps/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(consistentData)
+      body: JSON.stringify(dataToSend)
     });
     console.log('cloudStorage.updateMindMap() 結果:', result);
     return result;

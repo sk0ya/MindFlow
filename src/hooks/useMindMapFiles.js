@@ -4,7 +4,7 @@ import { optimizeFile, formatFileSize } from '../utils/fileOptimization.js';
 import { validateFile } from '../utils/fileValidation.js';
 import { logger } from '../utils/logger.js';
 
-export const useMindMapFiles = (findNode, updateNode) => {
+export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   // ファイル添付機能（R2ストレージ対応）
   const attachFileToNode = async (nodeId, file) => {
     try {
@@ -50,18 +50,29 @@ export const useMindMapFiles = (findNode, updateNode) => {
         throw new Error('認証が必要です');
       }
 
-      // 現在のマインドマップIDを取得
-      const { getCurrentMindMap } = await import('../utils/storage.js');
-      const currentMap = getCurrentMindMap();
-      if (!currentMap) {
-        throw new Error('現在のマインドマップが見つかりません');
+      // 現在のマインドマップIDを取得（クラウドモード対応）
+      const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
+      
+      let mapId = null;
+      if (isCloudStorageEnabled()) {
+        // クラウドモードの場合は親フックから渡されたIDを使用
+        if (!currentMapId) {
+          throw new Error('クラウドモードではマップIDが必要です');
+        }
+        mapId = currentMapId;
+      } else {
+        const currentMap = getCurrentMindMap();
+        if (!currentMap) {
+          throw new Error('現在のマインドマップが見つかりません');
+        }
+        mapId = currentMap.id;
       }
 
       // FormDataでファイルをアップロード
       const formData = new FormData();
       formData.append('file', file);
 
-      const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${nodeId}`, {
+      const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`, {
         method: 'POST',
         headers: {
           'Authorization': authHeader
@@ -132,20 +143,34 @@ export const useMindMapFiles = (findNode, updateNode) => {
           const authHeader = authManager.getAuthHeader();
           
           if (authHeader) {
-            const { getCurrentMindMap } = await import('../utils/storage.js');
-            const currentMap = getCurrentMindMap();
+            const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
             
-            if (currentMap) {
-              await fetch(
-                `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${nodeId}/${fileToRemove.r2FileId}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    'Authorization': authHeader
-                  }
-                }
-              );
+            let mapId = null;
+            if (isCloudStorageEnabled()) {
+              // クラウドモードの場合は親フックから渡されたIDを使用
+              if (!currentMapId) {
+                console.warn('クラウドモードでマップIDが未指定、ファイル削除をスキップ');
+                return;
+              }
+              mapId = currentMapId;
+            } else {
+              const currentMap = getCurrentMindMap();
+              if (!currentMap) {
+                console.warn('現在のマップが見つかりません、ファイル削除をスキップ');
+                return;
+              }
+              mapId = currentMap.id;
             }
+            
+            await fetch(
+              `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}/${fileToRemove.r2FileId}`,
+              {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': authHeader
+                }
+              }
+            );
           }
         } catch (error) {
           console.warn('R2ファイル削除に失敗しましたが、ローカルからは削除します:', error);
@@ -174,31 +199,27 @@ export const useMindMapFiles = (findNode, updateNode) => {
       // R2ストレージのファイルの場合
       if (file.isR2Storage && file.r2FileId) {
         
-        // 現在のマインドマップIDを取得
-        const { getCurrentMindMap } = await import('../utils/storage.js');
-        const currentMap = getCurrentMindMap();
-        if (!currentMap) {
-          throw new Error('現在のマインドマップが見つかりません');
+        // 現在のマインドマップIDを取得（クラウドモード対応）
+        const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
+        
+        let mapId = null;
+        if (isCloudStorageEnabled()) {
+          // クラウドモードの場合は親フックから渡されたIDを使用
+          if (!currentMapId) {
+            throw new Error('クラウドモードではマップIDが必要です');
+          }
+          mapId = currentMapId;
+        } else {
+          const currentMap = getCurrentMindMap();
+          if (!currentMap) {
+            throw new Error('現在のマインドマップが見つかりません');
+          }
+          mapId = currentMap.id;
         }
         
-        // ファイルのdownloadUrlが現在のマップIDと一致するかチェック
+        // ファイルのdownloadUrlを直接使用（修正なし）
         if (file.downloadUrl) {
-          const urlMatch = file.downloadUrl.match(/\/api\/files\/([^\/]+)\//);
-          const downloadUrlMapId = urlMatch ? urlMatch[1] : null;
-          
-          console.log('downloadURL分析:', {
-            originalUrl: file.downloadUrl,
-            extractedMapId: downloadUrlMapId,
-            currentMapId: currentMap.id,
-            isMatch: downloadUrlMapId === currentMap.id
-          });
-          
-          // マップIDが一致しない場合は修正
-          let correctedDownloadUrl = file.downloadUrl;
-          if (downloadUrlMapId && downloadUrlMapId !== currentMap.id) {
-            correctedDownloadUrl = file.downloadUrl.replace(downloadUrlMapId, currentMap.id);
-            console.log('downloadURL修正:', correctedDownloadUrl);
-          }
+          console.log('downloadURL使用:', file.downloadUrl);
           
           // 認証ヘッダーを準備
           const { authManager } = await import('../utils/authManager.js');
@@ -213,7 +234,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
             headers['X-User-ID'] = userId;
           }
           
-          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${correctedDownloadUrl}`, {
+          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${file.downloadUrl}`, {
             headers
           });
           
@@ -228,7 +249,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
             URL.revokeObjectURL(url);
             return;
           } else {
-            console.log('修正downloadUrl失敗、動的URL構築に切り替え:', downloadResponse.status);
+            console.log('downloadUrl失敗、動的URL構築に切り替え:', downloadResponse.status);
           }
         }
         // 認証ヘッダーを準備
@@ -266,42 +287,33 @@ export const useMindMapFiles = (findNode, updateNode) => {
         
         if (!actualNodeId) {
           // マインドマップ内でファイルを検索してnodeIdを特定
-          const findFileInNodes = (node) => {
-            if (node.attachments && node.attachments.some(att => att.id === file.id || att.r2FileId === file.r2FileId)) {
-              return node.id;
-            }
-            if (node.children) {
-              for (const child of node.children) {
-                const foundNodeId = findFileInNodes(child);
-                if (foundNodeId) return foundNodeId;
+          // ファイル検索はクラウドモードでは行わない（nodeIdが必須）
+          if (!isCloudStorageEnabled()) {
+            const currentMap = getCurrentMindMap();
+            const findFileInNodes = (node) => {
+              if (node.attachments && node.attachments.some(att => att.id === file.id || att.r2FileId === file.r2FileId)) {
+                return node.id;
               }
-            }
-            return null;
-          };
-          
-          actualNodeId = findFileInNodes(currentMap.rootNode);
+              if (node.children) {
+                for (const child of node.children) {
+                  const foundNodeId = findFileInNodes(child);
+                  if (foundNodeId) return foundNodeId;
+                }
+              }
+              return null;
+            };
+            
+            actualNodeId = findFileInNodes(currentMap.rootNode);
+          }
         }
         
         if (!actualNodeId) {
           throw new Error('ファイルが関連付けられているノードが見つかりません');
         }
 
-        // ダウンロード用の署名付きURLを取得
-        // ファイルのdownloadUrlが現在のマップIDと一致するかチェック
-        let correctedMapId = currentMap.id;
-        if (file.downloadUrl) {
-          const urlMatch = file.downloadUrl.match(/\/api\/files\/([^\/]+)\//);
-          const downloadUrlMapId = urlMatch ? urlMatch[1] : null;
-          
-          // マップIDが一致しない場合は現在のマップIDを使用
-          if (downloadUrlMapId && downloadUrlMapId !== currentMap.id) {
-            console.log('🔧 マップID不一致を修正:', downloadUrlMapId, '→', currentMap.id);
-            correctedMapId = currentMap.id;
-          }
-        }
-        
+        // ダウンロード用の署名付きURLを取得（マップID修正なし）
         const downloadResponse = await fetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${correctedMapId}/${actualNodeId}/${file.r2FileId}?type=download`,
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${actualNodeId}/${file.r2FileId}?type=download`,
           { headers }
         );
 
