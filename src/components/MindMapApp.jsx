@@ -8,6 +8,7 @@ import ErrorBoundary from './ErrorBoundary';
 import ImageModal from './ImageModal';
 import FileActionMenu from './FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
+import SimpleMindMapSidebar from './SimpleMindMapSidebar';
 import NodeMapLinksPanel from './MapLinksPanel';
 import CloudStoragePanelEnhanced from './CloudStoragePanelEnhanced';
 import SyncStatusIndicator from './SyncStatusIndicator';
@@ -372,21 +373,33 @@ const MindMapApp = () => {
 
         {/* メインコンテンツ（サイドバーと並行表示） */}
         <div className="main-layout">
-          {/* サイドバー */}
+          {/* サイドバー（モード別） */}
           {showSidebar && (
             <div className="sidebar-container">
-              <MindMapSidebar
-                mindMaps={mindMap.allMindMaps || []}
-                currentMapId={mindMap.currentMapId}
-                onCreateMap={mindMap.createMindMap}
-                onRenameMap={mindMap.renameMindMap}
-                onDeleteMap={mindMap.deleteMindMapById}
-                onSelectMap={(mapId) => mindMap.switchToMap(mapId, false)}
-                onChangeCategory={mindMap.changeMapCategory}
-                availableCategories={mindMap.getAvailableCategories() || []}
-                isCollapsed={false}
-                onToggleCollapse={() => setShowSidebar(!showSidebar)}
-              />
+              {isLocalMode ? (
+                <SimpleMindMapSidebar
+                  mindMaps={mindMap.allMindMaps || []}
+                  currentMapId={mindMap.currentMapId}
+                  onCreateMap={mindMap.createMindMap}
+                  onRenameMap={mindMap.renameMindMap}
+                  onDeleteMap={mindMap.deleteMindMapById}
+                  onSelectMap={(mapId) => mindMap.switchToMap(mapId, false)}
+                  onToggleCollapse={() => setShowSidebar(!showSidebar)}
+                />
+              ) : (
+                <MindMapSidebar
+                  mindMaps={mindMap.allMindMaps || []}
+                  currentMapId={mindMap.currentMapId}
+                  onCreateMap={mindMap.createMindMap}
+                  onRenameMap={mindMap.renameMindMap}
+                  onDeleteMap={mindMap.deleteMindMapById}
+                  onSelectMap={(mapId) => mindMap.switchToMap(mapId, false)}
+                  onChangeCategory={mindMap.changeMapCategory}
+                  availableCategories={mindMap.getAvailableCategories() || []}
+                  isCollapsed={false}
+                  onToggleCollapse={() => setShowSidebar(!showSidebar)}
+                />
+              )}
             </div>
           )}
 
