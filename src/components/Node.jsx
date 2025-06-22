@@ -33,6 +33,12 @@ const Node = ({
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef(null);
   const blurTimeoutRef = useRef(null);
+  const creationTimeRef = useRef(Date.now());
+  
+  // ノードが作成された時刻を記録
+  useEffect(() => {
+    creationTimeRef.current = Date.now();
+  }, [node.id]);
   
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -234,8 +240,20 @@ const Node = ({
       
       // 新しく作成されたノードの場合は少し遅延（フォーカス移動を待つ）
       const isNewlyCreated = !node.text && currentValue === '';
+      const timeSinceCreation = Date.now() - creationTimeRef.current;
+      
       if (isNewlyCreated) {
-        // 新規ノードで空の場合は300ms待って、再度フォーカスチェック
+        // 作成から1秒以内の新規ノードは削除処理を無効化
+        if (timeSinceCreation < 1000) {
+          console.log('🛡️ 新規作成ノード保護期間中 - 削除スキップ:', { 
+            nodeId: node.id, 
+            timeSinceCreation,
+            currentValue 
+          });
+          return; // 削除処理を実行しない
+        }
+        
+        // 保護期間終了後は通常の削除判定
         blurTimeoutRef.current = setTimeout(() => {
           // 他のnode-input要素にフォーカスが移動していない場合のみ削除
           const activeElement = document.activeElement;
