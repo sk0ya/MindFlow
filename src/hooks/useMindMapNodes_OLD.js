@@ -374,6 +374,7 @@ export const useMindMapNodes = (data, updateData) => {
       return;
     }
     
+    console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
     updateNode(nodeId, { text: textToSave.trim() });
     setEditingNodeId(null);
     setEditText('');

@@ -240,8 +240,9 @@ const MindMapApp = () => {
   };
 
   const handleNodeUpdate = async (nodeId, text) => {
-    await mindMap.updateNode(nodeId, { text });
-    // finishEditは既にupdateNodeで処理されているため不要
+    console.log('🔧 handleNodeUpdate - nodeId:', nodeId, 'text:', text);
+    // finishEditを使用して適切に編集を終了
+    mindMap.finishEdit(nodeId, text);
   };
 
   const handleAddChild = async (parentId) => {
