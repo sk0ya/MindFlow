@@ -76,7 +76,12 @@ export const useMindMapNodes = (data, updateData) => {
     };
     
     const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
-    updateData(newData, { skipHistory: false, immediate: true });
+    // ファイル添付などの重要な操作では即座保存
+    if (updates.attachments) {
+      await updateData(newData, { skipHistory: false, saveImmediately: true });
+    } else {
+      await updateData(newData, { skipHistory: false, immediate: true });
+    }
     
     // 2. ストレージアダプターを通じて反映（現在は無効化）
     if (syncToCloud) {
@@ -124,7 +129,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...data, rootNode: newRootNode };
-    updateData(newData, { skipHistory: false, immediate: true });
+    await updateData(newData, { skipHistory: false, saveImmediately: true });
     
     // 2. ストレージアダプターを通じて反映（現在は無効化）
     console.log('⚠️ ノード追加のクラウド同期は一時的に無効化されています:', newChild.id);
@@ -242,7 +247,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...data, rootNode: newRootNode };
-    updateData(newData, { skipHistory: false, immediate: true });
+    await updateData(newData, { skipHistory: false, saveImmediately: true });
     
     // 2. ストレージアダプターを通じて反映（現在は無効化）
     console.log('⚠️ ノード削除のクラウド同期は一時的に無効化されています:', nodeId);

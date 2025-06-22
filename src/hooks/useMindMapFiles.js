@@ -171,8 +171,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         });
         
         // 3. R2ストレージの結果でファイル添付情報を作成
-        const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult.id, {
+        const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult, {
           isR2Storage: true,
+          nodeId: nodeId,
           storagePath: uploadResult.storagePath,
           thumbnailPath: uploadResult.thumbnailPath,
           downloadUrl: uploadResult.downloadUrl,
@@ -184,7 +185,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         // 4. ノードにファイル添付情報を追加（クラウドモード）
         if (node) {
           const updatedAttachments = [...(node.attachments || []), fileAttachment];
-          updateNode(nodeId, { attachments: updatedAttachments });
+          await updateNode(nodeId, { attachments: updatedAttachments });
           
           logger.info(`✅ ファイル添付完了 (クラウド): ${file.name}`, {
             nodeId,
@@ -229,7 +230,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         // 4. ノードにファイル添付情報を追加（ローカルモード）
         if (node) {
           const updatedAttachments = [...(node.attachments || []), fileAttachment];
-          updateNode(nodeId, { attachments: updatedAttachments });
+          await updateNode(nodeId, { attachments: updatedAttachments });
           
           logger.info(`✅ ファイル添付完了 (ローカル): ${file.name}`, {
             nodeId,
@@ -407,7 +408,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           fileId: file.r2FileId,
           fileName: file.name,
           nodeId: nodeId,
-          fileNodeId: file.nodeId
+          fileNodeId: file.nodeId,
+          fileObject: file,
+          isR2Storage: file.isR2Storage
         });
 
         // nodeIdを特定（優先順位: 引数 > file.nodeId > ファイル検索）

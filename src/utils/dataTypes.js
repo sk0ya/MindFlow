@@ -149,6 +149,9 @@ export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = nu
     downloadUrl: uploadedFileInfo?.downloadUrl, // R2からのダウンロードURL
     storagePath: uploadedFileInfo?.storagePath, // R2のストレージパス
     thumbnailUrl: uploadedFileInfo?.thumbnailUrl, // サムネイルURL
+    r2FileId: uploadedFileInfo?.id, // R2ファイルID（ダウンロード用）
+    isR2Storage: optimizationInfo?.isR2Storage || false,
+    nodeId: optimizationInfo?.nodeId, // ファイルが添付されているノードID
     isImage: isImageFile(file),
     createdAt: uploadedFileInfo?.uploadedAt || new Date().toISOString(),
     // 最適化情報

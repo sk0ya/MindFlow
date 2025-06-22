@@ -13,6 +13,33 @@ export const useMindMapData = (isAppReady = false) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   
+  // 即座保存機能
+  const saveImmediately = async (dataToSave = data) => {
+    if (!dataToSave || dataToSave.isPlaceholder) return;
+    
+    try {
+      // タイマーをクリア
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+
+      // 編集中のテキストを強制確定（存在する場合）
+      const editingInput = document.querySelector('.node-input');
+      if (editingInput) {
+        console.log('📝 即座保存: 編集中のノードを検出、テキストを確定します');
+        editingInput.blur();
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      const { saveMindMap } = await import('../utils/storageRouter.js');
+      await saveMindMap(dataToSave);
+      console.log('💾 即座保存完了:', dataToSave.title);
+    } catch (error) {
+      console.warn('⚠️ 即座保存失敗:', error.message);
+    }
+  };
+
   // 自動保存を開始（ノード個別同期無効化中の対策）
   const startAutoSave = () => {
     if (autoSaveTimeoutRef.current) {
@@ -20,24 +47,7 @@ export const useMindMapData = (isAppReady = false) => {
     }
     
     autoSaveTimeoutRef.current = setTimeout(async () => {
-      if (data && !data.isPlaceholder) {
-        try {
-          // 編集中のテキストを強制確定（存在する場合）
-          const editingInput = document.querySelector('.node-input');
-          if (editingInput) {
-            console.log('📝 編集中のノードを検出、テキストを確定します');
-            editingInput.blur(); // フォーカスを外して確定
-            // 少し待ってから保存（確定処理の完了を待つ）
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-          
-          const { saveMindMap } = await import('../utils/storageRouter.js');
-          await saveMindMap(data);
-          console.log('💾 マップ全体保存完了:', data.title);
-        } catch (error) {
-          console.warn('⚠️ 自動保存失敗:', error.message);
-        }
-      }
+      await saveImmediately();
     }, 2000); // 2秒後に保存
   };
   
@@ -152,7 +162,7 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // データ更新の共通処理（リアルタイム同期対応）
-  const updateData = (newData, options = {}) => {
+  const updateData = async (newData, options = {}) => {
     // プレースホルダーデータの場合は更新を無視
     if (data?.isPlaceholder) {
       console.log('⏳ プレースホルダー中: データ更新をスキップ');
@@ -166,14 +176,19 @@ export const useMindMapData = (isAppReady = false) => {
       addToHistory(newData);
     }
     
-    // ⚠️ ノード個別同期無効化中のため、マップ全体保存を再有効化
-    if (options.immediate) {
+    // 保存処理
+    if (options.saveImmediately) {
+      // 即座保存（重要な操作用）
+      await saveImmediately(newData);
+    } else if (options.immediate) {
+      // 通常の自動保存（2秒デバウンス）
       startAutoSave();
     }
     
-    console.log('🔄 データ更新完了 (マップ全体保存有効):', {
+    console.log('🔄 データ更新完了:', {
       id: newData.id,
       immediate: options.immediate || false,
+      saveImmediately: options.saveImmediately || false,
       skipHistory: options.skipHistory || false
     });
     
@@ -240,6 +255,7 @@ export const useMindMapData = (isAppReady = false) => {
     data,
     setData,
     updateData,
+    saveImmediately,
     undo,
     redo,
     canUndo: historyIndex > 0,
