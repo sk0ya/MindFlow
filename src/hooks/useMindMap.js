@@ -4,11 +4,11 @@ import { useMindMapNodes } from './useMindMapNodes_OLD.js';
 import { useMindMapFiles } from './useMindMapFiles_OLD.js';
 import { useMindMapMulti } from './useMindMapMulti.js';
 
-// 緊急復旧: 完全に簡略化されたuseMindMap
+// 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
 export const useMindMap = (isAppReady = false) => {
   console.log('🔧 useMindMap called with isAppReady:', isAppReady);
   
-  // データ管理
+  // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
   const dataHook = useMindMapData(isAppReady);
   console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
   

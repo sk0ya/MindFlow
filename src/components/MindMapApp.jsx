@@ -32,10 +32,12 @@ import { useOnboarding } from '../hooks/useOnboarding.js';
 import { useAppInitialization } from '../hooks/useAppInitialization.js';
 
 const MindMapApp = () => {
+  // 🚨 PHASE 1: すべてのフックを最初に呼び出し（React Hook順序を固定）
+  
   // URL パラメータで認証トークンをチェック
   const urlParams = new URLSearchParams(window.location.search);
   const authToken = urlParams.get('token');
-  const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
+  const isAuthVerification = authToken && authToken.length > 20;
   
   // 認証状態を管理
   const [authState, setAuthState] = useState({
@@ -79,6 +81,30 @@ const MindMapApp = () => {
   const [currentTool, setCurrentTool] = useState('select');
   const [showPerformanceDash, setShowPerformanceDash] = useState(false);
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
+
+  // 🚨 重要: メインのマインドマップフック（常に呼び出し）
+  const mindMap = useMindMap(isReady);
+
+  // 認証状態変更の監視
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setAuthState({
+        isAuthenticated: authManager.isAuthenticated(),
+        user: authManager.getCurrentUser(),
+        isLoading: false
+      });
+    };
+
+    // 認証成功時のクラウド同期
+    if (authState.isAuthenticated && mindMap.triggerCloudSync) {
+      mindMap.triggerCloudSync();
+    }
+
+    window.addEventListener('authStateChange', handleAuthChange);
+    return () => window.removeEventListener('authStateChange', handleAuthChange);
+  }, [authState.isAuthenticated, mindMap.triggerCloudSync]);
+
+  // 🚨 PHASE 2: 条件分岐によるレンダリング（フック呼び出し後）
 
   // 認証トークン検証時は専用コンポーネントを表示
   if (isAuthVerification) {
@@ -147,9 +173,6 @@ const MindMapApp = () => {
     );
   }
 
-  // メインのマインドマップフック（早期リターンの後で呼び出し）
-  const mindMap = useMindMap(isReady);
-  
   // デバッグ情報
   console.log('🔍 MindMapApp Debug:', {
     isReady,
@@ -188,26 +211,8 @@ const MindMapApp = () => {
     );
   }
 
-  // 認証状態変更の監視
-  useEffect(() => {
-    const handleAuthChange = () => {
-      setAuthState({
-        isAuthenticated: authManager.isAuthenticated(),
-        user: authManager.getCurrentUser(),
-        isLoading: false
-      });
-    };
+  // 🚨 PHASE 3: イベントハンドラー定義
 
-    // 認証成功時のクラウド同期
-    if (authState.isAuthenticated && mindMap.triggerCloudSync) {
-      mindMap.triggerCloudSync();
-    }
-
-    window.addEventListener('authStateChange', handleAuthChange);
-    return () => window.removeEventListener('authStateChange', handleAuthChange);
-  }, [authState.isAuthenticated, mindMap.triggerCloudSync]);
-
-  // イベントハンドラー
   const handleNodeSelect = (nodeId) => {
     mindMap.setSelectedNodeId(nodeId);
     setContextMenu(null);
@@ -303,6 +308,8 @@ const MindMapApp = () => {
     window.dispatchEvent(new CustomEvent('authStateChange'));
   };
 
+  // 🚨 PHASE 4: メインアプリレンダリング
+
   return (
     <ErrorBoundary>
       <div className="mindmap-app">
@@ -317,8 +324,8 @@ const MindMapApp = () => {
             canRedo={mindMap.canRedo}
             onExport={() => exportMindMapAsJSON(mindMap.data)}
             onImport={importMindMapFromJSON}
-            zoom={1} // 簡略化: zoom機能は後で修正
-            onZoomReset={() => {}} // 簡略化
+            zoom={mindMap.zoom || 1}
+            onZoomReset={mindMap.resetView}
             onShowCloudStoragePanel={() => setShowCloudPanel(true)}
             authState={authState}
             onShowAuthModal={() => setShowAuthModal(true)}
@@ -365,10 +372,10 @@ const MindMapApp = () => {
             onShowImageModal={setImageModal}
             onShowFileActionMenu={setFileActionMenu}
             onShowNodeMapLinks={setMapLinksPanel}
-            zoom={1} // 簡略化
-            setZoom={() => {}} // 簡略化
-            pan={{ x: 0, y: 0 }} // 簡略化
-            setPan={() => {}} // 簡略化
+            zoom={mindMap.zoom || 1}
+            setZoom={mindMap.setZoom}
+            pan={mindMap.pan || { x: 0, y: 0 }}
+            setPan={mindMap.setPan}
           />
 
           <UserCursors />

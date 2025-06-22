@@ -11,15 +11,21 @@ const UserPresence = memo(({
   realtimeStatus = 'disconnected',
   onUserClick
 }) => {
+  // 緊急修正: connectedUsersが未定義の場合の安全ガード
+  const safeConnectedUsers = Array.isArray(connectedUsers) ? connectedUsers : [];
+  
   // ユーザーリストを最適化
   const optimizedUsers = useMemo(() => {
-    return connectedUsers.map(user => ({
+    if (!safeConnectedUsers || !Array.isArray(safeConnectedUsers)) {
+      return [];
+    }
+    return safeConnectedUsers.map(user => ({
       ...user,
       isCurrentUser: user.id === currentUserId
     }));
-  }, [connectedUsers, currentUserId]);
+  }, [safeConnectedUsers, currentUserId]);
 
-  if (!optimizedUsers.length) {
+  if (!optimizedUsers || !optimizedUsers.length) {
     return null;
   }
 

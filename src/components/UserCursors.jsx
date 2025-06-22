@@ -14,13 +14,30 @@ const UserCursors = memo(({
 }) => {
   // アクティブなカーソルのみをメモ化
   const activeCursors = useMemo(() => {
-    if (!userCursors || userCursors.size === 0) {
+    // 緊急修正: userCursorsが未定義の場合の安全ガード
+    if (!userCursors || (typeof userCursors.size === 'number' && userCursors.size === 0)) {
+      return [];
+    }
+
+    // userCursorsがMapでない場合も対処
+    let cursorsArray = [];
+    try {
+      if (userCursors && typeof userCursors.values === 'function') {
+        cursorsArray = Array.from(userCursors.values());
+      } else if (Array.isArray(userCursors)) {
+        cursorsArray = userCursors;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.warn('UserCursors: userCursors処理エラー:', error);
       return [];
     }
 
     const now = Date.now();
-    return Array.from(userCursors.values())
+    return cursorsArray
       .filter(cursor => 
+        cursor &&
         cursor.userId !== currentUserId &&
         cursor.cursor &&
         cursor.cursor.timestamp &&
@@ -49,8 +66,8 @@ const UserCursors = memo(({
   // カスタム比較関数でレンダリングを最適化
   if (prevProps.currentUserId !== nextProps.currentUserId ||
       prevProps.zoom !== nextProps.zoom ||
-      prevProps.pan.x !== nextProps.pan.x ||
-      prevProps.pan.y !== nextProps.pan.y) {
+      prevProps.pan?.x !== nextProps.pan?.x ||
+      prevProps.pan?.y !== nextProps.pan?.y) {
     return false;
   }
 
