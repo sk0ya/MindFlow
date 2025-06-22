@@ -8,8 +8,8 @@ class LocalStorageAdapter {
   }
 
   async getAllMaps() {
-    const { getAllMindMaps } = await import('./storage.js');
-    const maps = getAllMindMaps();
+    const { getAllMindMapsLocal } = await import('./localStorage.js');
+    const maps = getAllMindMapsLocal();
     console.log('🏠 ローカル: マップ一覧取得', maps.length, '件');
     return maps;
   }
@@ -25,22 +25,22 @@ class LocalStorageAdapter {
   }
 
   async createMap(mapData) {
-    const { saveMindMap } = await import('./storage.js');
-    await saveMindMap(mapData);
+    const { saveMindMapLocal } = await import('./localStorage.js');
+    await saveMindMapLocal(mapData);
     console.log('🏠 ローカル: マップ作成完了', mapData.title);
     return mapData;
   }
 
   async updateMap(mapId, mapData) {
-    const { saveMindMap } = await import('./storage.js');
-    await saveMindMap(mapData);
+    const { saveMindMapLocal } = await import('./localStorage.js');
+    await saveMindMapLocal(mapData);
     console.log('🏠 ローカル: マップ更新完了', mapData.title);
     return mapData;
   }
 
   async deleteMap(mapId) {
-    const { deleteMindMap } = await import('./storage.js');
-    const result = deleteMindMap(mapId);
+    const { deleteMindMapLocal } = await import('./localStorage.js');
+    const result = deleteMindMapLocal(mapId);
     console.log('🏠 ローカル: マップ削除完了', mapId);
     return result;
   }
@@ -159,17 +159,8 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ一覧取得開始');
       
-      const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps`, {
-        method: 'GET'
-      });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const maps = result.mindmaps || [];
+      const { cloudStorage } = await import('./cloudStorage.js');
+      const maps = await cloudStorage.getAllMindMapsCloud();
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
 
@@ -184,16 +175,8 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
-      const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps/${mapId}`, {
-        method: 'GET'
-      });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const map = await response.json();
+      const { cloudStorage } = await import('./cloudStorage.js');
+      const map = await cloudStorage.getMindMapCloud(mapId);
       console.log('☁️ クラウド: マップ取得完了', map.title);
       return map;
 
@@ -208,45 +191,8 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
       
-      const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(mapData)
-      });
-
-      if (!response.ok) {
-        let errorDetail = `${response.status} ${response.statusText}`;
-        try {
-          const errorBody = await response.text();
-          console.error('❌ API エラー詳細:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorBody,
-            url: response.url,
-            headers: Object.fromEntries(response.headers.entries())
-          });
-          
-          // 401エラーの場合、送信したヘッダーも再表示
-          if (response.status === 401) {
-            const sentHeaders = await this.getAuthHeaders();
-            console.error('🔑 送信した認証ヘッダー (401エラー時):', {
-              authorization: sentHeaders.Authorization?.substring(0, 50) + '...',
-              userId: sentHeaders['X-User-ID'],
-              contentType: sentHeaders['Content-Type']
-            });
-          }
-          
-          errorDetail += ` - ${errorBody}`;
-        } catch (e) {
-          console.error('❌ エラーレスポンス読み取り失敗:', e);
-        }
-        throw new Error(`API エラー: ${errorDetail}`);
-      }
-
-      const result = await response.json();
+      const { cloudStorage } = await import('./cloudStorage.js');
+      const result = await cloudStorage.createMindMapCloud(mapData);
       console.log('☁️ クラウド: マップ作成完了', result.title);
       return result;
 
@@ -258,19 +204,11 @@ class CloudStorageAdapter {
 
   async updateMap(mapId, mapData) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: マップ更新開始', mapId);
       
-      const response = await fetch(`${this.baseUrl}/mindmaps/${mapId}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify(mapData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const { cloudStorage } = await import('./cloudStorage.js');
+      const result = await cloudStorage.updateMindMapCloud(mapId, mapData);
       console.log('☁️ クラウド: マップ更新完了', result.title);
       return result;
 
@@ -282,18 +220,11 @@ class CloudStorageAdapter {
 
   async deleteMap(mapId) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: マップ削除開始', mapId);
       
-      const response = await fetch(`${this.baseUrl}/mindmaps/${mapId}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const { cloudStorage } = await import('./cloudStorage.js');
+      const result = await cloudStorage.deleteMindMapCloud(mapId);
       console.log('☁️ クラウド: マップ削除完了');
       return result;
 

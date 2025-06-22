@@ -1,32 +1,15 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, getAllMindMapsHybrid, isCloudStorageEnabled } from '../utils/storage.js';
+import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
 import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
 import { getCurrentAdapter } from '../utils/storageAdapter.js';
 
 // マルチマップ管理専用のカスタムフック
 export const useMindMapMulti = (data, setData, updateData) => {
   // マルチマップ管理用の状態
-  const [allMindMaps, setAllMindMaps] = useState(() => {
-    const maps = getAllMindMaps();
-    // 無効なデータを除外してログ出力
-    const validMaps = maps.filter(map => {
-      if (!map || !map.id) {
-        console.warn('Invalid mindmap found and filtered out:', map);
-        return false;
-      }
-      return true;
-    });
-    return validMaps;
-  });
+  const [allMindMaps, setAllMindMaps] = useState([]);
   
   const [currentMapId, setCurrentMapId] = useState(() => {
-    // クラウドモードの場合は、データから取得
-    if (isCloudStorageEnabled()) {
-      return data?.id || null;
-    }
-    
-    const currentMap = getCurrentMindMap();
-    return currentMap?.id || null;
+    return data?.id || null;
   });
 
   // マップ一覧の更新（完全分離版）

@@ -1,3 +1,4 @@
+// 完全分離：クラウドストレージ専用処理
 // Cloudflare Workers APIクライアント
 
 const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
@@ -142,21 +143,38 @@ class CloudStorageClient {
     throw lastError;
   }
 
-  // すべてのマインドマップを取得
-  async getAllMindMaps() {
-    console.log('cloudStorage.getAllMindMaps() 開始');
+  // すべてのマインドマップを取得（クラウド専用）
+  async getAllMindMapsCloud() {
+    console.log('☁️ クラウド: マップ一覧取得開始');
     const result = await this.request('/mindmaps');
-    console.log('cloudStorage.getAllMindMaps() 結果:', result);
-    return result;
+    
+    const maps = result.mindmaps || [];
+    // 基本情報のみのマップリストを作成（詳細データは個別ロード時に取得）
+    const basicMaps = maps.map(map => ({
+      id: map.id,
+      title: map.title || '無題のマップ',
+      category: map.category || '未分類',
+      updatedAt: map.updatedAt || new Date().toISOString(),
+      createdAt: map.createdAt || map.updatedAt || new Date().toISOString(),
+      isBasicInfo: true // 基本情報であることを明示
+    }));
+    
+    console.log('☁️ クラウド: マップ一覧取得完了', basicMaps.length, '件');
+    return basicMaps;
   }
 
-  // 特定のマインドマップを取得（データ構造検証付き）
-  async getMindMap(id) {
-    console.log('🔍 getMindMap 開始:', id);
+  // 後方互換性のため
+  async getAllMindMaps() {
+    return await this.getAllMindMapsCloud();
+  }
+
+  // 特定のマインドマップを取得（クラウド専用・データ構造検証付き）
+  async getMindMapCloud(id) {
+    console.log('☁️ クラウド: マップ取得開始', id);
     const result = await this.request(`/mindmaps/${id}`);
     
     // レスポンス構造を詳細ログ出力
-    console.log('📄 getMindMap レスポンス構造:', {
+    console.log('📄 クラウドマップ レスポンス構造:', {
       hasResult: !!result,
       resultType: typeof result,
       keys: result ? Object.keys(result) : null,
@@ -202,29 +220,43 @@ class CloudStorageClient {
         result.rootNode.children = [];
       }
       
-      console.log('✅ データ構造検証完了:', {
+      console.log('✅ クラウドデータ構造検証完了:', {
         rootNodeId: result.rootNode.id,
         childrenCount: result.rootNode.children.length
       });
     } else {
-      console.error('❌ rootNodeが見つかりません:', result);
-      throw new Error('サーバーからのデータにrootNodeが含まれていません');
+      console.error('❌ クラウドrootNodeが見つかりません:', result);
+      throw new Error('クラウドサーバーからのデータにrootNodeが含まれていません');
     }
     
+    console.log('☁️ クラウド: マップ取得完了', result.title);
     return result;
   }
 
-  // マインドマップを作成
-  async createMindMap(mindmapData) {
-    return await this.request('/mindmaps', {
+  // 後方互換性のため
+  async getMindMap(id) {
+    return await this.getMindMapCloud(id);
+  }
+
+  // マインドマップを作成（クラウド専用）
+  async createMindMapCloud(mindmapData) {
+    console.log('☁️ クラウド: マップ作成開始', mindmapData.title);
+    const result = await this.request('/mindmaps', {
       method: 'POST',
       body: JSON.stringify(mindmapData)
     });
+    console.log('☁️ クラウド: マップ作成完了', result.title);
+    return result;
   }
 
-  // マインドマップを更新
-  async updateMindMap(id, mindmapData) {
-    console.log('cloudStorage.updateMindMap() 開始:', id, mindmapData.title);
+  // 後方互換性のため
+  async createMindMap(mindmapData) {
+    return await this.createMindMapCloud(mindmapData);
+  }
+
+  // マインドマップを更新（クラウド専用）
+  async updateMindMapCloud(id, mindmapData) {
+    console.log('☁️ クラウド: マップ更新開始:', id, mindmapData.title);
     
     // IDの一貫性を保つ - データはそのまま送信
     const dataToSend = {
@@ -237,26 +269,44 @@ class CloudStorageClient {
       method: 'PUT',
       body: JSON.stringify(dataToSend)
     });
-    console.log('cloudStorage.updateMindMap() 結果:', result);
+    console.log('☁️ クラウド: マップ更新完了:', result.title);
     return result;
   }
 
-  // マインドマップを削除
-  async deleteMindMap(id) {
-    return await this.request(`/mindmaps/${id}`, {
-      method: 'DELETE'
-    });
+  // 後方互換性のため
+  async updateMindMap(id, mindmapData) {
+    return await this.updateMindMapCloud(id, mindmapData);
   }
 
-  // 接続テスト
-  async testConnection() {
+  // マインドマップを削除（クラウド専用）
+  async deleteMindMapCloud(id) {
+    console.log('☁️ クラウド: マップ削除開始', id);
+    const result = await this.request(`/mindmaps/${id}`, {
+      method: 'DELETE'
+    });
+    console.log('☁️ クラウド: マップ削除完了');
+    return result;
+  }
+
+  // 後方互換性のため
+  async deleteMindMap(id) {
+    return await this.deleteMindMapCloud(id);
+  }
+
+  // 接続テスト（クラウド専用）
+  async testConnectionCloud() {
     try {
-      await this.getAllMindMaps();
+      await this.getAllMindMapsCloud();
       return true;
     } catch (error) {
-      console.error('Cloud storage connection failed:', error);
+      console.error('☁️ クラウド接続テスト失敗:', error);
       return false;
     }
+  }
+
+  // 後方互換性のため
+  async testConnection() {
+    return await this.testConnectionCloud();
   }
 }
 
