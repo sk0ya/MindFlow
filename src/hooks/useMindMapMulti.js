@@ -68,18 +68,36 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // 新規マップ作成
-  const createMindMap = (title = '新しいマインドマップ', category = '未分類') => {
-    const newMap = createNewMindMap(title);
-    // メイントピックをマップ名に基づいて設定
-    newMap.rootNode.text = title;
-    newMap.category = category;
-    
-    // 更新されたマップを保存
-    saveMindMap(newMap);
-    refreshAllMindMaps();
-    // 新規作成時はルートノードを選択
-    switchToMap(newMap.id, true);
-    return newMap.id;
+  const createMindMap = async (title = '新しいマインドマップ', category = '未分類') => {
+    try {
+      // クラウドモード対応の新規マップ作成
+      const { createInitialData } = await import('../utils/dataTypes.js');
+      const { isCloudStorageEnabled, saveMindMapHybrid } = await import('../utils/storage.js');
+      
+      const newMap = createInitialData();
+      newMap.title = title;
+      newMap.category = category;
+      
+      // メイントピックをマップ名に基づいて設定
+      if (newMap.rootNode) {
+        newMap.rootNode.text = title;
+      }
+      
+      console.log('🆕 新規マップ作成:', title, 'クラウドモード:', isCloudStorageEnabled());
+      
+      // クラウドモードかローカルモードかに応じて保存
+      await saveMindMapHybrid(newMap);
+      
+      // マップ一覧を更新
+      await refreshAllMindMaps();
+      
+      // 新規作成時はルートノードを選択
+      switchToMap(newMap.id, true);
+      return newMap.id;
+    } catch (error) {
+      console.error('❌ 新規マップ作成失敗:', error);
+      throw error;
+    }
   };
 
   // マップ名変更

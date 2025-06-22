@@ -391,16 +391,22 @@ const MindMapApp = () => {
     switchToMap(mapId);
   };
 
-  const handleCreateMap = (providedName = null, providedCategory = null) => {
+  const handleCreateMap = async (providedName = null, providedCategory = null) => {
     let mapName = providedName;
     if (!mapName) {
       mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
     }
     
     if (mapName && mapName.trim()) {
-      const category = providedCategory || '未分類';
-      const mapId = createMindMap(mapName.trim(), category);
-      return mapId;
+      try {
+        const category = providedCategory || '未分類';
+        const mapId = await createMindMap(mapName.trim(), category);
+        return mapId;
+      } catch (error) {
+        console.error('マップ作成エラー:', error);
+        alert('マップの作成に失敗しました: ' + error.message);
+        return null;
+      }
     }
     return null;
   };
