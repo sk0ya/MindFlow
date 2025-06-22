@@ -591,8 +591,8 @@ const MindMapApp = () => {
     );
   }
 
-  // データが初期化されていない場合はローディング画面を表示
-  if (!data) {
+  // 初期化中の場合の処理
+  if (initState.isInitializing) {
     return (
       <div className="mindmap-app loading-screen">
         <div className="loading-content">
@@ -604,56 +604,72 @@ const MindMapApp = () => {
     );
   }
 
+  // データがなく、どの初期化UIも表示されていない場合（エラー状態）
+  if (!data && !initState.showStorageModeSelector && !initState.showAuthModal && !initState.showOnboarding) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>MindFlow</h2>
+          <p>初期化に問題が発生しました...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mindmap-app">
-      <MindMapSidebar
-        mindMaps={allMindMaps}
-        currentMapId={currentMapId}
-        onSelectMap={handleSelectMap}
-        onCreateMap={handleCreateMap}
-        onDeleteMap={handleDeleteMap}
-        onRenameMap={handleRenameMap}
-        onChangeCategory={handleChangeCategory}
-        availableCategories={getAvailableCategories()}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={handleToggleSidebar}
-      />
-      
-      <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
-        <Toolbar
-          title={data.title}
-          onTitleChange={updateTitle}
-          onExport={handleExport}
-          onImport={handleImport}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          zoom={zoom}
-          onZoomReset={handleZoomReset}
-          onShowCloudStoragePanel={() => setShowCloudStoragePanel(true)}
-          authState={authState}
-          onShowAuthModal={handleShowAuthModal}
-          onLogout={handleLogout}
-          onShowShortcutHelper={() => setShowShortcutHelper(true)}
-        />
+      {/* データが存在する場合のみメインアプリを表示 */}
+      {data ? (
+        <>
+          <MindMapSidebar
+            mindMaps={allMindMaps}
+            currentMapId={currentMapId}
+            onSelectMap={handleSelectMap}
+            onCreateMap={handleCreateMap}
+            onDeleteMap={handleDeleteMap}
+            onRenameMap={handleRenameMap}
+            onChangeCategory={handleChangeCategory}
+            availableCategories={getAvailableCategories()}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
+          />
+          
+          <div className={`container ${sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
+            <Toolbar
+              title={data.title}
+              onTitleChange={updateTitle}
+              onExport={handleExport}
+              onImport={handleImport}
+              onUndo={undo}
+              onRedo={redo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              zoom={zoom}
+              onZoomReset={handleZoomReset}
+              onShowCloudStoragePanel={() => setShowCloudStoragePanel(true)}
+              authState={authState}
+              onShowAuthModal={handleShowAuthModal}
+              onLogout={handleLogout}
+              onShowShortcutHelper={() => setShowShortcutHelper(true)}
+            />
 
-        <ErrorBoundary>
-          <MindMapCanvas
-            data={data}
-            selectedNodeId={selectedNodeId}
-            editingNodeId={editingNodeId}
-            editText={editText}
-            setEditText={setEditText}
-            onSelectNode={handleNodeSelect}
-            onStartEdit={startEdit}
-            onFinishEdit={finishEdit}
-            onDragNode={dragNode}
-            onChangeParent={changeParent}
-            onAddChild={handleAddChild}
-            onAddSibling={handleAddSibling}
-            onDeleteNode={deleteNode}
-            onRightClick={handleRightClick}
+            <ErrorBoundary>
+              <MindMapCanvas
+                data={data}
+                selectedNodeId={selectedNodeId}
+                editingNodeId={editingNodeId}
+                editText={editText}
+                setEditText={setEditText}
+                onSelectNode={handleNodeSelect}
+                onStartEdit={startEdit}
+                onFinishEdit={finishEdit}
+                onDragNode={dragNode}
+                onChangeParent={changeParent}
+                onAddChild={handleAddChild}
+                onAddSibling={handleAddSibling}
+                onDeleteNode={deleteNode}
+                onRightClick={handleRightClick}
             onToggleCollapse={toggleCollapse}
             onNavigateToDirection={navigateToDirection}
             onFileUpload={handleFileUpload}
@@ -784,60 +800,63 @@ const MindMapApp = () => {
           />
         )}
 
-        <CloudStoragePanelEnhanced
-          isVisible={showCloudStoragePanel}
-          onClose={() => setShowCloudStoragePanel(false)}
-          allMindMaps={allMindMaps}
-          refreshAllMindMaps={refreshAllMindMaps}
-          currentMapId={currentMapId}
-          switchToMap={switchToMap}
-          deleteMindMapById={deleteMindMapById}
-          renameMindMap={renameMindMap}
-          createMindMap={createMindMap}
-        />
-        
-        <AuthModal
-          isVisible={initState.showAuthModal}
-          onClose={initState.handleAuthClose}
-          onAuthSuccess={handleAuthSuccess}
-        />
+            <CloudStoragePanelEnhanced
+              isVisible={showCloudStoragePanel}
+              onClose={() => setShowCloudStoragePanel(false)}
+              allMindMaps={allMindMaps}
+              refreshAllMindMaps={refreshAllMindMaps}
+              currentMapId={currentMapId}
+              switchToMap={switchToMap}
+              deleteMindMapById={deleteMindMapById}
+              renameMindMap={renameMindMap}
+              createMindMap={createMindMap}
+            />
 
-        {/* チュートリアルオーバーレイ */}
-        <TutorialOverlay
-          isVisible={initState.showOnboarding}
-          onComplete={initState.handleOnboardingComplete}
-          onSkip={initState.handleOnboardingComplete}
-        />
-
-        {/* キーボードショートカットヘルパー */}
-        <KeyboardShortcutHelper
-          isVisible={showShortcutHelper}
-          onClose={() => setShowShortcutHelper(false)}
-        />
-
-        {/* ストレージモード選択画面 */}
-        {initState.showStorageModeSelector && (
-          <StorageModeSelector
-            onModeSelect={initState.handleStorageModeSelect}
-            hasLocalData={initState.hasExistingLocalData}
-          />
-        )}
-
-        <footer className="footer">
-          <div>
-            <span className="footer-brand">© 2024 MindFlow</span>
-            <span className="stats">
-              ノード数: {flattenNodes && data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
-              最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
-            </span>
-            {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
-              <span className="sync-status">
-                <SyncStatusIndicator />
-              </span>
-            )}
+            <footer className="footer">
+              <div>
+                <span className="footer-brand">© 2024 MindFlow</span>
+                <span className="stats">
+                  ノード数: {flattenNodes && data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
+                  最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
+                </span>
+                {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
+                  <span className="sync-status">
+                    <SyncStatusIndicator />
+                  </span>
+                )}
+              </div>
+            </footer>
           </div>
-        </footer>
-      </div>
+        </>
+      ) : null}
+
+      {/* 初期化UI - データの有無に関係なく表示 */}
+      <AuthModal
+        isVisible={initState.showAuthModal}
+        onClose={initState.handleAuthClose}
+        onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* チュートリアルオーバーレイ */}
+      <TutorialOverlay
+        isVisible={initState.showOnboarding}
+        onComplete={initState.handleOnboardingComplete}
+        onSkip={initState.handleOnboardingComplete}
+      />
+
+      {/* キーボードショートカットヘルパー */}
+      <KeyboardShortcutHelper
+        isVisible={showShortcutHelper}
+        onClose={() => setShowShortcutHelper(false)}
+      />
+
+      {/* ストレージモード選択画面 */}
+      {initState.showStorageModeSelector && (
+        <StorageModeSelector
+          onModeSelect={initState.handleStorageModeSelect}
+          hasLocalData={initState.hasExistingLocalData}
+        />
+      )}
     </div>
   );
 };
