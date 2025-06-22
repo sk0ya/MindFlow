@@ -237,11 +237,15 @@ class CloudStorageAdapter {
   // ノード操作（クラウドモードでは即座反映）
   async addNode(mapId, nodeData, parentId) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: ノード追加開始', nodeData.id);
       
-      const response = await fetch(`${this.baseUrl}/nodes`, {
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           mapId,
           node: nodeData,
@@ -274,11 +278,15 @@ class CloudStorageAdapter {
 
   async updateNode(mapId, nodeId, updates) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: ノード更新開始', nodeId);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           mapId,
           updates,
@@ -309,11 +317,15 @@ class CloudStorageAdapter {
 
   async deleteNode(mapId, nodeId) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: ノード削除開始', nodeId);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           mapId,
           operation: 'delete'
@@ -342,11 +354,15 @@ class CloudStorageAdapter {
 
   async moveNode(mapId, nodeId, newParentId) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}/move`, {
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}/move`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           mapId,
           newParentId,
