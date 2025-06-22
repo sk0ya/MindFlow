@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useMindMapData } from './useMindMapData_OLD.js';
-import { useMindMapNodes } from './useMindMapNodes_OLD.js';
-import { useMindMapFiles } from './useMindMapFiles_OLD.js';
+import { useMindMapData } from './useMindMapData.js';
+import { useMindMapNodes } from './useMindMapNodes.js';
+import { useMindMapFiles } from './useMindMapFiles.js';
 import { useMindMapMulti } from './useMindMapMulti.js';
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
