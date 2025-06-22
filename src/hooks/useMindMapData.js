@@ -121,7 +121,7 @@ export const useMindMapData = (isAppReady = false) => {
     setHistoryIndex(prev => Math.min(prev + 1, 49));
   };
 
-  // データ更新の共通処理
+  // データ更新の共通処理（リアルタイム同期対応）
   const updateData = (newData, options = {}) => {
     // プレースホルダーデータの場合は更新を無視
     if (data?.isPlaceholder) {
@@ -136,49 +136,12 @@ export const useMindMapData = (isAppReady = false) => {
       addToHistory(newData);
     }
     
-    // 自動保存
-    // setTimeout内で動的に設定を確認
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-    
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      try {
-        // 動的に設定を確認
-        const { getAppSettings, saveMindMapHybrid } = await import('../utils/storage.js');
-        const currentSettings = getAppSettings();
-        
-        console.log('📊 現在の設定確認:', {
-          autoSave: currentSettings.autoSave,
-          storageMode: currentSettings.storageMode,
-          dataAutoSave: data.settings?.autoSave
-        });
-        
-        // オートセーブ設定の確認（クラウドモードでも設定を尊重）
-        const shouldAutoSave = currentSettings.autoSave || newData.settings?.autoSave;
-        
-        if (shouldAutoSave) {
-          console.log('🔄 オートセーブ開始:', newData.id, newData.title);
-          console.log('💾 保存モード:', currentSettings.storageMode);
-          
-          const result = await saveMindMapHybrid(newData);
-          console.log('✅ オートセーブ成功:', result);
-        } else {
-          console.log('⚠️ オートセーブが無効になっています');
-        }
-      } catch (error) {
-        console.error('❌ オートセーブ失敗:', error);
-        console.error('❌ エラー詳細:', error.message, error.stack);
-        // フォールバックとしてローカル保存
-        try {
-          console.log('🏠 ローカル保存にフォールバック');
-          const { saveMindMap } = await import('../utils/storage.js');
-          await saveMindMap(newData);
-        } catch (fallbackError) {
-          console.error('❌ フォールバック保存も失敗:', fallbackError);
-        }
-      }
-    }, 1000);
+    // ⚠️ 自動保存は廃止 - リアルタイム同期で即座DB反映済み
+    console.log('🔄 データ更新完了 (リアルタイム同期対応):', {
+      id: newData.id,
+      immediate: options.immediate || false,
+      skipHistory: options.skipHistory || false
+    });
     
     // カスタムコールバックがあれば実行
     if (options.onUpdate) {

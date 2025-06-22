@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createNewNode, calculateNodePosition, COLORS } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
+import { realtimeSync } from '../utils/realtimeSync.js';
 
 // ノード操作専用のカスタムフック
 export const useMindMapNodes = (data, updateData) => {
@@ -66,24 +67,29 @@ export const useMindMapNodes = (data, updateData) => {
     }
   };
 
-  // ノードを更新
-  const updateNode = (nodeId, updates) => {
+  // ノードを更新（即座DB反映）
+  const updateNode = async (nodeId, updates) => {
+    // 1. ローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
       if (node.id === nodeId) return { ...node, ...updates };
       return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
     };
     
-    updateData(
-      { ...data, rootNode: updateNodeRecursive(data.rootNode) },
-      {
-        operationType: 'node_update',
-        operationData: { nodeId, updates }
-      }
-    );
+    const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
+    updateData(newData, { skipHistory: false, immediate: true });
+    
+    // 2. DBに即座反映（非同期）
+    try {
+      await realtimeSync.updateNode(data.id, nodeId, updates);
+      console.log('✅ ノード更新のDB反映完了:', nodeId);
+    } catch (error) {
+      console.warn('⚠️ ノード更新のDB反映失敗:', error.message);
+      // UIは既に更新済みなので、エラーは静かにログのみ
+    }
   };
 
-  // 子ノードを追加
-  const addChildNode = (parentId, nodeText = '', startEditing = false) => {
+  // 子ノードを追加（即座DB反映）
+  const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
@@ -96,6 +102,7 @@ export const useMindMapNodes = (data, updateData) => {
     // 色を設定
     newChild.color = getNodeColor(parentNode, childrenCount);
     
+    // 1. ローカル状態を即座に更新
     const addChildRecursive = (node) => {
       if (node.id === parentId) {
         return { ...node, children: [...(node.children || []), newChild] };
@@ -108,23 +115,16 @@ export const useMindMapNodes = (data, updateData) => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData(
-      { ...data, rootNode: newRootNode },
-      {
-        operationType: 'node_create',
-        operationData: {
-          nodeId: newChild.id,
-          parentId: parentId,
-          text: nodeText,
-          position: { x: newChild.x, y: newChild.y },
-          style: {
-            fontSize: newChild.fontSize,
-            fontWeight: newChild.fontWeight,
-            color: newChild.color
-          }
-        }
-      }
-    );
+    const newData = { ...data, rootNode: newRootNode };
+    updateData(newData, { skipHistory: false, immediate: true });
+    
+    // 2. DBに即座反映（非同期）
+    try {
+      await realtimeSync.addNode(data.id, newChild, parentId);
+      console.log('✅ ノード追加のDB反映完了:', newChild.id);
+    } catch (error) {
+      console.warn('⚠️ ノード追加のDB反映失敗:', error.message);
+    }
     
     // 編集状態を同時に設定
     if (startEditing) {
@@ -187,8 +187,8 @@ export const useMindMapNodes = (data, updateData) => {
     return newSibling.id;
   };
 
-  // ノードを削除
-  const deleteNode = (nodeId) => {
+  // ノードを削除（即座DB反映）
+  const deleteNode = async (nodeId) => {
     if (nodeId === 'root') return false;
     
     // 削除後に選択するノードを決定
@@ -214,6 +214,7 @@ export const useMindMapNodes = (data, updateData) => {
       nodeToSelect = 'root';
     }
     
+    // 1. ローカル状態を即座に更新
     const deleteNodeRecursive = (node) => {
       return {
         ...node,
@@ -228,13 +229,16 @@ export const useMindMapNodes = (data, updateData) => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData(
-      { ...data, rootNode: newRootNode },
-      {
-        operationType: 'node_delete',
-        operationData: { nodeId, preserveChildren: false }
-      }
-    );
+    const newData = { ...data, rootNode: newRootNode };
+    updateData(newData, { skipHistory: false, immediate: true });
+    
+    // 2. DBに即座反映（非同期）
+    try {
+      await realtimeSync.deleteNode(data.id, nodeId);
+      console.log('✅ ノード削除のDB反映完了:', nodeId);
+    } catch (error) {
+      console.warn('⚠️ ノード削除のDB反映失敗:', error.message);
+    }
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {
