@@ -3,6 +3,7 @@
 import { corsHeaders } from '../utils/cors.js';
 import { requireAuth } from '../utils/auth.js';
 import { unifyUserIds, checkMigrationNeeded } from '../migrations/unifyUserIds.js';
+import { cleanAllData, cleanR2Storage, getDataSummary } from '../migrations/cleanDatabase.js';
 
 export async function handleMigrationRequest(request, env) {
   const url = new URL(request.url);
@@ -10,8 +11,12 @@ export async function handleMigrationRequest(request, env) {
   const pathParts = url.pathname.split('/');
   const action = pathParts[3]; // /api/migration/{action}
 
-  // 管理者権限チェック（簡易版）
-  if (env.ENABLE_AUTH === 'true') {
+  // 管理者権限チェック（Admin Keyを優先）
+  const adminKey = request.headers.get('X-Admin-Key');
+  if (adminKey && adminKey === env.ADMIN_KEY) {
+    // Admin Keyが正しい場合は認証をスキップ
+    console.log('Admin key認証成功');
+  } else if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
     if (!authResult.authenticated) {
       return new Response(JSON.stringify({ error: 'Authentication required' }), {
@@ -35,17 +40,14 @@ export async function handleMigrationRequest(request, env) {
       });
     }
   } else {
-    // 認証が無効の場合は特別なヘッダーで管理者確認
-    const adminKey = request.headers.get('X-Admin-Key');
-    if (!adminKey || adminKey !== env.ADMIN_KEY) {
-      return new Response(JSON.stringify({ error: 'Admin key required' }), {
-        status: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders(env.CORS_ORIGIN)
-        }
-      });
-    }
+    // 認証が無効でAdminKeyも無い場合はエラー
+    return new Response(JSON.stringify({ error: 'Admin key required' }), {
+      status: 403,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders(env.CORS_ORIGIN)
+      }
+    });
   }
 
   try {
@@ -55,6 +57,8 @@ export async function handleMigrationRequest(request, env) {
       case 'GET':
         if (action === 'check') {
           response = await checkMigrationNeeded(env);
+        } else if (action === 'summary') {
+          response = await getDataSummary(env);
         } else {
           throw new Error(`Unknown migration action: ${action}`);
         }
@@ -63,6 +67,10 @@ export async function handleMigrationRequest(request, env) {
       case 'POST':
         if (action === 'unify-userids') {
           response = await unifyUserIds(env);
+        } else if (action === 'clean-database') {
+          response = await cleanAllData(env);
+        } else if (action === 'clean-r2') {
+          response = await cleanR2Storage(env);
         } else {
           throw new Error(`Unknown migration action: ${action}`);
         }

@@ -8,33 +8,24 @@ export async function handleRequest(request, env) {
   // 認証チェック（JWT認証またはX-User-IDを受け入れ）
   let userId = 'default-user';
   
-  // 最初にJWT認証を試行
+  // JWT認証チェック
   if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
-    if (authResult.authenticated) {
-      // 統一化：JWTのuserIdは必ずemail（auth.jsで設定）
-      userId = authResult.user.userId;
-      console.log('JWT認証成功 - userId:', userId, 'email:', authResult.user.email);
-    } else {
-      // JWT認証失敗時、X-User-IDを確認（後方互換性）
-      const xUserId = request.headers.get('X-User-ID');
-      if (xUserId) {
-        userId = xUserId;
-        console.log('X-User-ID使用 - userId:', userId);
-      } else {
-        // どちらも無い場合はエラー
-        console.log('認証失敗:', authResult.error);
-        return new Response(JSON.stringify({ error: authResult.error }), {
-          status: authResult.status,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders(env.CORS_ORIGIN)
-          }
-        });
-      }
+    if (!authResult.authenticated) {
+      console.log('認証失敗:', authResult.error);
+      return new Response(JSON.stringify({ error: authResult.error }), {
+        status: authResult.status,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders(env.CORS_ORIGIN)
+        }
+      });
     }
+    // JWTのuserIdは必ずemail（auth.jsで設定）
+    userId = authResult.user.userId;
+    console.log('JWT認証成功 - userId:', userId, 'email:', authResult.user.email);
   } else {
-    // 認証が無効の場合は従来の方法を使用
+    // 認証が無効の場合はX-User-IDを使用
     userId = request.headers.get('X-User-ID') || 'default-user';
     console.log('認証無効モード - userId:', userId);
   }

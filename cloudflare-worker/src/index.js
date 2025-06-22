@@ -7,54 +7,6 @@ import { handleMigrationRequest } from './handlers/migration.js';
 import { corsHeaders } from './utils/cors.js';
 import { requireAuth } from './utils/auth.js';
 
-// 直接ファイルアクセス処理（レガシー対応）
-async function handleDirectFileAccess(request, env, fileId) {
-  try {
-    console.log('直接ファイルアクセス - fileId:', fileId);
-    
-    // 認証チェック（緩和版）
-    let userId = 'default-user';
-    if (env.ENABLE_AUTH === 'true') {
-      const authResult = await requireAuth(request);
-      if (authResult.authenticated) {
-        userId = authResult.user.userId;
-      } else {
-        const xUserId = request.headers.get('X-User-ID');
-        if (xUserId) {
-          userId = xUserId;
-        }
-      }
-    }
-    
-    // ファイル情報をデータベースから検索
-    const attachment = await env.DB.prepare(
-      'SELECT * FROM attachments WHERE id = ?'
-    ).bind(fileId).first();
-    
-    if (!attachment) {
-      return new Response('File not found', { status: 404 });
-    }
-    
-    // R2からファイル取得
-    const fileObject = await env.FILES.get(attachment.storage_path);
-    if (!fileObject) {
-      return new Response('File not found in storage', { status: 404 });
-    }
-    
-    return new Response(fileObject.body, {
-      headers: {
-        'Content-Type': attachment.mime_type,
-        'Content-Disposition': `attachment; filename="${attachment.original_name}"`,
-        'Content-Length': attachment.file_size.toString(),
-        ...corsHeaders(env.CORS_ORIGIN)
-      }
-    });
-    
-  } catch (error) {
-    console.error('直接ファイルアクセスエラー:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
 
 // ユーザー移行処理
 async function handleUserMigration(request, env) {
@@ -184,11 +136,6 @@ export default {
         return await handleFilesRequest(request, env);
       }
       
-      // 直接ファイルアクセス用エンドポイント（レガシー対応）
-      if (path.startsWith('/files/direct/')) {
-        const fileId = path.replace('/files/direct/', '');
-        return await handleDirectFileAccess(request, env, fileId);
-      }
       
       if (path.startsWith('/api/realtime')) {
         return await handleRealtimeRequest(request, env);
