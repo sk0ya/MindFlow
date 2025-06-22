@@ -362,7 +362,10 @@ export const useMindMapNodes = (data, updateData) => {
 
   // 編集終了
   const finishEdit = (nodeId, newText) => {
-    if (newText.trim() === '') {
+    // newTextがundefinedの場合は現在のeditTextを使用
+    const textToSave = newText !== undefined ? newText : editText;
+    
+    if (!textToSave || textToSave.trim() === '') {
       setEditingNodeId(null);
       setEditText('');
       if (nodeId !== 'root') {
@@ -371,7 +374,7 @@ export const useMindMapNodes = (data, updateData) => {
       return;
     }
     
-    updateNode(nodeId, { text: newText.trim() });
+    updateNode(nodeId, { text: textToSave.trim() });
     setEditingNodeId(null);
     setEditText('');
   };
