@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
-import { useMindMapData } from './useMindMapData_OLD.js';
-import { useMindMapNodes } from './useMindMapNodes_OLD.js';
+import { useMindMapData } from './useMindMapData.js';
+import { useMindMapNodes } from './useMindMapNodes.js';
 import { useMindMapNavigation } from './useMindMapNavigation.js';
-import { useMindMapFiles } from './useMindMapFiles_OLD.js';
+import { useMindMapFiles } from './useMindMapFiles.js';
 import { useMindMapMulti } from './useMindMapMulti.js';
 
-// 緊急復旧: 旧システムベースの統合フック
+// リファクタリング後のメインフック（元のuseMindMapの代替）
 export const useMindMap = (isAppReady = false) => {
   // データ管理
   const {
@@ -45,54 +44,15 @@ export const useMindMap = (isAppReady = false) => {
     toggleCollapse
   } = useMindMapNodes(data, updateData);
 
-  // ナビゲーション（簡略化版）
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  
-  const navigateToDirection = useCallback((direction) => {
-    if (!selectedNodeId || !data?.rootNode) return;
-    
-    const allNodes = flattenNodes(data.rootNode);
-    const currentNode = findNode(selectedNodeId);
-    if (!currentNode) return;
-    
-    let targetNode = null;
-    let minDistance = Infinity;
-    
-    allNodes.forEach(node => {
-      if (node.id === selectedNodeId) return;
-      
-      const dx = node.x - currentNode.x;
-      const dy = node.y - currentNode.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      let isInDirection = false;
-      
-      switch (direction) {
-        case 'up':
-          isInDirection = dy < -20 && Math.abs(dx) < Math.abs(dy);
-          break;
-        case 'down':
-          isInDirection = dy > 20 && Math.abs(dx) < Math.abs(dy);
-          break;
-        case 'left':
-          isInDirection = dx < -20 && Math.abs(dy) < Math.abs(dx);
-          break;
-        case 'right':
-          isInDirection = dx > 20 && Math.abs(dy) < Math.abs(dx);
-          break;
-      }
-      
-      if (isInDirection && distance < minDistance) {
-        minDistance = distance;
-        targetNode = node;
-      }
-    });
-    
-    if (targetNode) {
-      setSelectedNodeId(targetNode.id);
-    }
-  }, [selectedNodeId, data, flattenNodes, findNode, setSelectedNodeId]);
+  // ナビゲーション
+  const { navigateToDirection } = useMindMapNavigation(
+    findNode, 
+    findParentNode, 
+    flattenNodes, 
+    selectedNodeId, 
+    setSelectedNodeId, 
+    data
+  );
 
   // マルチマップ管理
   const {
@@ -119,11 +79,18 @@ export const useMindMap = (isAppReady = false) => {
 
   // switchToMapのラッパー（適切な引数を渡す）
   const switchToMap = async (mapId, selectRoot = false) => {
+    // 履歴管理は現在useMindMapDataで管理されているため、引数なしで呼び出し
     try {
       await switchToMapBase(mapId, selectRoot);
     } catch (error) {
       console.error('❌ マップ切り替え失敗:', error);
     }
+  };
+
+  // カーソル位置の更新（リアルタイム機能用 - 現在は無効化）
+  const updateCursorPosition = (nodeId) => {
+    // リアルタイム機能は一時的に無効化
+    console.log('リアルタイム機能は無効化されています');
   };
 
   return {
@@ -157,16 +124,6 @@ export const useMindMap = (isAppReady = false) => {
     // 折りたたみ
     toggleCollapse,
     
-    // ナビゲーション (簡略化)
-    zoom,
-    setZoom,
-    pan,
-    setPan,
-    resetView: () => {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-    },
-    
     // ファイル添付
     attachFileToNode,
     removeFileFromNode,
@@ -198,6 +155,20 @@ export const useMindMap = (isAppReady = false) => {
     
     // カテゴリー管理
     changeMapCategory,
-    getAvailableCategories
+    getAvailableCategories,
+    
+    // ノード用マップリンク管理（簡略化）
+    addNodeMapLink: () => console.warn('Node map links feature temporarily disabled'),
+    removeNodeMapLink: () => console.warn('Node map links feature temporarily disabled'),
+    updateNodeMapLinkTargetTitle: () => console.warn('Node map links feature temporarily disabled'),
+    
+    // リアルタイム同期（無効化）
+    realtimeClient: null,
+    isRealtimeConnected: false,
+    realtimeStatus: 'disconnected',
+    connectedUsers: [],
+    userCursors: new Map(),
+    initializeRealtime: () => console.warn('Realtime features temporarily disabled'),
+    updateCursorPosition
   };
 };

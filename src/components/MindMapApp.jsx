@@ -1,41 +1,171 @@
-import React, { useState, useEffect } from 'react';
-import { useAppRender } from '../hooks/useAppRender.js';
-import { useMindMapMulti } from '../hooks/useMindMapMulti.js';
-import { authManager } from '../utils/authManager.js';
-import { useOnboarding } from '../hooks/useOnboarding.js';
+﻿import React, { useState, useEffect } from 'react';
+import { useMindMap } from '../hooks/useMindMap';
+import Toolbar from './Toolbar';
+import MindMapCanvas from './MindMapCanvas';
+import NodeCustomizationPanel from './NodeCustomizationPanel';
+import ContextMenu from './ContextMenu';
+import ErrorBoundary from './ErrorBoundary';
+import ImageModal from './ImageModal';
+import FileActionMenu from './FileActionMenu';
+import MindMapSidebar from './MindMapSidebar';
+import NodeMapLinksPanel from './MapLinksPanel';
+import CloudStoragePanelEnhanced from './CloudStoragePanelEnhanced';
+import SyncStatusIndicator from './SyncStatusIndicator';
+import UserPresence from './UserPresence';
+import UserCursors from './UserCursors';
+import ConnectionStatus from './ConnectionStatus';
+import ConflictNotification from './ConflictNotification';
+import CollaborativeFeatures from './CollaborativeFeatures';
+import PerformanceDashboard from './PerformanceDashboard';
+import { exportMindMapAsJSON, importMindMapFromJSON, isFirstTimeSetup, setStorageMode } from '../utils/storageRouter';
+import { getAppSettings } from '../utils/storage';
+import { hasLocalData } from '../utils/localStorage';
 import './MindMapApp.css';
 
-// レンダリングコンポーネント
 import AuthVerification from './AuthVerification.jsx';
 import AuthModal from './AuthModal.jsx';
-import StorageModeSelector from './StorageModeSelector.jsx';
+import { authManager } from '../utils/authManager.js';
 import TutorialOverlay from './TutorialOverlay.jsx';
-import LoadingScreen from './LoadingScreen.jsx';
-import MainApp from './MainApp.jsx';
+import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
+import StorageModeSelector from './StorageModeSelector.jsx';
+import { useOnboarding } from '../hooks/useOnboarding.js';
+import { useAppInitialization } from '../hooks/useAppInitialization.js';
 
 const MindMapApp = () => {
-  // レンダリング状態を取得
-  const { renderType, mindMap, initState } = useAppRender();
-
-  // グローバル認証状態
+  // URL パラメータで認証トークンをチェック
+  const urlParams = new URLSearchParams(window.location.search);
+  const authToken = urlParams.get('token');
+  const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
+  
+  // 認証状態を管理
   const [authState, setAuthState] = useState({
     isAuthenticated: authManager.isAuthenticated(),
     user: authManager.getCurrentUser(),
     isLoading: false
   });
-
-  // ローカルUI状態（メインアプリで使用）
+  
+  // 認証モーダル状態
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { showOnboarding, completeOnboarding, setShowOnboarding } = useOnboarding();
+  
+  // アプリ初期化状態とストレージモード選択フック
+  const initializationState = useAppInitialization();
+  const {
+    isInitializing,
+    showStorageModeSelector,
+    showAuthModal: showInitAuthModal,
+    showOnboarding: showInitOnboarding,
+    storageMode,
+    isReady,
+    handleStorageModeSelect,
+    handleAuthSuccess: handleInitAuthSuccess,
+    handleAuthClose,
+    handleOnboardingComplete
+  } = initializationState;
 
-  // マルチマップ管理
-  const multiMapOps = useMindMapMulti(
-    mindMap.data,
-    mindMap.setData,
-    mindMap.updateData
-  );
+  // ローカルオンボーディング状態
+  const { showOnboarding: showLocalOnboarding, completeOnboarding, setShowOnboarding } = useOnboarding();
+  
+  // 実際のオンボーディング表示判定
+  const showOnboarding = showInitOnboarding || showLocalOnboarding;
+  
+  // UI状態管理
+  const [contextMenu, setContextMenu] = useState(null);
+  const [nodeCustomization, setNodeCustomization] = useState({ isOpen: false, nodeId: null });
+  const [imageModal, setImageModal] = useState(null);
+  const [fileActionMenu, setFileActionMenu] = useState(null);
+  const [mapLinksPanel, setMapLinksPanel] = useState({ isOpen: false, node: null, position: null });
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [showCloudPanel, setShowCloudPanel] = useState(false);
+  const [currentTool, setCurrentTool] = useState('select');
+  const [showPerformanceDash, setShowPerformanceDash] = useState(false);
+  const [showShortcutHelper, setShowShortcutHelper] = useState(false);
 
-  // 認証状態監視
+  // メインのマインドマップフック（アプリが準備完了してから）
+  const mindMap = useMindMap(isReady);
+  
+  // 認証トークン検証時は専用コンポーネントを表示
+  if (isAuthVerification) {
+    return <AuthVerification token={authToken} />;
+  }
+
+  // 初期化中は読み込み画面を表示
+  if (isInitializing) {
+    return (
+      <div className="mindmap-app">
+        <div className="loading-screen">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <h2>アプリケーションを初期化中...</h2>
+            <p>設定を読み込んでいます</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ストレージモード選択画面
+  if (showStorageModeSelector) {
+    return (
+      <div className="mindmap-app">
+        <StorageModeSelector onModeSelect={handleStorageModeSelect} />
+      </div>
+    );
+  }
+
+  // 初期化段階での認証モーダル
+  if (showInitAuthModal) {
+    return (
+      <div className="mindmap-app">
+        <AuthModal
+          isOpen={true}
+          onClose={handleAuthClose}
+          onAuthSuccess={handleInitAuthSuccess}
+        />
+      </div>
+    );
+  }
+
+  // オンボーディング表示
+  if (showOnboarding) {
+    return (
+      <div className="mindmap-app">
+        <TutorialOverlay
+          isVisible={true}
+          onComplete={() => {
+            if (showInitOnboarding) {
+              handleOnboardingComplete();
+            } else {
+              completeOnboarding();
+            }
+          }}
+          onSkip={() => {
+            if (showInitOnboarding) {
+              handleOnboardingComplete();
+            } else {
+              setShowOnboarding(false);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // データが読み込まれていない場合は読み込み画面
+  if (!mindMap.data || mindMap.data.isPlaceholder) {
+    return (
+      <div className="mindmap-app">
+        <div className="loading-screen">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <h2>データを読み込み中...</h2>
+            <p>マインドマップデータを準備しています</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 認証状態変更の監視
   useEffect(() => {
     const handleAuthChange = () => {
       setAuthState({
@@ -54,75 +184,282 @@ const MindMapApp = () => {
     return () => window.removeEventListener('authStateChange', handleAuthChange);
   }, [authState.isAuthenticated, mindMap.triggerCloudSync]);
 
-  // 認証成功ハンドラー（統一）
+  // イベントハンドラー
+  const handleNodeSelect = (nodeId) => {
+    mindMap.setSelectedNodeId(nodeId);
+    setContextMenu(null);
+  };
+
+  const handleNodeEdit = (nodeId, text) => {
+    mindMap.startEdit(nodeId);
+  };
+
+  const handleNodeUpdate = async (nodeId, text) => {
+    await mindMap.updateNode(nodeId, { text });
+  };
+
+  const handleAddChild = async (parentId) => {
+    await mindMap.addChildNode(parentId, '', true);
+  };
+
+  const handleAddSibling = async (nodeId) => {
+    await mindMap.addSiblingNode(nodeId, '', true);
+  };
+
+  const handleDeleteNode = async (nodeId) => {
+    await mindMap.deleteNode(nodeId);
+  };
+
+  const handleNodeDrag = async (nodeId, x, y) => {
+    await mindMap.dragNode(nodeId, x, y);
+  };
+
+  const handleFileUpload = async (nodeId, files) => {
+    try {
+      for (const file of files) {
+        await mindMap.attachFileToNode(nodeId, file);
+      }
+    } catch (error) {
+      console.error('ファイルアップロードエラー:', error);
+      alert(`ファイルアップロードエラー: ${error.message}`);
+    }
+  };
+
+  const handleFileRemove = async (nodeId, fileId) => {
+    try {
+      await mindMap.removeFileFromNode(nodeId, fileId);
+    } catch (error) {
+      console.error('ファイル削除エラー:', error);
+      alert(`ファイル削除エラー: ${error.message}`);
+    }
+  };
+
+  const handleFileDownload = async (file, nodeId) => {
+    try {
+      await mindMap.downloadFile(file, nodeId);
+    } catch (error) {
+      console.error('ファイルダウンロードエラー:', error);
+      alert(`ファイルダウンロードエラー: ${error.message}`);
+    }
+  };
+
+  const handleRightClick = (e, nodeId) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      nodeId: nodeId
+    });
+  };
+
+  const handleContextMenuAction = async (action, nodeId) => {
+    setContextMenu(null);
+    
+    switch (action) {
+      case 'addChild':
+        await handleAddChild(nodeId);
+        break;
+      case 'addSibling':
+        await handleAddSibling(nodeId);
+        break;
+      case 'delete':
+        await handleDeleteNode(nodeId);
+        break;
+      case 'edit':
+        mindMap.startEdit(nodeId);
+        break;
+      case 'customize':
+        setNodeCustomization({ isOpen: true, nodeId });
+        break;
+    }
+  };
+
   const handleAuthSuccess = (user) => {
     setAuthState({ isAuthenticated: true, user, isLoading: false });
-    
-    // initStateの認証モーダル or ローカル認証モーダル
-    if (initState.showAuthModal && initState.handleAuthSuccess) {
-      initState.handleAuthSuccess();
-    } else {
-      setShowAuthModal(false);
-    }
-    
+    setShowAuthModal(false);
     window.dispatchEvent(new CustomEvent('authStateChange'));
   };
 
-  // レンダリングタイプに応じてコンポーネントを返す
-  switch (renderType.type) {
-    case 'AUTH_VERIFICATION':
-      return <AuthVerification token={renderType.props.token} />;
-
-    case 'LOADING':
-      return <LoadingScreen message={renderType.props.message} />;
-
-    case 'STORAGE_SELECTOR':
-      return (
-        <div className="mindmap-app">
-          <StorageModeSelector onModeSelect={renderType.props.onModeSelect} />
+  return (
+    <ErrorBoundary>
+      <div className="mindmap-app">
+        {/* ヘッダー部分 */}
+        <div className="mindmap-header">
+          <Toolbar
+            title={mindMap.data?.title || '無題'}
+            onTitleChange={mindMap.updateTitle}
+            onUndo={mindMap.undo}
+            onRedo={mindMap.redo}
+            canUndo={mindMap.canUndo}
+            canRedo={mindMap.canRedo}
+            onExport={() => exportMindMapAsJSON(mindMap.data)}
+            onImport={importMindMapFromJSON}
+            zoom={1} // 簡略化: zoom機能は後で修正
+            onZoomReset={() => {}} // 簡略化
+            onShowCloudStoragePanel={() => setShowCloudPanel(true)}
+            authState={authState}
+            onShowAuthModal={() => setShowAuthModal(true)}
+            onLogout={() => {
+              authManager.logout();
+              setAuthState({ isAuthenticated: false, user: null, isLoading: false });
+              window.dispatchEvent(new CustomEvent('authStateChange'));
+            }}
+            onShowShortcutHelper={() => setShowShortcutHelper(true)}
+          />
+          
+          <SyncStatusIndicator 
+            syncStatus={{}} // 簡略化: sync状態は後で修正
+            onForceSync={mindMap.saveMindMap}
+          />
+          
+          <div className="connection-info">
+            <ConnectionStatus />
+            <UserPresence />
+          </div>
         </div>
-      );
 
-    case 'AUTH_MODAL':
-      return (
-        <div className="mindmap-app">
+        {/* メインコンテンツエリア */}
+        <div className="mindmap-content">
+          <MindMapCanvas
+            data={mindMap.data}
+            selectedNodeId={mindMap.selectedNodeId}
+            editingNodeId={mindMap.editingNodeId}
+            editText={mindMap.editText}
+            setEditText={mindMap.setEditText}
+            onSelectNode={handleNodeSelect}
+            onStartEdit={handleNodeEdit}
+            onFinishEdit={handleNodeUpdate}
+            onDragNode={handleNodeDrag}
+            onChangeParent={mindMap.changeParent}
+            onAddChild={handleAddChild}
+            onAddSibling={handleAddSibling}
+            onDeleteNode={handleDeleteNode}
+            onRightClick={handleRightClick}
+            onToggleCollapse={mindMap.toggleCollapse}
+            onNavigateToDirection={mindMap.navigateToDirection}
+            onFileUpload={handleFileUpload}
+            onRemoveFile={handleFileRemove}
+            onShowImageModal={setImageModal}
+            onShowFileActionMenu={setFileActionMenu}
+            onShowNodeMapLinks={setMapLinksPanel}
+            zoom={1} // 簡略化
+            setZoom={() => {}} // 簡略化
+            pan={{ x: 0, y: 0 }} // 簡略化
+            setPan={() => {}} // 簡略化
+          />
+
+          <UserCursors />
+        </div>
+
+        {/* サイドバー */}
+        {showSidebar && (
+          <MindMapSidebar
+            allMindMaps={mindMap.allMindMaps}
+            currentMapId={mindMap.currentMapId}
+            onCreateMap={mindMap.createMindMap}
+            onRenameMap={mindMap.renameMindMap}
+            onDeleteMap={mindMap.deleteMindMapById}
+            onSwitchMap={(mapId) => mindMap.switchToMap(mapId, false)}
+            onClose={() => setShowSidebar(false)}
+            onRefresh={mindMap.refreshAllMindMaps}
+            onChangeCategory={mindMap.changeMapCategory}
+            availableCategories={mindMap.getAvailableCategories()}
+          />
+        )}
+
+        {/* クラウドストレージパネル */}
+        {showCloudPanel && (
+          <CloudStoragePanelEnhanced
+            isOpen={showCloudPanel}
+            onClose={() => setShowCloudPanel(false)}
+            authState={authState}
+            setAuthState={setAuthState}
+            onShowAuthModal={() => setShowAuthModal(true)}
+          />
+        )}
+
+        {/* モーダルとメニュー */}
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onAction={(action) => handleContextMenuAction(action, contextMenu.nodeId)}
+            onClose={() => setContextMenu(null)}
+            nodeId={contextMenu.nodeId}
+            isRoot={contextMenu.nodeId === 'root'}
+          />
+        )}
+
+        {nodeCustomization.isOpen && (
+          <NodeCustomizationPanel
+            nodeId={nodeCustomization.nodeId}
+            node={mindMap.findNode(nodeCustomization.nodeId)}
+            onUpdate={(updates) => mindMap.updateNode(nodeCustomization.nodeId, updates)}
+            onClose={() => setNodeCustomization({ isOpen: false, nodeId: null })}
+          />
+        )}
+
+        {imageModal && (
+          <ImageModal
+            file={imageModal}
+            onClose={() => setImageModal(null)}
+          />
+        )}
+
+        {fileActionMenu && (
+          <FileActionMenu
+            file={fileActionMenu.file}
+            nodeId={fileActionMenu.nodeId}
+            position={fileActionMenu.position}
+            onDownload={() => handleFileDownload(fileActionMenu.file, fileActionMenu.nodeId)}
+            onRemove={() => handleFileRemove(fileActionMenu.nodeId, fileActionMenu.file.id)}
+            onRename={(newName) => mindMap.renameFileInNode(fileActionMenu.nodeId, fileActionMenu.file.id, newName)}
+            onClose={() => setFileActionMenu(null)}
+          />
+        )}
+
+        {mapLinksPanel.isOpen && (
+          <NodeMapLinksPanel
+            node={mapLinksPanel.node}
+            position={mapLinksPanel.position}
+            allMindMaps={mindMap.allMindMaps}
+            onAddLink={(targetMapId) => {
+              console.log('🔗 マップリンク追加:', { nodeId: mapLinksPanel.node.id, targetMapId });
+            }}
+            onRemoveLink={(linkId) => {
+              console.log('🔗 マップリンク削除:', { nodeId: mapLinksPanel.node.id, linkId });
+            }}
+            onNavigateToMap={(mapId) => mindMap.switchToMap(mapId)}
+            onClose={() => setMapLinksPanel({ isOpen: false, node: null, position: null })}
+          />
+        )}
+
+        {showAuthModal && (
           <AuthModal
-            isOpen={true}
-            onClose={renderType.props.onClose}
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
             onAuthSuccess={handleAuthSuccess}
           />
-        </div>
-      );
+        )}
 
-    case 'ONBOARDING':
-      return (
-        <div className="mindmap-app">
-          <TutorialOverlay
-            isVisible={true}
-            onComplete={renderType.props.onComplete}
-            onSkip={renderType.props.onSkip}
+        {showShortcutHelper && (
+          <KeyboardShortcutHelper
+            onClose={() => setShowShortcutHelper(false)}
           />
-        </div>
-      );
+        )}
 
-    case 'MAIN_APP':
-      return (
-        <MainApp
-          mindMap={mindMap}
-          multiMapOps={multiMapOps}
-          authState={authState}
-          setAuthState={setAuthState}
-          showAuthModal={showAuthModal}
-          setShowAuthModal={setShowAuthModal}
-          showOnboarding={showOnboarding}
-          completeOnboarding={completeOnboarding}
-          setShowOnboarding={setShowOnboarding}
-        />
-      );
+        {showPerformanceDash && (
+          <PerformanceDashboard
+            onClose={() => setShowPerformanceDash(false)}
+            syncStatus={{}} // 簡略化
+          />
+        )}
 
-    default:
-      return <LoadingScreen message="不明なエラーが発生しました" />;
-  }
+        <CollaborativeFeatures />
+        <ConflictNotification />
+      </div>
+    </ErrorBoundary>
+  );
 };
 
 export default MindMapApp;
