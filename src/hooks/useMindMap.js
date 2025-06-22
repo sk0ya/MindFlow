@@ -54,14 +54,6 @@ export const useMindMap = (isAppReady = false) => {
     data
   );
 
-  // ファイル添付
-  const {
-    attachFileToNode,
-    removeFileFromNode,
-    renameFileInNode,
-    downloadFile
-  } = useMindMapFiles(findNode, updateNode, currentMapId);
-
   // マルチマップ管理
   const {
     allMindMaps,
@@ -75,6 +67,14 @@ export const useMindMap = (isAppReady = false) => {
     getAvailableCategories,
     switchToMap: switchToMapBase
   } = useMindMapMulti(data, setData, updateData);
+
+  // ファイル添付（currentMapIdが定義された後）
+  const {
+    attachFileToNode,
+    removeFileFromNode,
+    renameFileInNode,
+    downloadFile
+  } = useMindMapFiles(findNode, updateNode, currentMapId);
 
   // switchToMapのラッパー（適切な引数を渡す）
   const switchToMap = (mapId, selectRoot = false) => {
