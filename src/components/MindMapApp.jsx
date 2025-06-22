@@ -264,7 +264,7 @@ const MindMapApp = () => {
     return <AuthVerification token={authToken} />;
   }
 
-  if (!initState.isReady && !initState.showStorageModeSelector && !initState.showAuthModal && !initState.showOnboarding) {
+  if (!initState.isReady && !initState.showStorageModeSelector) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
@@ -283,45 +283,20 @@ const MindMapApp = () => {
     );
   }
 
-  if (initState.showAuthModal) {
-    return (
-      <div className="mindmap-app">
-        <AuthModal
-          isOpen={true}
-          onClose={initState.handleAuthClose}
-          onAuthSuccess={(user) => {
-            setAuthState({ isAuthenticated: true, user, isLoading: false });
-            initState.handleAuthSuccess();
-            window.dispatchEvent(new CustomEvent('authStateChange'));
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (initState.showOnboarding) {
-    return (
-      <div className="mindmap-app">
-        <TutorialOverlay
-          onComplete={initState.handleOnboardingComplete}
-          onSkip={initState.handleOnboardingComplete}
-        />
-      </div>
-    );
-  }
-
-  if (!mindMap.data) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p>データを読み込み中...</p>
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
       <div className="mindmap-app">
+        {!mindMap.data && initState.isReady && (
+          <div className="loading-screen">
+            <div className="loading-spinner"></div>
+            <p>データを読み込み中...</p>
+          </div>
+        )}
+        
+        {/* メインコンテンツ - データがある場合のみ表示 */}
+        {mindMap.data && (
+          <>
         {/* ヘッダー部分 */}
         <div className="mindmap-header">
           <Toolbar
@@ -492,6 +467,22 @@ const MindMapApp = () => {
           />
         )}
 
+        {(showAuthModal || initState.showAuthModal) && (
+          <AuthModal
+            isOpen={showAuthModal || initState.showAuthModal}
+            onClose={initState.showAuthModal ? initState.handleAuthClose : () => setShowAuthModal(false)}
+            onAuthSuccess={(user) => {
+              setAuthState({ isAuthenticated: true, user, isLoading: false });
+              if (initState.showAuthModal) {
+                initState.handleAuthSuccess();
+              } else {
+                setShowAuthModal(false);
+              }
+              window.dispatchEvent(new CustomEvent('authStateChange'));
+            }}
+          />
+        )}
+
         {showShortcutHelper && (
           <KeyboardShortcutHelper
             onClose={() => setShowShortcutHelper(false)}
@@ -515,8 +506,15 @@ const MindMapApp = () => {
         {/* コラボレーション機能 */}
         <CollaborativeFeatures />
         <ConflictNotification />
+        </>
+        )}
 
-        {/* 初回セットアップは早期リターンで処理済み */}
+        {/* 初回セットアップ */}
+        {initState.showStorageModeSelector && (
+          <StorageModeSelector
+            onModeSelect={initState.handleStorageModeSelect}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );
