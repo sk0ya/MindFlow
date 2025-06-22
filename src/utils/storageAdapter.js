@@ -132,23 +132,23 @@ class CloudStorageAdapter {
       throw new Error('認証が必要です');
     }
 
-    const token = authManager.getAuthToken();
+    const authHeader = authManager.getAuthHeader(); // これは既に "Bearer ${token}" 形式
     const user = authManager.getCurrentUser();
     
-    if (!token) {
-      throw new Error('認証トークンが見つかりません');
+    if (!authHeader) {
+      throw new Error('認証ヘッダーが見つかりません');
     }
 
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      'Authorization': authHeader, // Bearerプレフィックスは既に含まれている
       'X-User-ID': user?.email || 'unknown'
     };
     
     console.log('📤 送信ヘッダー:', {
       hasAuth: !!headers.Authorization,
-      userId: headers['X-User-ID'],
-      tokenLength: token?.length || 0
+      authHeader: authHeader.substring(0, 20) + '...',
+      userId: headers['X-User-ID']
     });
     
     return headers;
@@ -156,11 +156,12 @@ class CloudStorageAdapter {
 
   async getAllMaps() {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: マップ一覧取得開始');
       
-      const response = await fetch(`${this.baseUrl}/mindmaps`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps`, {
+        method: 'GET'
       });
 
       if (!response.ok) {
@@ -180,11 +181,12 @@ class CloudStorageAdapter {
 
   async getMap(mapId) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
-      const response = await fetch(`${this.baseUrl}/mindmaps/${mapId}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps/${mapId}`, {
+        method: 'GET'
       });
 
       if (!response.ok) {
@@ -206,19 +208,12 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
       
-      // 認証状態を詳細チェック
-      await this.debugAuthState();
-      
-      const headers = await this.getAuthHeaders();
-      console.log('📤 API呼び出し:', {
-        url: `${this.baseUrl}/mindmaps`,
+      const { authManager } = await import('./authManager.js');
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/mindmaps`, {
         method: 'POST',
-        hasHeaders: !!headers
-      });
-      
-      const response = await fetch(`${this.baseUrl}/mindmaps`, {
-        method: 'POST',
-        headers: headers,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(mapData)
       });
 
@@ -230,8 +225,20 @@ class CloudStorageAdapter {
             status: response.status,
             statusText: response.statusText,
             body: errorBody,
-            url: response.url
+            url: response.url,
+            headers: Object.fromEntries(response.headers.entries())
           });
+          
+          // 401エラーの場合、送信したヘッダーも再表示
+          if (response.status === 401) {
+            const sentHeaders = await this.getAuthHeaders();
+            console.error('🔑 送信した認証ヘッダー (401エラー時):', {
+              authorization: sentHeaders.Authorization?.substring(0, 50) + '...',
+              userId: sentHeaders['X-User-ID'],
+              contentType: sentHeaders['Content-Type']
+            });
+          }
+          
           errorDetail += ` - ${errorBody}`;
         } catch (e) {
           console.error('❌ エラーレスポンス読み取り失敗:', e);
