@@ -50,8 +50,8 @@ export const useMindMapData = (isAppReady = false) => {
       
       if (settings.storageMode === 'local') {
         // ローカルモード: データを初期化
-        const mindMap = getCurrentMindMap();
-        if (mindMap) {
+        const mindMap = await getCurrentMindMap();
+        if (mindMap && mindMap.rootNode) {
           console.log('📁 ローカルモード: 既存データ読み込み');
           const processedData = assignColorsToExistingNodes(mindMap);
           await dataManager.initializeData(processedData);

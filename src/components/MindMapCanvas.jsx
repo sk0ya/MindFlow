@@ -41,7 +41,7 @@ const MindMapCanvas = ({
 
   const flattenVisibleNodes = (node) => {
     const result = [node];
-    if (!node.collapsed && node.children) {
+    if (!node?.collapsed && node?.children) {
       node.children.forEach(child => 
         result.push(...flattenVisibleNodes(child))
       );

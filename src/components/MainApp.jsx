@@ -154,6 +154,8 @@ const MainApp = ({
             onShowPerformanceDash={() => setShowPerformanceDash(!showPerformanceDash)}
             currentTool={currentTool}
             onToolChange={setCurrentTool}
+            authState={authState}
+            setAuthState={setAuthState}
           />
           
           <SyncStatusIndicator 
@@ -174,23 +176,27 @@ const MainApp = ({
             selectedNodeId={mindMap.selectedNodeId}
             editingNodeId={mindMap.editingNodeId}
             editText={mindMap.editText}
-            onNodeSelect={handleNodeSelect}
-            onNodeEdit={handleNodeEdit}
-            onNodeUpdate={handleNodeUpdate}
-            onNodeDrag={handleNodeDrag}
-            onNodeRightClick={handleRightClick}
+            setEditText={mindMap.setEditText}
+            onSelectNode={handleNodeSelect}
+            onStartEdit={handleNodeEdit}
+            onFinishEdit={handleNodeUpdate}
+            onDragNode={handleNodeDrag}
+            onChangeParent={mindMap.changeParent}
             onAddChild={handleAddChild}
+            onAddSibling={handleAddSibling}
             onDeleteNode={handleDeleteNode}
+            onRightClick={handleRightClick}
+            onToggleCollapse={mindMap.toggleCollapse}
+            onNavigateToDirection={mindMap.navigateToDirection}
             onFileUpload={handleFileUpload}
-            onFileRemove={handleFileRemove}
+            onRemoveFile={handleFileRemove}
             onShowImageModal={setImageModal}
             onShowFileActionMenu={setFileActionMenu}
             onShowNodeMapLinks={setMapLinksPanel}
-            setEditText={mindMap.setEditText}
-            finishEdit={mindMap.finishEdit}
-            findNode={mindMap.findNode}
-            toggleCollapse={mindMap.toggleCollapse}
-            currentTool={currentTool}
+            zoom={mindMap.zoom}
+            setZoom={mindMap.setZoom}
+            pan={mindMap.pan}
+            setPan={mindMap.setPan}
           />
 
           <UserCursors />

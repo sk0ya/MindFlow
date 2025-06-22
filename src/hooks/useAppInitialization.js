@@ -48,16 +48,35 @@ export const useAppInitialization = () => {
               isReady: true
             });
           } else if (settings.storageMode === 'cloud') {
-            // クラウドモード
-            setInitState({
-              isInitializing: false,
-              showStorageModeSelector: false,
-              showAuthModal: false,
-              showOnboarding: false,
-              storageMode: 'cloud',
-              hasExistingLocalData: hasData,
-              isReady: true
-            });
+            // クラウドモード - 認証状態をチェック
+            const { authManager } = await import('../utils/authManager.js');
+            const isAuthenticated = authManager.isAuthenticated();
+            
+            console.log('☁️ クラウドモード: 認証状態 =', isAuthenticated);
+            
+            if (isAuthenticated) {
+              // 認証済み - 直接アプリ開始
+              setInitState({
+                isInitializing: false,
+                showStorageModeSelector: false,
+                showAuthModal: false,
+                showOnboarding: false,
+                storageMode: 'cloud',
+                hasExistingLocalData: hasData,
+                isReady: true
+              });
+            } else {
+              // 未認証 - 認証画面を表示
+              setInitState({
+                isInitializing: false,
+                showStorageModeSelector: false,
+                showAuthModal: true,
+                showOnboarding: false,
+                storageMode: 'cloud',
+                hasExistingLocalData: hasData,
+                isReady: false
+              });
+            }
           }
           
         } else {
