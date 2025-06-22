@@ -157,8 +157,8 @@ class AuthManager {
       // ログイン成功時にマップ一覧を同期
       try {
         console.log('🔄 ログイン成功時マップ一覧同期開始...');
-        const { getAllMindMapsHybrid } = await import('./storage.js');
-        await getAllMindMapsHybrid();
+        const { getAllMindMaps } = await import('./storageRouter.js');
+        await getAllMindMaps();
         console.log('✅ ログイン成功時マップ一覧同期完了');
       } catch (syncError) {
         console.warn('⚠️ ログイン成功時マップ一覧同期失敗:', syncError);

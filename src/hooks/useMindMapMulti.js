@@ -131,8 +131,8 @@ export const useMindMapMulti = (data, setData, updateData) => {
         console.log('☁️ クラウドマップ削除成功');
       } else {
         // ローカルから削除
-        const { deleteMindMap } = await import('../utils/storage.js');
-        const newCurrentMap = deleteMindMap(mapId);
+        const { deleteMindMap } = await import('../utils/storageRouter.js');
+        await deleteMindMap(mapId);
         console.log('🏠 ローカルマップ削除成功');
       }
       

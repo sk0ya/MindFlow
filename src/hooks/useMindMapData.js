@@ -22,6 +22,15 @@ export const useMindMapData = (isAppReady = false) => {
     autoSaveTimeoutRef.current = setTimeout(async () => {
       if (data && !data.isPlaceholder) {
         try {
+          // 編集中のテキストを強制確定（存在する場合）
+          const editingInput = document.querySelector('.node-input');
+          if (editingInput) {
+            console.log('📝 編集中のノードを検出、テキストを確定します');
+            editingInput.blur(); // フォーカスを外して確定
+            // 少し待ってから保存（確定処理の完了を待つ）
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
           const { saveMindMap } = await import('../utils/storageRouter.js');
           await saveMindMap(data);
           console.log('💾 マップ全体保存完了:', data.title);
