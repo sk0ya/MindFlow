@@ -74,7 +74,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノード更新（完全分離版）
-  const updateNode = async (nodeId, updates, syncToCloud = true) => {
+  const updateNode = async (nodeId, updates, syncToCloud = true, options = {}) => {
     // 1. ローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
       if (node.id === nodeId) return { ...node, ...updates };
@@ -83,12 +83,16 @@ export const useMindMapNodes = (data, updateData) => {
     
     const currentData = dataRef.current;
     const newData = { ...currentData, rootNode: updateNodeRecursive(currentData.rootNode) };
-    // ファイル添付などの重要な操作では即座保存
-    if (updates.attachments) {
-      await updateData(newData, { skipHistory: false, saveImmediately: true });
-    } else {
-      await updateData(newData, { skipHistory: false, immediate: true });
-    }
+    
+    // 更新オプションの準備
+    const updateOptions = {
+      skipHistory: false,
+      source: options.source || 'updateNode',
+      allowDuringEdit: options.allowDuringEdit || false,
+      ...(updates.attachments ? { saveImmediately: true } : { immediate: true })
+    };
+    
+    await updateData(newData, updateOptions);
     
     // 2. ストレージアダプターを通じて反映（現在は無効化）
     if (syncToCloud) {
@@ -434,11 +438,11 @@ export const useMindMapNodes = (data, updateData) => {
       });
       // 空でも既存の内容があった場合は削除せず、元の内容を復元
       if (currentNode?.text) {
-        updateNode(nodeId, { text: currentNode.text });
+        updateNode(nodeId, { text: currentNode.text }, true, { allowDuringEdit: true, source: 'finishEdit-restore' });
       }
     } else if (!isEmpty) {
       console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-      updateNode(nodeId, { text: textToSave.trim() });
+      updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
     }
     
     // 編集状態をリセット（対象ノードが現在編集中の場合のみ）
@@ -462,7 +466,7 @@ export const useMindMapNodes = (data, updateData) => {
       
       if (!isEmpty) {
         console.log('📝 finishEdit - テキストのみ保存:', textToSave.trim());
-        updateNode(nodeId, { text: textToSave.trim() });
+        updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-textOnly' });
       }
       // 編集状態は変更せずにreturn
       return;
@@ -482,7 +486,7 @@ export const useMindMapNodes = (data, updateData) => {
       // テキスト保存は実行するが、編集状態の変更はスキップ
       if (!isEmpty) {
         console.log('📝 finishEdit - 保護モード: テキストのみ保存:', textToSave.trim());
-        updateNode(nodeId, { text: textToSave.trim() });
+        updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-protected' });
       }
       return;
     }
