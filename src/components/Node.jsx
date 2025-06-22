@@ -33,6 +33,20 @@ const Node = ({
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef(null);
   const blurTimeoutRef = useRef(null);
+  
+  // 編集モードになった時に確実にフォーカスを設定
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      // 少し遅延してからフォーカス（DOM更新完了後）
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+          console.log('🎯 フォーカス設定完了:', { nodeId: node.id, focused: document.activeElement === inputRef.current });
+        }
+      }, 10);
+    }
+  }, [isEditing, node.id]);
 
   const handleMouseDown = useCallback((e) => {
     e.stopPropagation();
@@ -218,10 +232,25 @@ const Node = ({
       const currentValue = e.target ? e.target.value : editText;
       console.log('🎹 Node.jsx blur実行:', { finalValue: currentValue });
       
-      // タイマーは使わず即座に実行（値の確実な保存のため）
-      onFinishEdit(node.id, currentValue);
+      // 新しく作成されたノードの場合は少し遅延（フォーカス移動を待つ）
+      const isNewlyCreated = !node.text && currentValue === '';
+      if (isNewlyCreated) {
+        // 新規ノードで空の場合は200ms待って、再度フォーカスチェック
+        blurTimeoutRef.current = setTimeout(() => {
+          // まだフォーカスが戻ってこない場合のみ削除
+          if (document.activeElement !== inputRef.current) {
+            console.log('🗑️ 新規空ノードを削除:', node.id);
+            onFinishEdit(node.id, currentValue);
+          } else {
+            console.log('🎯 フォーカス復帰のため削除キャンセル:', node.id);
+          }
+        }, 200);
+      } else {
+        // 既存ノードは即座に保存
+        onFinishEdit(node.id, currentValue);
+      }
     }
-  }, [node.id, editText, onFinishEdit, isComposing]);
+  }, [node.id, node.text, editText, onFinishEdit, isComposing]);
 
   // ファイルアップロードのハンドラ
   const handleFileUpload = useCallback((e) => {

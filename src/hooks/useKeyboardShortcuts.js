@@ -81,8 +81,9 @@ export const useKeyboardShortcuts = ({
           // テキストがある場合のみ兄弟ノード追加
           if (currentText.trim() && addSiblingNode) {
             setTimeout(() => {
-              addSiblingNode(editingNodeId, '', true);
-            }, 50); // DOM更新を待つ
+              const newNodeId = addSiblingNode(editingNodeId, '', true);
+              console.log('📍 兄弟ノード作成完了:', { newNodeId, parentId: editingNodeId });
+            }, 100); // DOM更新とフォーカス設定を確実に待つ
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
@@ -100,8 +101,9 @@ export const useKeyboardShortcuts = ({
           // テキストがある場合のみ子ノード追加
           if (currentText.trim() && addChildNode) {
             setTimeout(() => {
-              addChildNode(editingNodeId, '', true);
-            }, 50); // DOM更新を待つ
+              const newNodeId = addChildNode(editingNodeId, '', true);
+              console.log('📍 子ノード作成完了:', { newNodeId, parentId: editingNodeId });
+            }, 100); // DOM更新とフォーカス設定を確実に待つ
           }
         }
         return;
