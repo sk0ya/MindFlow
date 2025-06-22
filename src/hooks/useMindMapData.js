@@ -1,62 +1,51 @@
-import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
+// 新しいDataManagerベースのデータ管理フック
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { dataManager } from '../utils/dataManager.js';
+import { getCurrentMindMap, saveMindMap } from '../utils/storageRouter.js';
 import { getAppSettings } from '../utils/storage.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
 
-// データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
   const [data, setData] = useState(null);
-  
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
-  
+  const [syncStatus, setSyncStatus] = useState(dataManager.getSyncStatus());
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const autoSaveTimeoutRef = useRef(null);
+  const syncStatusInterval = useRef(null);
   
-  // 即座保存機能
-  const saveImmediately = async (dataToSave = data) => {
-    if (!dataToSave || dataToSave.isPlaceholder) return;
+  // DataManagerの状態更新コールバック
+  const handleDataManagerUpdate = useCallback((updatedData) => {
+    console.log('📊 DataManagerからデータ更新通知', updatedData.id);
+    setData(updatedData);
     
-    try {
-      // タイマーをクリア
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
-
-      // 編集中のテキストを強制確定（存在する場合）
-      const editingInput = document.querySelector('.node-input');
-      if (editingInput) {
-        console.log('📝 即座保存: 編集中のノードを検出、テキストを確定します');
-        editingInput.blur();
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      
-      const { saveMindMap } = await import('../utils/storageRouter.js');
-      await saveMindMap(dataToSave);
-      console.log('💾 即座保存完了:', dataToSave.title);
-    } catch (error) {
-      console.warn('⚠️ 即座保存失敗:', error.message);
-    }
-  };
-
-  // 自動保存を開始（ノード個別同期無効化中の対策）
-  const startAutoSave = () => {
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
+    // 履歴に追加（操作によっては除外する場合もある）
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(deepClone(updatedData));
+      return newHistory.slice(-50); // 最大50件保持
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex]);
+  
+  // 同期状態の監視
+  useEffect(() => {
+    syncStatusInterval.current = setInterval(() => {
+      setSyncStatus(dataManager.getSyncStatus());
+    }, 1000);
     
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      await saveImmediately();
-    }, 2000); // 2秒後に保存
-  };
+    return () => {
+      if (syncStatusInterval.current) {
+        clearInterval(syncStatusInterval.current);
+      }
+    };
+  }, []);
   
   // アプリ準備完了時のデータ初期化
   useEffect(() => {
     if (!isAppReady || data !== null) return;
 
     const initializeData = async () => {
-      console.log('🚀 データ初期化開始 (isAppReady: true)');
+      console.log('🚀 DataV2: データ初期化開始 (isAppReady: true)');
       const settings = getAppSettings();
       
       if (settings.storageMode === 'local') {
@@ -64,10 +53,14 @@ export const useMindMapData = (isAppReady = false) => {
         const mindMap = getCurrentMindMap();
         if (mindMap) {
           console.log('📁 ローカルモード: 既存データ読み込み');
-          setData(assignColorsToExistingNodes(mindMap));
+          const processedData = assignColorsToExistingNodes(mindMap);
+          await dataManager.initializeData(processedData);
+          setData(processedData);
         } else {
           console.log('📁 ローカルモード: 新規マップ作成');
-          setData(createInitialData());
+          const newData = createInitialData();
+          await dataManager.initializeData(newData);
+          setData(newData);
         }
         console.log('📁 ローカルモード: 初期化完了');
         
@@ -77,13 +70,15 @@ export const useMindMapData = (isAppReady = false) => {
       } else {
         // フォールバック
         console.log('❓ 設定不明: デフォルトデータ');
-        setData(createInitialData());
+        const newData = createInitialData();
+        await dataManager.initializeData(newData);
+        setData(newData);
       }
     };
 
     initializeData();
   }, [isAppReady, data]);
-
+  
   // クラウド同期処理（統一）
   const initializeFromCloud = async () => {
     try {
@@ -114,6 +109,7 @@ export const useMindMapData = (isAppReady = false) => {
         
         if (fullMapData) {
           const processedData = assignColorsToExistingNodes(fullMapData);
+          await dataManager.initializeData(processedData);
           setData(processedData);
           console.log('✅ クラウド同期完了');
         }
@@ -122,12 +118,16 @@ export const useMindMapData = (isAppReady = false) => {
         console.log('📭 クラウドにマップなし: 新規作成');
         const newMap = createInitialData();
         newMap.title = '新しいマインドマップ';
+        await dataManager.initializeData(newMap);
         setData(newMap);
         
         // クラウドに保存
         try {
-          const { saveMindMap } = await import('../utils/storageRouter.js');
-          await saveMindMap(newMap);
+          await dataManager.executeOperation(
+            dataManager.OPERATION_TYPES.METADATA_UPDATE,
+            { title: newMap.title },
+            { onLocalUpdate: handleDataManagerUpdate }
+          );
           console.log('✅ 新規マップのクラウド保存完了');
         } catch (saveError) {
           console.warn('❌ 新規マップ保存失敗:', saveError);
@@ -137,134 +137,213 @@ export const useMindMapData = (isAppReady = false) => {
       console.warn('❌ クラウド同期失敗:', error);
       // エラー時は新規マップで開始
       const newMap = createInitialData();
+      await dataManager.initializeData(newMap);
       setData(newMap);
     } finally {
       setIsLoadingFromCloud(false);
     }
   };
-
+  
   // 認証成功時のクラウド同期トリガー
   const triggerCloudSync = async () => {
+    const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
     if (isCloudStorageEnabled() && data?.isPlaceholder) {
       console.log('🔑 認証成功: クラウド同期をトリガー');
       await initializeFromCloud();
     }
   };
-
-  // 履歴に追加
-  const addToHistory = (newData) => {
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push(deepClone(newData));
-      return newHistory.slice(-50);
-    });
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-  };
-
-  // データ更新の共通処理（リアルタイム同期対応）
-  const updateData = async (newData, options = {}) => {
-    // プレースホルダーデータの場合は更新を無視
+  
+  // 新しい操作メソッド（DataManagerベース）
+  const updateNodeText = useCallback(async (nodeId, text) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.TEXT_EDIT,
+      { nodeId, text },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const addNode = useCallback(async (parentId, nodeData, position = null) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.NODE_ADD,
+      { parentId, nodeData, position },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const deleteNode = useCallback(async (nodeId) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.NODE_DELETE,
+      { nodeId },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const moveNode = useCallback(async (nodeId, newX, newY, newParentId = null) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.NODE_MOVE,
+      { nodeId, newX, newY, newParentId },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const attachFile = useCallback(async (nodeId, fileData) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.FILE_ATTACH,
+      { nodeId, fileData },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const removeFile = useCallback(async (nodeId, fileId) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.FILE_REMOVE,
+      { nodeId, fileId },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  const updateLayout = useCallback(async (layout) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.LAYOUT_CHANGE,
+      { layout },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  // 既存互換メソッド
+  const updateData = useCallback(async (newData, options = {}) => {
+    // 旧式のupdateDataとの互換性維持
+    console.log('⚠️ 旧式updateData使用 - DataManagerに移行推奨');
+    
     if (data?.isPlaceholder) {
       console.log('⏳ プレースホルダー中: データ更新をスキップ');
       return;
     }
     
+    // DataManagerを通さず直接更新（非推奨）
     setData(newData);
     
-    // リアルタイム操作の適用中でない場合のみ履歴に追加
     if (!options.skipHistory) {
-      addToHistory(newData);
+      setHistory(prev => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push(deepClone(newData));
+        return newHistory.slice(-50);
+      });
+      setHistoryIndex(prev => Math.min(prev + 1, 49));
     }
     
     // 保存処理
     if (options.saveImmediately) {
-      // 即座保存（重要な操作用）
-      await saveImmediately(newData);
-    } else if (options.immediate) {
-      // 通常の自動保存（2秒デバウンス）
-      startAutoSave();
+      try {
+        await saveMindMap(newData);
+        console.log('💾 緊急保存完了:', newData.title);
+      } catch (error) {
+        console.warn('⚠️ 緊急保存失敗:', error.message);
+      }
     }
-    
-    console.log('🔄 データ更新完了:', {
-      id: newData.id,
-      immediate: options.immediate || false,
-      saveImmediately: options.saveImmediately || false,
-      skipHistory: options.skipHistory || false
-    });
-    
-    // カスタムコールバックがあれば実行
-    if (options.onUpdate) {
-      options.onUpdate(newData, options);
-    }
-  };
-
-  // Undo
+  }, [data, historyIndex]);
+  
+  // Undo/Redo
   const undo = async () => {
     if (historyIndex > 0) {
       const previousData = history[historyIndex - 1];
+      await dataManager.initializeData(previousData);
       setData(previousData);
       setHistoryIndex(prev => prev - 1);
-      await saveMindMap(previousData);
     }
   };
 
-  // Redo
   const redo = async () => {
     if (historyIndex < history.length - 1) {
       const nextData = history[historyIndex + 1];
+      await dataManager.initializeData(nextData);
       setData(nextData);
       setHistoryIndex(prev => prev + 1);
-      await saveMindMap(nextData);
     }
   };
+  
+  // 設定・メタデータ更新
+  const updateSettings = useCallback(async (newSettings) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.METADATA_UPDATE,
+      { settings: { ...data.settings, ...newSettings } },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [data, handleDataManagerUpdate]);
 
-  // 設定を更新
-  const updateSettings = (newSettings) => {
-    updateData({
-      ...data,
-      settings: { ...data.settings, ...newSettings }
-    });
-  };
+  const updateTitle = useCallback(async (newTitle) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.METADATA_UPDATE,
+      { title: newTitle },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
 
-  // マップタイトルを更新
-  const updateTitle = (newTitle) => {
-    updateData({ ...data, title: newTitle });
-  };
-
-  // テーマを変更
-  const changeTheme = (themeName) => {
-    updateData({ ...data, theme: themeName });
-  };
-
+  const changeTheme = useCallback(async (themeName) => {
+    return dataManager.executeOperation(
+      dataManager.OPERATION_TYPES.METADATA_UPDATE,
+      { theme: themeName },
+      { onLocalUpdate: handleDataManagerUpdate }
+    );
+  }, [handleDataManagerUpdate]);
+  
+  // 強制同期
+  const forceSync = useCallback(async () => {
+    try {
+      await dataManager.processPendingOperations();
+      console.log('✅ 強制同期完了');
+    } catch (error) {
+      console.error('❌ 強制同期失敗:', error);
+    }
+  }, []);
+  
   // 初期化時に履歴を設定
   useEffect(() => {
-    if (history.length === 0) {
+    if (data && history.length === 0) {
       setHistory([deepClone(data)]);
       setHistoryIndex(0);
     }
-    
-    // クリーンアップ
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [data, history.length]);
 
   return {
+    // データとステート
     data,
     setData,
-    updateData,
-    saveImmediately,
+    isLoadingFromCloud,
+    syncStatus,
+    
+    // 新しい操作メソッド（DataManagerベース）
+    updateNodeText,
+    addNode,
+    deleteNode,
+    moveNode,
+    attachFile,
+    removeFile,
+    updateLayout,
+    
+    // メタデータ操作
+    updateSettings,
+    updateTitle,
+    changeTheme,
+    
+    // 履歴操作
     undo,
     redo,
     canUndo: historyIndex > 0,
     canRedo: historyIndex < history.length - 1,
-    updateSettings,
-    updateTitle,
-    changeTheme,
-    saveMindMap: async () => await saveMindMap(data),
-    isLoadingFromCloud,
-    triggerCloudSync
+    
+    // 同期操作
+    forceSync,
+    triggerCloudSync,
+    
+    // 旧式互換（非推奨）
+    updateData,
+    saveMindMap: async () => {
+      console.warn('⚠️ 旧式saveMindMap使用 - forceSync推奨');
+      await forceSync();
+    },
+    
+    // デバッグ用
+    dataManager
   };
 };
