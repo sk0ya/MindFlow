@@ -73,36 +73,85 @@ class CloudStorageAdapter {
     this.name = 'クラウドストレージ';
     this.baseUrl = '';
     this.pendingOperations = new Map();
-    this.initialize();
+    this.isInitialized = false;
+    this.initPromise = this.initialize();
+  }
+
+  // 認証状態の詳細チェック
+  async debugAuthState() {
+    const { authManager } = await import('./authManager.js');
+    
+    const authState = {
+      isAuthenticated: authManager.isAuthenticated(),
+      hasToken: !!authManager.getAuthToken(),
+      tokenLength: authManager.getAuthToken()?.length || 0,
+      user: authManager.getCurrentUser(),
+      rawToken: authManager.getAuthToken()?.substring(0, 50) + '...' // 最初の50文字のみ
+    };
+    
+    console.log('🔍 詳細認証状態:', authState);
+    return authState;
+  }
+
+  async ensureInitialized() {
+    if (!this.isInitialized) {
+      await this.initPromise;
+    }
   }
 
   async initialize() {
     const { authManager } = await import('./authManager.js');
     
-    if (!authManager.isAuthenticated()) {
-      console.log('☁️ クラウド: 未認証のため初期化スキップ');
-      return;
-    }
-
+    console.log('☁️ クラウド: 初期化開始', {
+      isAuthenticated: authManager.isAuthenticated(),
+      hasToken: !!authManager.getAuthToken()
+    });
+    
     this.baseUrl = window.location.hostname === 'localhost' 
       ? 'http://localhost:8787/api' 
       : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
     
-    console.log('☁️ クラウド: 初期化完了', this.baseUrl);
+    console.log('☁️ クラウド: 初期化完了', {
+      baseUrl: this.baseUrl,
+      authenticated: authManager.isAuthenticated()
+    });
+    
+    this.isInitialized = true;
   }
 
   async getAuthHeaders() {
     const { authManager } = await import('./authManager.js');
     
+    console.log('🔍 認証状態確認:', {
+      isAuthenticated: authManager.isAuthenticated(),
+      hasToken: !!authManager.getAuthToken(),
+      user: authManager.getCurrentUser()
+    });
+    
     if (!authManager.isAuthenticated()) {
       throw new Error('認証が必要です');
     }
 
-    return {
+    const token = authManager.getAuthToken();
+    const user = authManager.getCurrentUser();
+    
+    if (!token) {
+      throw new Error('認証トークンが見つかりません');
+    }
+
+    const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authManager.getAuthToken()}`,
-      'X-User-ID': authManager.getCurrentUser()?.email || 'unknown'
+      'Authorization': `Bearer ${token}`,
+      'X-User-ID': user?.email || 'unknown'
     };
+    
+    console.log('📤 送信ヘッダー:', {
+      hasAuth: !!headers.Authorization,
+      userId: headers['X-User-ID'],
+      tokenLength: token?.length || 0
+    });
+    
+    return headers;
   }
 
   async getAllMaps() {
@@ -154,16 +203,40 @@ class CloudStorageAdapter {
 
   async createMap(mapData) {
     try {
+      await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
+      
+      // 認証状態を詳細チェック
+      await this.debugAuthState();
+      
+      const headers = await this.getAuthHeaders();
+      console.log('📤 API呼び出し:', {
+        url: `${this.baseUrl}/mindmaps`,
+        method: 'POST',
+        hasHeaders: !!headers
+      });
       
       const response = await fetch(`${this.baseUrl}/mindmaps`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify(mapData)
       });
 
       if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
+        let errorDetail = `${response.status} ${response.statusText}`;
+        try {
+          const errorBody = await response.text();
+          console.error('❌ API エラー詳細:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorBody,
+            url: response.url
+          });
+          errorDetail += ` - ${errorBody}`;
+        } catch (e) {
+          console.error('❌ エラーレスポンス読み取り失敗:', e);
+        }
+        throw new Error(`API エラー: ${errorDetail}`);
       }
 
       const result = await response.json();
