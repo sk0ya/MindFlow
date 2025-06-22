@@ -64,6 +64,7 @@ const MindMapApp = () => {
     editingNodeId,
     editText,
     setSelectedNodeId,
+    setEditingNodeId,
     setEditText,
     updateNode,
     addChildNode,
@@ -150,16 +151,12 @@ const MindMapApp = () => {
   useKeyboardShortcuts({
     selectedNodeId,
     editingNodeId,
-    setEditingNodeId: (nodeId) => {
-      if (nodeId) {
-        startEdit(nodeId);
-      } else {
-        finishEdit(editingNodeId, editText);
-      }
-    },
+    setEditingNodeId,
+    setEditText,
     startEdit,
     finishEdit,
     editText,
+    updateNode,
     addChildNode,
     addSiblingNode,
     deleteNode,

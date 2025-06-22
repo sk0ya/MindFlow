@@ -5,9 +5,11 @@ export const useKeyboardShortcuts = ({
   selectedNodeId,
   editingNodeId,
   setEditingNodeId,
+  setEditText,
   startEdit,
   finishEdit,
   editText,
+  updateNode,
   addChildNode,
   addSiblingNode,
   deleteNode,
@@ -63,65 +65,20 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // 編集中の場合は、Tab/Enterキーを処理
+      // 編集中の場合は、まず編集を終了してから通常のキー処理を行う
       if (editingNodeId) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          console.log('⌨️ useKeyboardShortcuts Enter処理:', { editingNodeId, editText });
-          
-          // 実際の入力フィールドから現在の値を取得（新ノード作成前に）
-          const currentInputElement = document.querySelector('.node-input');
-          const currentText = currentInputElement ? currentInputElement.value : editText;
-          
-          console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
-          
-          // テキストがある場合のみ兄弟ノード追加（編集終了前に実行）
-          if (currentText.trim() && addSiblingNode) {
-            // 元の編集中ノードIDと現在のテキストを保存
-            const originalEditingNodeId = editingNodeId;
-            const originalText = currentText;
-            
-            // 先に新ノードを作成してから編集終了
-            const newNodeId = addSiblingNode(editingNodeId, '', true);
-            console.log('📍 兄弟ノード作成完了:', { newNodeId, parentId: editingNodeId });
-            
-            // その後で前のノード（元の編集中ノード）の編集を終了（削除無効化）
-            setTimeout(() => {
-              finishEdit(originalEditingNodeId, originalText.trim(), { allowDelete: false });
-            }, 50);
-          } else {
-            // テキストが空の場合は通常通り編集終了
-            finishEdit(editingNodeId, currentText.trim());
-          }
+          console.log('🔧 ULTRA SIMPLE Enter: 編集終了');
+          finishEdit(editingNodeId, editText);
+          // 編集終了後、通常のEnterキー処理は下の非編集時処理で実行される
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
-          console.log('⌨️ useKeyboardShortcuts Tab処理:', { editingNodeId, editText });
-          
-          // 実際の入力フィールドから現在の値を取得
-          const currentInputElement = document.querySelector('.node-input');
-          const currentText = currentInputElement ? currentInputElement.value : editText;
-          
-          console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
-          
-          // テキストがある場合のみ子ノード追加（編集終了前に実行）
-          if (currentText.trim() && addChildNode) {
-            // 元の編集中ノードIDと現在のテキストを保存
-            const originalEditingNodeId = editingNodeId;
-            const originalText = currentText;
-            
-            // 先に新ノードを作成してから編集終了
-            const newNodeId = addChildNode(editingNodeId, '', true);
-            console.log('📍 子ノード作成完了:', { newNodeId, parentId: editingNodeId });
-            
-            // その後で前のノード（元の編集中ノード）の編集を終了（削除無効化）
-            setTimeout(() => {
-              finishEdit(originalEditingNodeId, originalText.trim(), { allowDelete: false });
-            }, 50);
-          } else {
-            // テキストが空の場合は通常通り編集終了
-            finishEdit(editingNodeId, currentText.trim());
-          }
+          console.log('🔧 ULTRA SIMPLE Tab: 編集終了');
+          finishEdit(editingNodeId, editText);
+          // 編集終了後、通常のTabキー処理は下の非編集時処理で実行される
         }
+        // 他のキーはそのまま編集を続ける
         return;
       }
 

@@ -48,6 +48,7 @@ export const useMindMap = (isAppReady = false) => {
     
     // 状態更新
     setSelectedNodeId: nodeHook.setSelectedNodeId,
+    setEditingNodeId: nodeHook.setEditingNodeId,
     setEditText: nodeHook.setEditText,
     
     // ノード操作

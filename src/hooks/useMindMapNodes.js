@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createNewNode, calculateNodePosition, COLORS } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 import { getCurrentAdapter } from '../utils/storageAdapter.js';
@@ -8,6 +8,12 @@ export const useMindMapNodes = (data, updateData) => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editText, setEditText] = useState('');
+  
+  // 最新のdataを参照するためのref
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   // 全ノードを平坦化（メモ化）
   const flattenNodes = useCallback((rootNode = data?.rootNode) => {
@@ -75,7 +81,8 @@ export const useMindMapNodes = (data, updateData) => {
       return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
     };
     
-    const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
+    const currentData = dataRef.current;
+    const newData = { ...currentData, rootNode: updateNodeRecursive(currentData.rootNode) };
     // ファイル添付などの重要な操作では即座保存
     if (updates.attachments) {
       await updateData(newData, { skipHistory: false, saveImmediately: true });
@@ -195,6 +202,17 @@ export const useMindMapNodes = (data, updateData) => {
     
     updateData({ ...data, rootNode: newRootNode });
     
+    // データ状態確認
+    setTimeout(() => {
+      const actualNode = findNode(newSibling.id);
+      console.log('🔍 兄弟ノード作成後のデータ確認:', { 
+        nodeId: newSibling.id, 
+        exists: !!actualNode,
+        nodeData: actualNode,
+        allNodeIds: flattenNodes().map(n => n.id)
+      });
+    }, 100);
+    
     // 編集状態を同時に設定
     if (startEditing) {
       setSelectedNodeId(newSibling.id);
@@ -209,6 +227,12 @@ export const useMindMapNodes = (data, updateData) => {
   // ノードを削除（即座DB反映）
   const deleteNode = async (nodeId) => {
     if (nodeId === 'root') return false;
+    
+    console.log('🗑️ deleteNode実行開始:', { 
+      nodeId, 
+      timestamp: Date.now(),
+      callStack: new Error().stack
+    });
     
     // 削除後に選択するノードを決定
     let nodeToSelect = null;
@@ -367,7 +391,6 @@ export const useMindMapNodes = (data, updateData) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
     const currentNode = findNode(nodeId);
-    const { allowDelete = true } = options;
     
     console.log('📝 finishEdit - 詳細入力:', { 
       nodeId, 
@@ -377,14 +400,16 @@ export const useMindMapNodes = (data, updateData) => {
       isEmpty: !textToSave || textToSave.trim() === '',
       currentNodeText: currentNode?.text,
       isRoot: nodeId === 'root',
-      allowDelete
+      textToSaveLength: textToSave?.length,
+      newTextLength: newText?.length,
+      options
     });
     
     const isEmpty = !textToSave || textToSave.trim() === '';
     const isRoot = nodeId === 'root';
     
     // 削除判定：明確な条件でのみ削除
-    const shouldDelete = isEmpty && !isRoot && allowDelete && currentNode && (
+    const shouldDelete = isEmpty && !isRoot && currentNode && (
       // 既存ノードが元々空だった場合（新規作成後に内容を入力せずにblur）
       !currentNode.text || currentNode.text.trim() === ''
     );
@@ -404,7 +429,7 @@ export const useMindMapNodes = (data, updateData) => {
     if (isEmpty && !isRoot) {
       console.log('⚠️ 空のテキストだが削除しない:', { 
         nodeId, 
-        reason: allowDelete ? '既存の内容があったノード' : '削除が無効化されている',
+        reason: '既存の内容があったノード',
         originalText: currentNode?.text
       });
       // 空でも既存の内容があった場合は削除せず、元の内容を復元
@@ -416,8 +441,73 @@ export const useMindMapNodes = (data, updateData) => {
       updateNode(nodeId, { text: textToSave.trim() });
     }
     
-    setEditingNodeId(null);
-    setEditText('');
+    // 編集状態をリセット（対象ノードが現在編集中の場合のみ）
+    console.log('🔄 finishEdit編集状態チェック:', { 
+      finishEditNodeId: nodeId, 
+      currentEditingNodeId: editingNodeId, 
+      shouldReset: editingNodeId === nodeId,
+      preserveCurrentEdit: options.preserveCurrentEdit
+    });
+    
+    // 編集状態のリセット制御
+    const { onlyResetIfCurrent = true, preserveCurrentEdit, onlyUpdateText = false, skipEditStateReset = false } = options;
+    
+    // テキストのみ更新モード（編集状態は変更しない）
+    if (onlyUpdateText) {
+      console.log('📝 finishEdit - テキストのみ更新モード:', { 
+        nodeId, 
+        textToSave: textToSave.trim(),
+        isEmpty
+      });
+      
+      if (!isEmpty) {
+        console.log('📝 finishEdit - テキストのみ保存:', textToSave.trim());
+        updateNode(nodeId, { text: textToSave.trim() });
+      }
+      // 編集状態は変更せずにreturn
+      return;
+    }
+    
+    // 新しいノードが編集中の場合は編集状態を保護
+    if (preserveCurrentEdit) {
+      // setTimeoutの実行タイミングで、新しいノードがまだ編集状態になっていない場合があるため
+      // preserveCurrentEditが指定されている場合は、finishEditの編集状態変更部分を無視する
+      console.log('✅ 編集状態保護: 新しいノード作成のため編集状態変更をスキップ', { 
+        preserveCurrentEdit, 
+        currentEditingNodeId: editingNodeId,
+        isNewNodeEditing: editingNodeId === preserveCurrentEdit,
+        nodeIdBeingFinished: nodeId
+      });
+      
+      // テキスト保存は実行するが、編集状態の変更はスキップ
+      if (!isEmpty) {
+        console.log('📝 finishEdit - 保護モード: テキストのみ保存:', textToSave.trim());
+        updateNode(nodeId, { text: textToSave.trim() });
+      }
+      return;
+    }
+    
+    // 編集状態リセットをスキップ
+    if (skipEditStateReset) {
+      console.log('✅ 編集状態リセットをスキップ: 新しいノード作成のため');
+      return;
+    }
+    
+    if (onlyResetIfCurrent) {
+      // 対象ノードが現在編集中の場合のみリセット
+      if (editingNodeId === nodeId) {
+        console.log('⚠️ 編集状態リセット: 対象ノードが編集中のため');
+        setEditingNodeId(null);
+        setEditText('');
+      } else {
+        console.log('✅ 編集状態保持: 対象ノードが編集中ではないため');
+      }
+    } else {
+      // 強制的にリセット
+      console.log('⚠️ 編集状態強制リセット');
+      setEditingNodeId(null);
+      setEditText('');
+    }
   };
 
   // 折りたたみ状態をトグル
@@ -435,6 +525,7 @@ export const useMindMapNodes = (data, updateData) => {
     editingNodeId,
     editText,
     setSelectedNodeId,
+    setEditingNodeId,
     setEditText,
     updateNode,
     addChildNode,

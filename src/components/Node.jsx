@@ -225,7 +225,8 @@ const Node = ({
         nodeId: node.id, 
         originalText: node.text, 
         editText, 
-        targetValue: e.target.value 
+        targetValue: e.target.value,
+        timestamp: Date.now()
       });
       
       // 既存のタイマーをクリア
