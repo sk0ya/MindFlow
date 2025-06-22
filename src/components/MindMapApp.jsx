@@ -821,7 +821,7 @@ const MindMapApp = () => {
                 </span>
                 {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
                   <span className="sync-status">
-                    <SyncStatusIndicator />
+                    <SyncStatusIndicator refreshAllMindMaps={refreshAllMindMaps} />
                   </span>
                 )}
               </div>

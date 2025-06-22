@@ -151,6 +151,23 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           validationTimestamp: new Date().toISOString(),
           warnings: validationResult.warnings
         });
+
+        // 4. ノードにファイル添付情報を追加（クラウドモード）
+        const node = findNode(nodeId);
+        if (node) {
+          const updatedAttachments = [...(node.attachments || []), fileAttachment];
+          updateNode(nodeId, { attachments: updatedAttachments });
+          
+          logger.info(`✅ ファイル添付完了 (クラウド): ${file.name}`, {
+            nodeId,
+            attachmentId: fileAttachment.id,
+            r2FileId: uploadResult.id
+          });
+          
+          return fileAttachment.id;
+        } else {
+          throw new Error('対象ノードが見つかりません');
+        }
         
       } else {
         // ローカルモード: Base64でローカルストレージに保存
@@ -180,35 +197,23 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           warnings: validationResult.warnings,
           optimization: optimizedFile
         });
+
+        // 4. ノードにファイル添付情報を追加（ローカルモード）
+        const node = findNode(nodeId);
+        if (node) {
+          const updatedAttachments = [...(node.attachments || []), fileAttachment];
+          updateNode(nodeId, { attachments: updatedAttachments });
+          
+          logger.info(`✅ ファイル添付完了 (ローカル): ${file.name}`, {
+            nodeId,
+            attachmentId: fileAttachment.id
+          });
+          
+          return fileAttachment.id;
+        } else {
+          throw new Error('対象ノードが見つかりません');
+        }
       }
-      
-      // 3. ローカルのノードに添付情報を追加
-      const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult.id, {
-        isR2Storage: true,
-        storagePath: uploadResult.storagePath,
-        thumbnailPath: uploadResult.thumbnailPath,
-        downloadUrl: uploadResult.downloadUrl,
-        securityValidated: true,
-        validationTimestamp: new Date().toISOString(),
-        warnings: validationResult.warnings
-      });
-      
-      const node = findNode(nodeId);
-      
-      if (node) {
-        const updatedAttachments = [...(node.attachments || []), fileAttachment];
-        updateNode(nodeId, { attachments: updatedAttachments });
-        
-        logger.info(`✅ ファイル添付完了: ${file.name}`, {
-          nodeId,
-          attachmentId: fileAttachment.id,
-          r2FileId: uploadResult.id
-        });
-        
-        return fileAttachment.id;
-      }
-      
-      throw new Error('対象ノードが見つかりません');
       
     } catch (error) {
       logger.error('❌ ファイル添付エラー', {
