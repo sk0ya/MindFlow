@@ -3,7 +3,7 @@
 import { corsHeaders } from '../utils/cors.js';
 import { requireAuth } from '../utils/auth.js';
 import { unifyUserIds, checkMigrationNeeded } from '../migrations/unifyUserIds.js';
-import { cleanAllData, cleanR2Storage, getDataSummary } from '../migrations/cleanDatabase.js';
+import { cleanAllData, cleanR2Storage, getDataSummary, getDetailedData, fixStoragePaths } from '../migrations/cleanDatabase.js';
 
 export async function handleMigrationRequest(request, env) {
   const url = new URL(request.url);
@@ -59,6 +59,8 @@ export async function handleMigrationRequest(request, env) {
           response = await checkMigrationNeeded(env);
         } else if (action === 'summary') {
           response = await getDataSummary(env);
+        } else if (action === 'detailed') {
+          response = await getDetailedData(env);
         } else {
           throw new Error(`Unknown migration action: ${action}`);
         }
@@ -71,6 +73,8 @@ export async function handleMigrationRequest(request, env) {
           response = await cleanAllData(env);
         } else if (action === 'clean-r2') {
           response = await cleanR2Storage(env);
+        } else if (action === 'fix-storage-paths') {
+          response = await fixStoragePaths(env);
         } else {
           throw new Error(`Unknown migration action: ${action}`);
         }

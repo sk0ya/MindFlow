@@ -105,3 +105,72 @@ export async function getDataSummary(env) {
     throw error;
   }
 }
+
+export async function getDetailedData(env) {
+  try {
+    // 詳細なデータを取得
+    const { results: mindmaps } = await env.DB.prepare('SELECT * FROM mindmaps').all();
+    const { results: nodes } = await env.DB.prepare('SELECT * FROM nodes').all();
+    const { results: attachments } = await env.DB.prepare('SELECT * FROM attachments').all();
+    const r2List = await env.FILES.list();
+    
+    return {
+      mindmaps: mindmaps,
+      nodes: nodes,
+      attachments: attachments,
+      r2Files: r2List.objects.map(obj => ({
+        key: obj.key,
+        size: obj.size,
+        uploaded: obj.uploaded
+      }))
+    };
+  } catch (error) {
+    console.error('詳細データ取得エラー:', error);
+    throw error;
+  }
+}
+
+export async function fixStoragePaths(env) {
+  console.log('storage_pathの修正開始');
+  
+  try {
+    // すべてのattachmentを取得
+    const { results: attachments } = await env.DB.prepare('SELECT * FROM attachments').all();
+    
+    let fixed = 0;
+    for (const attachment of attachments) {
+      // legacy/プレフィックスがある場合は修正
+      if (attachment.storage_path.startsWith('legacy/')) {
+        // R2ファイルの実際のキーを検索（attachment.idはnode_で始まるが、R2のfile_IDとは異なる）
+        const r2List = await env.FILES.list();
+        console.log('探索中のattachment:', attachment);
+        console.log('利用可能なR2ファイル:', r2List.objects.map(obj => obj.key));
+        
+        // ファイルサイズで一致するものを探す
+        const matchingR2File = r2List.objects.find(obj => 
+          obj.size === attachment.file_size
+        );
+        
+        if (matchingR2File) {
+          console.log(`修正: ${attachment.id} - ${attachment.storage_path} -> ${matchingR2File.key}`);
+          
+          await env.DB.prepare(
+            'UPDATE attachments SET storage_path = ? WHERE id = ?'
+          ).bind(matchingR2File.key, attachment.id).run();
+          
+          fixed++;
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      fixed: fixed,
+      message: `${fixed}件のstorage_pathを修正しました`
+    };
+    
+  } catch (error) {
+    console.error('storage_path修正エラー:', error);
+    throw error;
+  }
+}

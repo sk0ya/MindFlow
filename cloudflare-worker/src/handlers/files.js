@@ -211,15 +211,24 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
  * ファイル取得処理
  */
 async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
+  console.log('getFile called with:', { userId, mindmapId, nodeId, fileId });
+  
   // 所有権確認
-  await verifyOwnership(env.DB, userId, mindmapId, nodeId);
+  try {
+    await verifyOwnership(env.DB, userId, mindmapId, nodeId);
+  } catch (ownershipError) {
+    console.error('Ownership verification failed:', ownershipError);
+    throw ownershipError;
+  }
 
   // ファイル情報取得
   let attachment;
   try {
+    console.log('Querying attachment:', { fileId, nodeId });
     attachment = await env.DB.prepare(
       'SELECT * FROM attachments WHERE id = ? AND node_id = ?'
     ).bind(fileId, nodeId).first();
+    console.log('Attachment query result:', attachment);
   } catch (dbError) {
     console.error('Database query failed:', dbError);
     attachment = null;
