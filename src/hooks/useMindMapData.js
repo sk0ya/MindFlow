@@ -80,8 +80,8 @@ export const useMindMapData = (isAppReady = false) => {
       console.log('🔄 認証済み: クラウド同期開始');
       
       // クラウドからマインドマップ一覧を取得
-      const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
-      const cloudMaps = await loadMindMapsFromCloud();
+      const { getAllMindMaps } = await import('../utils/storageRouter.js');
+      const cloudMaps = await getAllMindMaps();
       
       if (cloudMaps && cloudMaps.length > 0) {
         // 既存データを読み込み
@@ -90,7 +90,8 @@ export const useMindMapData = (isAppReady = false) => {
         )[0];
         
         console.log('📥 最新のクラウドマップを読み込み:', latestMap.title);
-        const fullMapData = await loadMindMapFromCloud(latestMap.id);
+        const { getMindMap } = await import('../utils/storageRouter.js');
+        const fullMapData = await getMindMap(latestMap.id);
         
         if (fullMapData) {
           const processedData = assignColorsToExistingNodes(fullMapData);

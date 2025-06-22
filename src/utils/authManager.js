@@ -30,8 +30,8 @@ class AuthManager {
           setTimeout(async () => {
             try {
               console.log('🔄 自動ログイン時マップ一覧同期開始...');
-              const { getAllMindMapsHybrid } = await import('./storage.js');
-              await getAllMindMapsHybrid();
+              const { getAllMindMaps } = await import('./storageRouter.js');
+              await getAllMindMaps();
               console.log('✅ 自動ログイン時マップ一覧同期完了');
             } catch (syncError) {
               console.warn('⚠️ 自動ログイン時マップ一覧同期失敗:', syncError);
