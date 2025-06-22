@@ -13,6 +13,25 @@ export const useMindMapData = (isAppReady = false) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   
+  // 自動保存を開始（ノード個別同期無効化中の対策）
+  const startAutoSave = () => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      if (data && !data.isPlaceholder) {
+        try {
+          const { saveMindMap } = await import('../utils/storageRouter.js');
+          await saveMindMap(data);
+          console.log('💾 マップ全体保存完了:', data.title);
+        } catch (error) {
+          console.warn('⚠️ 自動保存失敗:', error.message);
+        }
+      }
+    }, 2000); // 2秒後に保存
+  };
+  
   // アプリ準備完了時のデータ初期化
   useEffect(() => {
     if (!isAppReady || data !== null) return;
@@ -137,8 +156,12 @@ export const useMindMapData = (isAppReady = false) => {
       addToHistory(newData);
     }
     
-    // ⚠️ 自動保存は廃止 - リアルタイム同期で即座DB反映済み
-    console.log('🔄 データ更新完了 (リアルタイム同期対応):', {
+    // ⚠️ ノード個別同期無効化中のため、マップ全体保存を再有効化
+    if (options.immediate) {
+      startAutoSave();
+    }
+    
+    console.log('🔄 データ更新完了 (マップ全体保存有効):', {
       id: newData.id,
       immediate: options.immediate || false,
       skipHistory: options.skipHistory || false
