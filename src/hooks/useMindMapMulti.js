@@ -170,9 +170,24 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ切り替え
-  const switchToMap = (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
-    const allMaps = getAllMindMaps();
-    const targetMap = allMaps.find(map => map && map.id === mapId);
+  const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
+    console.log('🔄 マップ切り替え開始:', mapId);
+    
+    // クラウドモードの場合は現在のallMindMapsから検索、見つからない場合はクラウドから直接取得
+    let targetMap = allMindMaps.find(map => map && map.id === mapId);
+    
+    if (!targetMap) {
+      console.log('🔍 ローカル一覧にマップが見つからない、クラウドから取得:', mapId);
+      try {
+        const { isCloudStorageEnabled, loadMindMapFromCloud } = await import('../utils/storage.js');
+        if (isCloudStorageEnabled()) {
+          targetMap = await loadMindMapFromCloud(mapId);
+          console.log('☁️ クラウドからマップ取得成功:', targetMap?.title);
+        }
+      } catch (error) {
+        console.error('❌ クラウドからマップ取得失敗:', error);
+      }
+    }
     
     if (targetMap) {
       // 現在のマップを保存
@@ -205,10 +220,31 @@ export const useMindMapMulti = (data, setData, updateData) => {
 
   // 初期化時にallMindMapsを更新
   useEffect(() => {
-    const maps = getAllMindMaps();
-    if (maps.length !== allMindMaps.length) {
-      setAllMindMaps(maps);
-    }
+    const initializeMaps = async () => {
+      try {
+        console.log('🔄 初期化時のマップ一覧読み込み開始');
+        const { getAppSettings } = await import('../utils/storage.js');
+        const settings = getAppSettings();
+        
+        if (settings.storageMode === 'cloud') {
+          // クラウドモードの場合はrefreshAllMindMapsを呼ぶ
+          console.log('☁️ クラウドモードで初期化');
+          await refreshAllMindMaps();
+        } else {
+          // ローカルモードの場合は従来通り
+          console.log('🏠 ローカルモードで初期化');
+          const { getAllMindMaps } = await import('../utils/storage.js');
+          const maps = getAllMindMaps();
+          if (maps.length !== allMindMaps.length) {
+            setAllMindMaps(maps);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 初期化時のマップ一覧読み込み失敗:', error);
+      }
+    };
+    
+    initializeMaps();
   }, []);
 
   // data.idの変更を監視してcurrentMapIdを更新（ローカル・クラウド共通）

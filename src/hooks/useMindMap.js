@@ -78,9 +78,13 @@ export const useMindMap = (isAppReady = false) => {
   } = useMindMapFiles(findNode, updateNode, currentMapId);
 
   // switchToMapのラッパー（適切な引数を渡す）
-  const switchToMap = (mapId, selectRoot = false) => {
+  const switchToMap = async (mapId, selectRoot = false) => {
     // 履歴管理は現在useMindMapDataで管理されているため、引数なしで呼び出し
-    switchToMapBase(mapId, selectRoot);
+    try {
+      await switchToMapBase(mapId, selectRoot);
+    } catch (error) {
+      console.error('❌ マップ切り替え失敗:', error);
+    }
   };
 
   // カーソル位置の更新（リアルタイム機能用 - 現在は無効化）

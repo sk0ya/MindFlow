@@ -387,8 +387,13 @@ const MindMapApp = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  const handleSelectMap = (mapId) => {
-    switchToMap(mapId);
+  const handleSelectMap = async (mapId) => {
+    try {
+      await switchToMap(mapId);
+    } catch (error) {
+      console.error('マップ切り替えエラー:', error);
+      alert('マップの切り替えに失敗しました: ' + error.message);
+    }
   };
 
   const handleCreateMap = async (providedName = null, providedCategory = null) => {
