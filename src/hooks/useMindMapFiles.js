@@ -60,93 +60,127 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         validationPassed: true
       });
       
-      // 2. R2ストレージにアップロード
-      const { authManager } = await import('../utils/authManager.js');
-      const authHeader = authManager.getAuthHeader();
+      // 2. ストレージモードに応じたファイル保存
+      const { getCurrentMindMap, isCloudStorageEnabled, getAppSettings } = await import('../utils/storage.js');
       
-      console.log('🔐 認証情報確認:', {
-        isAuthenticated: authManager.isAuthenticated(),
-        hasAuthHeader: !!authHeader,
-        authHeaderPrefix: authHeader ? authHeader.substring(0, 10) + '...' : 'なし'
+      // デバッグ: ストレージモード確認
+      const settings = getAppSettings();
+      const isCloudMode = isCloudStorageEnabled();
+      console.log('📂 ストレージモード確認:', {
+        storageMode: settings.storageMode,
+        isCloudMode,
+        settings
       });
       
-      if (!authHeader) {
-        throw new Error('認証が必要です');
-      }
+      if (isCloudMode) {
+        // クラウドモード: R2ストレージにアップロード
+        console.log('☁️ クラウドモード: R2ストレージにアップロード');
+        
+        const { authManager } = await import('../utils/authManager.js');
+        const authHeader = authManager.getAuthHeader();
+        
+        console.log('🔐 認証情報確認:', {
+          isAuthenticated: authManager.isAuthenticated(),
+          hasAuthHeader: !!authHeader,
+          authHeaderPrefix: authHeader ? authHeader.substring(0, 10) + '...' : 'なし'
+        });
+        
+        if (!authHeader) {
+          throw new Error('認証が必要です');
+        }
 
-      // 現在のマインドマップIDを取得（クラウドモード対応）
-      const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
-      
-      let mapId = null;
-      if (isCloudStorageEnabled()) {
-        // クラウドモードの場合は親フックから渡されたIDを使用
-        console.log('☁️ クラウドモード - currentMapId:', currentMapId);
         if (!currentMapId) {
           throw new Error('クラウドモードではマップIDが必要です');
         }
-        mapId = currentMapId;
-      } else {
-        const currentMap = getCurrentMindMap();
-        if (!currentMap) {
-          throw new Error('現在のマインドマップが見つかりません');
-        }
-        mapId = currentMap.id;
-      }
-      
-      console.log('📎 ファイルアップロード情報:', {
-        mapId,
-        nodeId,
-        fileName: file.name,
-        isCloudMode: isCloudStorageEnabled(),
-        uploadUrl: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`
-      });
-      
-      // プレースホルダーIDの場合はエラー
-      if (mapId === 'loading-placeholder' || mapId === 'cloud-loading-placeholder') {
-        throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
-      }
-
-      // FormDataでファイルをアップロード
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authHeader
-        },
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        // エラーの詳細を取得
-        let errorDetail = uploadResponse.statusText;
-        try {
-          const errorBody = await uploadResponse.text();
-          errorDetail = errorBody || uploadResponse.statusText;
-        } catch (e) {
-          // エラーボディの取得に失敗した場合はステータステキストを使用
-        }
         
-        console.error('ファイルアップロードエラー詳細:', {
-          status: uploadResponse.status,
-          statusText: uploadResponse.statusText,
-          url: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`,
-          mapId,
+        console.log('📎 R2アップロード情報:', {
+          mapId: currentMapId,
           nodeId,
-          errorDetail
+          fileName: file.name
+        });
+
+        // FormDataでファイルをアップロード
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader
+          },
+          body: formData
+        });
+
+        if (!uploadResponse.ok) {
+          // エラーの詳細を取得
+          let errorDetail = uploadResponse.statusText;
+          try {
+            const errorBody = await uploadResponse.text();
+            errorDetail = errorBody || uploadResponse.statusText;
+          } catch (e) {
+            // エラーボディの取得に失敗した場合はステータステキストを使用
+          }
+          
+          console.error('R2アップロードエラー詳細:', {
+            status: uploadResponse.status,
+            statusText: uploadResponse.statusText,
+            url: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`,
+            mapId: currentMapId,
+            nodeId,
+            errorDetail
+          });
+          
+          throw new Error(`R2アップロードに失敗しました: ${errorDetail}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
+        
+        logger.info(`☁️ R2アップロード完了: ${file.name}`, {
+          nodeId,
+          fileId: uploadResult.id,
+          downloadUrl: uploadResult.downloadUrl
         });
         
-        throw new Error(`ファイルアップロードに失敗しました: ${errorDetail}`);
+        // 3. R2ストレージの結果でファイル添付情報を作成
+        const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult.id, {
+          isR2Storage: true,
+          storagePath: uploadResult.storagePath,
+          thumbnailPath: uploadResult.thumbnailPath,
+          downloadUrl: uploadResult.downloadUrl,
+          securityValidated: true,
+          validationTimestamp: new Date().toISOString(),
+          warnings: validationResult.warnings
+        });
+        
+      } else {
+        // ローカルモード: Base64でローカルストレージに保存
+        console.log('🏠 ローカルモード: Base64でローカル保存');
+        
+        // ファイルをBase64に変換
+        const optimizedFile = await optimizeFile(file);
+        const dataURL = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(optimizedFile.file);
+        });
+        
+        logger.info(`💾 ローカル保存完了: ${file.name}`, {
+          nodeId,
+          originalSize: file.size,
+          optimizedSize: optimizedFile.file.size,
+          compressionRatio: Math.round((1 - optimizedFile.file.size / file.size) * 100)
+        });
+        
+        // 3. ローカルストレージ用のファイル添付情報を作成
+        const fileAttachment = createFileAttachment(optimizedFile.file, dataURL, null, {
+          isR2Storage: false,
+          securityValidated: true,
+          validationTimestamp: new Date().toISOString(),
+          warnings: validationResult.warnings,
+          optimization: optimizedFile
+        });
       }
-
-      const uploadResult = await uploadResponse.json();
-      
-      logger.info(`☁️ R2アップロード完了: ${file.name}`, {
-        nodeId,
-        fileId: uploadResult.id,
-        downloadUrl: uploadResult.downloadUrl
-      });
       
       // 3. ローカルのノードに添付情報を追加
       const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult.id, {
