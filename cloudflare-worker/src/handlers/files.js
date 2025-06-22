@@ -12,6 +12,16 @@ export async function handleRequest(request, env) {
   // 認証チェック（JWT認証またはX-User-IDを受け入れ）
   let userId = 'default-user';
   
+  // 認証ヘッダーをデバッグ
+  const authHeader = request.headers.get('Authorization');
+  const xUserId = request.headers.get('X-User-ID');
+  console.log('FILES - 受信認証ヘッダー:', {
+    hasAuth: !!authHeader,
+    authType: authHeader ? authHeader.substring(0, 10) + '...' : 'none',
+    hasXUserId: !!xUserId,
+    xUserId: xUserId
+  });
+
   // JWT認証チェック
   if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
