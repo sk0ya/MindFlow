@@ -366,11 +366,24 @@ export const useMindMapNodes = (data, updateData) => {
   const finishEdit = (nodeId, newText) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
+    const currentNode = findNode(nodeId);
     
-    console.log('📝 finishEdit - 入力:', { nodeId, newText, editText, textToSave });
+    console.log('📝 finishEdit - 詳細入力:', { 
+      nodeId, 
+      newText, 
+      editText, 
+      textToSave,
+      isEmpty: !textToSave || textToSave.trim() === '',
+      currentNodeText: currentNode?.text,
+      isRoot: nodeId === 'root'
+    });
     
     if (!textToSave || textToSave.trim() === '') {
-      console.log('⚠️ 空のテキスト検出 - ノードを削除:', nodeId);
+      console.log('⚠️ 空のテキスト検出 - ノード削除判定:', { 
+        nodeId, 
+        isRoot: nodeId === 'root',
+        willDelete: nodeId !== 'root'
+      });
       setEditingNodeId(null);
       setEditText('');
       if (nodeId !== 'root') {

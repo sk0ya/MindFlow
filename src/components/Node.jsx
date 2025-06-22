@@ -33,12 +33,6 @@ const Node = ({
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef(null);
   const blurTimeoutRef = useRef(null);
-  const creationTimeRef = useRef(Date.now());
-  
-  // ノードが作成された時刻を記録
-  useEffect(() => {
-    creationTimeRef.current = Date.now();
-  }, [node.id]);
   
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -227,53 +221,29 @@ const Node = ({
   const handleInputBlur = useCallback((e) => {
     // IME変換中でない場合のみ編集を終了
     if (!isComposing) {
-      console.log('🎹 Node.jsx blur処理:', { nodeId: node.id, editText, targetValue: e.target.value });
+      console.log('🎹 Node.jsx blur処理:', { 
+        nodeId: node.id, 
+        originalText: node.text, 
+        editText, 
+        targetValue: e.target.value 
+      });
       
       // 既存のタイマーをクリア
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
       
-      // 最新の入力値を即座に取得して保存（DOM要素から直接取得）
+      // 最新の入力値を即座に取得（DOM要素から直接取得）
       const currentValue = e.target ? e.target.value : editText;
-      console.log('🎹 Node.jsx blur実行:', { finalValue: currentValue });
+      console.log('🎹 Node.jsx blur実行:', { 
+        nodeId: node.id,
+        finalValue: currentValue,
+        isEmpty: !currentValue || currentValue.trim() === '',
+        isRoot: node.id === 'root'
+      });
       
-      // 新しく作成されたノードの場合は少し遅延（フォーカス移動を待つ）
-      const isNewlyCreated = !node.text && currentValue === '';
-      const timeSinceCreation = Date.now() - creationTimeRef.current;
-      
-      if (isNewlyCreated) {
-        // 作成から1秒以内の新規ノードは削除処理を無効化
-        if (timeSinceCreation < 1000) {
-          console.log('🛡️ 新規作成ノード保護期間中 - 削除スキップ:', { 
-            nodeId: node.id, 
-            timeSinceCreation,
-            currentValue 
-          });
-          return; // 削除処理を実行しない
-        }
-        
-        // 保護期間終了後は通常の削除判定
-        blurTimeoutRef.current = setTimeout(() => {
-          // 他のnode-input要素にフォーカスが移動していない場合のみ削除
-          const activeElement = document.activeElement;
-          const isFocusOnOtherInput = activeElement && activeElement.classList.contains('node-input');
-          
-          if (!isFocusOnOtherInput && activeElement !== inputRef.current) {
-            console.log('🗑️ 新規空ノードを削除:', { nodeId: node.id, activeElement: activeElement?.tagName });
-            onFinishEdit(node.id, currentValue);
-          } else {
-            console.log('🎯 フォーカス移動のため削除キャンセル:', { 
-              nodeId: node.id, 
-              activeElement: activeElement?.tagName,
-              isFocusOnOtherInput 
-            });
-          }
-        }, 300);
-      } else {
-        // 既存ノードは即座に保存
-        onFinishEdit(node.id, currentValue);
-      }
+      // 即座に編集完了処理を実行（finishEditが削除判定を行う）
+      onFinishEdit(node.id, currentValue);
     }
   }, [node.id, node.text, editText, onFinishEdit, isComposing]);
 
