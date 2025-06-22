@@ -157,7 +157,7 @@ const Node = ({
     }
   }, [node.id, onRightClick]);
 
-  // 編集終了を即座に実行する関数
+  // 編集終了を即座に実行する関数（blur用）
   const finishEditImmediately = useCallback(() => {
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
@@ -177,20 +177,36 @@ const Node = ({
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      finishEditImmediately();
-      // Enterキーで編集終了後、兄弟ノードを追加
-      if (onAddSibling) {
-        // 編集終了後すぐに新しいノードを追加（遅延なし）
-        onAddSibling(node.id);
+      // 現在の編集テキストを保存してから新規ノード作成
+      const currentText = editText.trim();
+      if (currentText) {
+        onFinishEdit(node.id, currentText);
+        // テキストが保存されてから兄弟ノードを追加
+        setTimeout(() => {
+          if (onAddSibling) {
+            onAddSibling(node.id);
+          }
+        }, 100);
+      } else {
+        // 空の場合は編集を終了するだけ
+        onFinishEdit(node.id, node.text);
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
       e.stopPropagation();
-      finishEditImmediately();
-      // Tabキーで編集終了後、子ノードを追加
-      if (onAddChild) {
-        // 編集終了後すぐに新しいノードを追加（遅延なし）
-        onAddChild(node.id);
+      // 現在の編集テキストを保存してから新規ノード作成
+      const currentText = editText.trim();
+      if (currentText) {
+        onFinishEdit(node.id, currentText);
+        // テキストが保存されてから子ノードを追加
+        setTimeout(() => {
+          if (onAddChild) {
+            onAddChild(node.id);
+          }
+        }, 100);
+      } else {
+        // 空の場合は編集を終了するだけ
+        onFinishEdit(node.id, node.text);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -202,7 +218,7 @@ const Node = ({
       }
       onFinishEdit(node.id, node.text);
     }
-  }, [node.id, node.text, finishEditImmediately, isComposing, onAddChild, onAddSibling]);
+  }, [node.id, node.text, editText, isComposing, onAddChild, onAddSibling, onFinishEdit]);
 
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true);

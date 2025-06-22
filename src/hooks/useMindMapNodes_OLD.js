@@ -371,7 +371,10 @@ export const useMindMapNodes = (data, updateData) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
     
+    console.log('📝 finishEdit - 入力:', { nodeId, newText, editText, textToSave });
+    
     if (!textToSave || textToSave.trim() === '') {
+      console.log('⚠️ 空のテキスト検出 - ノードを削除:', nodeId);
       setEditingNodeId(null);
       setEditText('');
       if (nodeId !== 'root') {

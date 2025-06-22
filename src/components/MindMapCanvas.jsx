@@ -260,16 +260,9 @@ const MindMapCanvas = ({
 
   const handleKeyDown = useCallback((e) => {
     if (selectedNodeId && !editingNodeId) {
-      // 特殊キーの処理
+      // 特殊キーの処理（Tab/EnterはNode.jsxで処理されるためここでは無効化）
       switch (e.key) {
-        case 'Tab':
-          e.preventDefault();
-          onAddChild(selectedNodeId);
-          break;
-        case 'Enter':
-          e.preventDefault();
-          onAddSibling(selectedNodeId);
-          break;
+        // case 'Tab': と case 'Enter': は Node.jsx で処理されるため削除
         case 'Delete':
         case 'Backspace':
           e.preventDefault();
@@ -310,7 +303,7 @@ const MindMapCanvas = ({
           break;
       }
     }
-  }, [selectedNodeId, editingNodeId, onAddChild, onAddSibling, onDeleteNode, onStartEdit, onSelectNode, onNavigateToDirection]);
+  }, [selectedNodeId, editingNodeId, onDeleteNode, onStartEdit, onSelectNode, onNavigateToDirection]);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
