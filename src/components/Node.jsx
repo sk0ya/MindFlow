@@ -235,16 +235,23 @@ const Node = ({
       // 新しく作成されたノードの場合は少し遅延（フォーカス移動を待つ）
       const isNewlyCreated = !node.text && currentValue === '';
       if (isNewlyCreated) {
-        // 新規ノードで空の場合は200ms待って、再度フォーカスチェック
+        // 新規ノードで空の場合は300ms待って、再度フォーカスチェック
         blurTimeoutRef.current = setTimeout(() => {
-          // まだフォーカスが戻ってこない場合のみ削除
-          if (document.activeElement !== inputRef.current) {
-            console.log('🗑️ 新規空ノードを削除:', node.id);
+          // 他のnode-input要素にフォーカスが移動していない場合のみ削除
+          const activeElement = document.activeElement;
+          const isFocusOnOtherInput = activeElement && activeElement.classList.contains('node-input');
+          
+          if (!isFocusOnOtherInput && activeElement !== inputRef.current) {
+            console.log('🗑️ 新規空ノードを削除:', { nodeId: node.id, activeElement: activeElement?.tagName });
             onFinishEdit(node.id, currentValue);
           } else {
-            console.log('🎯 フォーカス復帰のため削除キャンセル:', node.id);
+            console.log('🎯 フォーカス移動のため削除キャンセル:', { 
+              nodeId: node.id, 
+              activeElement: activeElement?.tagName,
+              isFocusOnOtherInput 
+            });
           }
-        }, 200);
+        }, 300);
       } else {
         // 既存ノードは即座に保存
         onFinishEdit(node.id, currentValue);

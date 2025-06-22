@@ -75,15 +75,19 @@ export const useKeyboardShortcuts = ({
           
           console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
           
-          // テキストを保存してから編集終了
-          finishEdit(editingNodeId, currentText.trim());
-          
-          // テキストがある場合のみ兄弟ノード追加
+          // テキストがある場合のみ兄弟ノード追加（編集終了前に実行）
           if (currentText.trim() && addSiblingNode) {
+            // 先に新ノードを作成してから編集終了
+            const newNodeId = addSiblingNode(editingNodeId, '', true);
+            console.log('📍 兄弟ノード作成完了:', { newNodeId, parentId: editingNodeId });
+            
+            // その後で前のノードの編集を終了
             setTimeout(() => {
-              const newNodeId = addSiblingNode(editingNodeId, '', true);
-              console.log('📍 兄弟ノード作成完了:', { newNodeId, parentId: editingNodeId });
-            }, 100); // DOM更新とフォーカス設定を確実に待つ
+              finishEdit(editingNodeId, currentText.trim());
+            }, 50);
+          } else {
+            // テキストが空の場合は通常通り編集終了
+            finishEdit(editingNodeId, currentText.trim());
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
@@ -95,15 +99,19 @@ export const useKeyboardShortcuts = ({
           
           console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
           
-          // テキストを保存してから編集終了
-          finishEdit(editingNodeId, currentText.trim());
-          
-          // テキストがある場合のみ子ノード追加
+          // テキストがある場合のみ子ノード追加（編集終了前に実行）
           if (currentText.trim() && addChildNode) {
+            // 先に新ノードを作成してから編集終了
+            const newNodeId = addChildNode(editingNodeId, '', true);
+            console.log('📍 子ノード作成完了:', { newNodeId, parentId: editingNodeId });
+            
+            // その後で前のノードの編集を終了
             setTimeout(() => {
-              const newNodeId = addChildNode(editingNodeId, '', true);
-              console.log('📍 子ノード作成完了:', { newNodeId, parentId: editingNodeId });
-            }, 100); // DOM更新とフォーカス設定を確実に待つ
+              finishEdit(editingNodeId, currentText.trim());
+            }, 50);
+          } else {
+            // テキストが空の場合は通常通り編集終了
+            finishEdit(editingNodeId, currentText.trim());
           }
         }
         return;
