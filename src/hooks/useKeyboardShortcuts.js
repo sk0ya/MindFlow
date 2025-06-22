@@ -57,19 +57,19 @@ export const useKeyboardShortcuts = ({
           e.preventDefault();
           console.log('⌨️ useKeyboardShortcuts Enter処理:', { editingNodeId, editText });
           const currentText = editText.trim();
-          finishEdit(editingNodeId, currentText || '');
+          finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ兄弟ノード追加
           if (currentText && addSiblingNode) {
-            setTimeout(() => addSiblingNode(editingNodeId, '', true), 50);
+            setTimeout(() => addSiblingNode(editingNodeId, '新しいノード', true), 50);
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
           console.log('⌨️ useKeyboardShortcuts Tab処理:', { editingNodeId, editText });
           const currentText = editText.trim();
-          finishEdit(editingNodeId, currentText || '');
+          finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ子ノード追加
           if (currentText && addChildNode) {
-            setTimeout(() => addChildNode(editingNodeId, '', true), 50);
+            setTimeout(() => addChildNode(editingNodeId, '新しいノード', true), 50);
           }
         }
         return;
@@ -95,15 +95,17 @@ export const useKeyboardShortcuts = ({
         switch (e.key) {
           case 'Tab':
             e.preventDefault();
-            addChildNode(selectedNodeId, '', true);
+            console.log('⌨️ 非編集時Tab処理:', { selectedNodeId });
+            addChildNode(selectedNodeId, '新しいノード', true);
             break;
           
           case 'Enter':
             e.preventDefault();
+            console.log('⌨️ 非編集時Enter処理:', { selectedNodeId });
             if (selectedNodeId === 'root') {
-              addChildNode('root', '', true);
+              addChildNode('root', '新しいノード', true);
             } else {
-              addSiblingNode(selectedNodeId, '', true);
+              addSiblingNode(selectedNodeId, '新しいノード', true);
             }
             break;
           
