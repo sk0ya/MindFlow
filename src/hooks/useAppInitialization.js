@@ -82,7 +82,8 @@ export const useAppInitialization = () => {
               ...prev,
               isInitializing: false,
               showStorageModeSelector: true,
-              hasExistingLocalData: false
+              hasExistingLocalData: false,
+              isReady: false // ストレージ選択中はisReady=falseを維持
             }));
           }
         }

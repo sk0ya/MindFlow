@@ -67,7 +67,10 @@ const MindMapApp = () => {
   console.log('🔄 MindMapApp: DataManagerシステム動作中', {
     hasData: !!mindMap.data,
     syncStatus: mindMap.syncStatus,
-    isReady: initState.isReady
+    isReady: initState.isReady,
+    showStorageModeSelector: initState.showStorageModeSelector,
+    showAuthModal: initState.showAuthModal,
+    showOnboarding: initState.showOnboarding
   });
 
   // UI状態管理
@@ -261,12 +264,48 @@ const MindMapApp = () => {
     return <AuthVerification token={authToken} />;
   }
 
-  if (!initState.isReady) {
+  if (!initState.isReady && !initState.showStorageModeSelector && !initState.showAuthModal && !initState.showOnboarding) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
         <p>アプリケーションを初期化中...</p>
         {authState.isLoading && <p>認証処理中...</p>}
+      </div>
+    );
+  }
+
+  // ストレージモード選択やオンボーディング中は早期リターン
+  if (initState.showStorageModeSelector) {
+    return (
+      <div className="mindmap-app">
+        <StorageModeSelector onModeSelect={initState.handleStorageModeSelect} />
+      </div>
+    );
+  }
+
+  if (initState.showAuthModal) {
+    return (
+      <div className="mindmap-app">
+        <AuthModal
+          isOpen={true}
+          onClose={initState.handleAuthClose}
+          onAuthSuccess={(user) => {
+            setAuthState({ isAuthenticated: true, user, isLoading: false });
+            initState.handleAuthSuccess();
+            window.dispatchEvent(new CustomEvent('authStateChange'));
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (initState.showOnboarding) {
+    return (
+      <div className="mindmap-app">
+        <TutorialOverlay
+          onComplete={initState.handleOnboardingComplete}
+          onSkip={initState.handleOnboardingComplete}
+        />
       </div>
     );
   }
@@ -477,12 +516,7 @@ const MindMapApp = () => {
         <CollaborativeFeatures />
         <ConflictNotification />
 
-        {/* 初回セットアップ */}
-        {initState.showStorageModeSelector && (
-          <StorageModeSelector
-            onModeSelect={initState.handleStorageModeSelect}
-          />
-        )}
+        {/* 初回セットアップは早期リターンで処理済み */}
       </div>
     </ErrorBoundary>
   );
