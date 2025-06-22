@@ -241,6 +241,8 @@ const MindMapApp = () => {
 
   const handleNodeUpdate = async (nodeId, text) => {
     await mindMap.updateNode(nodeId, { text });
+    // 編集終了後は選択状態を維持
+    mindMap.finishEdit();
   };
 
   const handleAddChild = async (parentId) => {

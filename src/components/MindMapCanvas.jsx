@@ -374,6 +374,7 @@ const MindMapCanvas = ({
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
                 onAddChild={onAddChild}
+                onAddSibling={onAddSibling}
                 onDelete={onDeleteNode}
                 onRightClick={onRightClick}
                 editText={editText}

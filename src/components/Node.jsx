@@ -177,6 +177,22 @@ const Node = ({
       e.preventDefault();
       e.stopPropagation();
       finishEditImmediately();
+      // Enterキーで編集終了後、兄弟ノードを追加
+      if (onAddSibling) {
+        setTimeout(() => {
+          onAddSibling(node.id);
+        }, 100);
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      finishEditImmediately();
+      // Tabキーで編集終了後、子ノードを追加
+      if (onAddChild) {
+        setTimeout(() => {
+          onAddChild(node.id);
+        }, 100);
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
@@ -187,7 +203,7 @@ const Node = ({
       }
       onFinishEdit(node.id, node.text);
     }
-  }, [node.id, node.text, finishEditImmediately, isComposing]);
+  }, [node.id, node.text, finishEditImmediately, isComposing, onAddChild, onAddSibling]);
 
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true);
