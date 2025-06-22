@@ -1,9 +1,10 @@
-// 新しいDataManagerベースのノード操作フック
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { createNewNode, calculateNodePosition, COLORS } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
+import { getCurrentAdapter } from '../utils/storageAdapter.js';
 
-export const useMindMapNodes = (data, dataOperations) => {
+// ノード操作専用のカスタムフック
+export const useMindMapNodes = (data, updateData) => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -34,7 +35,7 @@ export const useMindMapNodes = (data, dataOperations) => {
   }, [data?.rootNode]);
 
   // ノードの親を検索（メモ化）
-  const findParentNode = useCallback((nodeId, rootNode = data?.rootNode, parent = null) => {
+  const findParentNode = useCallback((nodeId, rootNode = data.rootNode, parent = null) => {
     if (!rootNode || !nodeId) return null;
     if (rootNode.id === nodeId) return parent;
     
@@ -46,7 +47,7 @@ export const useMindMapNodes = (data, dataOperations) => {
   }, [data?.rootNode]);
 
   // オートレイアウトを適用
-  const applyAutoLayout = useCallback((rootNode) => {
+  const applyAutoLayout = (rootNode) => {
     const svg = document.querySelector('.mindmap-canvas-container svg');
     const centerX = rootNode.x || (svg?.clientWidth / 2) || 400;
     const centerY = rootNode.y || (svg?.clientHeight / 2) || 300;
@@ -55,53 +56,55 @@ export const useMindMapNodes = (data, dataOperations) => {
       centerX, centerY, baseRadius: 180, levelSpacing: 200,
       minVerticalSpacing: 80, maxVerticalSpacing: 130
     });
-  }, []);
+  };
 
   // ノードの色を取得する（親から継承または新規割り当て）
-  const getNodeColor = useCallback((parentNode, childIndex) => {
+  const getNodeColor = (parentNode, childIndex) => {
     if (parentNode.id === 'root') {
       return COLORS[childIndex % COLORS.length];
     } else {
       return parentNode.color || '#666';
     }
-  }, []);
+  };
 
-  // ノード更新（DataManager経由）
-  const updateNode = useCallback(async (nodeId, updates) => {
-    console.log('📝 NodesV2: ノード更新', { nodeId, updates });
+  // ノード更新（完全分離版）
+  const updateNode = async (nodeId, updates, syncToCloud = true) => {
+    // 1. ローカル状態を即座に更新
+    const updateNodeRecursive = (node) => {
+      if (node.id === nodeId) return { ...node, ...updates };
+      return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
+    };
     
-    if (updates.text !== undefined) {
-      // テキスト更新
-      return await dataOperations.updateNodeText(nodeId, updates.text);
-    } else if (updates.attachments !== undefined) {
-      // ファイル添付の場合は直接的な更新が必要
-      // 現在のDataManagerは個別プロパティ更新をサポートしていないため、
-      // 一時的にレガシー方式を使用
-      console.warn('⚠️ NodesV2: attachments更新はレガシー方式を使用');
-      
-      const currentNode = findNode(nodeId);
-      if (currentNode) {
-        const updateNodeRecursive = (node) => {
-          if (node.id === nodeId) return { ...node, ...updates };
-          return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
-        };
-        
-        const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
-        // レガシーupdateDataを使用（将来的にDataManagerで対応）
-        await dataOperations.updateData?.(newData, { saveImmediately: true });
-      }
+    const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
+    // ファイル添付などの重要な操作では即座保存
+    if (updates.attachments) {
+      await updateData(newData, { skipHistory: false, saveImmediately: true });
     } else {
-      // 位置更新など
-      return await dataOperations.moveNode(nodeId, updates.x, updates.y);
+      await updateData(newData, { skipHistory: false, immediate: true });
     }
-  }, [data, dataOperations, findNode]);
+    
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    if (syncToCloud) {
+      console.log('⚠️ ノード個別同期は一時的に無効化されています:', nodeId);
+      // APIサーバーのノードエンドポイント修正後に有効化
+      /*
+      try {
+        const adapter = getCurrentAdapter();
+        await adapter.updateNode(data.id, nodeId, updates);
+        console.log('✅ ノード更新完了:', nodeId);
+      } catch (error) {
+        console.warn('⚠️ ノード更新失敗:', error.message);
+      }
+      */
+    } else {
+      console.log('📝 ローカルのみ更新:', nodeId);
+    }
+  };
 
-  // 子ノード追加（DataManager経由）
-  const addChildNode = useCallback(async (parentId, nodeText = '', startEditing = false) => {
+  // 子ノード追加（完全分離版）
+  const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
-    
-    console.log('➕ NodesV2: 子ノード追加', { parentId, nodeText });
     
     const newChild = createNewNode(nodeText, parentNode);
     const childrenCount = parentNode.children?.length || 0;
@@ -112,34 +115,48 @@ export const useMindMapNodes = (data, dataOperations) => {
     // 色を設定
     newChild.color = getNodeColor(parentNode, childrenCount);
     
-    // DataManager経由で追加
-    const result = await dataOperations.addNode(parentId, newChild);
+    // 1. ローカル状態を即座に更新
+    const addChildRecursive = (node) => {
+      if (node.id === parentId) {
+        return { ...node, children: [...(node.children || []), newChild] };
+      }
+      return { ...node, children: node.children?.map(addChildRecursive) || [] };
+    };
     
-    if (result.success) {
-      // オートレイアウトの適用（必要に応じて）
-      if (data.settings?.autoLayout !== false) {
-        const newLayout = applyAutoLayout(result.data.rootNode);
-        await dataOperations.updateLayout(newLayout);
-      }
-      
-      // 編集状態を同時に設定
-      if (startEditing) {
-        setSelectedNodeId(newChild.id);
-        setEditingNodeId(newChild.id);
-        setEditText('');
-      }
-      
-      return newChild.id;
+    let newRootNode = addChildRecursive(data.rootNode);
+    if (data.settings?.autoLayout !== false) {
+      newRootNode = applyAutoLayout(newRootNode);
     }
     
-    return null;
-  }, [data, dataOperations, findNode, getNodeColor, applyAutoLayout]);
+    const newData = { ...data, rootNode: newRootNode };
+    await updateData(newData, { skipHistory: false, saveImmediately: true });
+    
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    console.log('⚠️ ノード追加のクラウド同期は一時的に無効化されています:', newChild.id);
+    /*
+    try {
+      const adapter = getCurrentAdapter();
+      await adapter.addNode(data.id, newChild, parentId);
+      console.log('✅ ノード追加完了:', newChild.id);
+    } catch (error) {
+      console.warn('⚠️ ノード追加失敗:', error.message);
+    }
+    */
+    
+    // 編集状態を同時に設定
+    if (startEditing) {
+      setSelectedNodeId(newChild.id);
+      // 遅延なしで即座に編集モード開始（blur競合を防止）
+      setEditingNodeId(newChild.id);
+      setEditText(newChild.text || ''); // ノードのテキストを使用
+    }
+    
+    return newChild.id;
+  };
 
   // 兄弟ノードを追加
-  const addSiblingNode = useCallback(async (nodeId, nodeText = '', startEditing = false) => {
+  const addSiblingNode = (nodeId, nodeText = '', startEditing = false) => {
     if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
-    
-    console.log('👥 NodesV2: 兄弟ノード追加', { nodeId, nodeText });
     
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
@@ -159,38 +176,39 @@ export const useMindMapNodes = (data, dataOperations) => {
       }
     }
     
-    // 挿入位置を計算
-    const currentIndex = parentNode.children?.findIndex(child => child.id === nodeId) ?? -1;
-    const insertPosition = currentIndex + 1;
-    
-    // DataManager経由で追加
-    const result = await dataOperations.addNode(parentNode.id, newSibling, insertPosition);
-    
-    if (result.success) {
-      // オートレイアウトの適用
-      if (data.settings?.autoLayout !== false) {
-        const newLayout = applyAutoLayout(result.data.rootNode);
-        await dataOperations.updateLayout(newLayout);
+    const addSiblingRecursive = (node) => {
+      if (node.id === parentNode.id) {
+        const currentIndex = node.children?.findIndex(child => child.id === nodeId) ?? -1;
+        if (currentIndex === -1) return node;
+        
+        const newChildren = [...(node.children || [])];
+        newChildren.splice(currentIndex + 1, 0, newSibling);
+        return { ...node, children: newChildren };
       }
-      
-      // 編集状態を同時に設定
-      if (startEditing) {
-        setSelectedNodeId(newSibling.id);
-        setEditingNodeId(newSibling.id);
-        setEditText('');
-      }
-      
-      return newSibling.id;
+      return { ...node, children: node.children?.map(addSiblingRecursive) || [] };
+    };
+    
+    let newRootNode = addSiblingRecursive(data.rootNode);
+    if (data.settings?.autoLayout !== false) {
+      newRootNode = applyAutoLayout(newRootNode);
     }
     
-    return null;
-  }, [data, dataOperations, findNode, findParentNode, getNodeColor, addChildNode, applyAutoLayout]);
-
-  // ノードを削除（DataManager経由）
-  const deleteNode = useCallback(async (nodeId) => {
-    if (nodeId === 'root') return false;
+    updateData({ ...data, rootNode: newRootNode });
     
-    console.log('🗑️ NodesV2: ノード削除', { nodeId });
+    // 編集状態を同時に設定
+    if (startEditing) {
+      setSelectedNodeId(newSibling.id);
+      // 遅延なしで即座に編集モード開始（blur競合を防止）
+      setEditingNodeId(newSibling.id);
+      setEditText(newSibling.text || ''); // ノードのテキストを使用
+    }
+    
+    return newSibling.id;
+  };
+
+  // ノードを削除（即座DB反映）
+  const deleteNode = async (nodeId) => {
+    if (nodeId === 'root') return false;
     
     // 削除後に選択するノードを決定
     let nodeToSelect = null;
@@ -215,39 +233,53 @@ export const useMindMapNodes = (data, dataOperations) => {
       nodeToSelect = 'root';
     }
     
-    // DataManager経由で削除
-    const result = await dataOperations.deleteNode(nodeId);
+    // 1. ローカル状態を即座に更新
+    const deleteNodeRecursive = (node) => {
+      return {
+        ...node,
+        children: (node.children || [])
+          .filter(child => child.id !== nodeId)
+          .map(deleteNodeRecursive)
+      };
+    };
     
-    if (result.success) {
-      // オートレイアウトの適用
-      if (data.settings?.autoLayout !== false) {
-        const newLayout = applyAutoLayout(result.data.rootNode);
-        await dataOperations.updateLayout(newLayout);
-      }
-      
-      // 削除されたノードが選択されていた場合、決定されたノードを選択
-      if (selectedNodeId === nodeId) {
-        setSelectedNodeId(nodeToSelect);
-      }
-      if (editingNodeId === nodeId) setEditingNodeId(null);
-      
-      return true;
+    let newRootNode = deleteNodeRecursive(data.rootNode);
+    if (data.settings?.autoLayout !== false) {
+      newRootNode = applyAutoLayout(newRootNode);
     }
     
-    return false;
-  }, [data, dataOperations, findParentNode, selectedNodeId, editingNodeId, applyAutoLayout]);
+    const newData = { ...data, rootNode: newRootNode };
+    await updateData(newData, { skipHistory: false, saveImmediately: true });
+    
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    console.log('⚠️ ノード削除のクラウド同期は一時的に無効化されています:', nodeId);
+    /*
+    try {
+      const adapter = getCurrentAdapter();
+      await adapter.deleteNode(data.id, nodeId);
+      console.log('✅ ノード削除完了:', nodeId);
+    } catch (error) {
+      console.warn('⚠️ ノード削除失敗:', error.message);
+    }
+    */
+    
+    // 削除されたノードが選択されていた場合、決定されたノードを選択
+    if (selectedNodeId === nodeId) {
+      setSelectedNodeId(nodeToSelect);
+    }
+    if (editingNodeId === nodeId) setEditingNodeId(null);
+    
+    return true;
+  };
 
-  // ノードをドラッグで移動
-  const dragNode = useCallback(async (nodeId, x, y) => {
-    console.log('🖱️ NodesV2: ドラッグ移動', { nodeId, x, y });
-    return await dataOperations.moveNode(nodeId, x, y);
-  }, [dataOperations]);
+  // ノードをドラッグで移動（ローカルのみ、クラウド同期なし）
+  const dragNode = (nodeId, x, y) => {
+    updateNode(nodeId, { x, y }, false);
+  };
 
   // ノードの親を変更
-  const changeParent = useCallback(async (nodeId, newParentId) => {
+  const changeParent = (nodeId, newParentId) => {
     if (nodeId === 'root' || nodeId === newParentId) return false;
-    
-    console.log('🔄 NodesV2: 親ノード変更', { nodeId, newParentId });
     
     // 循環参照防止
     const isDescendant = (parentId, childId) => {
@@ -269,86 +301,99 @@ export const useMindMapNodes = (data, dataOperations) => {
     
     if (!nodeToMove || !newParent) return false;
     
-    // 色を新しい親に合わせて更新
-    const childrenCount = newParent.children?.length || 0;
-    const updatedNode = {
-      ...nodeToMove,
-      color: getNodeColor(newParent, childrenCount)
+    // 現在の親から削除
+    const removeFromParent = (node) => {
+      return {
+        ...node,
+        children: (node.children || [])
+          .filter(child => child.id !== nodeId)
+          .map(removeFromParent)
+      };
     };
     
-    // DataManagerでは親変更の直接操作が未実装のため、
-    // 一時的にレガシー方式を使用
-    console.warn('⚠️ NodesV2: 親変更はレガシー方式を使用');
+    // 新しい親に追加
+    const addToNewParent = (node) => {
+      if (node.id === newParentId) {
+        const childrenCount = node.children?.length || 0;
+        const updatedNode = {
+          ...nodeToMove,
+          color: getNodeColor(newParent, childrenCount)
+        };
+        
+        return {
+          ...node,
+          children: [...(node.children || []), updatedNode]
+        };
+      }
+      return {
+        ...node,
+        children: node.children?.map(addToNewParent) || []
+      };
+    };
     
-    // 1. 元の位置から削除
-    const removeResult = await dataOperations.deleteNode(nodeId);
-    if (!removeResult.success) return false;
+    let newRootNode = removeFromParent(data.rootNode);
+    newRootNode = addToNewParent(newRootNode);
     
-    // 2. 新しい親に追加
-    const addResult = await dataOperations.addNode(newParentId, updatedNode);
-    if (!addResult.success) {
-      // 失敗した場合のロールバックは複雑なので、エラーログのみ
-      console.error('❌ NodesV2: 親変更時の追加に失敗');
-      return false;
-    }
-    
-    // オートレイアウトの適用
     if (data.settings?.autoLayout !== false) {
-      const newLayout = applyAutoLayout(addResult.data.rootNode);
-      await dataOperations.updateLayout(newLayout);
+      newRootNode = applyAutoLayout(newRootNode);
     }
     
+    updateData(
+      { ...data, rootNode: newRootNode },
+      {
+        operationType: 'node_move',
+        operationData: {
+          nodeId,
+          newPosition: { x: nodeToMove.x, y: nodeToMove.y },
+          newParentId
+        }
+      }
+    );
     return true;
-  }, [data, dataOperations, findNode, getNodeColor, applyAutoLayout]);
+  };
 
   // 編集開始
-  const startEdit = useCallback((nodeId, clearText = false) => {
+  const startEdit = (nodeId, clearText = false) => {
     const node = findNode(nodeId);
     if (node) {
       setEditingNodeId(nodeId);
       setEditText(clearText ? '' : node.text);
       setSelectedNodeId(nodeId);
-      console.log('✏️ NodesV2: 編集開始', { nodeId, text: node.text });
     }
-  }, [findNode]);
+  };
 
   // 編集終了
-  const finishEdit = useCallback(async (nodeId, newText) => {
-    console.log('✅ NodesV2: 編集終了', { nodeId, newText });
+  const finishEdit = (nodeId, newText) => {
+    // newTextがundefinedの場合は現在のeditTextを使用
+    const textToSave = newText !== undefined ? newText : editText;
     
-    if (newText.trim() === '') {
+    console.log('📝 finishEdit - 入力:', { nodeId, newText, editText, textToSave });
+    
+    if (!textToSave || textToSave.trim() === '') {
+      console.log('⚠️ 空のテキスト検出 - ノードを削除:', nodeId);
       setEditingNodeId(null);
       setEditText('');
       if (nodeId !== 'root') {
-        await deleteNode(nodeId);
+        deleteNode(nodeId);
       }
       return;
     }
     
-    await updateNode(nodeId, { text: newText.trim() });
+    console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
+    updateNode(nodeId, { text: textToSave.trim() });
     setEditingNodeId(null);
     setEditText('');
-  }, [updateNode, deleteNode]);
+  };
 
   // 折りたたみ状態をトグル
-  const toggleCollapse = useCallback(async (nodeId) => {
-    console.log('📁 NodesV2: 折りたたみトグル', { nodeId });
+  const toggleCollapse = (nodeId) => {
+    const toggleNodeRecursive = (node) => {
+      if (node.id === nodeId) return { ...node, collapsed: !node.collapsed };
+      return { ...node, children: node.children?.map(toggleNodeRecursive) || [] };
+    };
     
-    const node = findNode(nodeId);
-    if (node) {
-      // 現在はDataManagerで折りたたみ状態の専用操作がないため、
-      // 一時的にレガシー方式を使用
-      console.warn('⚠️ NodesV2: 折りたたみはレガシー方式を使用');
-      
-      const toggleNodeRecursive = (node) => {
-        if (node.id === nodeId) return { ...node, collapsed: !node.collapsed };
-        return { ...node, children: node.children?.map(toggleNodeRecursive) || [] };
-      };
-      
-      const newData = { ...data, rootNode: toggleNodeRecursive(data.rootNode) };
-      await dataOperations.updateData?.(newData, { immediate: true });
-    }
-  }, [data, dataOperations, findNode]);
+    updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
+  };
 
   return {
     selectedNodeId,
