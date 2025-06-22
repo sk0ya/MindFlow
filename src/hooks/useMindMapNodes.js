@@ -363,10 +363,11 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 編集終了
-  const finishEdit = (nodeId, newText) => {
+  const finishEdit = (nodeId, newText, options = {}) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
     const currentNode = findNode(nodeId);
+    const { allowDelete = true } = options;
     
     console.log('📝 finishEdit - 詳細入力:', { 
       nodeId, 
@@ -375,25 +376,46 @@ export const useMindMapNodes = (data, updateData) => {
       textToSave,
       isEmpty: !textToSave || textToSave.trim() === '',
       currentNodeText: currentNode?.text,
-      isRoot: nodeId === 'root'
+      isRoot: nodeId === 'root',
+      allowDelete
     });
     
-    if (!textToSave || textToSave.trim() === '') {
-      console.log('⚠️ 空のテキスト検出 - ノード削除判定:', { 
+    const isEmpty = !textToSave || textToSave.trim() === '';
+    const isRoot = nodeId === 'root';
+    
+    // 削除判定：明確な条件でのみ削除
+    const shouldDelete = isEmpty && !isRoot && allowDelete && currentNode && (
+      // 既存ノードが元々空だった場合（新規作成後に内容を入力せずにblur）
+      !currentNode.text || currentNode.text.trim() === ''
+    );
+    
+    if (shouldDelete) {
+      console.log('🗑️ ノード削除実行:', { 
         nodeId, 
-        isRoot: nodeId === 'root',
-        willDelete: nodeId !== 'root'
+        reason: '空の新規ノードまたは内容を削除したノード',
+        originalText: currentNode?.text
       });
       setEditingNodeId(null);
       setEditText('');
-      if (nodeId !== 'root') {
-        deleteNode(nodeId);
-      }
+      deleteNode(nodeId);
       return;
     }
     
-    console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-    updateNode(nodeId, { text: textToSave.trim() });
+    if (isEmpty && !isRoot) {
+      console.log('⚠️ 空のテキストだが削除しない:', { 
+        nodeId, 
+        reason: allowDelete ? '既存の内容があったノード' : '削除が無効化されている',
+        originalText: currentNode?.text
+      });
+      // 空でも既存の内容があった場合は削除せず、元の内容を復元
+      if (currentNode?.text) {
+        updateNode(nodeId, { text: currentNode.text });
+      }
+    } else if (!isEmpty) {
+      console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
+      updateNode(nodeId, { text: textToSave.trim() });
+    }
+    
     setEditingNodeId(null);
     setEditText('');
   };

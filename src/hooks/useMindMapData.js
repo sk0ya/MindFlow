@@ -24,21 +24,14 @@ export const useMindMapData = (isAppReady = false) => {
         autoSaveTimeoutRef.current = null;
       }
 
-      // 編集中のテキストを強制確定（新規作成ノードは除外）
+      // 編集中のテキストがある場合のみ確定（遅延なし）
       const editingInput = document.querySelector('.node-input');
-      if (editingInput) {
-        const hasContent = editingInput.value && editingInput.value.trim().length > 0;
-        console.log('📝 即座保存: 編集中のノード検出', { 
-          hasContent, 
-          value: editingInput.value,
-          willBlur: hasContent 
+      if (editingInput && editingInput.value && editingInput.value.trim().length > 0) {
+        console.log('📝 即座保存: 内容のある編集中ノードを確定', { 
+          value: editingInput.value.trim()
         });
-        
-        // 内容がある場合のみblurして確定（空の新規ノードは保護）
-        if (hasContent) {
-          editingInput.blur();
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
+        editingInput.blur();
+        // 遅延を削除してシンプルに
       }
       
       const { saveMindMap } = await import('../utils/storageRouter.js');

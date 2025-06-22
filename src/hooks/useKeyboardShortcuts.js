@@ -81,9 +81,9 @@ export const useKeyboardShortcuts = ({
             const newNodeId = addSiblingNode(editingNodeId, '', true);
             console.log('📍 兄弟ノード作成完了:', { newNodeId, parentId: editingNodeId });
             
-            // その後で前のノードの編集を終了
+            // その後で前のノードの編集を終了（削除無効化）
             setTimeout(() => {
-              finishEdit(editingNodeId, currentText.trim());
+              finishEdit(editingNodeId, currentText.trim(), { allowDelete: false });
             }, 50);
           } else {
             // テキストが空の場合は通常通り編集終了
@@ -105,9 +105,9 @@ export const useKeyboardShortcuts = ({
             const newNodeId = addChildNode(editingNodeId, '', true);
             console.log('📍 子ノード作成完了:', { newNodeId, parentId: editingNodeId });
             
-            // その後で前のノードの編集を終了
+            // その後で前のノードの編集を終了（削除無効化）
             setTimeout(() => {
-              finishEdit(editingNodeId, currentText.trim());
+              finishEdit(editingNodeId, currentText.trim(), { allowDelete: false });
             }, 50);
           } else {
             // テキストが空の場合は通常通り編集終了
