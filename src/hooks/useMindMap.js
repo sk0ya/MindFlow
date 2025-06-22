@@ -29,9 +29,95 @@ export const useMindMap = (isAppReady = false) => {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   
   const navigateToDirection = useCallback((direction) => {
-    console.log('🧭 Navigate to direction:', direction);
-    // 簡略化：基本的なナビゲーションのみ実装
-  }, []);
+    console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
+    
+    if (!nodeHook.selectedNodeId || !dataHook.data?.rootNode) {
+      console.log('⚠️ Navigation cancelled: no selected node or data');
+      return;
+    }
+    
+    const allNodes = nodeHook.flattenNodes(dataHook.data.rootNode);
+    const currentNode = nodeHook.findNode(nodeHook.selectedNodeId);
+    if (!currentNode) {
+      console.log('⚠️ Navigation cancelled: current node not found');
+      return;
+    }
+    
+    let targetNode = null;
+    let minDistance = Infinity;
+    
+    // 座標ベースで方向にあるノードを探す
+    allNodes.forEach(node => {
+      if (node.id === nodeHook.selectedNodeId) return;
+      
+      const dx = node.x - currentNode.x;
+      const dy = node.y - currentNode.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      let isInDirection = false;
+      
+      switch (direction) {
+        case 'up':
+          isInDirection = dy < -20 && Math.abs(dx) < Math.abs(dy);
+          break;
+        case 'down':
+          isInDirection = dy > 20 && Math.abs(dx) < Math.abs(dy);
+          break;
+        case 'left':
+          isInDirection = dx < -20 && Math.abs(dy) < Math.abs(dx);
+          break;
+        case 'right':
+          isInDirection = dx > 20 && Math.abs(dy) < Math.abs(dx);
+          break;
+      }
+      
+      if (isInDirection && distance < minDistance) {
+        minDistance = distance;
+        targetNode = node;
+      }
+    });
+    
+    // 方向にノードが見つからない場合は階層関係で代替
+    if (!targetNode) {
+      console.log('🔄 No node found in direction, trying hierarchical fallback');
+      
+      switch (direction) {
+        case 'up':
+          // 上方向: 親ノードを選択
+          targetNode = nodeHook.findParentNode(nodeHook.selectedNodeId);
+          break;
+        case 'down':
+          // 下方向: 最初の子ノードを選択
+          targetNode = currentNode.children && currentNode.children.length > 0 
+            ? currentNode.children[0] : null;
+          break;
+        case 'left':
+          // 左方向: 前の兄弟ノードを選択
+          const leftParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
+          if (leftParent && leftParent.children) {
+            const currentIndex = leftParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
+            targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
+          }
+          break;
+        case 'right':
+          // 右方向: 次の兄弟ノードを選択
+          const rightParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
+          if (rightParent && rightParent.children) {
+            const currentIndex = rightParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
+            targetNode = currentIndex < rightParent.children.length - 1 
+              ? rightParent.children[currentIndex + 1] : null;
+          }
+          break;
+      }
+    }
+    
+    if (targetNode) {
+      console.log('✅ Navigation successful:', { from: nodeHook.selectedNodeId, to: targetNode.id, direction });
+      nodeHook.setSelectedNodeId(targetNode.id);
+    } else {
+      console.log('⚠️ No target node found for direction:', direction);
+    }
+  }, [nodeHook.selectedNodeId, dataHook.data, nodeHook.flattenNodes, nodeHook.findNode, nodeHook.findParentNode, nodeHook.setSelectedNodeId]);
 
   // マルチマップ管理
   const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
