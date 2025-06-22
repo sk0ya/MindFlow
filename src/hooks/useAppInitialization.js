@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { hasLocalData, isFirstTimeSetup, setStorageMode, getAppSettings } from '../utils/storage.js';
+import { isFirstTimeSetup, setStorageMode } from '../utils/storageRouter.js';
+import { getAppSettings } from '../utils/storage.js';
+import { hasLocalData } from '../utils/localStorage.js';
 
 // アプリ初期化専用フック - シーケンスを一本化
 export const useAppInitialization = () => {

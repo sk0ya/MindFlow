@@ -1,7 +1,7 @@
 // Debug script to test sync functionality
 import { authManager } from './utils/authManager.js';
 import { cloudStorage } from './utils/cloudStorage.js';
-import { saveMindMapHybrid } from './utils/storage.js';
+import { saveMindMap } from './utils/storageRouter.js';
 import { createInitialData } from './utils/dataTypes.js';
 
 export const debugSync = async () => {
@@ -53,7 +53,7 @@ export const debugSync = async () => {
       title: testMap.title
     });
     
-    const syncResult = await saveMindMapHybrid(testMap);
+    const syncResult = await saveMindMap(testMap);
     console.log('🔄 Sync Result:', syncResult);
   } catch (error) {
     console.error('❌ Sync Test failed:', error);

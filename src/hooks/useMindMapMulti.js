@@ -84,8 +84,8 @@ export const useMindMapMulti = (data, setData, updateData) => {
         }
       } else {
         // ローカル更新
-        const { getAllMindMaps, saveMindMap } = await import('../utils/storage.js');
-        const allMaps = getAllMindMaps();
+        const { getAllMindMaps, saveMindMap } = await import('../utils/storageRouter.js');
+        const allMaps = await getAllMindMaps();
         const mapIndex = allMaps.findIndex(map => map.id === mapId);
         
         if (mapIndex !== -1) {
@@ -156,8 +156,8 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // カテゴリー変更
-  const changeMapCategory = (mapId, newCategory) => {
-    const allMaps = getAllMindMaps();
+  const changeMapCategory = async (mapId, newCategory) => {
+    const allMaps = await getAllMindMaps();
     const mapIndex = allMaps.findIndex(map => map.id === mapId);
     
     if (mapIndex !== -1) {
@@ -238,8 +238,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
         } else {
           // ローカルモードの場合は従来通り
           console.log('🏠 ローカルモードで初期化');
-          const { getAllMindMaps } = await import('../utils/storage.js');
-          const maps = getAllMindMaps();
+          const maps = await getAllMindMaps();
           if (maps.length !== allMindMaps.length) {
             setAllMindMaps(maps);
           }

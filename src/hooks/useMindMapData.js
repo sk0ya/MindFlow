@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAppSettings } from '../utils/storage.js';
+import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
+import { getAppSettings } from '../utils/storage.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
 
 // データ管理専用のカスタムフック
@@ -86,8 +87,8 @@ export const useMindMapData = (isAppReady = false) => {
         
         // クラウドに保存
         try {
-          const { saveMindMapHybrid } = await import('../utils/storage.js');
-          await saveMindMapHybrid(newMap);
+          const { saveMindMap } = await import('../utils/storageRouter.js');
+          await saveMindMap(newMap);
           console.log('✅ 新規マップのクラウド保存完了');
         } catch (saveError) {
           console.warn('❌ 新規マップ保存失敗:', saveError);

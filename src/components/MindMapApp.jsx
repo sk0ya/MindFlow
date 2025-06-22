@@ -17,7 +17,9 @@ import ConnectionStatus from './ConnectionStatus';
 import ConflictNotification from './ConflictNotification';
 import CollaborativeFeatures from './CollaborativeFeatures';
 import PerformanceDashboard from './PerformanceDashboard';
-import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings, hasLocalData, isFirstTimeSetup, setStorageMode } from '../utils/storage';
+import { exportMindMapAsJSON, importMindMapFromJSON, isFirstTimeSetup, setStorageMode } from '../utils/storageRouter';
+import { getAppSettings } from '../utils/storage';
+import { hasLocalData } from '../utils/localStorage';
 import './MindMapApp.css';
 
 import AuthVerification from './AuthVerification.jsx';
