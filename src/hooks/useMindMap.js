@@ -60,7 +60,7 @@ export const useMindMap = (isAppReady = false) => {
     removeFileFromNode,
     renameFileInNode,
     downloadFile
-  } = useMindMapFiles(findNode, updateNode);
+  } = useMindMapFiles(findNode, updateNode, currentMapId);
 
   // マルチマップ管理
   const {

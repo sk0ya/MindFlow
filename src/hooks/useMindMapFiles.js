@@ -46,6 +46,12 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       const { authManager } = await import('../utils/authManager.js');
       const authHeader = authManager.getAuthHeader();
       
+      console.log('🔐 認証情報確認:', {
+        isAuthenticated: authManager.isAuthenticated(),
+        hasAuthHeader: !!authHeader,
+        authHeaderPrefix: authHeader ? authHeader.substring(0, 10) + '...' : 'なし'
+      });
+      
       if (!authHeader) {
         throw new Error('認証が必要です');
       }
@@ -56,6 +62,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       let mapId = null;
       if (isCloudStorageEnabled()) {
         // クラウドモードの場合は親フックから渡されたIDを使用
+        console.log('☁️ クラウドモード - currentMapId:', currentMapId);
         if (!currentMapId) {
           throw new Error('クラウドモードではマップIDが必要です');
         }
@@ -67,6 +74,14 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         }
         mapId = currentMap.id;
       }
+      
+      console.log('📎 ファイルアップロード情報:', {
+        mapId,
+        nodeId,
+        fileName: file.name,
+        isCloudMode: isCloudStorageEnabled(),
+        uploadUrl: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`
+      });
 
       // FormDataでファイルをアップロード
       const formData = new FormData();
@@ -81,7 +96,25 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`ファイルアップロードに失敗しました: ${uploadResponse.statusText}`);
+        // エラーの詳細を取得
+        let errorDetail = uploadResponse.statusText;
+        try {
+          const errorBody = await uploadResponse.text();
+          errorDetail = errorBody || uploadResponse.statusText;
+        } catch (e) {
+          // エラーボディの取得に失敗した場合はステータステキストを使用
+        }
+        
+        console.error('ファイルアップロードエラー詳細:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          url: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`,
+          mapId,
+          nodeId,
+          errorDetail
+        });
+        
+        throw new Error(`ファイルアップロードに失敗しました: ${errorDetail}`);
       }
 
       const uploadResult = await uploadResponse.json();
