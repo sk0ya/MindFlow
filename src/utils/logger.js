@@ -22,7 +22,7 @@ export const LOG_LEVEL_NAMES = {
 
 // 環境別デフォルトログレベル
 const getDefaultLogLevel = () => {
-  const env = process.env.NODE_ENV || 'development';
+  const env = import.meta.env.MODE || 'development';
   
   switch (env) {
     case 'development':
@@ -387,14 +387,14 @@ class Logger {
 // グローバルロガーインスタンス
 export const logger = new Logger({
   level: getDefaultLogLevel(),
-  outputs: process.env.NODE_ENV === 'production' 
+  outputs: import.meta.env.MODE === 'production' 
     ? [LOG_OUTPUTS.STORAGE, LOG_OUTPUTS.REMOTE]
     : [LOG_OUTPUTS.CONSOLE, LOG_OUTPUTS.STORAGE],
-  remoteEndpoint: process.env.VITE_LOG_ENDPOINT,
+  remoteEndpoint: import.meta.env.VITE_LOG_ENDPOINT,
   context: {
     app: 'MindFlow',
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: import.meta.env.MODE || 'development'
   }
 });
 
@@ -449,7 +449,7 @@ export const commonFilters = {
 };
 
 // 開発環境での便利機能
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.MODE === 'development') {
   // グローバルにロガーを公開（デバッグ用）
   if (typeof window !== 'undefined') {
     window.mindflowLogger = logger;

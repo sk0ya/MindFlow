@@ -195,7 +195,7 @@ export const getStorageInfo = () => {
 
 // ストレージの完全リセット（開発用）
 export const resetStorage = () => {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.MODE === 'development') {
     const confirmReset = confirm('ストレージを完全にリセットしますか？この操作は元に戻せません。');
     if (confirmReset) {
       localStorage.clear();
