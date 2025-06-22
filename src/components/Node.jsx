@@ -446,7 +446,6 @@ const Node = ({
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             onBlur={handleInputBlur}
-            autoFocus
             style={{
               width: '100%',
               border: '1px solid #ccc',
