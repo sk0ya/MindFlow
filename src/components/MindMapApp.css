@@ -4,6 +4,23 @@
   position: relative;
   overflow-x: hidden;
   display: flex;
+  flex-direction: column;
+}
+
+/* ローカルモード表示 */
+.local-mode-status {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.mode-indicator {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
 }
 
 .container {

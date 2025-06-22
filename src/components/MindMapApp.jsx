@@ -82,11 +82,18 @@ const MindMapApp = () => {
   const [showPerformanceDash, setShowPerformanceDash] = useState(false);
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
 
+  // ストレージモード取得
+  const appSettings = getAppSettings();
+  const isLocalMode = appSettings.storageMode === 'local';
+  const isCloudMode = appSettings.storageMode === 'cloud';
+
   // 🚨 重要: メインのマインドマップフック（常に呼び出し）
   const mindMap = useMindMap(isReady);
 
-  // 認証状態変更の監視
+  // 認証状態変更の監視（クラウドモード専用）
   useEffect(() => {
+    if (!isCloudMode) return;
+
     const handleAuthChange = () => {
       setAuthState({
         isAuthenticated: authManager.isAuthenticated(),
@@ -102,7 +109,7 @@ const MindMapApp = () => {
 
     window.addEventListener('authStateChange', handleAuthChange);
     return () => window.removeEventListener('authStateChange', handleAuthChange);
-  }, [authState.isAuthenticated, mindMap.triggerCloudSync]);
+  }, [isCloudMode, authState.isAuthenticated, mindMap.triggerCloudSync]);
 
   // 🚨 PHASE 2: 条件分岐によるレンダリング（フック呼び出し後）
 
@@ -326,26 +333,39 @@ const MindMapApp = () => {
             onImport={importMindMapFromJSON}
             zoom={mindMap.zoom || 1}
             onZoomReset={mindMap.resetView}
-            onShowCloudStoragePanel={() => setShowCloudPanel(true)}
-            authState={authState}
-            onShowAuthModal={() => setShowAuthModal(true)}
-            onLogout={() => {
+            onShowCloudStoragePanel={isCloudMode ? () => setShowCloudPanel(true) : undefined}
+            authState={isCloudMode ? authState : undefined}
+            onShowAuthModal={isCloudMode ? () => setShowAuthModal(true) : undefined}
+            onLogout={isCloudMode ? () => {
               authManager.logout();
               setAuthState({ isAuthenticated: false, user: null, isLoading: false });
               window.dispatchEvent(new CustomEvent('authStateChange'));
-            }}
+            } : undefined}
+            isLocalMode={isLocalMode}
             onShowShortcutHelper={() => setShowShortcutHelper(true)}
           />
           
-          <SyncStatusIndicator 
-            syncStatus={{}} // 簡略化: sync状態は後で修正
-            onForceSync={mindMap.saveMindMap}
-          />
-          
-          <div className="connection-info">
-            <ConnectionStatus />
-            {/* 一時的に無効化: UserPresence */}
-          </div>
+          {/* ローカルモード表示 */}
+          {isLocalMode && (
+            <div className="local-mode-status">
+              <span className="mode-indicator">📁 ローカルモード</span>
+            </div>
+          )}
+
+          {/* クラウドモード専用コンポーネント */}
+          {isCloudMode && (
+            <>
+              <SyncStatusIndicator 
+                syncStatus={{}} // 簡略化: sync状態は後で修正
+                onForceSync={mindMap.saveMindMap}
+              />
+              
+              <div className="connection-info">
+                <ConnectionStatus />
+                {/* 一時的に無効化: UserPresence */}
+              </div>
+            </>
+          )}
         </div>
 
         {/* メインコンテンツエリア */}
@@ -397,8 +417,8 @@ const MindMapApp = () => {
           />
         )}
 
-        {/* クラウドストレージパネル */}
-        {showCloudPanel && (
+        {/* クラウドストレージパネル（クラウドモード専用） */}
+        {isCloudMode && showCloudPanel && (
           <CloudStoragePanelEnhanced
             isOpen={showCloudPanel}
             onClose={() => setShowCloudPanel(false)}
@@ -464,7 +484,8 @@ const MindMapApp = () => {
           />
         )}
 
-        {showAuthModal && (
+        {/* 認証モーダル（クラウドモード専用） */}
+        {isCloudMode && showAuthModal && (
           <AuthModal
             isOpen={showAuthModal}
             onClose={() => setShowAuthModal(false)}
@@ -485,8 +506,13 @@ const MindMapApp = () => {
           />
         )}
 
-        <CollaborativeFeatures />
-        <ConflictNotification />
+        {/* コラボレーション機能（クラウドモード専用） */}
+        {isCloudMode && (
+          <>
+            <CollaborativeFeatures />
+            <ConflictNotification />
+          </>
+        )}
       </div>
     </ErrorBoundary>
   );

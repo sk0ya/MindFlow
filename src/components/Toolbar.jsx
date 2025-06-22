@@ -16,7 +16,8 @@ const Toolbar = ({
   authState,
   onShowAuthModal,
   onLogout,
-  onShowShortcutHelper
+  onShowShortcutHelper,
+  isLocalMode = false
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -118,18 +119,21 @@ const Toolbar = ({
             </ShortcutTooltip>
           </div>
 
-          <div className="action-group">
-            <button
-              onClick={onShowCloudStoragePanel}
-              className="btn btn-feature"
-              title="クラウドストレージとマップ管理"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-              クラウド
-            </button>
-          </div>
+          {/* クラウドボタン（クラウドモード専用） */}
+          {!isLocalMode && onShowCloudStoragePanel && (
+            <div className="action-group">
+              <button
+                onClick={onShowCloudStoragePanel}
+                className="btn btn-feature"
+                title="クラウドストレージとマップ管理"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+                クラウド
+              </button>
+            </div>
+          )}
 
           <div className="action-group primary-actions">
             <button
@@ -158,39 +162,42 @@ const Toolbar = ({
         </div>
 
         <div className="toolbar-right">
-          <div className="auth-section">
-            {authState.isAuthenticated ? (
-              <div className="auth-info">
-                <div className="user-info">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  <span className="user-name">{authState.user?.email}</span>
+          {/* 認証セクション（クラウドモード専用） */}
+          {!isLocalMode && authState && (
+            <div className="auth-section">
+              {authState.isAuthenticated ? (
+                <div className="auth-info">
+                  <div className="user-info">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span className="user-name">{authState.user?.email}</span>
+                  </div>
+                  <button
+                    onClick={onLogout}
+                    className="btn btn-auth"
+                    title="ログアウト"
+                  >
+                    ログアウト
+                  </button>
                 </div>
+              ) : (
                 <button
-                  onClick={onLogout}
-                  className="btn btn-auth"
-                  title="ログアウト"
+                  onClick={onShowAuthModal}
+                  className="btn btn-auth-login"
+                  title="ログイン"
                 >
-                  ログアウト
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2"/>
+                    <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  ログイン
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={onShowAuthModal}
-                className="btn btn-auth-login"
-                title="ログイン"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="currentColor" strokeWidth="2"/>
-                  <polyline points="10,17 15,12 10,7" stroke="currentColor" strokeWidth="2"/>
-                  <line x1="15" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-                ログイン
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           
           <div className="help-controls">
             <ShortcutTooltip shortcut="F1 or ?" description="ショートカット一覧を表示">
