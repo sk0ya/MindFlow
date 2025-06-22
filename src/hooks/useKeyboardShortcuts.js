@@ -51,11 +51,26 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // 編集中の場合は、Enterキーのみ処理
+      // 編集中の場合は、Tab/Enterキーを処理
       if (editingNodeId) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          finishEdit(editingNodeId, editText);
+          console.log('⌨️ useKeyboardShortcuts Enter処理:', { editingNodeId, editText });
+          const currentText = editText.trim();
+          finishEdit(editingNodeId, currentText || '');
+          // テキストがある場合のみ兄弟ノード追加
+          if (currentText && addSiblingNode) {
+            setTimeout(() => addSiblingNode(editingNodeId, '', true), 50);
+          }
+        } else if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          console.log('⌨️ useKeyboardShortcuts Tab処理:', { editingNodeId, editText });
+          const currentText = editText.trim();
+          finishEdit(editingNodeId, currentText || '');
+          // テキストがある場合のみ子ノード追加
+          if (currentText && addChildNode) {
+            setTimeout(() => addChildNode(editingNodeId, '', true), 50);
+          }
         }
         return;
       }

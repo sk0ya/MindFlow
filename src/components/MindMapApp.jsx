@@ -31,6 +31,7 @@ import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
 import StorageModeSelector from './StorageModeSelector.jsx';
 import { useOnboarding } from '../hooks/useOnboarding.js';
 import { useAppInitialization } from '../hooks/useAppInitialization.js';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js';
 
 const MindMapApp = () => {
   // 🚨 PHASE 1: すべてのフックを最初に呼び出し（React Hook順序を固定）
@@ -90,6 +91,33 @@ const MindMapApp = () => {
 
   // 🚨 重要: メインのマインドマップフック（常に呼び出し）
   const mindMap = useMindMap(isReady);
+  
+  // キーボードショートカット処理（統一化）
+  useKeyboardShortcuts({
+    selectedNodeId: mindMap.selectedNodeId,
+    editingNodeId: mindMap.editingNodeId,
+    setEditingNodeId: (nodeId) => nodeId ? mindMap.startEdit(nodeId) : null,
+    startEdit: mindMap.startEdit,
+    finishEdit: mindMap.finishEdit,
+    editText: mindMap.editText,
+    addChildNode: mindMap.addChildNode,
+    addSiblingNode: mindMap.addSiblingNode,
+    deleteNode: mindMap.deleteNode,
+    undo: mindMap.undo,
+    redo: mindMap.redo,
+    canUndo: mindMap.canUndo,
+    canRedo: mindMap.canRedo,
+    navigateToDirection: mindMap.navigateToDirection,
+    saveMindMap: mindMap.saveMindMap,
+    showMapList: false, // 簡略化
+    setShowMapList: () => {}, // 簡略化
+    showCloudStorage: false, // 簡略化
+    setShowCloudStorage: () => {}, // 簡略化
+    showTutorial: showOnboarding,
+    setShowTutorial: setShowOnboarding,
+    showKeyboardHelper: showShortcutHelper,
+    setShowKeyboardHelper: setShowShortcutHelper
+  });
 
   // 認証状態変更の監視（クラウドモード専用）
   useEffect(() => {

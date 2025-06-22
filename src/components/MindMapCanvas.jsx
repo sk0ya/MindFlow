@@ -259,25 +259,10 @@ const MindMapCanvas = ({
   }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
 
   const handleKeyDown = useCallback((e) => {
+    console.log('🖱️ Canvas handleKeyDown:', { key: e.key, selectedNodeId, editingNodeId });
     if (selectedNodeId && !editingNodeId) {
-      // 特殊キーの処理（Tab/EnterはNode.jsxで処理されるためここでは無効化）
+      // 基本的なナビゲーションのみ処理（Tab/Enter/削除はuseKeyboardShortcutsに委任）
       switch (e.key) {
-        // case 'Tab': と case 'Enter': は Node.jsx で処理されるため削除
-        case 'Delete':
-        case 'Backspace':
-          e.preventDefault();
-          if (selectedNodeId !== 'root') {
-            onDeleteNode(selectedNodeId);
-            // 削除後の選択はuseMindMapで自動的に処理される
-          }
-          break;
-        case ' ':
-          e.preventDefault();
-          onStartEdit(selectedNodeId);
-          break;
-        case 'Escape':
-          onSelectNode(null);
-          break;
         case 'ArrowUp':
           e.preventDefault();
           onNavigateToDirection('up');
@@ -294,16 +279,12 @@ const MindMapCanvas = ({
           e.preventDefault();
           onNavigateToDirection('right');
           break;
-        case 'Process':
-          // IME変換中は何もしない
-          break;
         default:
-          // 文字入力での自動編集開始は無効化（IMEとの競合を避けるため）
-          // Spaceキーまたはダブルクリックでの編集開始を使用
+          // 他のキーはuseKeyboardShortcutsで統一処理
           break;
       }
     }
-  }, [selectedNodeId, editingNodeId, onDeleteNode, onStartEdit, onSelectNode, onNavigateToDirection]);
+  }, [selectedNodeId, editingNodeId, onNavigateToDirection]);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);

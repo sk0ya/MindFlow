@@ -167,58 +167,26 @@ const Node = ({
   }, [node.id, editText, onFinishEdit]);
 
   const handleKeyDown = useCallback((e) => {
-    e.stopPropagation();
+    console.log('🎹 Node.jsx handleKeyDown:', { key: e.key, isComposing, editText });
     
     // IME変換中は何もしない
     if (isComposing) {
+      console.log('🎹 IME変換中のためスキップ');
       return;
     }
     
-    if (e.key === 'Enter') {
+    // 編集中の入力フィールドでは、Escapeのみ処理（他はuseKeyboardShortcutsに委任）
+    if (e.key === 'Escape') {
       e.preventDefault();
-      e.stopPropagation();
-      // 現在の編集テキストを保存してから新規ノード作成
-      const currentText = editText.trim();
-      if (currentText) {
-        onFinishEdit(node.id, currentText);
-        // テキストが保存されてから兄弟ノードを追加
-        setTimeout(() => {
-          if (onAddSibling) {
-            onAddSibling(node.id);
-          }
-        }, 100);
-      } else {
-        // 空の場合は編集を終了するだけ
-        onFinishEdit(node.id, node.text);
-      }
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      e.stopPropagation();
-      // 現在の編集テキストを保存してから新規ノード作成
-      const currentText = editText.trim();
-      if (currentText) {
-        onFinishEdit(node.id, currentText);
-        // テキストが保存されてから子ノードを追加
-        setTimeout(() => {
-          if (onAddChild) {
-            onAddChild(node.id);
-          }
-        }, 100);
-      } else {
-        // 空の場合は編集を終了するだけ
-        onFinishEdit(node.id, node.text);
-      }
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      // Escapeの場合は元のテキストに戻す
+      console.log('🎹 Escape処理: 元のテキストに戻す');
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
       }
       onFinishEdit(node.id, node.text);
     }
-  }, [node.id, node.text, editText, isComposing, onAddChild, onAddSibling, onFinishEdit]);
+    // Tab/EnterはuseKeyboardShortcutsで統一処理
+  }, [node.id, node.text, isComposing, onFinishEdit]);
 
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true);
