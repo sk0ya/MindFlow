@@ -80,9 +80,6 @@ const MindMapApp = () => {
   const [showPerformanceDash, setShowPerformanceDash] = useState(false);
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
 
-  // メインのマインドマップフック（アプリが準備完了してから）
-  const mindMap = useMindMap(isReady);
-  
   // 認証トークン検証時は専用コンポーネントを表示
   if (isAuthVerification) {
     return <AuthVerification token={authToken} />;
@@ -149,6 +146,9 @@ const MindMapApp = () => {
       </div>
     );
   }
+
+  // メインのマインドマップフック（早期リターンの後で呼び出し）
+  const mindMap = useMindMap(isReady);
 
   // データが読み込まれていない場合は読み込み画面
   if (!mindMap.data || mindMap.data.isPlaceholder) {
