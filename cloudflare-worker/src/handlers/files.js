@@ -9,17 +9,38 @@ export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const method = request.method;
   
-  // 認証チェック
+  // 認証チェック（JWT認証またはX-User-IDを受け入れ）
   let userId = 'default-user';
+  
+  // 最初にJWT認証を試行
   if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
-    if (!authResult.authenticated) {
-      return new Response(JSON.stringify({ error: authResult.error }), {
-        status: authResult.status,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders(env.CORS_ORIGIN) }
-      });
+    if (authResult.authenticated) {
+      // 統一化：JWTのuserIdは必ずemail（auth.jsで設定）
+      userId = authResult.user.userId;
+      console.log('FILES - JWT認証成功 - userId:', userId, 'email:', authResult.user.email);
+    } else {
+      // JWT認証失敗時、X-User-IDを確認（後方互換性）
+      const xUserId = request.headers.get('X-User-ID');
+      if (xUserId) {
+        userId = xUserId;
+        console.log('FILES - X-User-ID使用 - userId:', userId);
+      } else {
+        // どちらも無い場合はエラー
+        console.log('FILES - 認証失敗:', authResult.error);
+        return new Response(JSON.stringify({ error: authResult.error }), {
+          status: authResult.status,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders(env.CORS_ORIGIN)
+          }
+        });
+      }
     }
-    userId = authResult.user.userId;
+  } else {
+    // 認証が無効の場合は従来の方法を使用
+    userId = request.headers.get('X-User-ID') || 'default-user';
+    console.log('FILES - 認証無効モード - userId:', userId);
   }
 
   const pathParts = url.pathname.split('/');
@@ -429,6 +450,8 @@ async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
  */
 
 async function verifyOwnership(db, userId, mindmapId, nodeId) {
+  console.log('verifyOwnership check:', { userId, mindmapId, nodeId });
+  
   const result = await db.prepare(`
     SELECT m.id 
     FROM mindmaps m 
@@ -436,11 +459,16 @@ async function verifyOwnership(db, userId, mindmapId, nodeId) {
     WHERE m.id = ? AND m.user_id = ? AND n.id = ?
   `).bind(mindmapId, userId, nodeId).first();
   
+  console.log('verifyOwnership result:', result);
+  
   if (!result) {
+    console.error('Access denied for:', { userId, mindmapId, nodeId });
     const error = new Error('Access denied');
     error.status = 403;
     throw error;
   }
+  
+  console.log('verifyOwnership passed');
 }
 
 function getAttachmentType(mimeType) {

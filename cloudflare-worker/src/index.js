@@ -3,6 +3,7 @@ import { handleAuthRequest } from './handlers/auth.js';
 import { handleRequest as handleNodesRequest } from './handlers/nodes.js';
 import { handleRequest as handleFilesRequest } from './handlers/files.js';
 import { handleRequest as handleRealtimeRequest } from './handlers/realtime.js';
+import { handleMigrationRequest } from './handlers/migration.js';
 import { corsHeaders } from './utils/cors.js';
 
 // ユーザー移行処理
@@ -139,6 +140,10 @@ export default {
       
       if (path.startsWith('/api/auth')) {
         return await handleAuthRequest(request, env);
+      }
+      
+      if (path.startsWith('/api/migration')) {
+        return await handleMigrationRequest(request, env);
       }
 
       if (path === '/api/migrate-users' && request.method === 'POST') {

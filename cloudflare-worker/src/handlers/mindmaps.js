@@ -12,6 +12,7 @@ export async function handleRequest(request, env) {
   if (env.ENABLE_AUTH === 'true') {
     const authResult = await requireAuth(request);
     if (authResult.authenticated) {
+      // 統一化：JWTのuserIdは必ずemail（auth.jsで設定）
       userId = authResult.user.userId;
       console.log('JWT認証成功 - userId:', userId, 'email:', authResult.user.email);
     } else {
