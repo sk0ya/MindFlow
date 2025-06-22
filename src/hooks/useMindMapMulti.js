@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, getAllMindMapsHybrid } from '../utils/storage.js';
+import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, getAllMindMapsHybrid, isCloudStorageEnabled } from '../utils/storage.js';
 import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
 
 // マルチマップ管理専用のカスタムフック
@@ -19,8 +19,13 @@ export const useMindMapMulti = (data, setData, updateData) => {
   });
   
   const [currentMapId, setCurrentMapId] = useState(() => {
+    // クラウドモードの場合は、データから取得
+    if (isCloudStorageEnabled()) {
+      return data?.id || null;
+    }
+    
     const currentMap = getCurrentMindMap();
-    return currentMap.id;
+    return currentMap?.id || null;
   });
 
   // マップ一覧の更新
@@ -162,6 +167,14 @@ export const useMindMapMulti = (data, setData, updateData) => {
       setAllMindMaps(maps);
     }
   }, []);
+
+  // クラウドモード時のcurrentMapId更新
+  useEffect(() => {
+    if (isCloudStorageEnabled() && data?.id && data.id !== currentMapId) {
+      console.log('🔄 クラウドモード: currentMapIdを更新', data.id);
+      setCurrentMapId(data.id);
+    }
+  }, [data?.id, currentMapId]);
 
   return {
     allMindMaps,

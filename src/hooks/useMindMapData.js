@@ -44,9 +44,11 @@ export const useMindMapData = () => {
         // 認証状態を確認
         const { authManager } = await import('../utils/authManager.js');
         if (!authManager.isAuthenticated()) {
-          console.log('未認証のためクラウド同期スキップ');
+          console.log('⏳ 未認証のためクラウド同期を待機中...');
           return;
         }
+        
+        console.log('🔄 認証済み: クラウド同期を開始');
         
         // クラウドからマインドマップ一覧を取得
         const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
@@ -67,6 +69,8 @@ export const useMindMapData = () => {
             
             console.log('✅ クラウド同期完了');
           }
+        } else {
+          console.log('📭 クラウドにマップが見つかりません。新規作成します。');
         }
       } catch (error) {
         console.warn('❌ クラウド初期化失敗:', error);
@@ -76,9 +80,62 @@ export const useMindMapData = () => {
     };
     
     // 少し遅延してクラウド同期を実行（認証が完了してから）
-    const timer = setTimeout(initializeFromCloud, 1000);
+    const timer = setTimeout(initializeFromCloud, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // 認証状態変更時の再同期
+  useEffect(() => {
+    const syncOnAuthChange = async () => {
+      try {
+        if (!isCloudStorageEnabled()) return;
+        
+        const { authManager } = await import('../utils/authManager.js');
+        if (authManager.isAuthenticated() && !isLoadingFromCloud) {
+          console.log('🔑 認証状態変更: クラウド同期を再実行');
+          
+          setIsLoadingFromCloud(true);
+          
+          const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
+          const cloudMaps = await loadMindMapsFromCloud();
+          
+          if (cloudMaps && cloudMaps.length > 0) {
+            const latestMap = cloudMaps.sort((a, b) => 
+              new Date(b.updatedAt) - new Date(a.updatedAt)
+            )[0];
+            
+            const fullMapData = await loadMindMapFromCloud(latestMap.id);
+            if (fullMapData) {
+              const processedData = assignColorsToExistingNodes(fullMapData);
+              setData(processedData);
+              console.log('✅ 認証後のクラウド同期完了');
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('❌ 認証後同期失敗:', error);
+      } finally {
+        setIsLoadingFromCloud(false);
+      }
+    };
+
+    // 認証状態の変更を監視（ポーリングで定期チェック）
+    const authCheckInterval = setInterval(async () => {
+      try {
+        const { authManager } = await import('../utils/authManager.js');
+        const isAuth = authManager.isAuthenticated();
+        
+        // 認証済みかつ、まだデータが空の場合は同期実行
+        if (isAuth && isCloudStorageEnabled() && data && !data.rootNode?.children?.length) {
+          await syncOnAuthChange();
+        }
+      } catch (error) {
+        // Silent fail for auth check
+      }
+    }, 3000);
+
+    return () => clearInterval(authCheckInterval);
+  }, [isLoadingFromCloud, data]);
 
   // 履歴に追加
   const addToHistory = (newData) => {
