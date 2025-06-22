@@ -61,7 +61,8 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       });
       
       // 2. ストレージモードに応じたファイル保存
-      const { getCurrentMindMap, isCloudStorageEnabled, getAppSettings } = await import('../utils/storage.js');
+      const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
+      const { getAppSettings } = await import('../utils/storage.js');
       
       // デバッグ: ストレージモード確認
       const settings = getAppSettings();
@@ -264,7 +265,8 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           const authHeader = authManager.getAuthHeader();
           
           if (authHeader) {
-            const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
+            const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
+            const { getCurrentMindMap } = await import('../utils/storageRouter.js');
             
             let mapId = null;
             if (isCloudStorageEnabled()) {
@@ -325,7 +327,8 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       if (file.isR2Storage && file.r2FileId) {
         
         // 現在のマインドマップIDを取得（クラウドモード対応）
-        const { getCurrentMindMap, isCloudStorageEnabled } = await import('../utils/storage.js');
+        const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
+        const { getCurrentMindMap } = await import('../utils/storageRouter.js');
         
         let mapId = null;
         if (isCloudStorageEnabled()) {

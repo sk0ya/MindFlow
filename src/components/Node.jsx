@@ -405,6 +405,7 @@ const Node = ({
           <input
             ref={inputRef}
             type="text"
+            className="node-input"
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
