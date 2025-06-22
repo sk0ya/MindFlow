@@ -150,9 +150,68 @@ class CloudStorageClient {
     return result;
   }
 
-  // 特定のマインドマップを取得
+  // 特定のマインドマップを取得（データ構造検証付き）
   async getMindMap(id) {
-    return await this.request(`/mindmaps/${id}`);
+    console.log('🔍 getMindMap 開始:', id);
+    const result = await this.request(`/mindmaps/${id}`);
+    
+    // レスポンス構造を詳細ログ出力
+    console.log('📄 getMindMap レスポンス構造:', {
+      hasResult: !!result,
+      resultType: typeof result,
+      keys: result ? Object.keys(result) : null,
+      hasRootNode: !!(result && result.rootNode),
+      rootNodeType: result && result.rootNode ? typeof result.rootNode : null,
+      rootNodeKeys: result && result.rootNode && typeof result.rootNode === 'object' ? Object.keys(result.rootNode) : null,
+      hasChildren: !!(result && result.rootNode && result.rootNode.children),
+      childrenLength: result && result.rootNode && result.rootNode.children ? result.rootNode.children.length : 0,
+      sample: result && result.rootNode ? {
+        id: result.rootNode.id,
+        text: result.rootNode.text,
+        childrenCount: result.rootNode.children ? result.rootNode.children.length : 0
+      } : null
+    });
+    
+    // データ構造の検証と正規化
+    if (result && result.rootNode) {
+      // rootNodeが文字列の場合はパース
+      if (typeof result.rootNode === 'string') {
+        try {
+          console.log('📦 rootNodeをJSONパース中...');
+          result.rootNode = JSON.parse(result.rootNode);
+          console.log('✅ rootNodeパース成功');
+        } catch (parseError) {
+          console.error('❌ rootNodeパース失敗:', parseError);
+          throw new Error(`rootNodeのパースに失敗しました: ${parseError.message}`);
+        }
+      }
+      
+      // 基本構造の検証
+      if (!result.rootNode.id) {
+        console.warn('⚠️ rootNode.idが見つかりません');
+        result.rootNode.id = 'root';
+      }
+      
+      if (!result.rootNode.children) {
+        console.warn('⚠️ rootNode.childrenが見つかりません、空配列で初期化');
+        result.rootNode.children = [];
+      }
+      
+      if (!Array.isArray(result.rootNode.children)) {
+        console.error('❌ rootNode.childrenが配列ではありません:', typeof result.rootNode.children);
+        result.rootNode.children = [];
+      }
+      
+      console.log('✅ データ構造検証完了:', {
+        rootNodeId: result.rootNode.id,
+        childrenCount: result.rootNode.children.length
+      });
+    } else {
+      console.error('❌ rootNodeが見つかりません:', result);
+      throw new Error('サーバーからのデータにrootNodeが含まれていません');
+    }
+    
+    return result;
   }
 
   // マインドマップを作成

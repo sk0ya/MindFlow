@@ -139,38 +139,54 @@ async function getMindMap(db, userId, mindmapId) {
   return await getMindMapRelational(db, userId, mindmapId);
 }
 
-// リレーショナル形式からの読み込み
+// リレーショナル形式からの読み込み（デバッグ強化）
 async function getMindMapRelational(db, userId, mindmapId) {
+  console.log('🔍 getMindMapRelational 開始:', { userId, mindmapId });
+  
   // マインドマップ基本情報取得
   const mindmap = await db.prepare(
     'SELECT * FROM mindmaps WHERE user_id = ? AND id = ?'
   ).bind(userId, mindmapId).first();
   
   if (!mindmap) {
+    console.error('❌ マインドマップが見つかりません:', { userId, mindmapId });
     const error = new Error('Mind map not found');
     error.status = 404;
     throw error;
   }
+  
+  console.log('📎 マインドマップ基本情報:', {
+    id: mindmap.id,
+    title: mindmap.title,
+    nodeCount: mindmap.node_count
+  });
   
   // ノード取得
   const { results: nodes } = await db.prepare(
     'SELECT * FROM nodes WHERE mindmap_id = ? ORDER BY created_at'
   ).bind(mindmapId).all();
   
+  console.log('🌳 データベースから取得したノード数:', nodes.length);
+  
   // 添付ファイル取得
   const { results: attachments } = await db.prepare(
     'SELECT * FROM attachments WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)'
   ).bind(mindmapId).all();
+  
+  console.log('📎 添付ファイル数:', attachments.length);
   
   // リンク取得
   const { results: links } = await db.prepare(
     'SELECT * FROM node_links WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)'
   ).bind(mindmapId).all();
   
+  console.log('🔗 リンク数:', links.length);
+  
   // 階層構造を再構築
+  console.log('🔧 階層構造再構築開始');
   const rootNode = buildHierarchicalStructure(nodes, attachments, links, mindmapId);
   
-  return {
+  const result = {
     id: mindmap.id,
     title: mindmap.title,
     category: mindmap.category || '未分類',
@@ -180,10 +196,28 @@ async function getMindMapRelational(db, userId, mindmapId) {
     createdAt: mindmap.created_at,
     updatedAt: mindmap.updated_at,
   };
+  
+  console.log('✅ getMindMapRelational 完了:', {
+    id: result.id,
+    title: result.title,
+    hasRootNode: !!result.rootNode,
+    rootNodeId: result.rootNode?.id,
+    rootNodeChildrenCount: result.rootNode?.children?.length || 0
+  });
+  
+  return result;
 }
 
-// リレーショナルデータから階層構造を再構築
+// リレーショナルデータから階層構造を再構築（デバッグ強化版）
 function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null) {
+  console.log('🔧 buildHierarchicalStructure 開始:', {
+    nodesCount: nodes ? nodes.length : 0,
+    attachmentsCount: attachments ? attachments.length : 0,
+    linksCount: links ? links.length : 0,
+    mindmapId,
+    nodesSample: nodes && nodes.length > 0 ? nodes[0] : null
+  });
+  
   const nodeMap = new Map();
   const attachmentMap = new Map();
   const linkMap = new Map();
@@ -247,8 +281,12 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
     nodeMap.set(node.id, hierarchicalNode);
   });
   
-  // 親子関係を構築
+  // 親子関係を構築（デバッグ強化）
   let rootNode = null;
+  const orphanNodes = [];
+  
+  console.log('🌳 親子関係構築開始');
+  
   nodes.forEach(node => {
     const hierarchicalNode = nodeMap.get(node.id);
     
@@ -256,19 +294,56 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
       const parent = nodeMap.get(node.parent_id);
       if (parent) {
         parent.children.push(hierarchicalNode);
+        console.log(`✅ 子ノード追加: ${node.id} -> ${node.parent_id}`);
+      } else {
+        console.warn(`⚠️ 親ノードが見つかりません: ${node.id} -> ${node.parent_id}`);
+        orphanNodes.push(hierarchicalNode);
       }
     } else {
+      if (rootNode) {
+        console.warn(`⚠️ 複数のrootNodeが検出されました: 既存=${rootNode.id}, 新規=${node.id}`);
+      }
       rootNode = hierarchicalNode;
+      console.log(`🌱 rootNode設定: ${node.id}`);
     }
   });
   
-  return rootNode || {
-    id: 'root',
-    text: 'メイントピック',
-    x: 400,
-    y: 300,
-    children: []
-  };
+  // 孤立ノードがrootNodeの子ノードとして追加
+  if (orphanNodes.length > 0 && rootNode) {
+    console.log(`🔗 ${orphanNodes.length}個の孤立ノードをrootNodeに接続`);
+    rootNode.children.push(...orphanNodes);
+  }
+  
+  console.log('📋 構築結果:', {
+    hasRootNode: !!rootNode,
+    rootNodeId: rootNode ? rootNode.id : null,
+    rootChildrenCount: rootNode ? rootNode.children.length : 0,
+    orphanNodesCount: orphanNodes.length
+  });
+  
+  // rootNodeが存在しない場合のフォールバック
+  if (!rootNode) {
+    console.warn('⚠️ rootNodeが見つからないため、デフォルトrootNodeを作成');
+    rootNode = {
+      id: 'root',
+      text: 'メイントピック',
+      x: 400,
+      y: 300,
+      fontSize: null,
+      fontWeight: null,
+      backgroundColor: null,
+      textColor: null,
+      color: null,
+      notes: null,
+      tags: [],
+      collapsed: false,
+      children: orphanNodes.length > 0 ? orphanNodes : [],
+      attachments: [],
+      mapLinks: []
+    };
+  }
+  
+  return rootNode;
 }
 
 // リレーショナル形式での新規作成
@@ -302,16 +377,12 @@ async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) 
   await db.batch(statements);
 }
 
-// リレーショナル形式での更新
+// リレーショナル形式での安全な更新（データ損失防止）
 async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) {
-  console.log('updateMindMapRelational 開始:', mindmapId);
+  console.log('✅ updateMindMapRelational 安全更新開始:', mindmapId);
+  console.log('📋 更新データノード数:', countNodesInData(mindmapData));
   
   try {
-    // 既存ノードの削除を個別に実行
-    console.log('既存ノード削除開始');
-    const deleteResult = await db.prepare('DELETE FROM nodes WHERE mindmap_id = ?').bind(mindmapId).run();
-    console.log('ノード削除結果:', deleteResult.changes, 'rows deleted');
-    
     const statements = [];
     
     // マインドマップ更新
@@ -329,29 +400,80 @@ async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) 
       )
     );
     
-    // 新しいノードを作成
+    // ノードの安全な差分更新（全削除の代わり）
     if (mindmapData.rootNode) {
-      console.log('新しいノード作成開始');
+      console.log('🔄 ノード差分更新開始');
+      
+      // 既存ノードを取得
+      const { results: existingNodes } = await db.prepare(
+        'SELECT id, parent_id FROM nodes WHERE mindmap_id = ?'
+      ).bind(mindmapId).all();
+      
+      const existingNodeIds = new Set(existingNodes.map(n => n.id));
+      console.log('📋 既存ノード数:', existingNodeIds.size);
+      
+      // 新しいノード構造からすべてのノードIDを収集
+      const newNodeIds = new Set();
+      
+      function collectNodeIds(node) {
+        newNodeIds.add(node.id);
+        if (node.children && Array.isArray(node.children)) {
+          node.children.forEach(child => collectNodeIds(child));
+        }
+      }
+      
+      collectNodeIds(mindmapData.rootNode);
+      console.log('🆕 新しいノード数:', newNodeIds.size);
+      
+      // 削除すべきノード（既存にあるが新しい構造にない）
+      const nodesToDelete = [...existingNodeIds].filter(id => !newNodeIds.has(id));
+      console.log('🗑️ 削除対象ノード数:', nodesToDelete.length, nodesToDelete);
+      
+      // 不要ノードを個別に削除（安全な方法）
+      for (const nodeId of nodesToDelete) {
+        console.log('🗑️ ノード削除:', nodeId);
+        statements.push(
+          db.prepare('DELETE FROM nodes WHERE id = ? AND mindmap_id = ?').bind(nodeId, mindmapId)
+        );
+        // 関連データも整合性を保って削除
+        statements.push(
+          db.prepare('DELETE FROM attachments WHERE node_id = ?').bind(nodeId)
+        );
+        statements.push(
+          db.prepare('DELETE FROM node_links WHERE node_id = ?').bind(nodeId)
+        );
+      }
+      
+      // 新しい／更新ノードを作成／更新
       const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
-      console.log('作成するノード文の数:', nodeStatements.length);
+      console.log('🔧 作成／更新するノード文の数:', nodeStatements.length);
       statements.push(...nodeStatements);
     }
     
-    // 一括実行
-    console.log('バッチ実行開始');
+    // 一括実行（トランザクション保護）
+    console.log('🚀 バッチ実行開始（総文数:', statements.length, '）');
     await db.batch(statements);
-    console.log('updateMindMapRelational 完了');
+    console.log('✅ updateMindMapRelational 安全更新完了');
   } catch (error) {
-    console.error('updateMindMapRelational エラー:', error);
+    console.error('❌ updateMindMapRelational エラー:', error);
+    console.error('❌ エラースタック:', error.stack);
     throw error;
   }
 }
 
-// ノード作成文を再帰的に生成
+// ノード作成文を再帰的に生成（デバッグ強化）
 function createNodeStatements(db, node, mindmapId, parentId, now) {
+  console.log('🔧 createNodeStatements:', {
+    nodeId: node.id,
+    text: node.text,
+    parentId,
+    hasChildren: !!(node.children && node.children.length > 0),
+    childrenCount: node.children ? node.children.length : 0
+  });
+  
   const statements = [];
   
-  // ノード作成（重複時は置換）
+  // ノード作成（INSERT OR REPLACEで安全に更新）
   statements.push(
     db.prepare(
       'INSERT OR REPLACE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -377,6 +499,8 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       now
     )
   );
+  
+  console.log('✅ ノード文作成:', node.id, 'テキスト:', node.text || '（空）');
   
   // 添付ファイル
   if (node.attachments && Array.isArray(node.attachments)) {
@@ -425,14 +549,19 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
     });
   }
   
-  // 子ノード処理
+  // 子ノード処理（再帰的）
   if (node.children && Array.isArray(node.children)) {
-    node.children.forEach(child => {
+    console.log('🌳 子ノード処理開始:', node.id, '子ノード数:', node.children.length);
+    node.children.forEach((child, index) => {
+      console.log(`  └─ 子ノード[${index}]:`, child.id, child.text || '（空）');
       const childStatements = createNodeStatements(db, child, mindmapId, node.id, now);
       statements.push(...childStatements);
     });
+  } else {
+    console.log('🍁 子ノードなし:', node.id);
   }
   
+  console.log('📋 createNodeStatements 完了:', node.id, '総文数:', statements.length);
   return statements;
 }
 

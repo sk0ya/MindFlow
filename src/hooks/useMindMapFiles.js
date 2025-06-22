@@ -400,7 +400,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         }
         
         console.log('ダウンロード対象情報:', {
-          mapId: currentMap.id,
+          mapId: mapId,
           fileId: file.r2FileId,
           fileName: file.name,
           nodeId: nodeId,
@@ -414,7 +414,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           // マインドマップ内でファイルを検索してnodeIdを特定
           // ファイル検索はクラウドモードでは行わない（nodeIdが必須）
           if (!isCloudStorageEnabled()) {
-            const currentMap = getCurrentMindMap();
+            const localCurrentMap = getCurrentMindMap();
             const findFileInNodes = (node) => {
               if (node.attachments && node.attachments.some(att => att.id === file.id || att.r2FileId === file.r2FileId)) {
                 return node.id;
@@ -428,7 +428,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
               return null;
             };
             
-            actualNodeId = findFileInNodes(currentMap.rootNode);
+            actualNodeId = findFileInNodes(localCurrentMap.rootNode);
           }
         }
         

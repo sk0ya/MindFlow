@@ -381,7 +381,7 @@ export const saveMindMapHybrid = async (mindMapData) => {
 };
 
 
-// クラウド専用取得
+// クラウド専用取得（基本情報のみ、詳細データは個別取得）
 export const getAllMindMapsCloud = async () => {
   try {
     console.log('☁️ getAllMindMapsCloud 開始');
@@ -405,27 +405,22 @@ export const getAllMindMapsCloud = async () => {
     const actualMaps = cloudMaps?.mindmaps || cloudMaps;
     console.log('☁️ 実際のマップ配列:', actualMaps);
     
-    // クラウドデータが有効な場合はそれを使用（ローカルキャッシュなし）
+    // クラウドデータが有効な場合は基本情報のみ返す（パフォーマンス改善）
     if (actualMaps && actualMaps.length > 0) {
       console.log('☁️ クラウドデータ有効、件数:', actualMaps.length);
       
-      // 一時的に詳細取得をスキップして基本情報だけ返す
+      // 基本情報のみのマップリストを作成（詳細データは個別ロード時に取得）
       const basicMaps = actualMaps.map(map => ({
         id: map.id,
         title: map.title || '無題のマップ',
         category: map.category || '未分類',
         updatedAt: map.updatedAt || new Date().toISOString(),
         createdAt: map.createdAt || map.updatedAt || new Date().toISOString(),
-        rootNode: map.rootNode || {
-          id: 'root',
-          text: map.title || '無題のマップ',
-          x: 0,
-          y: 0,
-          children: []
-        }
+        // 基本情報のみ、rootNodeは含めない（メモリ節約）
+        isBasicInfo: true // フラグを追加して基本情報であることを明示
       }));
       
-      console.log('📄 基本データ生成完了、件数:', basicMaps.length);
+      console.log('📝 基本情報マップリスト作成完了、件数:', basicMaps.length);
       return basicMaps;
     }
     

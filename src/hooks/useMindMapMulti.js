@@ -28,7 +28,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     return currentMap?.id || null;
   });
 
-  // マップ一覧の更新
+  // マップ一覧の更新（改善版）
   const refreshAllMindMaps = async () => {
     try {
       console.log('🔄 マップ一覧を同期中...');
@@ -39,14 +39,29 @@ export const useMindMapMulti = (data, setData, updateData) => {
       console.log('📊 現在のストレージモード:', settings.storageMode);
       
       const maps = await getAllMindMapsHybrid();
-      console.log('📥 取得したマップデータ:', maps);
+      console.log('📥 取得したマップデータ:', {
+        type: typeof maps,
+        isArray: Array.isArray(maps),
+        length: maps?.length,
+        sample: maps?.[0] // 最初のマップのサンプル
+      });
       
       if (!maps) {
         console.warn('⚠️ マップデータがnullです');
         setAllMindMaps([]);
       } else if (Array.isArray(maps)) {
-        setAllMindMaps(maps);
-        console.log('✅ マップ一覧同期完了:', maps.length, '件');
+        // データ整合性チェック
+        const validMaps = maps.filter(map => {
+          if (!map || !map.id) {
+            console.warn('❌ 無効なマップを除外:', map);
+            return false;
+          }
+          return true;
+        });
+        
+        console.log('📋 有効なマップ:', validMaps.length, '件 / 総数:', maps.length, '件');
+        setAllMindMaps(validMaps);
+        console.log('✅ マップ一覧同期完了:', validMaps.length, '件');
       } else {
         console.warn('⚠️ マップデータが配列ではありません:', typeof maps, maps);
         setAllMindMaps([]);
@@ -54,7 +69,8 @@ export const useMindMapMulti = (data, setData, updateData) => {
     } catch (error) {
       console.error('❌ マップ一覧同期失敗:', error);
       console.error('❌ エラー詳細:', error.message, error.stack);
-      // エラー時はローカルデータを使用
+      
+      // エラー時はローカルデータにフォールバック
       try {
         const { getAllMindMaps } = await import('../utils/storage.js');
         const localMaps = getAllMindMaps();
@@ -169,64 +185,116 @@ export const useMindMapMulti = (data, setData, updateData) => {
     return Array.from(categories).sort();
   };
 
-  // マップ切り替え
+  // マップ切り替え（DB同期ロジック改善版）
   const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
     console.log('🔄 マップ切り替え開始:', mapId);
     
-    // まずマップ一覧から基本情報を確認
-    let targetMapInfo = allMindMaps.find(map => map && map.id === mapId);
-    let targetMap = null;
-    
-    if (targetMapInfo) {
-      console.log('📄 マップ一覧から基本情報取得:', targetMapInfo.title);
-      // 詳細なマップデータを取得
-      try {
-        const { isCloudStorageEnabled, loadMindMapFromCloud, getAllMindMaps } = await import('../utils/storage.js');
-        if (isCloudStorageEnabled()) {
-          console.log('☁️ クラウドから詳細データ取得中...');
-          targetMap = await loadMindMapFromCloud(mapId);
-          console.log('☁️ クラウドから詳細データ取得成功:', targetMap?.title, 'ノード数:', targetMap?.rootNode?.children?.length || 0);
-        } else {
-          // ローカルモードの場合は一覧から完全なデータを取得
-          const localMaps = getAllMindMaps();
-          targetMap = localMaps.find(map => map && map.id === mapId);
-          console.log('🏠 ローカルから詳細データ取得:', targetMap?.title);
+    try {
+      // 1. 現在のマップを保存（データ損失防止）
+      if (data && !data.isPlaceholder) {
+        try {
+          const { saveMindMapHybrid } = await import('../utils/storage.js');
+          console.log('💾 切り替え前のマップ保存開始:', data.id, data.title);
+          await saveMindMapHybrid(data);
+          console.log('✅ 切り替え前のマップ保存完了');
+        } catch (saveError) {
+          console.warn('⚠️ 切り替え前のマップ保存失敗:', saveError);
         }
-      } catch (error) {
-        console.error('❌ 詳細データ取得失敗:', error);
-        // フォールバック: 基本情報をそのまま使用
-        targetMap = targetMapInfo;
-      }
-    } else {
-      console.log('🔍 マップ一覧にない、直接取得:', mapId);
-      try {
-        const { isCloudStorageEnabled, loadMindMapFromCloud } = await import('../utils/storage.js');
-        if (isCloudStorageEnabled()) {
-          targetMap = await loadMindMapFromCloud(mapId);
-          console.log('☁️ 直接取得成功:', targetMap?.title);
-        }
-      } catch (error) {
-        console.error('❌ 直接取得失敗:', error);
-      }
-    }
-    
-    if (targetMap) {
-      // 現在のマップを保存（クラウドモード対応）
-      try {
-        const { saveMindMapHybrid } = await import('../utils/storage.js');
-        await saveMindMapHybrid(data);
-        console.log('✅ 切り替え前のマップ保存完了');
-      } catch (saveError) {
-        console.warn('⚠️ 切り替え前のマップ保存失敗:', saveError);
       }
       
-      // 新しいマップに切り替え
-      console.log('🔄 切り替え対象マップ:', targetMap.title, 'rootNode:', targetMap.rootNode);
+      // 2. ストレージモードの確認
+      const { isCloudStorageEnabled, loadMindMapFromCloud, getAllMindMaps } = await import('../utils/storage.js');
+      let targetMap = null;
+      
+      if (isCloudStorageEnabled()) {
+        // クラウドモード: 必ずクラウドから最新データを取得
+        console.log('☁️ クラウドモード: 最新データを取得中...', mapId);
+        targetMap = await loadMindMapFromCloud(mapId);
+        
+        if (!targetMap) {
+          throw new Error(`クラウドからマップ ${mapId} を取得できませんでした`);
+        }
+        
+        console.log('✅ クラウドから詳細データ取得成功:', {
+          id: targetMap.id,
+          title: targetMap.title,
+          hasRootNode: !!targetMap.rootNode,
+          nodeCount: targetMap.rootNode?.children?.length || 0
+        });
+        
+      } else {
+        // ローカルモード: ローカルストレージから取得
+        console.log('🏠 ローカルモード: ローカルデータ取得中...', mapId);
+        const localMaps = getAllMindMaps();
+        targetMap = localMaps.find(map => map && map.id === mapId);
+        
+        if (!targetMap) {
+          throw new Error(`ローカルからマップ ${mapId} を取得できませんでした`);
+        }
+        
+        console.log('✅ ローカルから詳細データ取得成功:', targetMap.title);
+      }
+      
+      // 3. データ整合性チェック（詳細版）
+      console.log('🔍 取得したマップデータの詳細検証:', {
+        hasTargetMap: !!targetMap,
+        targetMapKeys: targetMap ? Object.keys(targetMap) : null,
+        hasRootNode: !!(targetMap && targetMap.rootNode),
+        rootNodeType: targetMap && targetMap.rootNode ? typeof targetMap.rootNode : null,
+        rootNodeId: targetMap && targetMap.rootNode ? targetMap.rootNode.id : null,
+        hasChildren: !!(targetMap && targetMap.rootNode && targetMap.rootNode.children),
+        childrenType: targetMap && targetMap.rootNode && targetMap.rootNode.children ? typeof targetMap.rootNode.children : null,
+        childrenLength: targetMap && targetMap.rootNode && targetMap.rootNode.children ? targetMap.rootNode.children.length : 0,
+        mapId: targetMap ? targetMap.id : null,
+        mapTitle: targetMap ? targetMap.title : null
+      });
+      
+      if (!targetMap) {
+        throw new Error(`マップデータが取得できませんでした: ${mapId}`);
+      }
+      
+      if (!targetMap.id) {
+        console.error('❌ マップにIDがありません:', targetMap);
+        throw new Error('マップデータが破損しています（IDが見つかりません）');
+      }
+      
+      if (!targetMap.rootNode) {
+        console.error('❌ マップにrootNodeがありません:', targetMap);
+        throw new Error('マップデータが破損しています（rootNodeが見つかりません）');
+      }
+      
+      if (!targetMap.rootNode.children || !Array.isArray(targetMap.rootNode.children)) {
+        console.error('❌ rootNode.childrenが異常です:', {
+          hasChildren: !!targetMap.rootNode.children,
+          childrenType: typeof targetMap.rootNode.children,
+          isArray: Array.isArray(targetMap.rootNode.children),
+          value: targetMap.rootNode.children
+        });
+        
+        // 修正を試みる
+        if (!targetMap.rootNode.children) {
+          console.log('🔧 childrenを空配列で初期化します');
+          targetMap.rootNode.children = [];
+        } else if (!Array.isArray(targetMap.rootNode.children)) {
+          console.log('🔧 childrenを空配列にリセットします');
+          targetMap.rootNode.children = [];
+        }
+      }
+      
+      // 4. マップ切り替え実行
+      console.log('🔄 マップ切り替え実行:', {
+        from: data?.id || 'none',
+        to: targetMap.id,
+        title: targetMap.title,
+        rootNodeExists: !!targetMap.rootNode,
+        childrenCount: targetMap.rootNode?.children?.length || 0
+      });
+      
       const coloredMap = assignColorsToExistingNodes(targetMap);
       setData(coloredMap);
       setCurrentMapId(mapId);
       
-      // 編集状態をリセット
+      // 5. UI状態をリセット
       if (selectRoot && setSelectedNodeId) {
         setSelectedNodeId('root');
       } else if (setSelectedNodeId) {
@@ -235,14 +303,30 @@ export const useMindMapMulti = (data, setData, updateData) => {
       if (setEditingNodeId) setEditingNodeId(null);
       if (setEditText) setEditText('');
       
-      // 履歴をリセット
+      // 6. 履歴をリセット
       if (setHistory && setHistoryIndex) {
         setHistory([deepClone(coloredMap)]);
         setHistoryIndex(0);
       }
       
-      // ストレージの現在のマップを更新
-      localStorage.setItem('currentMindMap', JSON.stringify(coloredMap));
+      // 7. ローカルストレージ更新（クラウドモードでも現在のマップIDは保持）
+      if (!isCloudStorageEnabled()) {
+        localStorage.setItem('currentMindMap', JSON.stringify(coloredMap));
+      }
+      
+      console.log('✅ マップ切り替え完了:', {
+        title: coloredMap.title,
+        id: coloredMap.id,
+        hasRootNode: !!coloredMap.rootNode,
+        childrenCount: coloredMap.rootNode ? coloredMap.rootNode.children.length : 0
+      });
+      
+    } catch (error) {
+      console.error('❌ マップ切り替え失敗:', error);
+      console.error('❌ エラー詳細:', error.message, error.stack);
+      
+      // エラー時は現在のマップを維持（データ損失防止）
+      alert(`マップの切り替えに失敗しました: ${error.message}`);
     }
   };
 
