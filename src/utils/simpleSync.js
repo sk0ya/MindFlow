@@ -1,6 +1,6 @@
 // シンプルな同期システム - 循環依存なし
 
-const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
+const API_BASE = 'https://mindflow-api.shigekazukoya.workers.dev';
 
 // 基本的なAPI呼び出し
 async function apiRequest(endpoint, options = {}) {
