@@ -68,20 +68,40 @@ export const useKeyboardShortcuts = ({
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           console.log('⌨️ useKeyboardShortcuts Enter処理:', { editingNodeId, editText });
-          const currentText = editText.trim();
-          finishEdit(editingNodeId, currentText);
+          
+          // 実際の入力フィールドから現在の値を取得
+          const currentInputElement = document.querySelector('.node-input');
+          const currentText = currentInputElement ? currentInputElement.value : editText;
+          
+          console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
+          
+          // テキストを保存してから編集終了
+          finishEdit(editingNodeId, currentText.trim());
+          
           // テキストがある場合のみ兄弟ノード追加
-          if (currentText && addSiblingNode) {
-            addSiblingNode(editingNodeId, '', true);
+          if (currentText.trim() && addSiblingNode) {
+            setTimeout(() => {
+              addSiblingNode(editingNodeId, '', true);
+            }, 50); // DOM更新を待つ
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
           console.log('⌨️ useKeyboardShortcuts Tab処理:', { editingNodeId, editText });
-          const currentText = editText.trim();
-          finishEdit(editingNodeId, currentText);
+          
+          // 実際の入力フィールドから現在の値を取得
+          const currentInputElement = document.querySelector('.node-input');
+          const currentText = currentInputElement ? currentInputElement.value : editText;
+          
+          console.log('📝 編集完了 - 実際のテキスト:', { currentText, fromElement: !!currentInputElement });
+          
+          // テキストを保存してから編集終了
+          finishEdit(editingNodeId, currentText.trim());
+          
           // テキストがある場合のみ子ノード追加
-          if (currentText && addChildNode) {
-            addChildNode(editingNodeId, '', true);
+          if (currentText.trim() && addChildNode) {
+            setTimeout(() => {
+              addChildNode(editingNodeId, '', true);
+            }, 50); // DOM更新を待つ
           }
         }
         return;
