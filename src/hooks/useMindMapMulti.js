@@ -168,10 +168,10 @@ export const useMindMapMulti = (data, setData, updateData) => {
     }
   }, []);
 
-  // クラウドモード時のcurrentMapId更新
+  // data.idの変更を監視してcurrentMapIdを更新（ローカル・クラウド共通）
   useEffect(() => {
-    if (isCloudStorageEnabled() && data?.id && data.id !== currentMapId) {
-      console.log('🔄 クラウドモード: currentMapIdを更新', data.id);
+    if (data?.id && data.id !== currentMapId && data.id !== 'loading-placeholder' && data.id !== 'cloud-loading-placeholder') {
+      console.log('🔄 currentMapIdを更新:', data.id, '(previous:', currentMapId, ')');
       setCurrentMapId(data.id);
     }
   }, [data?.id, currentMapId]);
