@@ -5,8 +5,19 @@ import { validateFile } from '../utils/fileValidation.js';
 import { logger } from '../utils/logger.js';
 
 export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
+  // アプリ初期化状態をチェック
+  const isAppInitializing = () => {
+    return !currentMapId || 
+           currentMapId === 'loading-placeholder' || 
+           currentMapId === 'cloud-loading-placeholder';
+  };
+
   // ファイル添付機能（R2ストレージ対応）
   const attachFileToNode = async (nodeId, file) => {
+    // アプリ初期化中はファイルアップロードを無効化
+    if (isAppInitializing()) {
+      throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
+    }
     try {
       logger.info(`📎 ファイル添付開始: ${file.name} (${formatFileSize(file.size)})`, {
         nodeId,
@@ -82,6 +93,11 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         isCloudMode: isCloudStorageEnabled(),
         uploadUrl: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}`
       });
+      
+      // プレースホルダーIDの場合はエラー
+      if (mapId === 'loading-placeholder' || mapId === 'cloud-loading-placeholder') {
+        throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
+      }
 
       // FormDataでファイルをアップロード
       const formData = new FormData();
@@ -228,6 +244,10 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
 
   // ファイルをダウンロード（R2ストレージ対応）
   const downloadFile = async (file, nodeId = null) => {
+    // アプリ初期化中はファイルダウンロードを無効化
+    if (isAppInitializing()) {
+      throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
+    }
     try {
       // R2ストレージのファイルの場合
       if (file.isR2Storage && file.r2FileId) {
@@ -476,6 +496,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
     removeFileFromNode,
     renameFileInNode,
     downloadFile,
-    reattachFile
+    reattachFile,
+    isAppInitializing
   };
 };

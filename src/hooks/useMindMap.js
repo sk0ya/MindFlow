@@ -73,7 +73,8 @@ export const useMindMap = (isAppReady = false) => {
     attachFileToNode,
     removeFileFromNode,
     renameFileInNode,
-    downloadFile
+    downloadFile,
+    isAppInitializing
   } = useMindMapFiles(findNode, updateNode, currentMapId);
 
   // switchToMapのラッパー（適切な引数を渡す）
@@ -124,6 +125,7 @@ export const useMindMap = (isAppReady = false) => {
     removeFileFromNode,
     renameFileInNode,
     downloadFile,
+    isAppInitializing,
     
     // 履歴
     undo,
