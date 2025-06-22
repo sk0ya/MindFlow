@@ -98,6 +98,7 @@ const MindMapApp = () => {
       return (
         <div className="mindmap-app">
           <TutorialOverlay
+            isVisible={true}
             onComplete={renderType.props.onComplete}
             onSkip={renderType.props.onSkip}
           />

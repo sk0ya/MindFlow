@@ -305,6 +305,7 @@ const MainApp = ({
 
         {showOnboarding && (
           <TutorialOverlay
+            isVisible={true}
             onComplete={completeOnboarding}
             onSkip={() => setShowOnboarding(false)}
           />
