@@ -193,7 +193,18 @@ export const useMindMap = (isAppReady = false) => {
     createMindMap: multiHook.createMindMap,
     renameMindMap: multiHook.renameMindMap,
     deleteMindMapById: multiHook.deleteMindMapById,
-    switchToMap: multiHook.switchToMap,
+    switchToMap: (mapId, selectRoot = false) => {
+      return multiHook.switchToMap(
+        mapId, 
+        selectRoot, 
+        nodeHook.setSelectedNodeId, 
+        nodeHook.setEditingNodeId, 
+        nodeHook.setEditText, 
+        dataHook.setHistory, 
+        dataHook.setHistoryIndex,
+        nodeHook.finishEdit  // finishEditを渡す
+      );
+    },
     refreshAllMindMaps: multiHook.refreshAllMindMaps,
     
     // カテゴリー管理

@@ -187,10 +187,36 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ切り替え（完全分離版）
-  const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
+  const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null, finishEdit = null) => {
     console.log('📖 マップ切り替え開始:', mapId);
     
     try {
+      // 🔧 マップ切り替え前に編集中のノードを適切に保存
+      if (setEditingNodeId && setEditText && finishEdit) {
+        const editingInput = document.querySelector('.node-input');
+        const currentEditingNodeId = editingInput ? editingInput.dataset.nodeId : null;
+        const currentEditText = editingInput ? editingInput.value : '';
+        
+        if (currentEditingNodeId && currentEditText !== undefined) {
+          console.log('💾 マップ切り替え前の編集保存:', { 
+            nodeId: currentEditingNodeId, 
+            text: currentEditText,
+            isEmpty: !currentEditText || currentEditText.trim() === ''
+          });
+          
+          // 編集中のテキストを保存（削除判定を無効化）
+          try {
+            finishEdit(currentEditingNodeId, currentEditText, { 
+              skipMapSwitchDelete: true,  // マップ切り替え時の削除を無効化
+              allowDuringEdit: true,
+              source: 'mapSwitch'
+            });
+          } catch (editError) {
+            console.warn('⚠️ マップ切り替え前の編集保存失敗:', editError);
+          }
+        }
+      }
+      
       const adapter = getCurrentAdapter();
       const targetMap = await adapter.getMap(mapId);
       

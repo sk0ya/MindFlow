@@ -412,8 +412,8 @@ export const useMindMapNodes = (data, updateData) => {
     const isEmpty = !textToSave || textToSave.trim() === '';
     const isRoot = nodeId === 'root';
     
-    // 削除判定：明確な条件でのみ削除
-    const shouldDelete = isEmpty && !isRoot && currentNode && (
+    // 削除判定：明確な条件でのみ削除（マップ切り替え時は削除を無効化）
+    const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete && (
       // 既存ノードが元々空だった場合（新規作成後に内容を入力せずにblur）
       !currentNode.text || currentNode.text.trim() === ''
     );
@@ -422,12 +422,22 @@ export const useMindMapNodes = (data, updateData) => {
       console.log('🗑️ ノード削除実行:', { 
         nodeId, 
         reason: '空の新規ノードまたは内容を削除したノード',
-        originalText: currentNode?.text
+        originalText: currentNode?.text,
+        skipMapSwitchDelete: options.skipMapSwitchDelete
       });
       setEditingNodeId(null);
       setEditText('');
       deleteNode(nodeId);
       return;
+    }
+    
+    // マップ切り替え時の削除保護をログ出力
+    if (isEmpty && !isRoot && options.skipMapSwitchDelete) {
+      console.log('🛡️ マップ切り替え時削除保護:', { 
+        nodeId, 
+        text: textToSave,
+        reason: 'マップ切り替え時は空ノードでも削除しない'
+      });
     }
     
     if (isEmpty && !isRoot) {
