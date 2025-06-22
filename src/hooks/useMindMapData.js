@@ -12,26 +12,37 @@ export const useMindMapData = (isAppReady = false) => {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
+  const isSavingRef = useRef(false); // 同時保存処理防止フラグ
   
-  // 即座保存機能
+  // 即座保存機能（編集中の安全性を考慮）
   const saveImmediately = async (dataToSave = data) => {
     if (!dataToSave || dataToSave.isPlaceholder) return;
     
+    // 🔧 同時保存処理の防止
+    if (isSavingRef.current) {
+      console.log('⏸️ 保存スキップ: 既に保存処理実行中');
+      return;
+    }
+    
     try {
+      isSavingRef.current = true; // 保存開始フラグ
+      
       // タイマーをクリア
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
         autoSaveTimeoutRef.current = null;
       }
 
-      // 編集中のテキストがある場合のみ確定（遅延なし）
+      // 🔧 修正: 編集中の場合は自動保存をスキップして編集を保護
       const editingInput = document.querySelector('.node-input');
-      if (editingInput && editingInput.value && editingInput.value.trim().length > 0) {
-        console.log('📝 即座保存: 内容のある編集中ノードを確定', { 
-          value: editingInput.value.trim()
+      if (editingInput && document.activeElement === editingInput) {
+        console.log('✋ 自動保存スキップ: ノード編集中のため保護', { 
+          value: editingInput.value,
+          activeElement: document.activeElement.tagName,
+          isEditing: true
         });
-        editingInput.blur();
-        // 遅延を削除してシンプルに
+        // 編集中は強制blurを行わず、保存もスキップして編集を保護
+        return;
       }
       
       const { saveMindMap } = await import('../utils/storageRouter.js');
@@ -39,6 +50,8 @@ export const useMindMapData = (isAppReady = false) => {
       console.log('💾 即座保存完了:', dataToSave.title);
     } catch (error) {
       console.warn('⚠️ 即座保存失敗:', error.message);
+    } finally {
+      isSavingRef.current = false; // 保存完了フラグリセット
     }
   };
 
@@ -163,11 +176,27 @@ export const useMindMapData = (isAppReady = false) => {
     setHistoryIndex(prev => Math.min(prev + 1, 49));
   };
 
-  // データ更新の共通処理（リアルタイム同期対応）
+  // データ更新の共通処理（リアルタイム同期対応・編集中保護強化）
   const updateData = async (newData, options = {}) => {
     // プレースホルダーデータの場合は更新を無視
     if (data?.isPlaceholder) {
       console.log('⏳ プレースホルダー中: データ更新をスキップ');
+      return;
+    }
+    
+    // 🔧 編集中の競合状態を検出・保護
+    const editingInput = document.querySelector('.node-input');
+    const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
+    
+    if (isCurrentlyEditing && !options.allowDuringEdit) {
+      console.log('✋ データ更新スキップ: ノード編集中のため保護', {
+        editingValue: editingInput.value,
+        updateSource: options.source || 'unknown',
+        isExternalSync: options.skipHistory || false
+      });
+      
+      // 編集中は外部同期からの更新をスキップして編集を保護
+      // ただし、明示的に許可された場合は更新を実行
       return;
     }
     
@@ -191,7 +220,8 @@ export const useMindMapData = (isAppReady = false) => {
       id: newData.id,
       immediate: options.immediate || false,
       saveImmediately: options.saveImmediately || false,
-      skipHistory: options.skipHistory || false
+      skipHistory: options.skipHistory || false,
+      wasEditingProtected: isCurrentlyEditing && !options.allowDuringEdit
     });
     
     // カスタムコールバックがあれば実行
