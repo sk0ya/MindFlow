@@ -201,6 +201,58 @@ export const isCloudStorageEnabled = () => {
   return settings.storageMode === 'cloud';
 };
 
+// クラウドからマインドマップリストを読み込み
+export const loadMindMapsFromCloud = async () => {
+  try {
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    if (!authManager.isAuthenticated()) {
+      console.log('未認証のためクラウド読み込みスキップ');
+      return null;
+    }
+    
+    console.log('☁️ クラウドからマインドマップ一覧を読み込み中...');
+    const result = await cloudStorage.getAllMindMaps();
+    
+    if (result && result.mindmaps) {
+      console.log('✅ クラウドマインドマップ読み込み成功:', result.mindmaps.length + '件');
+      return result.mindmaps;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('❌ クラウド読み込み失敗:', error);
+    return null;
+  }
+};
+
+// 特定のマインドマップをクラウドから読み込み
+export const loadMindMapFromCloud = async (mapId) => {
+  try {
+    const { authManager } = await import('./authManager.js');
+    const { cloudStorage } = await import('./cloudStorage.js');
+    
+    if (!authManager.isAuthenticated()) {
+      console.log('未認証のためクラウド読み込みスキップ');
+      return null;
+    }
+    
+    console.log('☁️ クラウドからマインドマップを読み込み中:', mapId);
+    const result = await cloudStorage.getMindMap(mapId);
+    
+    if (result) {
+      console.log('✅ クラウドマインドマップ読み込み成功:', result.title);
+      return result;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('❌ クラウドマインドマップ読み込み失敗:', error);
+    return null;
+  }
+};
+
 // ハイブリッド保存（ローカル+クラウド）
 export const saveMindMapHybrid = async (mindMapData) => {
   try {

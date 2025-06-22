@@ -9,9 +9,60 @@ export const useMindMapData = () => {
     return assignColorsToExistingNodes(mindMap);
   });
   
+  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
+  
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
+  
+  // 初期化時にクラウドから同期
+  useEffect(() => {
+    const initializeFromCloud = async () => {
+      try {
+        setIsLoadingFromCloud(true);
+        
+        // 認証状態を確認
+        const { authManager } = await import('../utils/authManager.js');
+        if (!authManager.isAuthenticated()) {
+          console.log('未認証のためクラウド同期スキップ');
+          return;
+        }
+        
+        // クラウドからマインドマップ一覧を取得
+        const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
+        const cloudMaps = await loadMindMapsFromCloud();
+        
+        if (cloudMaps && cloudMaps.length > 0) {
+          // 最新のマインドマップを読み込み
+          const latestMap = cloudMaps.sort((a, b) => 
+            new Date(b.updatedAt) - new Date(a.updatedAt)
+          )[0];
+          
+          console.log('📥 最新のクラウドマップを読み込み:', latestMap.title);
+          const fullMapData = await loadMindMapFromCloud(latestMap.id);
+          
+          if (fullMapData) {
+            const processedData = assignColorsToExistingNodes(fullMapData);
+            setData(processedData);
+            
+            // ローカルにもバックアップとして保存
+            const { saveMindMap } = await import('../utils/storage.js');
+            saveMindMap(processedData);
+            
+            console.log('✅ クラウド同期完了');
+          }
+        }
+      } catch (error) {
+        console.warn('❌ クラウド初期化失敗:', error);
+      } finally {
+        setIsLoadingFromCloud(false);
+      }
+    };
+    
+    // 少し遅延してクラウド同期を実行（認証が完了してから）
+    const timer = setTimeout(initializeFromCloud, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // 履歴に追加
   const addToHistory = (newData) => {
@@ -123,6 +174,7 @@ export const useMindMapData = () => {
     updateSettings,
     updateTitle,
     changeTheme,
-    saveMindMap: async () => await saveMindMap(data)
+    saveMindMap: async () => await saveMindMap(data),
+    isLoadingFromCloud
   };
 };
