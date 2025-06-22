@@ -199,16 +199,19 @@ const Node = ({
   const handleInputBlur = useCallback((e) => {
     // IME変換中でない場合のみ編集を終了
     if (!isComposing) {
+      console.log('🎹 Node.jsx blur処理:', { nodeId: node.id, editText, targetValue: e.target.value });
+      
       // 既存のタイマーをクリア
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
       
-      // 短い遅延で編集を終了（マウスクリック等との競合を避ける）
-      blurTimeoutRef.current = setTimeout(() => {
-        onFinishEdit(node.id, editText);
-        blurTimeoutRef.current = null;
-      }, 50);
+      // 最新の入力値を即座に取得して保存（DOM要素から直接取得）
+      const currentValue = e.target ? e.target.value : editText;
+      console.log('🎹 Node.jsx blur実行:', { finalValue: currentValue });
+      
+      // タイマーは使わず即座に実行（値の確実な保存のため）
+      onFinishEdit(node.id, currentValue);
     }
   }, [node.id, editText, onFinishEdit, isComposing]);
 

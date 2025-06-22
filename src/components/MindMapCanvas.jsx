@@ -252,11 +252,14 @@ const MindMapCanvas = ({
   // ノード選択時に編集を確定する処理
   const handleNodeSelect = useCallback((nodeId) => {
     // 編集中で、異なるノードが選択された場合は編集を確定
+    // ただし、Node.jsxのblur処理に委任（editTextの同期問題を避けるため）
     if (editingNodeId && editingNodeId !== nodeId) {
-      onFinishEdit(editingNodeId, editText);
+      // editTextを渡さず、Node.jsx側で現在の入力値を使用させる
+      console.log('🖱️ Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
+      // onFinishEdit(editingNodeId, editText); // この行を削除
     }
     onSelectNode(nodeId);
-  }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
+  }, [editingNodeId, onSelectNode]);
 
   const handleKeyDown = useCallback((e) => {
     console.log('🖱️ Canvas handleKeyDown:', { key: e.key, selectedNodeId, editingNodeId });
