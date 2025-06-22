@@ -203,8 +203,35 @@ export const useMindMapMulti = (data, setData, updateData) => {
         targetMap.rootNode.children = [];
       }
       
+      // データ構造の詳細確認
+      console.log('🔍 切り替え前マップデータ検証:', {
+        id: targetMap.id,
+        title: targetMap.title,
+        hasRootNode: !!targetMap.rootNode,
+        rootNodeId: targetMap.rootNode?.id,
+        rootNodeChildren: targetMap.rootNode?.children?.length || 0,
+        rootNodeChildrenData: targetMap.rootNode?.children?.map(c => ({
+          id: c.id,
+          text: c.text,
+          hasX: typeof c.x === 'number',
+          hasY: typeof c.y === 'number'
+        })) || []
+      });
+      
       // マップ表示（読み取り専用）
       const coloredMap = assignColorsToExistingNodes(targetMap);
+      
+      console.log('🎨 色付け後データ検証:', {
+        hasRootNode: !!coloredMap.rootNode,
+        rootNodeChildren: coloredMap.rootNode?.children?.length || 0,
+        rootNodeChildrenData: coloredMap.rootNode?.children?.map(c => ({
+          id: c.id,
+          text: c.text,
+          hasX: typeof c.x === 'number',
+          hasY: typeof c.y === 'number'
+        })) || []
+      });
+      
       setData(coloredMap);
       setCurrentMapId(mapId);
       

@@ -68,7 +68,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノード更新（完全分離版）
-  const updateNode = async (nodeId, updates) => {
+  const updateNode = async (nodeId, updates, syncToCloud = true) => {
     // 1. ローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
       if (node.id === nodeId) return { ...node, ...updates };
@@ -78,14 +78,21 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. ストレージアダプターを通じて反映
-    try {
-      const adapter = getCurrentAdapter();
-      await adapter.updateNode(data.id, nodeId, updates);
-      console.log('✅ ノード更新完了:', nodeId);
-    } catch (error) {
-      console.warn('⚠️ ノード更新失敗:', error.message);
-      // UIは既に更新済みなので、エラーは静かにログのみ
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    if (syncToCloud) {
+      console.log('⚠️ ノード個別同期は一時的に無効化されています:', nodeId);
+      // APIサーバーのノードエンドポイント修正後に有効化
+      /*
+      try {
+        const adapter = getCurrentAdapter();
+        await adapter.updateNode(data.id, nodeId, updates);
+        console.log('✅ ノード更新完了:', nodeId);
+      } catch (error) {
+        console.warn('⚠️ ノード更新失敗:', error.message);
+      }
+      */
+    } else {
+      console.log('📝 ローカルのみ更新:', nodeId);
     }
   };
 
@@ -119,7 +126,9 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: newRootNode };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. ストレージアダプターを通じて反映
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    console.log('⚠️ ノード追加のクラウド同期は一時的に無効化されています:', newChild.id);
+    /*
     try {
       const adapter = getCurrentAdapter();
       await adapter.addNode(data.id, newChild, parentId);
@@ -127,6 +136,7 @@ export const useMindMapNodes = (data, updateData) => {
     } catch (error) {
       console.warn('⚠️ ノード追加失敗:', error.message);
     }
+    */
     
     // 編集状態を同時に設定
     if (startEditing) {
@@ -234,7 +244,9 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: newRootNode };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. ストレージアダプターを通じて反映
+    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    console.log('⚠️ ノード削除のクラウド同期は一時的に無効化されています:', nodeId);
+    /*
     try {
       const adapter = getCurrentAdapter();
       await adapter.deleteNode(data.id, nodeId);
@@ -242,6 +254,7 @@ export const useMindMapNodes = (data, updateData) => {
     } catch (error) {
       console.warn('⚠️ ノード削除失敗:', error.message);
     }
+    */
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {
@@ -252,9 +265,9 @@ export const useMindMapNodes = (data, updateData) => {
     return true;
   };
 
-  // ノードをドラッグで移動
+  // ノードをドラッグで移動（ローカルのみ、クラウド同期なし）
   const dragNode = (nodeId, x, y) => {
-    updateNode(nodeId, { x, y });
+    updateNode(nodeId, { x, y }, false);
   };
 
   // ノードの親を変更
