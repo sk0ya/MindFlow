@@ -478,7 +478,16 @@ const MindMapApp = () => {
     // 初期化フローの認証成功を通知
     initState.handleAuthSuccess();
     
-    // 1. まずマップ一覧をリフレッシュ
+    // リアルタイム同期を再初期化
+    try {
+      const { realtimeSync } = await import('../utils/realtimeSync.js');
+      realtimeSync.reinitialize();
+      console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
+    } catch (initError) {
+      console.warn('⚠️ リアルタイム同期再初期化失敗:', initError);
+    }
+    
+    // マップ一覧をリフレッシュ
     try {
       await refreshAllMindMaps();
       console.log('🔄 認証成功後にマップ一覧をリフレッシュしました');
@@ -486,7 +495,7 @@ const MindMapApp = () => {
       console.warn('⚠️ 認証後のマップ一覧リフレッシュに失敗:', refreshError);
     }
     
-    // 2. その後クラウド同期をトリガー
+    // クラウド同期をトリガー
     if (triggerCloudSync) {
       try {
         await triggerCloudSync();

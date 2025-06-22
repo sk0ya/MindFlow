@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, getAllMindMapsHybrid, isCloudStorageEnabled } from '../utils/storage.js';
 import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
-import { realtimeSync } from '../utils/realtimeSync.js';
+import { getCurrentAdapter } from '../utils/storageAdapter.js';
 
 // マルチマップ管理専用のカスタムフック
 export const useMindMapMulti = (data, setData, updateData) => {
@@ -29,44 +29,29 @@ export const useMindMapMulti = (data, setData, updateData) => {
     return currentMap?.id || null;
   });
 
-  // マップ一覧の更新（シンプル化 - 読み取り専用）
+  // マップ一覧の更新（完全分離版）
   const refreshAllMindMaps = async () => {
     try {
-      console.log('📋 マップ一覧を読み取り中...');
+      console.log('📋 マップ一覧取得開始');
       
-      const { getAppSettings } = await import('../utils/storage.js');
-      const settings = getAppSettings();
-      
-      let maps = [];
-      
-      if (settings.storageMode === 'cloud') {
-        // クラウドから直接読み取り
-        maps = await realtimeSync.loadMapList();
-        console.log('☁️ クラウドから', maps.length, '件のマップを取得');
-      } else {
-        // ローカルから読み取り
-        const { getAllMindMaps } = await import('../utils/storage.js');
-        maps = getAllMindMaps();
-        console.log('🏠 ローカルから', maps.length, '件のマップを取得');
-      }
+      const adapter = getCurrentAdapter();
+      const maps = await adapter.getAllMaps();
       
       // データ整合性チェック
       const validMaps = maps.filter(map => map && map.id);
       setAllMindMaps(validMaps);
-      console.log('✅ マップ一覧読み取り完了:', validMaps.length, '件');
+      console.log('✅ マップ一覧取得完了:', validMaps.length, '件');
       
     } catch (error) {
-      console.error('❌ マップ一覧読み取り失敗:', error);
+      console.error('❌ マップ一覧取得失敗:', error);
       setAllMindMaps([]);
     }
   };
 
-  // 新規マップ作成
+  // 新規マップ作成（完全分離版）
   const createMindMap = async (title = '新しいマインドマップ', category = '未分類') => {
     try {
-      // クラウドモード対応の新規マップ作成
       const { createInitialData } = await import('../utils/dataTypes.js');
-      const { isCloudStorageEnabled, saveMindMapHybrid } = await import('../utils/storage.js');
       
       const newMap = createInitialData();
       newMap.title = title;
@@ -77,59 +62,114 @@ export const useMindMapMulti = (data, setData, updateData) => {
         newMap.rootNode.text = title;
       }
       
-      console.log('🆕 新規マップ作成:', title, 'クラウドモード:', isCloudStorageEnabled());
+      console.log('🆕 マップ作成開始:', title);
       
-      // クラウドモードかローカルモードかに応じて保存
-      await saveMindMapHybrid(newMap);
+      const adapter = getCurrentAdapter();
+      const result = await adapter.createMap(newMap);
+      
+      console.log('✅ マップ作成完了:', result.title || title);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
       
-      // 新規作成時はルートノードを選択
-      switchToMap(newMap.id, true);
-      return newMap.id;
+      // 新規作成したマップに切り替え
+      await switchToMap(result.id || newMap.id, true);
+      return result.id || newMap.id;
+      
     } catch (error) {
-      console.error('❌ 新規マップ作成失敗:', error);
+      console.error('❌ マップ作成失敗:', error);
       throw error;
     }
   };
 
-  // マップ名変更
-  const renameMindMap = (mapId, newTitle) => {
-    const allMaps = getAllMindMaps();
-    const mapIndex = allMaps.findIndex(map => map.id === mapId);
-    
-    if (mapIndex !== -1) {
-      const updatedMap = { ...allMaps[mapIndex], title: newTitle, updatedAt: new Date().toISOString() };
-      allMaps[mapIndex] = updatedMap;
+  // マップ名変更（リアルタイム同期対応）
+  const renameMindMap = async (mapId, newTitle) => {
+    try {
+      const { getAppSettings } = await import('../utils/storage.js');
+      const settings = getAppSettings();
       
-      // ストレージに保存
-      saveMindMap(updatedMap);
-      refreshAllMindMaps();
+      console.log('✏️ マップ名変更:', mapId, '->', newTitle);
+      
+      if (settings.storageMode === 'cloud') {
+        // クラウドでマップタイトル更新
+        // Note: 個別のタイトル更新APIを実装する必要があります
+        console.log('☁️ クラウドマップタイトル更新');
+        // 現在はマップ全体の更新で代替
+        if (currentMapId === mapId && data) {
+          const updatedData = { ...data, title: newTitle, updatedAt: new Date().toISOString() };
+          await realtimeSync.updateMap?.(mapId, updatedData) || console.warn('updateMap method not implemented yet');
+        }
+      } else {
+        // ローカル更新
+        const { getAllMindMaps, saveMindMap } = await import('../utils/storage.js');
+        const allMaps = getAllMindMaps();
+        const mapIndex = allMaps.findIndex(map => map.id === mapId);
+        
+        if (mapIndex !== -1) {
+          const updatedMap = { ...allMaps[mapIndex], title: newTitle, updatedAt: new Date().toISOString() };
+          await saveMindMap(updatedMap);
+          console.log('🏠 ローカルマップタイトル更新完了');
+        }
+      }
+      
+      // マップ一覧を更新
+      await refreshAllMindMaps();
       
       // 現在編集中のマップの場合はタイトルを更新
       if (mapId === currentMapId) {
         setData(prev => ({ ...prev, title: newTitle }));
       }
+      
+    } catch (error) {
+      console.error('❌ マップ名変更失敗:', error);
+      throw error;
     }
   };
 
-  // マップ削除
-  const deleteMindMapById = (mapId) => {
+  // マップ削除（リアルタイム同期対応）
+  const deleteMindMapById = async (mapId) => {
     if (allMindMaps.length <= 1) {
       console.warn('最後のマインドマップは削除できません');
       return false;
     }
     
-    const newCurrentMap = deleteMindMap(mapId);
-    refreshAllMindMaps();
-    
-    // 削除されたマップが現在のマップだった場合、新しいマップに切り替え
-    if (mapId === currentMapId) {
-      switchToMap(newCurrentMap.id);
+    try {
+      const { getAppSettings } = await import('../utils/storage.js');
+      const settings = getAppSettings();
+      
+      console.log('🗑️ マップ削除開始:', mapId);
+      
+      if (settings.storageMode === 'cloud') {
+        // クラウドから削除
+        const result = await realtimeSync.deleteMap(mapId);
+        if (!result.success) {
+          throw new Error('クラウドマップ削除失敗: ' + result.error);
+        }
+        console.log('☁️ クラウドマップ削除成功');
+      } else {
+        // ローカルから削除
+        const { deleteMindMap } = await import('../utils/storage.js');
+        const newCurrentMap = deleteMindMap(mapId);
+        console.log('🏠 ローカルマップ削除成功');
+      }
+      
+      // マップ一覧を更新
+      await refreshAllMindMaps();
+      
+      // 削除されたマップが現在のマップだった場合、別のマップに切り替え
+      if (mapId === currentMapId && allMindMaps.length > 0) {
+        const remainingMaps = allMindMaps.filter(map => map.id !== mapId);
+        if (remainingMaps.length > 0) {
+          await switchToMap(remainingMaps[0].id);
+        }
+      }
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ マップ削除失敗:', error);
+      throw error;
     }
-    
-    return true;
   };
 
   // カテゴリー変更
@@ -163,30 +203,13 @@ export const useMindMapMulti = (data, setData, updateData) => {
     return Array.from(categories).sort();
   };
 
-  // マップ切り替え（完全読み取り専用）
+  // マップ切り替え（完全分離版）
   const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
-    console.log('📖 マップ読み取り開始:', mapId);
+    console.log('📖 マップ切り替え開始:', mapId);
     
     try {
-      const { getAppSettings } = await import('../utils/storage.js');
-      const settings = getAppSettings();
-      let targetMap = null;
-      
-      if (settings.storageMode === 'cloud') {
-        // クラウドから純粋な読み取り
-        console.log('☁️ クラウドから読み取り:', mapId);
-        targetMap = await realtimeSync.loadMap(mapId);
-      } else {
-        // ローカルから純粋な読み取り
-        console.log('🏠 ローカルから読み取り:', mapId);
-        const { getAllMindMaps } = await import('../utils/storage.js');
-        const localMaps = getAllMindMaps();
-        targetMap = localMaps.find(map => map && map.id === mapId);
-        
-        if (!targetMap) {
-          throw new Error(`マップが見つかりません: ${mapId}`);
-        }
-      }
+      const adapter = getCurrentAdapter();
+      const targetMap = await adapter.getMap(mapId);
       
       // データ整合性チェック
       if (!targetMap?.id || !targetMap?.rootNode) {
@@ -209,11 +232,11 @@ export const useMindMapMulti = (data, setData, updateData) => {
       if (setEditingNodeId) setEditingNodeId(null);
       if (setEditText) setEditText('');
       
-      console.log('✅ マップ読み取り完了:', targetMap.title);
+      console.log('✅ マップ切り替え完了:', targetMap.title);
       
     } catch (error) {
-      console.error('❌ マップ読み取り失敗:', error);
-      alert(`マップの読み取りに失敗しました: ${error.message}`);
+      console.error('❌ マップ切り替え失敗:', error);
+      alert(`マップの切り替えに失敗しました: ${error.message}`);
     }
   };
 

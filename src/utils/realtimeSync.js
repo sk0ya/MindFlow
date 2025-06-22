@@ -15,14 +15,23 @@ class RealtimeSync {
     this.isEnabled = settings.storageMode === 'cloud' && authManager.isAuthenticated();
     
     if (this.isEnabled) {
+      // 正しいAPIエンドポイントを使用
       this.baseUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:8787/api' 
-        : 'https://mindflow-api.sk0ya.workers.dev/api';
+        : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
       
       console.log('🔄 リアルタイム同期を有効化:', this.baseUrl);
     } else {
-      console.log('🏠 ローカルモード: リアルタイム同期は無効');
+      console.log('🏠 ローカルモード or 未認証: リアルタイム同期は無効');
+      console.log('  - ストレージモード:', settings.storageMode);
+      console.log('  - 認証状態:', authManager.isAuthenticated());
     }
+  }
+
+  // 認証状態変更時の再初期化
+  reinitialize() {
+    console.log('🔄 リアルタイム同期の再初期化');
+    this.initialize();
   }
 
   // 認証ヘッダーを取得

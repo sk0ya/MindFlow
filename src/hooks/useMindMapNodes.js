@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createNewNode, calculateNodePosition, COLORS } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
-import { realtimeSync } from '../utils/realtimeSync.js';
+import { getCurrentAdapter } from '../utils/storageAdapter.js';
 
 // ノード操作専用のカスタムフック
 export const useMindMapNodes = (data, updateData) => {
@@ -67,7 +67,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
   };
 
-  // ノードを更新（即座DB反映）
+  // ノード更新（完全分離版）
   const updateNode = async (nodeId, updates) => {
     // 1. ローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
@@ -78,17 +78,18 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: updateNodeRecursive(data.rootNode) };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. DBに即座反映（非同期）
+    // 2. ストレージアダプターを通じて反映
     try {
-      await realtimeSync.updateNode(data.id, nodeId, updates);
-      console.log('✅ ノード更新のDB反映完了:', nodeId);
+      const adapter = getCurrentAdapter();
+      await adapter.updateNode(data.id, nodeId, updates);
+      console.log('✅ ノード更新完了:', nodeId);
     } catch (error) {
-      console.warn('⚠️ ノード更新のDB反映失敗:', error.message);
+      console.warn('⚠️ ノード更新失敗:', error.message);
       // UIは既に更新済みなので、エラーは静かにログのみ
     }
   };
 
-  // 子ノードを追加（即座DB反映）
+  // 子ノード追加（完全分離版）
   const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
@@ -118,12 +119,13 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: newRootNode };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. DBに即座反映（非同期）
+    // 2. ストレージアダプターを通じて反映
     try {
-      await realtimeSync.addNode(data.id, newChild, parentId);
-      console.log('✅ ノード追加のDB反映完了:', newChild.id);
+      const adapter = getCurrentAdapter();
+      await adapter.addNode(data.id, newChild, parentId);
+      console.log('✅ ノード追加完了:', newChild.id);
     } catch (error) {
-      console.warn('⚠️ ノード追加のDB反映失敗:', error.message);
+      console.warn('⚠️ ノード追加失敗:', error.message);
     }
     
     // 編集状態を同時に設定
@@ -232,12 +234,13 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...data, rootNode: newRootNode };
     updateData(newData, { skipHistory: false, immediate: true });
     
-    // 2. DBに即座反映（非同期）
+    // 2. ストレージアダプターを通じて反映
     try {
-      await realtimeSync.deleteNode(data.id, nodeId);
-      console.log('✅ ノード削除のDB反映完了:', nodeId);
+      const adapter = getCurrentAdapter();
+      await adapter.deleteNode(data.id, nodeId);
+      console.log('✅ ノード削除完了:', nodeId);
     } catch (error) {
-      console.warn('⚠️ ノード削除のDB反映失敗:', error.message);
+      console.warn('⚠️ ノード削除失敗:', error.message);
     }
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
