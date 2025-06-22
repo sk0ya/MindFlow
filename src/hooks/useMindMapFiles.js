@@ -117,35 +117,26 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           mapId: currentMapId
         });
 
-        // ファイルアップロード前に現在のマップをクラウドに保存（ノード存在確保）
-        try {
-          console.log('💾 ファイルアップロード前にマップをクラウド保存');
-          const { saveMindMapCloud } = await import('../utils/storage.js');
-          const currentData = findNode('root') ? { 
-            id: currentMapId, 
-            rootNode: findNode('root'),
-            title: 'Current Map',
-            updatedAt: new Date().toISOString()
-          } : null;
-          
-          if (currentData) {
-            await saveMindMapCloud(currentData);
-            console.log('✅ ファイルアップロード前のマップ保存完了');
-          }
-        } catch (saveError) {
-          console.warn('⚠️ ファイルアップロード前のマップ保存失敗:', saveError);
-        }
+        // ファイルアップロード前にマップの最新状態を確認
+        console.log('🔄 ファイルアップロード処理を開始します');
 
         // FormDataでファイルをアップロード
         const formData = new FormData();
         formData.append('file', file);
 
+        console.log('📤 ファイルアップロードリクエスト送信中...');
         const uploadResponse = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Authorization': authHeader
           },
           body: formData
+        });
+
+        console.log('📡 ファイルアップロードレスポンス受信:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          ok: uploadResponse.ok
         });
 
         if (!uploadResponse.ok) {
