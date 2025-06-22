@@ -257,8 +257,8 @@ export const setStorageMode = async (mode) => {
   const updatedSettings = {
     ...settings,
     storageMode: mode,
-    // クラウドモードの場合、ローカル関連設定を無効化
-    autoSave: mode === 'cloud' ? false : settings.autoSave,
+    // クラウドモードでもオートセーブを有効にする
+    autoSave: true,
     cloudSync: mode === 'cloud'
   };
   

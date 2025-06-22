@@ -137,24 +137,38 @@ export const useMindMapData = (isAppReady = false) => {
     }
     
     // 自動保存
-    if (data.settings?.autoSave) {
+    // 設定を動的に確認
+    const { getAppSettings } = await import('../utils/storage.js');
+    const currentSettings = getAppSettings();
+    console.log('📊 現在の設定確認:', {
+      autoSave: currentSettings.autoSave,
+      storageMode: currentSettings.storageMode,
+      dataAutoSave: data.settings?.autoSave
+    });
+    
+    if (currentSettings.autoSave || data.settings?.autoSave) {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
       autoSaveTimeoutRef.current = setTimeout(async () => {
         try {
           console.log('🔄 オートセーブ開始:', newData.id, newData.title);
+          console.log('💾 保存モード:', currentSettings.storageMode);
           // 動的インポートでsaveMindMapHybridを使用
           const { saveMindMapHybrid } = await import('../utils/storage.js');
-          await saveMindMapHybrid(newData);
-          console.log('✅ オートセーブ成功');
+          const result = await saveMindMapHybrid(newData);
+          console.log('✅ オートセーブ成功:', result);
         } catch (error) {
           console.error('❌ オートセーブ失敗:', error);
+          console.error('❌ エラー詳細:', error.message, error.stack);
           // フォールバックとしてローカル保存
           console.log('🏠 ローカル保存にフォールバック');
+          const { saveMindMap } = await import('../utils/storage.js');
           await saveMindMap(newData);
         }
       }, 1000);
+    } else {
+      console.log('⚠️ オートセーブが無効になっています');
     }
     
     // カスタムコールバックがあれば実行
