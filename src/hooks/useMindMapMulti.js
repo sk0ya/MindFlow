@@ -173,27 +173,55 @@ export const useMindMapMulti = (data, setData, updateData) => {
   const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null) => {
     console.log('🔄 マップ切り替え開始:', mapId);
     
-    // クラウドモードの場合は現在のallMindMapsから検索、見つからない場合はクラウドから直接取得
-    let targetMap = allMindMaps.find(map => map && map.id === mapId);
+    // まずマップ一覧から基本情報を確認
+    let targetMapInfo = allMindMaps.find(map => map && map.id === mapId);
+    let targetMap = null;
     
-    if (!targetMap) {
-      console.log('🔍 ローカル一覧にマップが見つからない、クラウドから取得:', mapId);
+    if (targetMapInfo) {
+      console.log('📄 マップ一覧から基本情報取得:', targetMapInfo.title);
+      // 詳細なマップデータを取得
+      try {
+        const { isCloudStorageEnabled, loadMindMapFromCloud, getAllMindMaps } = await import('../utils/storage.js');
+        if (isCloudStorageEnabled()) {
+          console.log('☁️ クラウドから詳細データ取得中...');
+          targetMap = await loadMindMapFromCloud(mapId);
+          console.log('☁️ クラウドから詳細データ取得成功:', targetMap?.title, 'ノード数:', targetMap?.rootNode?.children?.length || 0);
+        } else {
+          // ローカルモードの場合は一覧から完全なデータを取得
+          const localMaps = getAllMindMaps();
+          targetMap = localMaps.find(map => map && map.id === mapId);
+          console.log('🏠 ローカルから詳細データ取得:', targetMap?.title);
+        }
+      } catch (error) {
+        console.error('❌ 詳細データ取得失敗:', error);
+        // フォールバック: 基本情報をそのまま使用
+        targetMap = targetMapInfo;
+      }
+    } else {
+      console.log('🔍 マップ一覧にない、直接取得:', mapId);
       try {
         const { isCloudStorageEnabled, loadMindMapFromCloud } = await import('../utils/storage.js');
         if (isCloudStorageEnabled()) {
           targetMap = await loadMindMapFromCloud(mapId);
-          console.log('☁️ クラウドからマップ取得成功:', targetMap?.title);
+          console.log('☁️ 直接取得成功:', targetMap?.title);
         }
       } catch (error) {
-        console.error('❌ クラウドからマップ取得失敗:', error);
+        console.error('❌ 直接取得失敗:', error);
       }
     }
     
     if (targetMap) {
-      // 現在のマップを保存
-      saveMindMap(data);
+      // 現在のマップを保存（クラウドモード対応）
+      try {
+        const { saveMindMapHybrid } = await import('../utils/storage.js');
+        await saveMindMapHybrid(data);
+        console.log('✅ 切り替え前のマップ保存完了');
+      } catch (saveError) {
+        console.warn('⚠️ 切り替え前のマップ保存失敗:', saveError);
+      }
       
       // 新しいマップに切り替え
+      console.log('🔄 切り替え対象マップ:', targetMap.title, 'rootNode:', targetMap.rootNode);
       const coloredMap = assignColorsToExistingNodes(targetMap);
       setData(coloredMap);
       setCurrentMapId(mapId);
