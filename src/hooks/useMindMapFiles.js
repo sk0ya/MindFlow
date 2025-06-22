@@ -99,11 +99,20 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           fileName: file.name
         });
 
+        // デバッグ: APIエンドポイントと認証ヘッダーを詳細ログ出力
+        const apiUrl = `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`;
+        console.log('🔗 API URL:', apiUrl);
+        console.log('🔐 認証ヘッダー:', authHeader ? `${authHeader.substring(0, 20)}...` : 'なし');
+        
+        // ユーザー情報も確認
+        const user = authManager.getCurrentUser();
+        console.log('👤 現在のユーザー:', user);
+
         // FormDataでファイルをアップロード
         const formData = new FormData();
         formData.append('file', file);
 
-        const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`, {
+        const uploadResponse = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Authorization': authHeader
