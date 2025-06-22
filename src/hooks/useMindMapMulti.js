@@ -131,7 +131,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
       
       // 現在編集中のマップの場合はタイトルを更新
       if (mapId === currentMapId) {
-        updateData({ ...data, title: newTitle });
+        setData(prev => ({ ...prev, title: newTitle }));
       }
     }
   };
@@ -190,19 +190,10 @@ export const useMindMapMulti = (data, setData, updateData) => {
     console.log('🔄 マップ切り替え開始:', mapId);
     
     try {
-      // 1. 現在のマップを保存（データ損失防止）
-      if (data && !data.isPlaceholder) {
-        try {
-          const { saveMindMapHybrid } = await import('../utils/storage.js');
-          console.log('💾 切り替え前のマップ保存開始:', data.id, data.title);
-          await saveMindMapHybrid(data);
-          console.log('✅ 切り替え前のマップ保存完了');
-        } catch (saveError) {
-          console.warn('⚠️ 切り替え前のマップ保存失敗:', saveError);
-        }
-      }
+      // マップ切り替えは読み取り専用操作（保存不要）
+      console.log('📚 読み取り専用マップ切り替え:', mapId);
       
-      // 2. ストレージモードの確認
+      // 1. ストレージモードの確認
       const { isCloudStorageEnabled, loadMindMapFromCloud, getAllMindMaps } = await import('../utils/storage.js');
       let targetMap = null;
       
@@ -235,7 +226,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
         console.log('✅ ローカルから詳細データ取得成功:', targetMap.title);
       }
       
-      // 3. データ整合性チェック（詳細版）
+      // 2. データ整合性チェック（詳細版）
       console.log('🔍 取得したマップデータの詳細検証:', {
         hasTargetMap: !!targetMap,
         targetMapKeys: targetMap ? Object.keys(targetMap) : null,
@@ -281,7 +272,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
         }
       }
       
-      // 4. マップ切り替え実行
+      // 3. マップ切り替え実行（読み取りのみ）
       console.log('🔄 マップ切り替え実行:', {
         from: data?.id || 'none',
         to: targetMap.id,
@@ -294,7 +285,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
       setData(coloredMap);
       setCurrentMapId(mapId);
       
-      // 5. UI状態をリセット
+      // 4. UI状態をリセット
       if (selectRoot && setSelectedNodeId) {
         setSelectedNodeId('root');
       } else if (setSelectedNodeId) {
@@ -303,18 +294,18 @@ export const useMindMapMulti = (data, setData, updateData) => {
       if (setEditingNodeId) setEditingNodeId(null);
       if (setEditText) setEditText('');
       
-      // 6. 履歴をリセット
+      // 5. 履歴をリセット
       if (setHistory && setHistoryIndex) {
         setHistory([deepClone(coloredMap)]);
         setHistoryIndex(0);
       }
       
-      // 7. ローカルストレージ更新（クラウドモードでも現在のマップIDは保持）
+      // 6. ローカルストレージ更新（ローカルモードのみ）
       if (!isCloudStorageEnabled()) {
         localStorage.setItem('currentMindMap', JSON.stringify(coloredMap));
       }
       
-      console.log('✅ マップ切り替え完了:', {
+      console.log('✅ 読み取り専用マップ切り替え完了:', {
         title: coloredMap.title,
         id: coloredMap.id,
         hasRootNode: !!coloredMap.rootNode,
