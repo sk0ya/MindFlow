@@ -115,6 +115,14 @@ const Node = ({
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
       }
+    } else if (isEditing && inputRef.current) {
+      // 編集モード開始時に確実にフォーカス
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select(); // テキストを選択状態にする
+        }
+      }, 10);
     }
   }, [isEditing]);
 

@@ -60,7 +60,7 @@ export const useKeyboardShortcuts = ({
           finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ兄弟ノード追加
           if (currentText && addSiblingNode) {
-            setTimeout(() => addSiblingNode(editingNodeId, '', true), 50);
+            addSiblingNode(editingNodeId, '', true);
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
@@ -69,7 +69,7 @@ export const useKeyboardShortcuts = ({
           finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ子ノード追加
           if (currentText && addChildNode) {
-            setTimeout(() => addChildNode(editingNodeId, '', true), 50);
+            addChildNode(editingNodeId, '', true);
           }
         }
         return;
