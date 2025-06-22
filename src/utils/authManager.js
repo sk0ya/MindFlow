@@ -7,7 +7,7 @@ class AuthManager {
   constructor() {
     this.token = null;
     this.user = null;
-    this.apiBase = 'https://mindflow-api.shigekazukoya.workers.dev';
+    this.apiBase = 'https://mindflow-api-production.shigekazukoya.workers.dev';
     
     this.loadAuthData();
     this.setupTokenRefresh();

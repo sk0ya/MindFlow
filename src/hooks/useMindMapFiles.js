@@ -103,7 +103,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const uploadResponse = await fetch(`https://mindflow-api.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`, {
+        const uploadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`, {
           method: 'POST',
           headers: {
             'Authorization': authHeader
@@ -124,7 +124,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           console.error('R2アップロードエラー詳細:', {
             status: uploadResponse.status,
             statusText: uploadResponse.statusText,
-            url: `https://mindflow-api.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`,
+            url: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`,
             mapId: currentMapId,
             nodeId,
             errorDetail
@@ -253,7 +253,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
             }
             
             await fetch(
-              `https://mindflow-api.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}/${fileToRemove.r2FileId}`,
+              `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}/${fileToRemove.r2FileId}`,
               {
                 method: 'DELETE',
                 headers: {
@@ -328,7 +328,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
             headers['X-User-ID'] = userId;
           }
           
-          const downloadResponse = await fetch(`https://mindflow-api.shigekazukoya.workers.dev${file.downloadUrl}`, {
+          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${file.downloadUrl}`, {
             headers
           });
           
@@ -407,7 +407,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
 
         // ダウンロード用の署名付きURLを取得（マップID修正なし）
         const downloadResponse = await fetch(
-          `https://mindflow-api.shigekazukoya.workers.dev/api/files/${mapId}/${actualNodeId}/${file.r2FileId}?type=download`,
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${actualNodeId}/${file.r2FileId}?type=download`,
           { headers }
         );
 
