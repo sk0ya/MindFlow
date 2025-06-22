@@ -5,7 +5,7 @@ import { useMindMapFiles } from './useMindMapFiles.js';
 import { useMindMapMulti } from './useMindMapMulti.js';
 
 // リファクタリング後のメインフック（元のuseMindMapの代替）
-export const useMindMap = () => {
+export const useMindMap = (isAppReady = false) => {
   // データ管理
   const {
     data,
@@ -18,8 +18,9 @@ export const useMindMap = () => {
     updateSettings,
     updateTitle,
     changeTheme,
-    saveMindMap
-  } = useMindMapData();
+    saveMindMap,
+    triggerCloudSync
+  } = useMindMapData(isAppReady);
 
   // ノード操作
   const {
@@ -135,6 +136,7 @@ export const useMindMap = () => {
     changeTheme,
     updateSettings,
     saveMindMap,
+    triggerCloudSync,
     
     // マルチマップ管理
     allMindMaps,

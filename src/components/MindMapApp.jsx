@@ -27,6 +27,7 @@ import TutorialOverlay from './TutorialOverlay.jsx';
 import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
 import StorageModeSelector from './StorageModeSelector.jsx';
 import { useOnboarding } from '../hooks/useOnboarding.js';
+import { useAppInitialization } from '../hooks/useAppInitialization.js';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -44,18 +45,12 @@ const MindMapApp = () => {
   // 認証モーダル状態
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // チュートリアル状態
-  const [showTutorial, setShowTutorial] = useState(false);
   
   // キーボードショートカットヘルパー状態
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
   
-  // ストレージモード選択状態
-  const [showStorageModeSelector, setShowStorageModeSelector] = useState(false);
-  const [hasExistingLocalData, setHasExistingLocalData] = useState(false);
-  
-  // オンボーディング
-  const { shouldShowOnboarding, isChecking: isCheckingOnboarding, completeOnboarding } = useOnboarding();
+  // アプリ初期化（統一フロー）
+  const initState = useAppInitialization();
 
   const {
     data,
@@ -104,8 +99,9 @@ const MindMapApp = () => {
     connectedUsers,
     userCursors,
     initializeRealtime,
-    updateCursorPosition
-  } = useMindMap();
+    updateCursorPosition,
+    triggerCloudSync
+  } = useMindMap(initState.isReady);
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -141,59 +137,12 @@ const MindMapApp = () => {
   // パフォーマンスダッシュボード状態（開発環境のみ）
   const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   
-  // 初期化処理：ストレージモード選択とオンボーディング制御
+  // 初期化完了時の処理
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        console.log('🚀 アプリ初期化開始');
-        
-        // ローカルデータの存在確認
-        const hasData = hasLocalData();
-        setHasExistingLocalData(hasData);
-        
-        // 初回セットアップかどうかチェック
-        const isFirstTime = isFirstTimeSetup();
-        
-        console.log('📊 初期化状態:', {
-          hasData,
-          isFirstTime,
-          isCheckingOnboarding
-        });
-        
-        // 条件に基づいてストレージモード選択画面を表示
-        if (isFirstTime || (!hasData && !authState.isAuthenticated)) {
-          setShowStorageModeSelector(true);
-        }
-        
-      } catch (error) {
-        console.error('アプリ初期化エラー:', error);
-      }
-    };
-
-    // オンボーディングチェックが完了してから初期化実行
-    if (!isCheckingOnboarding) {
-      initializeApp();
+    if (initState.isReady) {
+      console.log('✅ アプリ初期化完了');
     }
-  }, [isCheckingOnboarding, authState.isAuthenticated]);
-
-  // 初回アクセス時のチュートリアル表示チェック（ローカルモード時のみ）
-  useEffect(() => {
-    const checkTutorialDisplay = () => {
-      const settings = getAppSettings();
-      const isLocalMode = settings.storageMode === 'local';
-      
-      if (isLocalMode && shouldShowOnboarding) {
-        const isFirstVisit = !localStorage.getItem('mindflow_tutorial_completed');
-        if (isFirstVisit) {
-          setShowTutorial(true);
-        }
-      }
-    };
-
-    if (!isCheckingOnboarding) {
-      checkTutorialDisplay();
-    }
-  }, [shouldShowOnboarding, isCheckingOnboarding]);
+  }, [initState.isReady]);
 
   // 認証状態を監視して更新
   useEffect(() => {
@@ -254,36 +203,6 @@ const MindMapApp = () => {
     showSaveMessage();
   };
 
-  // ストレージモード選択ハンドラー
-  const handleStorageModeSelect = async (mode) => {
-    try {
-      console.log('📝 ストレージモード選択:', mode);
-      
-      // ストレージモードを設定
-      await setStorageMode(mode);
-      
-      setShowStorageModeSelector(false);
-      
-      // クラウドモードの場合は認証を開始
-      if (mode === 'cloud') {
-        setShowAuthModal(true);
-      } else {
-        // ローカルモードの場合はオンボーディングをチェック
-        if (shouldShowOnboarding) {
-          setShowTutorial(true);
-        }
-      }
-      
-      // アプリを再読み込みして新しい設定を適用
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
-    } catch (error) {
-      console.error('ストレージモード設定エラー:', error);
-      alert('設定の保存に失敗しました');
-    }
-  };
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -538,13 +457,21 @@ const MindMapApp = () => {
     setShowAuthModal(false);
   };
   
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = async (user) => {
     setAuthState({
       isAuthenticated: true,
       user: user,
       isLoading: false
     });
-    setShowAuthModal(false);
+    
+    // 初期化フローの認証成功を通知
+    initState.handleAuthSuccess();
+    
+    // クラウド同期をトリガー
+    if (triggerCloudSync) {
+      await triggerCloudSync();
+    }
+    
     // 認証後にマインドマップをリフレッシュ
     refreshAllMindMaps();
   };
@@ -857,16 +784,16 @@ const MindMapApp = () => {
         />
         
         <AuthModal
-          isVisible={showAuthModal}
-          onClose={handleCloseAuthModal}
+          isVisible={initState.showAuthModal}
+          onClose={initState.handleAuthClose}
           onAuthSuccess={handleAuthSuccess}
         />
 
         {/* チュートリアルオーバーレイ */}
         <TutorialOverlay
-          isVisible={showTutorial}
-          onComplete={() => setShowTutorial(false)}
-          onSkip={() => setShowTutorial(false)}
+          isVisible={initState.showOnboarding}
+          onComplete={initState.handleOnboardingComplete}
+          onSkip={initState.handleOnboardingComplete}
         />
 
         {/* キーボードショートカットヘルパー */}
@@ -876,10 +803,10 @@ const MindMapApp = () => {
         />
 
         {/* ストレージモード選択画面 */}
-        {showStorageModeSelector && (
+        {initState.showStorageModeSelector && (
           <StorageModeSelector
-            onModeSelect={handleStorageModeSelect}
-            hasLocalData={hasExistingLocalData}
+            onModeSelect={initState.handleStorageModeSelect}
+            hasLocalData={initState.hasExistingLocalData}
           />
         )}
 

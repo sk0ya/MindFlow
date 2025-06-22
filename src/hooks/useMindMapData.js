@@ -3,17 +3,45 @@ import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAppSettings }
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
 
 // データ管理専用のカスタムフック
-export const useMindMapData = () => {
+export const useMindMapData = (isAppReady = false) => {
   const [data, setData] = useState(() => {
-    // 設定をチェックしてからデータを初期化
-    const settings = getAppSettings();
-    
-    if (settings.storageMode === 'cloud') {
-      // クラウドモードの場合はプレースホルダーデータで初期化（認証完了まで待機）
-      console.log('☁️ クラウドモード: プレースホルダーで初期化（認証待機中）');
+    // アプリが準備完了まではプレースホルダー
+    if (!isAppReady) {
       return {
         id: 'loading-placeholder',
-        title: '読み込み中...',
+        title: '初期化中...',
+        rootNode: {
+          id: 'root',
+          text: 'アプリケーションを初期化中...',
+          x: 400,
+          y: 300,
+          children: [],
+          color: '#f8f9fa'
+        },
+        settings: { autoSave: false, autoLayout: false },
+        isPlaceholder: true
+      };
+    }
+
+    // アプリ準備完了後の初期化
+    const settings = getAppSettings();
+    
+    if (settings.storageMode === 'local') {
+      // ローカルモード: 既存データまたは新規作成
+      const mindMap = getCurrentMindMap();
+      if (mindMap) {
+        console.log('📁 ローカルモード: 既存データ読み込み');
+        return assignColorsToExistingNodes(mindMap);
+      } else {
+        console.log('📁 ローカルモード: 新規マップ作成');
+        return createInitialData();
+      }
+    } else if (settings.storageMode === 'cloud') {
+      // クラウドモード: プレースホルダーから開始
+      console.log('☁️ クラウドモード: 認証待機中');
+      return {
+        id: 'cloud-loading-placeholder',
+        title: 'クラウド同期中...',
         rootNode: {
           id: 'root',
           text: 'クラウドデータを読み込み中...',
@@ -23,15 +51,11 @@ export const useMindMapData = () => {
           color: '#e8f4fd'
         },
         settings: { autoSave: false, autoLayout: false },
-        isPlaceholder: true // プレースホルダーフラグ
+        isPlaceholder: true
       };
-    } else if (settings.storageMode === 'local') {
-      // ローカルモードの場合は既存データを読み込み
-      const mindMap = getCurrentMindMap();
-      return assignColorsToExistingNodes(mindMap);
     } else {
-      // ストレージモード未設定の場合は空データ
-      console.log('❓ ストレージモード未設定: 空データで初期化');
+      // フォールバック
+      console.log('❓ 設定不明: デフォルトデータ');
       return createInitialData();
     }
   });
@@ -42,140 +66,91 @@ export const useMindMapData = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   
-  // 初期化時にクラウドから同期（クラウドモードの場合のみ）
+  // アプリ準備完了時のデータ初期化
   useEffect(() => {
-    const initializeFromCloud = async () => {
-      try {
-        // クラウドモードかどうかチェック
-        if (!isCloudStorageEnabled()) {
-          console.log('🏠 ローカルモード: クラウド同期をスキップ');
-          return;
-        }
-        
-        setIsLoadingFromCloud(true);
-        
-        // 認証状態を確認
-        const { authManager } = await import('../utils/authManager.js');
-        if (!authManager.isAuthenticated()) {
-          console.log('⏳ 未認証のためクラウド同期を待機中...');
-          return;
-        }
-        
-        console.log('🔄 認証済み: クラウド同期を開始');
-        
-        // クラウドからマインドマップ一覧を取得
-        const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
-        const cloudMaps = await loadMindMapsFromCloud();
-        
-        if (cloudMaps && cloudMaps.length > 0) {
-          // 最新のマインドマップを読み込み
-          const latestMap = cloudMaps.sort((a, b) => 
-            new Date(b.updatedAt) - new Date(a.updatedAt)
-          )[0];
-          
-          console.log('📥 最新のクラウドマップを読み込み:', latestMap.title);
-          const fullMapData = await loadMindMapFromCloud(latestMap.id);
-          
-          if (fullMapData) {
-            const processedData = assignColorsToExistingNodes(fullMapData);
-            setData(processedData);
-            
-            console.log('✅ クラウド同期完了');
-          }
-        } else {
-          // クラウドにデータがない場合は新規マップを作成
-          console.log('📭 クラウドにマップが見つかりません。新規マップを作成します。');
-          const newMap = createInitialData();
-          newMap.title = '新しいマインドマップ';
-          setData(newMap);
-          
-          // 新規作成したマップをクラウドに保存
-          try {
-            const { saveMindMapHybrid } = await import('../utils/storage.js');
-            await saveMindMapHybrid(newMap);
-            console.log('✅ 新規マップをクラウドに保存完了');
-          } catch (saveError) {
-            console.warn('❌ 新規マップのクラウド保存失敗:', saveError);
-          }
-        }
-      } catch (error) {
-        console.warn('❌ クラウド初期化失敗:', error);
-      } finally {
-        setIsLoadingFromCloud(false);
-      }
-    };
-    
-    // 少し遅延してクラウド同期を実行（認証が完了してから）
-    const timer = setTimeout(initializeFromCloud, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isAppReady) return;
 
-  // 認証状態変更時の再同期
-  useEffect(() => {
-    const syncOnAuthChange = async () => {
-      try {
-        if (!isCloudStorageEnabled()) return;
+    const initializeData = async () => {
+      const settings = getAppSettings();
+      
+      if (settings.storageMode === 'local') {
+        // ローカルモード: 既にuseStateで初期化済み
+        console.log('📁 ローカルモード: 初期化完了');
         
-        const { authManager } = await import('../utils/authManager.js');
-        if (authManager.isAuthenticated() && !isLoadingFromCloud) {
-          console.log('🔑 認証状態変更: クラウド同期を再実行');
-          
-          setIsLoadingFromCloud(true);
-          
-          const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
-          const cloudMaps = await loadMindMapsFromCloud();
-          
-          if (cloudMaps && cloudMaps.length > 0) {
-            const latestMap = cloudMaps.sort((a, b) => 
-              new Date(b.updatedAt) - new Date(a.updatedAt)
-            )[0];
-            
-            const fullMapData = await loadMindMapFromCloud(latestMap.id);
-            if (fullMapData) {
-              const processedData = assignColorsToExistingNodes(fullMapData);
-              setData(processedData);
-              console.log('✅ 認証後のクラウド同期完了');
-            }
-          } else {
-            // 認証後もクラウドにデータがない場合は新規作成
-            console.log('📭 認証後もマップなし: 新規作成します');
-            const newMap = createInitialData();
-            newMap.title = '新しいマインドマップ';
-            setData(newMap);
-            
-            try {
-              const { saveMindMapHybrid } = await import('../utils/storage.js');
-              await saveMindMapHybrid(newMap);
-              console.log('✅ 認証後新規マップ保存完了');
-            } catch (saveError) {
-              console.warn('❌ 認証後新規マップ保存失敗:', saveError);
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('❌ 認証後同期失敗:', error);
-      } finally {
-        setIsLoadingFromCloud(false);
+      } else if (settings.storageMode === 'cloud') {
+        // クラウドモード: 認証状態をチェックして同期
+        await initializeFromCloud();
       }
     };
 
-    // 認証状態の変更を監視（ポーリングで定期チェック）
-    const authCheckInterval = setInterval(async () => {
-      try {
-        const { authManager } = await import('../utils/authManager.js');
-        const isAuth = authManager.isAuthenticated();
-        
-        // 認証済みかつ、プレースホルダーデータの場合は同期実行
-        if (isAuth && isCloudStorageEnabled() && data?.isPlaceholder) {
-          await syncOnAuthChange();
-        }
-      } catch (error) {
-        // Silent fail for auth check
-      }
-    }, 3000);
+    initializeData();
+  }, [isAppReady]);
 
-    return () => clearInterval(authCheckInterval);
-  }, [isLoadingFromCloud, data]);
+  // クラウド同期処理（統一）
+  const initializeFromCloud = async () => {
+    try {
+      setIsLoadingFromCloud(true);
+      
+      // 認証状態を確認
+      const { authManager } = await import('../utils/authManager.js');
+      if (!authManager.isAuthenticated()) {
+        console.log('⏳ 未認証: クラウド同期を待機');
+        return;
+      }
+      
+      console.log('🔄 認証済み: クラウド同期開始');
+      
+      // クラウドからマインドマップ一覧を取得
+      const { loadMindMapsFromCloud, loadMindMapFromCloud } = await import('../utils/storage.js');
+      const cloudMaps = await loadMindMapsFromCloud();
+      
+      if (cloudMaps && cloudMaps.length > 0) {
+        // 既存データを読み込み
+        const latestMap = cloudMaps.sort((a, b) => 
+          new Date(b.updatedAt) - new Date(a.updatedAt)
+        )[0];
+        
+        console.log('📥 最新のクラウドマップを読み込み:', latestMap.title);
+        const fullMapData = await loadMindMapFromCloud(latestMap.id);
+        
+        if (fullMapData) {
+          const processedData = assignColorsToExistingNodes(fullMapData);
+          setData(processedData);
+          console.log('✅ クラウド同期完了');
+        }
+      } else {
+        // 新規マップを作成
+        console.log('📭 クラウドにマップなし: 新規作成');
+        const newMap = createInitialData();
+        newMap.title = '新しいマインドマップ';
+        setData(newMap);
+        
+        // クラウドに保存
+        try {
+          const { saveMindMapHybrid } = await import('../utils/storage.js');
+          await saveMindMapHybrid(newMap);
+          console.log('✅ 新規マップのクラウド保存完了');
+        } catch (saveError) {
+          console.warn('❌ 新規マップ保存失敗:', saveError);
+        }
+      }
+    } catch (error) {
+      console.warn('❌ クラウド同期失敗:', error);
+      // エラー時は新規マップで開始
+      const newMap = createInitialData();
+      setData(newMap);
+    } finally {
+      setIsLoadingFromCloud(false);
+    }
+  };
+
+  // 認証成功時のクラウド同期トリガー
+  const triggerCloudSync = async () => {
+    if (isCloudStorageEnabled() && data?.isPlaceholder) {
+      console.log('🔑 認証成功: クラウド同期をトリガー');
+      await initializeFromCloud();
+    }
+  };
 
   // 履歴に追加
   const addToHistory = (newData) => {
@@ -294,6 +269,7 @@ export const useMindMapData = () => {
     updateTitle,
     changeTheme,
     saveMindMap: async () => await saveMindMap(data),
-    isLoadingFromCloud
+    isLoadingFromCloud,
+    triggerCloudSync
   };
 };
