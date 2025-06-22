@@ -112,6 +112,31 @@ const MindMapApp = () => {
     return () => window.removeEventListener('authStateChange', handleAuthChange);
   }, [isCloudMode, authState.isAuthenticated, mindMap.triggerCloudSync]);
 
+  // デバッグ情報（初回のみ）
+  useEffect(() => {
+    console.log('🔍 MindMapApp Debug:', {
+      isReady,
+      hasData: !!mindMap.data,
+      dataTitle: mindMap.data?.title,
+      isPlaceholder: mindMap.data?.isPlaceholder
+    });
+  }, [isReady, mindMap.data?.id]); // データIDが変わった時のみログ
+
+  // データ読み込みタイムアウト処理
+  useEffect(() => {
+    if (!mindMap.data || mindMap.data.isPlaceholder) {
+      const timeoutId = setTimeout(() => {
+        if (!mindMap.data) {
+          console.warn('⚠️ 5秒経過: ダミーデータで強制表示');
+          // 緊急時はページリロード
+          window.location.reload();
+        }
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [mindMap.data]);
+
   // 🚨 PHASE 2: 条件分岐によるレンダリング（フック呼び出し後）
 
   // 認証トークン検証時は専用コンポーネントを表示
@@ -180,31 +205,6 @@ const MindMapApp = () => {
       </div>
     );
   }
-
-  // デバッグ情報（初回のみ）
-  useEffect(() => {
-    console.log('🔍 MindMapApp Debug:', {
-      isReady,
-      hasData: !!mindMap.data,
-      dataTitle: mindMap.data?.title,
-      isPlaceholder: mindMap.data?.isPlaceholder
-    });
-  }, [isReady, mindMap.data?.id]); // データIDが変わった時のみログ
-
-  // データ読み込みタイムアウト処理
-  useEffect(() => {
-    if (!mindMap.data || mindMap.data.isPlaceholder) {
-      const timeoutId = setTimeout(() => {
-        if (!mindMap.data) {
-          console.warn('⚠️ 5秒経過: ダミーデータで強制表示');
-          // 緊急時はページリロード
-          window.location.reload();
-        }
-      }, 5000);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [mindMap.data]);
 
   // データが読み込まれていない場合は読み込み画面
   if (!mindMap.data || mindMap.data.isPlaceholder) {
