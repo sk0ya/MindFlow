@@ -29,6 +29,17 @@ export const useKeyboardShortcuts = ({
   
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // デバッグ用：キーイベントをログ出力
+      console.log('🎹 キーイベント:', {
+        key: e.key,
+        target: e.target.tagName,
+        editingNodeId,
+        selectedNodeId,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey
+      });
+      
       // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
       const isInputFocused = document.activeElement?.tagName === 'INPUT' || 
                            document.activeElement?.tagName === 'TEXTAREA' || 
@@ -37,6 +48,7 @@ export const useKeyboardShortcuts = ({
       // エスケープキーの処理（最優先）
       if (e.key === 'Escape') {
         e.preventDefault();
+        console.log('⭕ Escapeキー処理:', { editingNodeId, showMapList, showCloudStorage, showTutorial, showKeyboardHelper });
         if (editingNodeId) {
           setEditingNodeId(null);
         } else if (showMapList) {
@@ -92,16 +104,17 @@ export const useKeyboardShortcuts = ({
 
       // ノードが選択されている場合のみ実行されるショートカット
       if (selectedNodeId) {
+        console.log('🎯 選択ノードでのキー処理:', { key: e.key, selectedNodeId });
         switch (e.key) {
           case 'Tab':
             e.preventDefault();
-            console.log('⌨️ 非編集時Tab処理:', { selectedNodeId });
+            console.log('⭕ Tab → 子ノード追加:', { selectedNodeId });
             addChildNode(selectedNodeId, '', true);
             break;
           
           case 'Enter':
             e.preventDefault();
-            console.log('⌨️ 非編集時Enter処理:', { selectedNodeId });
+            console.log('⭕ Enter → 兄弟ノード追加:', { selectedNodeId });
             if (selectedNodeId === 'root') {
               addChildNode('root', '', true);
             } else {

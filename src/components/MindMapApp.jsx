@@ -30,6 +30,7 @@ import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
 import StorageModeSelector from './StorageModeSelector.jsx';
 import { useOnboarding } from '../hooks/useOnboarding.js';
 import { useAppInitialization } from '../hooks/useAppInitialization.js';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -50,6 +51,9 @@ const MindMapApp = () => {
   
   // キーボードショートカットヘルパー状態
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
+  
+  // マップリスト状態
+  const [showMapList, setShowMapList] = useState(false);
   
   // アプリ初期化（統一フロー）
   const initState = useAppInitialization();
@@ -139,6 +143,42 @@ const MindMapApp = () => {
   // パフォーマンスダッシュボード状態（開発環境のみ）
   const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   
+  // チュートリアル状態
+  const [showTutorial, setShowTutorial] = useState(false);
+  
+  // キーボードショートカットの統合
+  useKeyboardShortcuts({
+    selectedNodeId,
+    editingNodeId,
+    setEditingNodeId: (nodeId) => {
+      if (nodeId) {
+        startEdit(nodeId);
+      } else {
+        finishEdit(editingNodeId, editText);
+      }
+    },
+    startEdit,
+    finishEdit,
+    editText,
+    addChildNode,
+    addSiblingNode,
+    deleteNode,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    navigateToDirection,
+    saveMindMap,
+    showMapList,
+    setShowMapList,
+    showCloudStorage: showCloudStoragePanel,
+    setShowCloudStorage: setShowCloudStoragePanel,
+    showTutorial,
+    setShowTutorial,
+    showKeyboardHelper: showShortcutHelper,
+    setShowKeyboardHelper: setShowShortcutHelper
+  });
+  
   // 初期化完了時の処理
   useEffect(() => {
     if (initState.isReady) {
@@ -206,47 +246,7 @@ const MindMapApp = () => {
   };
 
 
-  useEffect(() => {
-    const handleGlobalKeyDown = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 's':
-            e.preventDefault();
-            handleSave().catch(console.error);
-            break;
-          case 'z':
-            if (e.shiftKey) {
-              e.preventDefault();
-              redo().catch(console.error);
-            } else {
-              e.preventDefault();
-              undo().catch(console.error);
-            }
-            break;
-          case 'y':
-            e.preventDefault();
-            redo().catch(console.error);
-            break;
-          default:
-            break;
-        }
-      }
-      
-      // ショートカットヘルプの表示/非表示
-      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        setShowShortcutHelper(!showShortcutHelper);
-      }
-      
-      if (e.key === 'F1') {
-        e.preventDefault();
-        setShowShortcutHelper(!showShortcutHelper);
-      }
-    };
-
-    document.addEventListener('keydown', handleGlobalKeyDown);
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handleSave, undo, redo, showShortcutHelper]);
+  // 既存のキーボードハンドラーは useKeyboardShortcuts に統合済み
 
   const handleAddChild = (parentId) => {
     addChildNode(parentId, '', true); // startEditing = true で即座に編集開始
