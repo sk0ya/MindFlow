@@ -243,14 +243,18 @@ const UserPresence = memo(({
   // UserPresenceの最適化された比較
   if (prevProps.realtimeStatus !== nextProps.realtimeStatus ||
       prevProps.currentUserId !== nextProps.currentUserId ||
-      prevProps.connectedUsers.length !== nextProps.connectedUsers.length) {
+      (prevProps.connectedUsers?.length || 0) !== (nextProps.connectedUsers?.length || 0)) {
     return false;
   }
 
   // ユーザーの詳細比較
-  return prevProps.connectedUsers.every((prevUser, index) => {
-    const nextUser = nextProps.connectedUsers[index];
-    return prevUser.id === nextUser.id &&
+  const prevUsers = prevProps.connectedUsers || [];
+  const nextUsers = nextProps.connectedUsers || [];
+  
+  return prevUsers.every((prevUser, index) => {
+    const nextUser = nextUsers[index];
+    return nextUser && 
+           prevUser.id === nextUser.id &&
            prevUser.name === nextUser.name &&
            prevUser.color === nextUser.color &&
            prevUser.lastActivity === nextUser.lastActivity;

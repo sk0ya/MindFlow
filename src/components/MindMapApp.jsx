@@ -344,7 +344,7 @@ const MindMapApp = () => {
           
           <div className="connection-info">
             <ConnectionStatus />
-            <UserPresence />
+            {/* 一時的に無効化: UserPresence */}
           </div>
         </div>
 
@@ -378,7 +378,7 @@ const MindMapApp = () => {
             setPan={mindMap.setPan}
           />
 
-          <UserCursors />
+          {/* 一時的に無効化: UserCursors */}
         </div>
 
         {/* サイドバー */}
