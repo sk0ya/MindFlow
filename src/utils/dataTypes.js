@@ -36,8 +36,12 @@ export const generateId = () => {
   return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
+export const generateMapId = () => {
+  return `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export const createInitialData = () => ({
-  id: generateId(),
+  id: generateMapId(),
   title: '新しいマインドマップ',
   category: '未分類',
   theme: 'default',

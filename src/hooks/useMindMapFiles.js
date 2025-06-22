@@ -191,7 +191,15 @@ export const useMindMapFiles = (findNode, updateNode) => {
             headers['X-User-ID'] = userId;
           }
           
-          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${file.downloadUrl}`, {
+          // レガシーdownloadUrlの修正を試行
+          let downloadUrl = file.downloadUrl;
+          if (downloadUrl.includes('/node_') && downloadUrl.match(/\/node_[^\/]*\/node_[^\/]*\/node_[^\/]*\?/)) {
+            // node_ID/node_ID/node_IDパターンの場合、中間のnode_IDを除去
+            downloadUrl = downloadUrl.replace(/\/node_[^\/]*\/node_[^\/]*\//, '/files/direct/');
+            console.log('レガシーURLを修正:', downloadUrl);
+          }
+          
+          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${downloadUrl}`, {
             headers
           });
           
@@ -205,6 +213,8 @@ export const useMindMapFiles = (findNode, updateNode) => {
             link.click();
             URL.revokeObjectURL(url);
             return;
+          } else {
+            console.log('既存downloadUrl失敗、動的URL構築に切り替え:', downloadResponse.status);
           }
         }
         // R2からダウンロードURLを取得
@@ -229,8 +239,23 @@ export const useMindMapFiles = (findNode, updateNode) => {
           throw new Error('現在のマインドマップが見つかりません');
         }
         
+        // マインドマップIDがnode_で始まる場合の対応（レガシーID対応）
+        let actualMapId = currentMap.id;
+        if (actualMapId && actualMapId.startsWith('node_')) {
+          console.warn('レガシーマインドマップID検出:', actualMapId);
+          // ファイルのdownloadUrlから正しいマインドマップIDを抽出を試行
+          if (file.downloadUrl) {
+            const urlMatch = file.downloadUrl.match(/\/api\/files\/([^\/]+)\//);
+            if (urlMatch && urlMatch[1] && !urlMatch[1].startsWith('node_')) {
+              actualMapId = urlMatch[1];
+              console.log('downloadUrlから正しいマップID抽出:', actualMapId);
+            }
+          }
+        }
+        
         console.log('ダウンロード対象情報:', {
-          mapId: currentMap.id,
+          originalMapId: currentMap.id,
+          actualMapId: actualMapId,
           fileId: file.r2FileId,
           fileName: file.name,
           nodeId: nodeId,
@@ -264,7 +289,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
 
         // ダウンロード用の署名付きURLを取得
         const downloadResponse = await fetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${actualNodeId}/${file.r2FileId}?type=download`,
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${actualMapId}/${actualNodeId}/${file.r2FileId}?type=download`,
           { headers }
         );
 
