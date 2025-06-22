@@ -551,3 +551,38 @@ export const debugStorageData = () => {
     return null;
   }
 };
+
+// デバッグ用：ローカルデータを完全削除
+export const clearAllLocalData = () => {
+  try {
+    console.log('🗑️ ローカルデータを完全削除中...');
+    
+    // マインドマップデータを削除
+    localStorage.removeItem(STORAGE_KEYS.MINDMAPS);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_MAP);
+    
+    // 設定データを削除（ストレージモード設定も含む）
+    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+    
+    // その他のMindFlow関連データを削除
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('mindflow_') || key.includes('mindmap')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    console.log('✅ ローカルデータ削除完了');
+    console.log('🔄 ページをリロードしてください');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ ローカルデータ削除失敗:', error);
+    return false;
+  }
+};
+
+// グローバルに公開（開発用）
+if (typeof window !== 'undefined') {
+  window.clearAllLocalData = clearAllLocalData;
+  window.debugStorageData = debugStorageData;
+}

@@ -29,35 +29,60 @@ export const useAppInitialization = () => {
           currentStorageMode: settings.storageMode
         });
 
-        // Step 2: フロー分岐
-        if (hasData && !isFirstTime) {
-          // ケース1: ローカルデータがある場合 → ローカル利用に流す
-          console.log('📁 既存ローカルデータ発見 → ローカルモードで継続');
+        // Step 2: フロー分岐（設定優先）
+        if (settings.storageMode) {
+          // ケース1: 既にストレージモードが設定されている場合
+          console.log('⚙️ 設定済みストレージモード:', settings.storageMode);
           
-          if (settings.storageMode !== 'local') {
-            await setStorageMode('local');
+          if (settings.storageMode === 'local') {
+            // ローカルモード
+            setInitState({
+              isInitializing: false,
+              showStorageModeSelector: false,
+              showAuthModal: false,
+              showOnboarding: false,
+              storageMode: 'local',
+              hasExistingLocalData: hasData,
+              isReady: true
+            });
+          } else if (settings.storageMode === 'cloud') {
+            // クラウドモード
+            setInitState({
+              isInitializing: false,
+              showStorageModeSelector: false,
+              showAuthModal: false,
+              showOnboarding: false,
+              storageMode: 'cloud',
+              hasExistingLocalData: hasData,
+              isReady: true
+            });
           }
           
-          setInitState({
-            isInitializing: false,
-            showStorageModeSelector: false,
-            showAuthModal: false,
-            showOnboarding: false,
-            storageMode: 'local',
-            hasExistingLocalData: true,
-            isReady: true
-          });
-          
         } else {
-          // ケース2: ローカルデータがない場合 → ストレージ選択画面
-          console.log('❓ ローカルデータなし → ストレージモード選択');
-          
-          setInitState(prev => ({
-            ...prev,
-            isInitializing: false,
-            showStorageModeSelector: true,
-            hasExistingLocalData: false
-          }));
+          // ケース2: ストレージモード未設定の場合
+          if (hasData && !isFirstTime) {
+            // ローカルデータがある場合はローカルモードを提案
+            console.log('📁 既存ローカルデータ発見 → ローカルモードで継続');
+            await setStorageMode('local');
+            setInitState({
+              isInitializing: false,
+              showStorageModeSelector: false,
+              showAuthModal: false,
+              showOnboarding: false,
+              storageMode: 'local',
+              hasExistingLocalData: true,
+              isReady: true
+            });
+          } else {
+            // ローカルデータがない場合はストレージ選択画面
+            console.log('❓ ローカルデータなし → ストレージモード選択');
+            setInitState(prev => ({
+              ...prev,
+              isInitializing: false,
+              showStorageModeSelector: true,
+              hasExistingLocalData: false
+            }));
+          }
         }
         
       } catch (error) {
