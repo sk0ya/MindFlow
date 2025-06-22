@@ -55,7 +55,7 @@ const MindMapApp = () => {
   const initState = useAppInitialization();
 
   // DataManagerベースのメインフック
-  const mindMap = useMindMap(initState.isAppReady);
+  const mindMap = useMindMap(initState.isReady);
   
   // マルチマップ管理（DataManagerシステムのデータを使用）
   const multiMapOps = useMindMapMulti(
@@ -67,7 +67,7 @@ const MindMapApp = () => {
   console.log('🔄 MindMapApp: DataManagerシステム動作中', {
     hasData: !!mindMap.data,
     syncStatus: mindMap.syncStatus,
-    isReady: initState.isAppReady
+    isReady: initState.isReady
   });
 
   // UI状態管理
@@ -261,7 +261,7 @@ const MindMapApp = () => {
     return <AuthVerification token={authToken} />;
   }
 
-  if (!initState.isAppReady) {
+  if (!initState.isReady) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
@@ -437,13 +437,17 @@ const MindMapApp = () => {
           />
         )}
 
-        {showAuthModal && (
+        {(showAuthModal || initState.showAuthModal) && (
           <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
+            isOpen={showAuthModal || initState.showAuthModal}
+            onClose={initState.showAuthModal ? initState.handleAuthClose : () => setShowAuthModal(false)}
             onAuthSuccess={(user) => {
               setAuthState({ isAuthenticated: true, user, isLoading: false });
-              setShowAuthModal(false);
+              if (initState.showAuthModal) {
+                initState.handleAuthSuccess();
+              } else {
+                setShowAuthModal(false);
+              }
               window.dispatchEvent(new CustomEvent('authStateChange'));
             }}
           />
@@ -455,10 +459,10 @@ const MindMapApp = () => {
           />
         )}
 
-        {showOnboarding && (
+        {(showOnboarding || initState.showOnboarding) && (
           <TutorialOverlay
-            onComplete={completeOnboarding}
-            onSkip={() => setShowOnboarding(false)}
+            onComplete={initState.showOnboarding ? initState.handleOnboardingComplete : completeOnboarding}
+            onSkip={initState.showOnboarding ? initState.handleOnboardingComplete : () => setShowOnboarding(false)}
           />
         )}
 
@@ -474,14 +478,9 @@ const MindMapApp = () => {
         <ConflictNotification />
 
         {/* 初回セットアップ */}
-        {isFirstTimeSetup() && !onboardingState.completed && (
+        {initState.showStorageModeSelector && (
           <StorageModeSelector
-            onModeSelect={(mode) => {
-              setStorageMode(mode);
-              if (mode === 'cloud') {
-                setShowAuthModal(true);
-              }
-            }}
+            onModeSelect={initState.handleStorageModeSelect}
           />
         )}
       </div>
