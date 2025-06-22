@@ -180,9 +180,8 @@ const Node = ({
       finishEditImmediately();
       // Enterキーで編集終了後、兄弟ノードを追加
       if (onAddSibling) {
-        setTimeout(() => {
-          onAddSibling(node.id);
-        }, 100);
+        // 編集終了後すぐに新しいノードを追加（遅延なし）
+        onAddSibling(node.id);
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
@@ -190,9 +189,8 @@ const Node = ({
       finishEditImmediately();
       // Tabキーで編集終了後、子ノードを追加
       if (onAddChild) {
-        setTimeout(() => {
-          onAddChild(node.id);
-        }, 100);
+        // 編集終了後すぐに新しいノードを追加（遅延なし）
+        onAddChild(node.id);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();

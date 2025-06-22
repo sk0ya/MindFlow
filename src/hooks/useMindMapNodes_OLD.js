@@ -146,8 +146,11 @@ export const useMindMapNodes = (data, updateData) => {
     // 編集状態を同時に設定
     if (startEditing) {
       setSelectedNodeId(newChild.id);
-      setEditingNodeId(newChild.id);
-      setEditText('');
+      // 少し遅延して編集モードを開始
+      setTimeout(() => {
+        setEditingNodeId(newChild.id);
+        setEditText('');
+      }, 50);
     }
     
     return newChild.id;
@@ -197,8 +200,11 @@ export const useMindMapNodes = (data, updateData) => {
     // 編集状態を同時に設定
     if (startEditing) {
       setSelectedNodeId(newSibling.id);
-      setEditingNodeId(newSibling.id);
-      setEditText('');
+      // 少し遅延して編集モードを開始
+      setTimeout(() => {
+        setEditingNodeId(newSibling.id);
+        setEditText('');
+      }, 50);
     }
     
     return newSibling.id;
