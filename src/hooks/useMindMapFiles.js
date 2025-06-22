@@ -107,6 +107,34 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         // ユーザー情報も確認
         const user = authManager.getCurrentUser();
         console.log('👤 現在のユーザー:', user);
+        
+        // デバッグ: ノード情報も確認
+        const node = findNode(nodeId);
+        console.log('📍 対象ノード情報:', {
+          nodeId,
+          nodeExists: !!node,
+          nodeText: node?.text,
+          mapId: currentMapId
+        });
+
+        // ファイルアップロード前に現在のマップをクラウドに保存（ノード存在確保）
+        try {
+          console.log('💾 ファイルアップロード前にマップをクラウド保存');
+          const { saveMindMapCloud } = await import('../utils/storage.js');
+          const currentData = findNode('root') ? { 
+            id: currentMapId, 
+            rootNode: findNode('root'),
+            title: 'Current Map',
+            updatedAt: new Date().toISOString()
+          } : null;
+          
+          if (currentData) {
+            await saveMindMapCloud(currentData);
+            console.log('✅ ファイルアップロード前のマップ保存完了');
+          }
+        } catch (saveError) {
+          console.warn('⚠️ ファイルアップロード前のマップ保存失敗:', saveError);
+        }
 
         // FormDataでファイルをアップロード
         const formData = new FormData();

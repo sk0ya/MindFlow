@@ -154,7 +154,8 @@ export const useMindMapData = (isAppReady = false) => {
           dataAutoSave: data.settings?.autoSave
         });
         
-        if (currentSettings.autoSave || data.settings?.autoSave) {
+        // クラウドモードでは常にオートセーブを実行
+        if (currentSettings.autoSave || data.settings?.autoSave || currentSettings.storageMode === 'cloud') {
           console.log('🔄 オートセーブ開始:', newData.id, newData.title);
           console.log('💾 保存モード:', currentSettings.storageMode);
           
