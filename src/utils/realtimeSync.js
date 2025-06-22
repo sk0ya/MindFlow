@@ -33,7 +33,7 @@ class RealtimeSync {
 
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authManager.getToken()}`,
+      'Authorization': `Bearer ${authManager.getAuthToken()}`,
       'X-User-ID': authManager.getCurrentUser()?.email || 'unknown'
     };
   }
