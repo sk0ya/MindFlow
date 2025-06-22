@@ -315,7 +315,14 @@ export const loadMindMapFromCloud = async (mapId) => {
     
     if (result) {
       console.log('✅ クラウドマインドマップ読み込み成功:', result.title);
-      return result;
+      
+      // データ構造を正規化（ファイルパスなど）
+      const normalizedResult = {
+        ...result,
+        rootNode: normalizeNodeStructure(result.rootNode, result.id)
+      };
+      
+      return normalizedResult;
     }
     
     return null;
@@ -338,26 +345,46 @@ export const saveMindMapHybrid = async (mindMapData) => {
     console.log('🔄 saveMindMapHybrid 実行:', {
       mapId: mindMapData.id,
       mapTitle: mindMapData.title,
-      isAuthenticated,
-      currentUser: currentUser ? {
-        userId: currentUser.userId,
-        email: currentUser.email,
-        id: currentUser.id
-      } : null,
-      authManagerType: typeof authManager,
-      authManagerMethods: authManager ? Object.keys(authManager) : 'null'
+      isAuthenticated
     });
     
     // 認証されている場合はクラウドに保存を試行
     if (isAuthenticated) {
       try {
         console.log('☁️ クラウド保存開始:', mindMapData.id);
-        const result = await cloudStorage.updateMindMap(mindMapData.id, mindMapData);
+        
+        // クラウドにマップが存在するかチェック
+        let cloudMapId = mindMapData.id;
+        try {
+          const existingMaps = await cloudStorage.getAllMindMaps();
+          const existingMap = existingMaps?.mindmaps?.find(m => m.title === mindMapData.title);
+          if (existingMap) {
+            cloudMapId = existingMap.id;
+            console.log('🔍 既存マップ発見、IDを使用:', cloudMapId);
+          }
+        } catch (searchError) {
+          console.log('🆕 新規マップとして作成');
+        }
+        
+        // データ構造を正規化（ファイルパスも更新）
+        const normalizedData = {
+          ...mindMapData,
+          id: cloudMapId,
+          rootNode: normalizeNodeStructure(mindMapData.rootNode, cloudMapId)
+        };
+        
+        const result = await cloudStorage.updateMindMap(cloudMapId, normalizedData);
         console.log('✅ クラウド保存成功:', result);
         
-        // クラウド保存成功時でもローカルにもバックアップとして保存
-        const localResult = saveMindMap(mindMapData);
-        return { ...localResult, source: 'cloud' };
+        // クラウドから正規化されたデータを取得してローカルにも保存
+        const cloudData = await cloudStorage.getMindMap(cloudMapId);
+        if (cloudData) {
+          await saveMindMap(cloudData);
+          console.log('✅ 正規化されたデータをローカルにも保存');
+          return { ...cloudData, source: 'cloud' };
+        }
+        
+        return { ...normalizedData, source: 'cloud' };
       } catch (cloudError) {
         console.warn('❌ クラウド保存失敗、ローカルにフォールバック:', cloudError);
         // クラウド保存失敗時はローカルに保存
@@ -373,6 +400,30 @@ export const saveMindMapHybrid = async (mindMapData) => {
     // エラー時はローカルに保存
     return saveMindMap(mindMapData);
   }
+};
+
+// ノード構造を正規化（ファイルパスなどを修正）
+const normalizeNodeStructure = (node, mapId) => {
+  if (!node) return node;
+  
+  const normalizedNode = { ...node };
+  
+  // 添付ファイルのパスを正規化
+  if (normalizedNode.attachments && Array.isArray(normalizedNode.attachments)) {
+    normalizedNode.attachments = normalizedNode.attachments.map(att => ({
+      ...att,
+      downloadUrl: att.id ? `/api/files/${mapId}/${node.id}/${att.id}?type=download` : att.downloadUrl
+    }));
+  }
+  
+  // 子ノードも再帰的に正規化
+  if (normalizedNode.children && Array.isArray(normalizedNode.children)) {
+    normalizedNode.children = normalizedNode.children.map(child => 
+      normalizeNodeStructure(child, mapId)
+    );
+  }
+  
+  return normalizedNode;
 };
 
 // ハイブリッド取得（クラウド優先、フォールバックでローカル）

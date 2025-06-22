@@ -205,7 +205,7 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
       r2FileId: att.id,
       nodeId: att.node_id, // nodeIdを明示的に追加
       storagePath: att.storage_path,
-      downloadUrl: mindmapId ? `/api/files/${mindmapId}/${att.node_id}/${att.id}?type=download` : null
+      downloadUrl: `/api/files/${mindmapId}/${att.node_id}/${att.id}?type=download`
     });
   });
   

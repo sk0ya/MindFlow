@@ -287,8 +287,21 @@ export const useMindMapFiles = (findNode, updateNode) => {
         }
 
         // ダウンロード用の署名付きURLを取得
+        // ファイルのdownloadUrlが現在のマップIDと一致するかチェック
+        let correctedMapId = currentMap.id;
+        if (file.downloadUrl) {
+          const urlMatch = file.downloadUrl.match(/\/api\/files\/([^\/]+)\//);
+          const downloadUrlMapId = urlMatch ? urlMatch[1] : null;
+          
+          // マップIDが一致しない場合は現在のマップIDを使用
+          if (downloadUrlMapId && downloadUrlMapId !== currentMap.id) {
+            console.log('🔧 マップID不一致を修正:', downloadUrlMapId, '→', currentMap.id);
+            correctedMapId = currentMap.id;
+          }
+        }
+        
         const downloadResponse = await fetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${actualNodeId}/${file.r2FileId}?type=download`,
+          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${correctedMapId}/${actualNodeId}/${file.r2FileId}?type=download`,
           { headers }
         );
 
