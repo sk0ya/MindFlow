@@ -76,7 +76,7 @@ const MindMapApp = () => {
   const [imageModal, setImageModal] = useState(null);
   const [fileActionMenu, setFileActionMenu] = useState(null);
   const [mapLinksPanel, setMapLinksPanel] = useState({ isOpen: false, node: null, position: null });
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true); // デフォルトで表示
   const [showCloudPanel, setShowCloudPanel] = useState(false);
   const [currentTool, setCurrentTool] = useState('select');
   const [showPerformanceDash, setShowPerformanceDash] = useState(false);
@@ -343,6 +343,8 @@ const MindMapApp = () => {
             } : undefined}
             isLocalMode={isLocalMode}
             onShowShortcutHelper={() => setShowShortcutHelper(true)}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            showSidebar={showSidebar}
           />
           
           {/* ローカルモード表示 */}
@@ -368,54 +370,59 @@ const MindMapApp = () => {
           )}
         </div>
 
-        {/* メインコンテンツエリア */}
-        <div className="mindmap-content">
-          <MindMapCanvas
-            data={mindMap.data}
-            selectedNodeId={mindMap.selectedNodeId}
-            editingNodeId={mindMap.editingNodeId}
-            editText={mindMap.editText}
-            setEditText={mindMap.setEditText}
-            onSelectNode={handleNodeSelect}
-            onStartEdit={handleNodeEdit}
-            onFinishEdit={handleNodeUpdate}
-            onDragNode={handleNodeDrag}
-            onChangeParent={mindMap.changeParent}
-            onAddChild={handleAddChild}
-            onAddSibling={handleAddSibling}
-            onDeleteNode={handleDeleteNode}
-            onRightClick={handleRightClick}
-            onToggleCollapse={mindMap.toggleCollapse}
-            onNavigateToDirection={mindMap.navigateToDirection}
-            onFileUpload={handleFileUpload}
-            onRemoveFile={handleFileRemove}
-            onShowImageModal={setImageModal}
-            onShowFileActionMenu={setFileActionMenu}
-            onShowNodeMapLinks={setMapLinksPanel}
-            zoom={mindMap.zoom || 1}
-            setZoom={mindMap.setZoom}
-            pan={mindMap.pan || { x: 0, y: 0 }}
-            setPan={mindMap.setPan}
-          />
+        {/* メインコンテンツ（サイドバーと並行表示） */}
+        <div className="main-layout">
+          {/* サイドバー */}
+          {showSidebar && (
+            <div className="sidebar-container">
+              <MindMapSidebar
+                mindMaps={mindMap.allMindMaps || []}
+                currentMapId={mindMap.currentMapId}
+                onCreateMap={mindMap.createMindMap}
+                onRenameMap={mindMap.renameMindMap}
+                onDeleteMap={mindMap.deleteMindMapById}
+                onSelectMap={(mapId) => mindMap.switchToMap(mapId, false)}
+                onChangeCategory={mindMap.changeMapCategory}
+                availableCategories={mindMap.getAvailableCategories() || []}
+                isCollapsed={false}
+                onToggleCollapse={() => setShowSidebar(!showSidebar)}
+              />
+            </div>
+          )}
 
-          {/* 一時的に無効化: UserCursors */}
+          {/* メインコンテンツエリア */}
+          <div className={`mindmap-content ${showSidebar ? 'with-sidebar' : ''}`}>
+            <MindMapCanvas
+              data={mindMap.data}
+              selectedNodeId={mindMap.selectedNodeId}
+              editingNodeId={mindMap.editingNodeId}
+              editText={mindMap.editText}
+              setEditText={mindMap.setEditText}
+              onSelectNode={handleNodeSelect}
+              onStartEdit={handleNodeEdit}
+              onFinishEdit={handleNodeUpdate}
+              onDragNode={handleNodeDrag}
+              onChangeParent={mindMap.changeParent}
+              onAddChild={handleAddChild}
+              onAddSibling={handleAddSibling}
+              onDeleteNode={handleDeleteNode}
+              onRightClick={handleRightClick}
+              onToggleCollapse={mindMap.toggleCollapse}
+              onNavigateToDirection={mindMap.navigateToDirection}
+              onFileUpload={handleFileUpload}
+              onRemoveFile={handleFileRemove}
+              onShowImageModal={setImageModal}
+              onShowFileActionMenu={setFileActionMenu}
+              onShowNodeMapLinks={setMapLinksPanel}
+              zoom={mindMap.zoom || 1}
+              setZoom={mindMap.setZoom}
+              pan={mindMap.pan || { x: 0, y: 0 }}
+              setPan={mindMap.setPan}
+            />
+
+            {/* 一時的に無効化: UserCursors */}
+          </div>
         </div>
-
-        {/* サイドバー */}
-        {showSidebar && (
-          <MindMapSidebar
-            allMindMaps={mindMap.allMindMaps}
-            currentMapId={mindMap.currentMapId}
-            onCreateMap={mindMap.createMindMap}
-            onRenameMap={mindMap.renameMindMap}
-            onDeleteMap={mindMap.deleteMindMapById}
-            onSwitchMap={(mapId) => mindMap.switchToMap(mapId, false)}
-            onClose={() => setShowSidebar(false)}
-            onRefresh={mindMap.refreshAllMindMaps}
-            onChangeCategory={mindMap.changeMapCategory}
-            availableCategories={mindMap.getAvailableCategories()}
-          />
-        )}
 
         {/* クラウドストレージパネル（クラウドモード専用） */}
         {isCloudMode && showCloudPanel && (

@@ -23,6 +23,30 @@
   font-weight: 500;
 }
 
+/* メインレイアウト（サイドバー + コンテンツ） */
+.main-layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 60px); /* ツールバーの高さを除く */
+}
+
+.sidebar-container {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid #e1e5e9;
+  background: #f8f9fa;
+}
+
+.mindmap-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mindmap-content.with-sidebar {
+  /* サイドバーありの場合の調整 */
+}
+
 .container {
   flex: 1;
   position: relative;

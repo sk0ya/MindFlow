@@ -17,7 +17,9 @@ const Toolbar = ({
   onShowAuthModal,
   onLogout,
   onShowShortcutHelper,
-  isLocalMode = false
+  isLocalMode = false,
+  onToggleSidebar,
+  showSidebar = true
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -53,6 +55,17 @@ const Toolbar = ({
     <div className="toolbar">
       <div className="toolbar-content">
         <div className="toolbar-left">
+          {/* サイドバー切り替えボタン */}
+          <button
+            onClick={onToggleSidebar}
+            className="btn btn-icon"
+            title={showSidebar ? 'マップ一覧を非表示' : 'マップ一覧を表示'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </button>
+
           <div className="logo">
             <div className="logo-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
