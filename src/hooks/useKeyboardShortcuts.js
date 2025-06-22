@@ -60,7 +60,7 @@ export const useKeyboardShortcuts = ({
           finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ兄弟ノード追加
           if (currentText && addSiblingNode) {
-            setTimeout(() => addSiblingNode(editingNodeId, '新しいノード', true), 50);
+            setTimeout(() => addSiblingNode(editingNodeId, '', true), 50);
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           e.preventDefault();
@@ -69,7 +69,7 @@ export const useKeyboardShortcuts = ({
           finishEdit(editingNodeId, currentText);
           // テキストがある場合のみ子ノード追加
           if (currentText && addChildNode) {
-            setTimeout(() => addChildNode(editingNodeId, '新しいノード', true), 50);
+            setTimeout(() => addChildNode(editingNodeId, '', true), 50);
           }
         }
         return;
@@ -96,16 +96,16 @@ export const useKeyboardShortcuts = ({
           case 'Tab':
             e.preventDefault();
             console.log('⌨️ 非編集時Tab処理:', { selectedNodeId });
-            addChildNode(selectedNodeId, '新しいノード', true);
+            addChildNode(selectedNodeId, '', true);
             break;
           
           case 'Enter':
             e.preventDefault();
             console.log('⌨️ 非編集時Enter処理:', { selectedNodeId });
             if (selectedNodeId === 'root') {
-              addChildNode('root', '新しいノード', true);
+              addChildNode('root', '', true);
             } else {
-              addSiblingNode(selectedNodeId, '新しいノード', true);
+              addSiblingNode(selectedNodeId, '', true);
             }
             break;
           
