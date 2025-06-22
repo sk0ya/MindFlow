@@ -467,13 +467,23 @@ const MindMapApp = () => {
     // 初期化フローの認証成功を通知
     initState.handleAuthSuccess();
     
-    // クラウド同期をトリガー
-    if (triggerCloudSync) {
-      await triggerCloudSync();
+    // 1. まずマップ一覧をリフレッシュ
+    try {
+      await refreshAllMindMaps();
+      console.log('🔄 認証成功後にマップ一覧をリフレッシュしました');
+    } catch (refreshError) {
+      console.warn('⚠️ 認証後のマップ一覧リフレッシュに失敗:', refreshError);
     }
     
-    // 認証後にマインドマップをリフレッシュ
-    refreshAllMindMaps();
+    // 2. その後クラウド同期をトリガー
+    if (triggerCloudSync) {
+      try {
+        await triggerCloudSync();
+        console.log('🔄 認証成功後のクラウド同期完了');
+      } catch (syncError) {
+        console.warn('⚠️ クラウド同期に失敗:', syncError);
+      }
+    }
   };
   
   const handleLogout = async () => {
@@ -821,7 +831,7 @@ const MindMapApp = () => {
                 </span>
                 {(getAppSettings().storageMode === 'cloud' || getAppSettings().cloudSync) && (
                   <span className="sync-status">
-                    <SyncStatusIndicator refreshAllMindMaps={refreshAllMindMaps} />
+                    <SyncStatusIndicator />
                   </span>
                 )}
               </div>

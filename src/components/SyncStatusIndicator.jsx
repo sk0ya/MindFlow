@@ -3,7 +3,7 @@ import { getSyncStatus } from '../utils/storage.js';
 import { syncManager } from '../utils/syncManager.js';
 import { authManager } from '../utils/authManager.js';
 
-const SyncStatusIndicator = ({ refreshAllMindMaps }) => {
+const SyncStatusIndicator = () => {
   const [syncStatus, setSyncStatus] = useState({
     isOnline: navigator.onLine,
     queueLength: 0,
@@ -73,16 +73,6 @@ const SyncStatusIndicator = ({ refreshAllMindMaps }) => {
       const result = await syncManager.forcSync();
       console.log('Manual sync completed:', result);
       setSyncStatus(getSyncStatus());
-      
-      // クラウド同期後にマップ一覧をリフレッシュ
-      if (refreshAllMindMaps) {
-        try {
-          await refreshAllMindMaps();
-          console.log('🔄 クラウド同期後にマップ一覧をリフレッシュしました');
-        } catch (refreshError) {
-          console.warn('⚠️ マップ一覧のリフレッシュに失敗:', refreshError);
-        }
-      }
     } catch (error) {
       console.error('Manual sync failed:', error);
     } finally {
