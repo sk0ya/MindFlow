@@ -4,36 +4,7 @@ import { deepClone, assignColorsToExistingNodes, createInitialData } from '../ut
 
 // データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
-  const [data, setData] = useState(() => {
-    // アプリが準備完了まではnullを返す
-    if (!isAppReady) {
-      console.log('⏳ アプリ初期化待機中...');
-      return null;
-    }
-
-    // アプリ準備完了後の初期化
-    const settings = getAppSettings();
-    
-    if (settings.storageMode === 'local') {
-      // ローカルモード: 既存データまたは新規作成
-      const mindMap = getCurrentMindMap();
-      if (mindMap) {
-        console.log('📁 ローカルモード: 既存データ読み込み');
-        return assignColorsToExistingNodes(mindMap);
-      } else {
-        console.log('📁 ローカルモード: 新規マップ作成');
-        return createInitialData();
-      }
-    } else if (settings.storageMode === 'cloud') {
-      // クラウドモード: 初期化完了まで待機
-      console.log('☁️ クラウドモード: 初期化待機中');
-      return null;
-    } else {
-      // フォールバック
-      console.log('❓ 設定不明: デフォルトデータ');
-      return createInitialData();
-    }
-  });
+  const [data, setData] = useState(null);
   
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
   
@@ -43,23 +14,36 @@ export const useMindMapData = (isAppReady = false) => {
   
   // アプリ準備完了時のデータ初期化
   useEffect(() => {
-    if (!isAppReady) return;
+    if (!isAppReady || data !== null) return;
 
     const initializeData = async () => {
+      console.log('🚀 データ初期化開始 (isAppReady: true)');
       const settings = getAppSettings();
       
       if (settings.storageMode === 'local') {
-        // ローカルモード: 既にuseStateで初期化済み
+        // ローカルモード: データを初期化
+        const mindMap = getCurrentMindMap();
+        if (mindMap) {
+          console.log('📁 ローカルモード: 既存データ読み込み');
+          setData(assignColorsToExistingNodes(mindMap));
+        } else {
+          console.log('📁 ローカルモード: 新規マップ作成');
+          setData(createInitialData());
+        }
         console.log('📁 ローカルモード: 初期化完了');
         
       } else if (settings.storageMode === 'cloud') {
         // クラウドモード: 認証状態をチェックして同期
         await initializeFromCloud();
+      } else {
+        // フォールバック
+        console.log('❓ 設定不明: デフォルトデータ');
+        setData(createInitialData());
       }
     };
 
     initializeData();
-  }, [isAppReady]);
+  }, [isAppReady, data]);
 
   // クラウド同期処理（統一）
   const initializeFromCloud = async () => {
