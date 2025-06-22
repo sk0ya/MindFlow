@@ -591,6 +591,19 @@ const MindMapApp = () => {
     );
   }
 
+  // データが初期化されていない場合はローディング画面を表示
+  if (!data) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>MindFlow</h2>
+          <p>アプリケーションを初期化中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mindmap-app">
       <MindMapSidebar

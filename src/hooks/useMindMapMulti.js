@@ -170,7 +170,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
 
   // data.idの変更を監視してcurrentMapIdを更新（ローカル・クラウド共通）
   useEffect(() => {
-    if (data?.id && data.id !== currentMapId && data.id !== 'loading-placeholder' && data.id !== 'cloud-loading-placeholder') {
+    if (data?.id && data.id !== currentMapId) {
       console.log('🔄 currentMapIdを更新:', data.id, '(previous:', currentMapId, ')');
       setCurrentMapId(data.id);
     }

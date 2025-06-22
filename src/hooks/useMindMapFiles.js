@@ -7,9 +7,7 @@ import { logger } from '../utils/logger.js';
 export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
-    const initializing = !currentMapId || 
-           currentMapId === 'loading-placeholder' || 
-           currentMapId === 'cloud-loading-placeholder';
+    const initializing = !currentMapId;
     
     if (initializing) {
       console.log('🔄 アプリ初期化状態:', {

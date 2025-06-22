@@ -5,22 +5,10 @@ import { deepClone, assignColorsToExistingNodes, createInitialData } from '../ut
 // データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
   const [data, setData] = useState(() => {
-    // アプリが準備完了まではプレースホルダー
+    // アプリが準備完了まではnullを返す
     if (!isAppReady) {
-      return {
-        id: 'loading-placeholder',
-        title: '初期化中...',
-        rootNode: {
-          id: 'root',
-          text: 'アプリケーションを初期化中...',
-          x: 400,
-          y: 300,
-          children: [],
-          color: '#f8f9fa'
-        },
-        settings: { autoSave: false, autoLayout: false },
-        isPlaceholder: true
-      };
+      console.log('⏳ アプリ初期化待機中...');
+      return null;
     }
 
     // アプリ準備完了後の初期化
@@ -37,22 +25,9 @@ export const useMindMapData = (isAppReady = false) => {
         return createInitialData();
       }
     } else if (settings.storageMode === 'cloud') {
-      // クラウドモード: プレースホルダーから開始
-      console.log('☁️ クラウドモード: 認証待機中');
-      return {
-        id: 'cloud-loading-placeholder',
-        title: 'クラウド同期中...',
-        rootNode: {
-          id: 'root',
-          text: 'クラウドデータを読み込み中...',
-          x: 400,
-          y: 300,
-          children: [],
-          color: '#e8f4fd'
-        },
-        settings: { autoSave: false, autoLayout: false },
-        isPlaceholder: true
-      };
+      // クラウドモード: 初期化完了まで待機
+      console.log('☁️ クラウドモード: 初期化待機中');
+      return null;
     } else {
       // フォールバック
       console.log('❓ 設定不明: デフォルトデータ');
