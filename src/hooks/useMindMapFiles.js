@@ -181,7 +181,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         });
 
         // 4. ノードにファイル添付情報を追加（クラウドモード）
-        const node = findNode(nodeId);
         if (node) {
           const updatedAttachments = [...(node.attachments || []), fileAttachment];
           updateNode(nodeId, { attachments: updatedAttachments });
@@ -227,7 +226,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         });
 
         // 4. ノードにファイル添付情報を追加（ローカルモード）
-        const node = findNode(nodeId);
         if (node) {
           const updatedAttachments = [...(node.attachments || []), fileAttachment];
           updateNode(nodeId, { attachments: updatedAttachments });
