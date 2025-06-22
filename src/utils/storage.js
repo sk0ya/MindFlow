@@ -52,6 +52,12 @@ export const saveToStorage = async (key, data) => {
 
 // すべてのマインドマップを取得
 export const getAllMindMaps = () => {
+  // クラウドモードの場合はローカルデータを返さない
+  if (isCloudStorageEnabled()) {
+    console.log('☁️ クラウドモード: ローカルデータアクセスをスキップ');
+    return [];
+  }
+  
   const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
   // 無効なデータをフィルターして除外
   const validMaps = maps.filter(map => {
@@ -98,6 +104,12 @@ export const saveMindMap = async (mindMapData) => {
 
 // 現在のマインドマップを取得
 export const getCurrentMindMap = () => {
+  // クラウドモードの場合はローカルデータを返さない
+  if (isCloudStorageEnabled()) {
+    console.log('☁️ クラウドモード: ローカル getCurrentMindMap をスキップ');
+    return null;
+  }
+  
   let currentMap = loadFromStorage(STORAGE_KEYS.CURRENT_MAP);
   
   if (!currentMap) {
@@ -178,6 +190,38 @@ export const importMindMapFromJSON = (file) => {
   });
 };
 
+// ローカルデータ存在チェック
+export const hasLocalData = () => {
+  try {
+    const maps = loadFromStorage(STORAGE_KEYS.MINDMAPS, []);
+    const currentMap = loadFromStorage(STORAGE_KEYS.CURRENT_MAP);
+    const settings = loadFromStorage(STORAGE_KEYS.SETTINGS);
+    
+    // マインドマップデータまたは設定データが存在するかチェック
+    const hasMaps = maps && maps.length > 0;
+    const hasCurrentMap = currentMap && currentMap.id;
+    const hasSettings = settings && settings.storageMode;
+    
+    console.log('🔍 ローカルデータチェック:', {
+      hasMaps,
+      hasCurrentMap, 
+      hasSettings,
+      mapsCount: maps?.length || 0
+    });
+    
+    return hasMaps || hasCurrentMap || hasSettings;
+  } catch (error) {
+    console.warn('ローカルデータチェックエラー:', error);
+    return false;
+  }
+};
+
+// 初回セットアップ完了チェック
+export const isFirstTimeSetup = () => {
+  const settings = loadFromStorage(STORAGE_KEYS.SETTINGS);
+  return !settings || !settings.storageMode;
+};
+
 // アプリケーション設定
 export const getAppSettings = () => {
   return loadFromStorage(STORAGE_KEYS.SETTINGS, {
@@ -185,7 +229,7 @@ export const getAppSettings = () => {
     autoSave: true,
     showWelcome: true,
     language: 'ja',
-    storageMode: 'local', // 'local' or 'cloud'
+    storageMode: null, // 初期状態では未設定
     cloudSync: true, // デフォルトで自動同期を有効に
     realtimeSync: false // リアルタイム同期はデフォルト無効
   });
@@ -199,6 +243,34 @@ export const saveAppSettings = (settings) => {
 export const isCloudStorageEnabled = () => {
   const settings = getAppSettings();
   return settings.storageMode === 'cloud';
+};
+
+// ローカルストレージ機能
+export const isLocalStorageEnabled = () => {
+  const settings = getAppSettings();
+  return settings.storageMode === 'local';
+};
+
+// ストレージモード設定
+export const setStorageMode = async (mode) => {
+  const settings = getAppSettings();
+  const updatedSettings = {
+    ...settings,
+    storageMode: mode,
+    // クラウドモードの場合、ローカル関連設定を無効化
+    autoSave: mode === 'cloud' ? false : settings.autoSave,
+    cloudSync: mode === 'cloud'
+  };
+  
+  console.log('📝 ストレージモード設定:', mode, updatedSettings);
+  await saveAppSettings(updatedSettings);
+  
+  // クラウドモードの場合、ローカルデータを無効化（削除はしない）
+  if (mode === 'cloud') {
+    console.log('☁️ クラウドモード: ローカルデータアクセスを無効化');
+  }
+  
+  return updatedSettings;
 };
 
 // クラウドからマインドマップリストを読み込み

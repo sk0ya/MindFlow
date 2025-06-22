@@ -17,7 +17,7 @@ import ConnectionStatus from './ConnectionStatus';
 import ConflictNotification from './ConflictNotification';
 import CollaborativeFeatures from './CollaborativeFeatures';
 import PerformanceDashboard from './PerformanceDashboard';
-import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings } from '../utils/storage';
+import { exportMindMapAsJSON, importMindMapFromJSON, getAppSettings, hasLocalData, isFirstTimeSetup, setStorageMode } from '../utils/storage';
 import './MindMapApp.css';
 
 import AuthVerification from './AuthVerification.jsx';
@@ -25,6 +25,8 @@ import AuthModal from './AuthModal.jsx';
 import { authManager } from '../utils/authManager.js';
 import TutorialOverlay from './TutorialOverlay.jsx';
 import KeyboardShortcutHelper from './KeyboardShortcutHelper.jsx';
+import StorageModeSelector from './StorageModeSelector.jsx';
+import { useOnboarding } from '../hooks/useOnboarding.js';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -47,6 +49,13 @@ const MindMapApp = () => {
   
   // キーボードショートカットヘルパー状態
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
+  
+  // ストレージモード選択状態
+  const [showStorageModeSelector, setShowStorageModeSelector] = useState(false);
+  const [hasExistingLocalData, setHasExistingLocalData] = useState(false);
+  
+  // オンボーディング
+  const { shouldShowOnboarding, isChecking: isCheckingOnboarding, completeOnboarding } = useOnboarding();
 
   const {
     data,
@@ -132,13 +141,59 @@ const MindMapApp = () => {
   // パフォーマンスダッシュボード状態（開発環境のみ）
   const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   
-  // 初回アクセス時のチュートリアル表示チェック
+  // 初期化処理：ストレージモード選択とオンボーディング制御
   useEffect(() => {
-    const isFirstVisit = !localStorage.getItem('mindflow_tutorial_completed');
-    if (isFirstVisit) {
-      setShowTutorial(true);
+    const initializeApp = async () => {
+      try {
+        console.log('🚀 アプリ初期化開始');
+        
+        // ローカルデータの存在確認
+        const hasData = hasLocalData();
+        setHasExistingLocalData(hasData);
+        
+        // 初回セットアップかどうかチェック
+        const isFirstTime = isFirstTimeSetup();
+        
+        console.log('📊 初期化状態:', {
+          hasData,
+          isFirstTime,
+          isCheckingOnboarding
+        });
+        
+        // 条件に基づいてストレージモード選択画面を表示
+        if (isFirstTime || (!hasData && !authState.isAuthenticated)) {
+          setShowStorageModeSelector(true);
+        }
+        
+      } catch (error) {
+        console.error('アプリ初期化エラー:', error);
+      }
+    };
+
+    // オンボーディングチェックが完了してから初期化実行
+    if (!isCheckingOnboarding) {
+      initializeApp();
     }
-  }, []);
+  }, [isCheckingOnboarding, authState.isAuthenticated]);
+
+  // 初回アクセス時のチュートリアル表示チェック（ローカルモード時のみ）
+  useEffect(() => {
+    const checkTutorialDisplay = () => {
+      const settings = getAppSettings();
+      const isLocalMode = settings.storageMode === 'local';
+      
+      if (isLocalMode && shouldShowOnboarding) {
+        const isFirstVisit = !localStorage.getItem('mindflow_tutorial_completed');
+        if (isFirstVisit) {
+          setShowTutorial(true);
+        }
+      }
+    };
+
+    if (!isCheckingOnboarding) {
+      checkTutorialDisplay();
+    }
+  }, [shouldShowOnboarding, isCheckingOnboarding]);
 
   // 認証状態を監視して更新
   useEffect(() => {
@@ -197,6 +252,37 @@ const MindMapApp = () => {
   const handleSave = async () => {
     await saveMindMap();
     showSaveMessage();
+  };
+
+  // ストレージモード選択ハンドラー
+  const handleStorageModeSelect = async (mode) => {
+    try {
+      console.log('📝 ストレージモード選択:', mode);
+      
+      // ストレージモードを設定
+      await setStorageMode(mode);
+      
+      setShowStorageModeSelector(false);
+      
+      // クラウドモードの場合は認証を開始
+      if (mode === 'cloud') {
+        setShowAuthModal(true);
+      } else {
+        // ローカルモードの場合はオンボーディングをチェック
+        if (shouldShowOnboarding) {
+          setShowTutorial(true);
+        }
+      }
+      
+      // アプリを再読み込みして新しい設定を適用
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('ストレージモード設定エラー:', error);
+      alert('設定の保存に失敗しました');
+    }
   };
 
   useEffect(() => {
@@ -788,6 +874,14 @@ const MindMapApp = () => {
           isVisible={showShortcutHelper}
           onClose={() => setShowShortcutHelper(false)}
         />
+
+        {/* ストレージモード選択画面 */}
+        {showStorageModeSelector && (
+          <StorageModeSelector
+            onModeSelect={handleStorageModeSelect}
+            hasLocalData={hasExistingLocalData}
+          />
+        )}
 
         <footer className="footer">
           <div>

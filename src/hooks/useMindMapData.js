@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap } from '../utils/storage.js';
-import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
+import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAppSettings } from '../utils/storage.js';
+import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
 
 // データ管理専用のカスタムフック
 export const useMindMapData = () => {
   const [data, setData] = useState(() => {
-    const mindMap = getCurrentMindMap();
-    return assignColorsToExistingNodes(mindMap);
+    // 設定をチェックしてからデータを初期化
+    const settings = getAppSettings();
+    
+    if (settings.storageMode === 'cloud') {
+      // クラウドモードの場合は空のデータから開始
+      console.log('☁️ クラウドモード: 空データで初期化');
+      return createInitialData();
+    } else if (settings.storageMode === 'local') {
+      // ローカルモードの場合は既存データを読み込み
+      const mindMap = getCurrentMindMap();
+      return assignColorsToExistingNodes(mindMap);
+    } else {
+      // ストレージモード未設定の場合は空データ
+      console.log('❓ ストレージモード未設定: 空データで初期化');
+      return createInitialData();
+    }
   });
   
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
@@ -15,10 +29,16 @@ export const useMindMapData = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   
-  // 初期化時にクラウドから同期
+  // 初期化時にクラウドから同期（クラウドモードの場合のみ）
   useEffect(() => {
     const initializeFromCloud = async () => {
       try {
+        // クラウドモードかどうかチェック
+        if (!isCloudStorageEnabled()) {
+          console.log('🏠 ローカルモード: クラウド同期をスキップ');
+          return;
+        }
+        
         setIsLoadingFromCloud(true);
         
         // 認証状態を確認
@@ -44,10 +64,6 @@ export const useMindMapData = () => {
           if (fullMapData) {
             const processedData = assignColorsToExistingNodes(fullMapData);
             setData(processedData);
-            
-            // ローカルにもバックアップとして保存
-            const { saveMindMap } = await import('../utils/storage.js');
-            saveMindMap(processedData);
             
             console.log('✅ クラウド同期完了');
           }
