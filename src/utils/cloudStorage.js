@@ -12,21 +12,20 @@ class CloudStorageClient {
     try {
       const { authManager } = await import('./authManager.js');
       
-      // 認証済みの場合は認証ユーザーIDを使用（emailを優先してサーバーと一致させる）
+      // 認証済みの場合は必ずemailをuserIdとして使用（統一化）
       if (authManager.isAuthenticated()) {
         const user = authManager.getCurrentUser();
         console.log('cloudStorage.getUserId - 認証ユーザー情報:', user);
-        if (user && (user.email || user.userId || user.id)) {
-          const finalUserId = user.email || user.userId || user.id;
-          console.log('cloudStorage.getUserId - 使用するuserId:', finalUserId);
-          return finalUserId;
+        if (user && user.email) {
+          console.log('cloudStorage.getUserId - emailベースuserId:', user.email);
+          return user.email;
         }
       }
     } catch (error) {
       console.warn('認証マネージャーの取得に失敗:', error);
     }
     
-    // 認証が無効または失敗の場合は従来の方法
+    // 認証が無効または失敗の場合は従来の方法を維持
     let userId = localStorage.getItem('mindflow_user_id');
     if (!userId) {
       userId = 'user_' + Math.random().toString(36).substr(2, 9);

@@ -173,12 +173,54 @@ export const useMindMapFiles = (findNode, updateNode) => {
     try {
       // R2ストレージのファイルの場合
       if (file.isR2Storage && file.r2FileId) {
+        
+        // ファイルにdownloadUrlが既に含まれている場合はそれを使用
+        if (file.downloadUrl) {
+          console.log('既存のdownloadURLを使用:', file.downloadUrl);
+          
+          // 認証ヘッダーを準備
+          const { authManager } = await import('../utils/authManager.js');
+          let headers = {};
+          
+          const authHeader = authManager.getAuthHeader();
+          if (authHeader) {
+            headers['Authorization'] = authHeader;
+          } else {
+            const { cloudStorage } = await import('../utils/cloudStorage.js');
+            const userId = await cloudStorage.getUserId();
+            headers['X-User-ID'] = userId;
+          }
+          
+          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${file.downloadUrl}`, {
+            headers
+          });
+          
+          if (downloadResponse.ok) {
+            // ダウンロード処理
+            const blob = await downloadResponse.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = file.name;
+            link.click();
+            URL.revokeObjectURL(url);
+            return;
+          }
+        }
         // R2からダウンロードURLを取得
         const { authManager } = await import('../utils/authManager.js');
-        const authHeader = authManager.getAuthHeader();
+        let headers = {};
         
-        if (!authHeader) {
-          throw new Error('認証が必要です');
+        // JWT認証が利用可能な場合は使用
+        const authHeader = authManager.getAuthHeader();
+        if (authHeader) {
+          headers['Authorization'] = authHeader;
+        } else {
+          // フォールバック: X-User-IDを使用
+          const { cloudStorage } = await import('../utils/cloudStorage.js');
+          const userId = await cloudStorage.getUserId();
+          headers['X-User-ID'] = userId;
+          console.log('JWT認証なし、X-User-IDでフォールバック:', userId);
         }
 
         const { getCurrentMindMap } = await import('../utils/storage.js');
@@ -186,6 +228,14 @@ export const useMindMapFiles = (findNode, updateNode) => {
         if (!currentMap) {
           throw new Error('現在のマインドマップが見つかりません');
         }
+        
+        console.log('ダウンロード対象情報:', {
+          mapId: currentMap.id,
+          fileId: file.r2FileId,
+          fileName: file.name,
+          nodeId: nodeId,
+          fileNodeId: file.nodeId
+        });
 
         // nodeIdを特定（優先順位: 引数 > file.nodeId > ファイル検索）
         let actualNodeId = nodeId || file.nodeId;
@@ -215,11 +265,7 @@ export const useMindMapFiles = (findNode, updateNode) => {
         // ダウンロード用の署名付きURLを取得
         const downloadResponse = await fetch(
           `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMap.id}/${actualNodeId}/${file.r2FileId}?type=download`,
-          {
-            headers: {
-              'Authorization': authHeader
-            }
-          }
+          { headers }
         );
 
         if (!downloadResponse.ok) {
