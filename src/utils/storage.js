@@ -409,22 +409,24 @@ export const getAllMindMapsCloud = async () => {
     if (actualMaps && actualMaps.length > 0) {
       console.log('☁️ クラウドデータ有効、件数:', actualMaps.length);
       
-      // マップ詳細を取得（ローカルキャッシュは行わない）
-      const detailedMaps = [];
-      for (const map of actualMaps) {
-        try {
-          console.log('📄 マップ詳細取得:', map.id, map.title);
-          const detailed = await cloudStorage.getMindMap(map.id);
-          if (detailed && detailed.rootNode) {
-            detailedMaps.push(detailed);
-          }
-        } catch (detailError) {
-          console.warn('📄 マップ詳細取得失敗:', map.id, detailError);
+      // 一時的に詳細取得をスキップして基本情報だけ返す
+      const basicMaps = actualMaps.map(map => ({
+        id: map.id,
+        title: map.title || '無題のマップ',
+        category: map.category || '未分類',
+        updatedAt: map.updatedAt || new Date().toISOString(),
+        createdAt: map.createdAt || map.updatedAt || new Date().toISOString(),
+        rootNode: map.rootNode || {
+          id: 'root',
+          text: map.title || '無題のマップ',
+          x: 0,
+          y: 0,
+          children: []
         }
-      }
+      }));
       
-      console.log('📄 詳細データ取得完了、件数:', detailedMaps.length);
-      return detailedMaps;
+      console.log('📄 基本データ生成完了、件数:', basicMaps.length);
+      return basicMaps;
     }
     
     // クラウドデータが空の場合は空配列を返す

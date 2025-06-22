@@ -32,13 +32,38 @@ export const useMindMapMulti = (data, setData, updateData) => {
   const refreshAllMindMaps = async () => {
     try {
       console.log('🔄 マップ一覧を同期中...');
+      
+      // ストレージモードを確認
+      const { getAppSettings } = await import('../utils/storage.js');
+      const settings = getAppSettings();
+      console.log('📊 現在のストレージモード:', settings.storageMode);
+      
       const maps = await getAllMindMapsHybrid();
-      setAllMindMaps(maps);
-      console.log('✅ マップ一覧同期完了:', maps.length, '件');
+      console.log('📥 取得したマップデータ:', maps);
+      
+      if (!maps) {
+        console.warn('⚠️ マップデータがnullです');
+        setAllMindMaps([]);
+      } else if (Array.isArray(maps)) {
+        setAllMindMaps(maps);
+        console.log('✅ マップ一覧同期完了:', maps.length, '件');
+      } else {
+        console.warn('⚠️ マップデータが配列ではありません:', typeof maps, maps);
+        setAllMindMaps([]);
+      }
     } catch (error) {
       console.error('❌ マップ一覧同期失敗:', error);
+      console.error('❌ エラー詳細:', error.message, error.stack);
       // エラー時はローカルデータを使用
-      setAllMindMaps(getAllMindMaps());
+      try {
+        const { getAllMindMaps } = await import('../utils/storage.js');
+        const localMaps = getAllMindMaps();
+        console.log('🏠 ローカルデータにフォールバック:', localMaps.length, '件');
+        setAllMindMaps(localMaps);
+      } catch (fallbackError) {
+        console.error('❌ ローカルデータ取得も失敗:', fallbackError);
+        setAllMindMaps([]);
+      }
     }
   };
 
