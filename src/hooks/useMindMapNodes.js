@@ -106,11 +106,9 @@ export const useMindMapNodes = (data, updateData) => {
     
     await updateData(newData, updateOptions);
     
-    // 2. ストレージアダプターを通じて反映（一時的に無効化）
+    // 2. ストレージアダプターを通じて反映
     if (syncToCloud) {
-      console.log('⚠️ ノード個別同期は一時的に無効化中（マップ全体同期を使用）:', nodeId);
-      // TODO: サーバー側ノード個別API実装完了後に再有効化
-      /*
+      console.log('🔄 ノード個別同期開始:', nodeId);
       try {
         const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
         const adapter = getCurrentAdapter();
@@ -124,7 +122,6 @@ export const useMindMapNodes = (data, updateData) => {
       } catch (error) {
         console.warn('⚠️ ノード更新失敗:', error.message);
       }
-      */
     } else {
       console.log('📝 ローカルのみ更新:', nodeId);
     }
@@ -174,10 +171,8 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...clonedData, rootNode: newRootNode };
     await updateData(newData, { skipHistory: false, saveImmediately: true });
     
-    // 2. ストレージアダプターを通じて反映（一時的に無効化）
-    console.log('⚠️ ノード個別同期は一時的に無効化中（マップ全体同期を使用）:', newChild.id);
-    // TODO: サーバー側ノード個別API実装完了後に再有効化
-    /*
+    // 2. ストレージアダプターを通じて反映
+    console.log('🔄 ノード追加同期開始:', newChild.id);
     try {
       const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
@@ -191,7 +186,6 @@ export const useMindMapNodes = (data, updateData) => {
     } catch (error) {
       console.warn('⚠️ ノード追加失敗:', error.message);
     }
-    */
     
     // 編集状態を同時に設定
     if (startEditing) {
@@ -324,10 +318,8 @@ export const useMindMapNodes = (data, updateData) => {
     const newData = { ...clonedData, rootNode: newRootNode };
     await updateData(newData, { skipHistory: false, saveImmediately: true });
     
-    // 2. ストレージアダプターを通じて反映（一時的に無効化）
-    console.log('⚠️ ノード個別同期は一時的に無効化中（マップ全体同期を使用）:', nodeId);
-    // TODO: サーバー側ノード個別API実装完了後に再有効化
-    /*
+    // 2. ストレージアダプターを通じて反映
+    console.log('🔄 ノード削除同期開始:', nodeId);
     try {
       const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
@@ -341,7 +333,6 @@ export const useMindMapNodes = (data, updateData) => {
     } catch (error) {
       console.warn('⚠️ ノード削除失敗:', error.message);
     }
-    */
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {

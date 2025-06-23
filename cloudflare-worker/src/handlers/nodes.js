@@ -39,11 +39,13 @@ export async function handleRequest(request, env) {
         break;
       
       case 'POST':
-        response = await createNode(env.DB, userId, mindmapId, await request.json());
+        const createData = await request.json();
+        response = await createNode(env.DB, userId, mindmapId, createData);
         break;
       
       case 'PUT':
-        response = await updateNode(env.DB, userId, mindmapId, nodeId, await request.json());
+        const updateData = await request.json();
+        response = await updateNode(env.DB, userId, mindmapId, nodeId, updateData);
         break;
       
       case 'DELETE':
@@ -166,7 +168,9 @@ async function getNode(db, userId, mindmapId, nodeId) {
 /**
  * 新しいノードを作成
  */
-async function createNode(db, userId, mindmapId, nodeData) {
+async function createNode(db, userId, mindmapId, requestData) {
+  console.log('🆕 Creating node:', { mindmapId, requestData });
+  
   // 所有権確認
   const mindmap = await db.prepare(
     'SELECT id FROM mindmaps WHERE id = ? AND user_id = ?'
@@ -178,11 +182,15 @@ async function createNode(db, userId, mindmapId, nodeData) {
     throw error;
   }
 
+  // クライアント側のデータ形式に対応
+  const nodeData = requestData.node || requestData; // node プロパティがある場合はそれを使用
+  const parentId = requestData.parentId || nodeData.parent_id;
+  
   // 親ノード存在確認（rootノード以外）
-  if (nodeData.parent_id && nodeData.parent_id !== 'root') {
+  if (parentId && parentId !== 'root') {
     const parentNode = await db.prepare(
       'SELECT id FROM nodes WHERE id = ? AND mindmap_id = ?'
-    ).bind(nodeData.parent_id, mindmapId).first();
+    ).bind(parentId, mindmapId).first();
     
     if (!parentNode) {
       const error = new Error('Parent node not found');
@@ -194,7 +202,7 @@ async function createNode(db, userId, mindmapId, nodeData) {
   const nodeId = nodeData.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const now = new Date().toISOString();
 
-  // ノード作成
+  // ノード作成 - クライアント側の座標形式 (x, y) をサーバー側 (position_x, position_y) に変換
   await db.prepare(`
     INSERT INTO nodes 
     (id, mindmap_id, text, type, parent_id, position_x, position_y, 
@@ -205,10 +213,10 @@ async function createNode(db, userId, mindmapId, nodeData) {
     mindmapId,
     nodeData.text || '',
     nodeData.type || 'branch',
-    nodeData.parent_id || null,
-    nodeData.position_x || 0,
-    nodeData.position_y || 0,
-    JSON.stringify(nodeData.style_settings || {}),
+    parentId || null,
+    nodeData.x || nodeData.position_x || 0,  // x → position_x
+    nodeData.y || nodeData.position_y || 0,  // y → position_y
+    JSON.stringify(nodeData.style_settings || nodeData.styleSettings || {}),
     nodeData.notes || '',
     JSON.stringify(nodeData.tags || []),
     nodeData.collapsed || false,
@@ -221,13 +229,16 @@ async function createNode(db, userId, mindmapId, nodeData) {
     'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
   ).bind(now, mindmapId).run();
 
+  console.log('✅ Node created:', nodeId);
   return { id: nodeId, created_at: now };
 }
 
 /**
  * ノードを更新
  */
-async function updateNode(db, userId, mindmapId, nodeId, updateData) {
+async function updateNode(db, userId, mindmapId, nodeId, requestData) {
+  console.log('🔄 Updating node:', { mindmapId, nodeId, requestData });
+  
   // 所有権確認
   const mindmap = await db.prepare(
     'SELECT id FROM mindmaps WHERE id = ? AND user_id = ?'
@@ -250,15 +261,28 @@ async function updateNode(db, userId, mindmapId, nodeId, updateData) {
     throw error;
   }
 
+  // クライアント側のデータ形式に対応
+  const updateData = requestData.updates || requestData;
+  
   const now = new Date().toISOString();
   const updateFields = [];
   const values = [];
 
-  // 更新可能フィールドの構築
+  // 更新可能フィールドの構築 - クライアント側の座標形式に対応
   if (updateData.text !== undefined) {
     updateFields.push('text = ?');
     values.push(updateData.text);
   }
+  // x → position_x, y → position_y の変換
+  if (updateData.x !== undefined) {
+    updateFields.push('position_x = ?');
+    values.push(updateData.x);
+  }
+  if (updateData.y !== undefined) {
+    updateFields.push('position_y = ?');
+    values.push(updateData.y);
+  }
+  // 従来の形式もサポート
   if (updateData.position_x !== undefined) {
     updateFields.push('position_x = ?');
     values.push(updateData.position_x);
@@ -267,9 +291,9 @@ async function updateNode(db, userId, mindmapId, nodeId, updateData) {
     updateFields.push('position_y = ?');
     values.push(updateData.position_y);
   }
-  if (updateData.style_settings !== undefined) {
+  if (updateData.style_settings !== undefined || updateData.styleSettings !== undefined) {
     updateFields.push('style_settings = ?');
-    values.push(JSON.stringify(updateData.style_settings));
+    values.push(JSON.stringify(updateData.style_settings || updateData.styleSettings));
   }
   if (updateData.notes !== undefined) {
     updateFields.push('notes = ?');
@@ -310,6 +334,7 @@ async function updateNode(db, userId, mindmapId, nodeId, updateData) {
     'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
   ).bind(now, mindmapId).run();
 
+  console.log('✅ Node updated:', nodeId);
   return { updated_at: now };
 }
 
@@ -317,6 +342,8 @@ async function updateNode(db, userId, mindmapId, nodeId, updateData) {
  * ノードを削除
  */
 async function deleteNode(db, userId, mindmapId, nodeId) {
+  console.log('🗑️ Deleting node:', { mindmapId, nodeId });
+  
   // 所有権確認
   const mindmap = await db.prepare(
     'SELECT id FROM mindmaps WHERE id = ? AND user_id = ?'
@@ -362,6 +389,7 @@ async function deleteNode(db, userId, mindmapId, nodeId) {
     'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
   ).bind(now, mindmapId).run();
 
+  console.log('✅ Node deleted:', nodeId);
   return { deleted_at: now };
 }
 
