@@ -160,56 +160,27 @@ export const useMindMapNodes = (data, updateData) => {
     console.log('✅ ローカル状態更新完了:', nodeId);
   };
 
-  // 子ノード追加（DB-First方式）
+  // 子ノード追加（一時ノード作成方式）
   const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
-    console.log('🔄 ノード追加開始:', { parentId, nodeText });
+    console.log('🔄 一時ノード追加開始:', { parentId, nodeText, startEditing });
     
-    // 1. 最初にDB操作を実行
-    let dbResult = null;
-    let finalNodeData = null;
+    // 1. ローカルに一時ノードを作成（DB保存はしない）
+    const tempChild = createNewNode(nodeText, parentNode);
+    const childrenCount = parentNode.children?.length || 0;
+    const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
+    tempChild.x = position.x;
+    tempChild.y = position.y;
+    tempChild.color = getNodeColor(parentNode, childrenCount);
     
-    try {
-      // 仮のノードデータを作成（DB保存用）
-      const tempChild = createNewNode(nodeText, parentNode);
-      const childrenCount = parentNode.children?.length || 0;
-      const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
-      tempChild.x = position.x;
-      tempChild.y = position.y;
-      tempChild.color = getNodeColor(parentNode, childrenCount);
-      
-      console.log('📤 DB操作実行中:', tempChild.id);
-      
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      dbResult = await adapter.addNode(dataRef.current.id, tempChild, parentId);
-      
-      if (!dbResult.success) {
-        console.error('❌ DB操作失敗:', dbResult.error);
-        throw new Error(dbResult.error || 'ノード追加に失敗しました');
-      }
-      
-      // DB操作成功 - 確定したIDでノードデータを更新
-      finalNodeData = {
-        ...tempChild,
-        id: dbResult.newId || dbResult.result?.id || tempChild.id
-      };
-      
-      console.log('✅ DB操作成功:', {
-        originalId: tempChild.id,
-        finalId: finalNodeData.id
-      });
-      
-    } catch (error) {
-      console.error('❌ ノード追加DB操作失敗:', error);
-      // DB操作失敗時はローカル状態を変更せずにエラーを返す
-      throw error;
-    }
+    // 一時ノードフラグを設定（編集完了まではDB保存しない）
+    tempChild.isTemporary = true;
     
-    // 2. DB操作成功後、確定したデータでローカル状態を更新
-    console.log('📝 ローカル状態更新開始');
+    console.log('📝 一時ノード作成:', tempChild.id);
+    
+    // 2. ローカル状態を即座に更新
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
@@ -218,7 +189,7 @@ export const useMindMapNodes = (data, updateData) => {
         if (!node.children) {
           node.children = [];
         }
-        node.children.push(finalNodeData);
+        node.children.push(tempChild);
         return node;
       }
       if (node.children) {
@@ -235,80 +206,51 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // 一時ノードなので保存しない
     
-    console.log('✅ ローカル状態更新完了:', finalNodeData.id);
+    console.log('✅ 一時ノード作成完了:', tempChild.id);
     
     // 編集状態を設定
     if (startEditing) {
-      setSelectedNodeId(finalNodeData.id);
-      setEditingNodeId(finalNodeData.id);
-      setEditText(finalNodeData.text || '');
+      setSelectedNodeId(tempChild.id);
+      setEditingNodeId(tempChild.id);
+      setEditText(tempChild.text || '');
     }
     
-    return finalNodeData.id;
+    return tempChild.id;
   };
 
-  // 兄弟ノードを追加（DB-First方式）
+  // 兄弟ノードを追加（一時ノード作成方式）
   const addSiblingNode = async (nodeId, nodeText = '', startEditing = false) => {
     if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
     
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
     
-    console.log('🔄 兄弟ノード追加開始:', { nodeId, parentNode: parentNode.id, nodeText });
+    console.log('🔄 一時兄弟ノード追加開始:', { nodeId, parentNode: parentNode.id, nodeText, startEditing });
     
-    // 1. 最初にDB操作を実行
-    let dbResult = null;
-    let finalNodeData = null;
+    // 1. ローカルに一時ノードを作成（DB保存はしない）
+    const tempSibling = createNewNode(nodeText, parentNode);
     
-    try {
-      // 仮のノードデータを作成（DB保存用）
-      const tempSibling = createNewNode(nodeText, parentNode);
-      
-      // 色の設定
-      if (parentNode.id === 'root') {
-        const siblingIndex = parentNode.children?.length || 0;
-        tempSibling.color = getNodeColor(parentNode, siblingIndex);
+    // 色の設定
+    if (parentNode.id === 'root') {
+      const siblingIndex = parentNode.children?.length || 0;
+      tempSibling.color = getNodeColor(parentNode, siblingIndex);
+    } else {
+      const existingSibling = findNode(nodeId);
+      if (existingSibling) {
+        tempSibling.color = existingSibling.color;
       } else {
-        const existingSibling = findNode(nodeId);
-        if (existingSibling) {
-          tempSibling.color = existingSibling.color;
-        } else {
-          tempSibling.color = parentNode.color || '#666';
-        }
+        tempSibling.color = parentNode.color || '#666';
       }
-      
-      console.log('📤 DB操作実行中:', tempSibling.id);
-      
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      dbResult = await adapter.addNode(dataRef.current.id, tempSibling, parentNode.id);
-      
-      if (!dbResult.success) {
-        console.error('❌ DB操作失敗:', dbResult.error);
-        throw new Error(dbResult.error || '兄弟ノード追加に失敗しました');
-      }
-      
-      // DB操作成功 - 確定したIDでノードデータを更新
-      finalNodeData = {
-        ...tempSibling,
-        id: dbResult.newId || dbResult.result?.id || tempSibling.id
-      };
-      
-      console.log('✅ DB操作成功:', {
-        originalId: tempSibling.id,
-        finalId: finalNodeData.id
-      });
-      
-    } catch (error) {
-      console.error('❌ 兄弟ノード追加DB操作失敗:', error);
-      // DB操作失敗時はローカル状態を変更せずにエラーを返す
-      throw error;
     }
     
-    // 2. DB操作成功後、確定したデータでローカル状態を更新
-    console.log('📝 ローカル状態更新開始');
+    // 一時ノードフラグを設定
+    tempSibling.isTemporary = true;
+    
+    console.log('📝 一時兄弟ノード作成:', tempSibling.id);
+    
+    // 2. ローカル状態を即座に更新
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
@@ -318,7 +260,7 @@ export const useMindMapNodes = (data, updateData) => {
         if (currentIndex === -1) return node;
         
         const newChildren = [...(node.children || [])];
-        newChildren.splice(currentIndex + 1, 0, finalNodeData);
+        newChildren.splice(currentIndex + 1, 0, tempSibling);
         return { ...node, children: newChildren };
       }
       return { ...node, children: node.children?.map(addSiblingRecursive) || [] };
@@ -330,26 +272,30 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // 一時ノードなので保存しない
     
-    console.log('✅ ローカル状態更新完了:', finalNodeData.id);
+    console.log('✅ 一時兄弟ノード作成完了:', tempSibling.id);
     
     // 編集状態を設定
     if (startEditing) {
-      setSelectedNodeId(finalNodeData.id);
-      setEditingNodeId(finalNodeData.id);
-      setEditText(finalNodeData.text || '');
+      setSelectedNodeId(tempSibling.id);
+      setEditingNodeId(tempSibling.id);
+      setEditText(tempSibling.text || '');
     }
     
-    return finalNodeData.id;
+    return tempSibling.id;
   };
 
-  // ノードを削除（DB-First方式）
+  // ノードを削除（一時ノード対応）
   const deleteNode = async (nodeId) => {
     if (nodeId === 'root') return false;
     
+    const currentNode = findNode(nodeId);
+    const isTemporary = currentNode?.isTemporary === true;
+    
     console.log('🗑️ deleteNode実行開始:', { 
       nodeId, 
+      isTemporary,
       timestamp: Date.now()
     });
     
@@ -376,30 +322,33 @@ export const useMindMapNodes = (data, updateData) => {
       nodeToSelect = 'root';
     }
     
-    // 1. 最初にDB操作を実行
-    let dbResult = null;
-    
-    try {
-      console.log('📤 DB削除操作実行中:', nodeId);
-      
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      dbResult = await adapter.deleteNode(dataRef.current.id, nodeId);
-      
-      if (!dbResult.success) {
-        console.error('❌ DB削除操作失敗:', dbResult.error);
-        throw new Error(dbResult.error || 'ノード削除に失敗しました');
+    // 一時ノードの場合はDB操作をスキップ（元々DBにない）
+    if (!isTemporary) {
+      // 1. DB操作を実行（既存ノードのみ）
+      try {
+        console.log('📤 DB削除操作実行中:', nodeId);
+        
+        const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+        const adapter = getCurrentAdapter();
+        const dbResult = await adapter.deleteNode(dataRef.current.id, nodeId);
+        
+        if (!dbResult.success) {
+          console.error('❌ DB削除操作失敗:', dbResult.error);
+          throw new Error(dbResult.error || 'ノード削除に失敗しました');
+        }
+        
+        console.log('✅ DB削除操作成功:', nodeId);
+        
+      } catch (error) {
+        console.error('❌ ノード削除DB操作失敗:', error);
+        // DB操作失敗時はローカル状態を変更せずにエラーを返す
+        throw error;
       }
-      
-      console.log('✅ DB削除操作成功:', nodeId);
-      
-    } catch (error) {
-      console.error('❌ ノード削除DB操作失敗:', error);
-      // DB操作失敗時はローカル状態を変更せずにエラーを返す
-      throw error;
+    } else {
+      console.log('📝 一時ノードのローカル削除:', nodeId);
     }
     
-    // 2. DB操作成功後、ローカル状態を更新
+    // 2. ローカル状態を更新
     console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
@@ -420,7 +369,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // 一時ノードはDB操作なし
     
     console.log('✅ ローカル状態更新完了:', nodeId);
     
@@ -555,7 +504,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
   };
 
-  // 編集終了
+  // 編集終了（一時ノードのDB保存処理を含む）
   const finishEdit = async (nodeId, newText, options = {}) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
@@ -569,6 +518,7 @@ export const useMindMapNodes = (data, updateData) => {
       isEmpty: !textToSave || textToSave.trim() === '',
       currentNodeText: currentNode?.text,
       isRoot: nodeId === 'root',
+      isTemporary: currentNode?.isTemporary,
       textToSaveLength: textToSave?.length,
       newTextLength: newText?.length,
       options
@@ -576,50 +526,133 @@ export const useMindMapNodes = (data, updateData) => {
     
     const isEmpty = !textToSave || textToSave.trim() === '';
     const isRoot = nodeId === 'root';
+    const isTemporary = currentNode?.isTemporary === true;
     
-    // 削除判定：明確な条件でのみ削除（マップ切り替え時は削除を無効化）
-    const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete && (
-      // 新規作成されたノード（元々空だった）で、テキストが空の場合のみ削除
-      (!currentNode.text || currentNode.text.trim() === '') ||
-      // または、明示的に削除を要求された場合
-      options.forceDelete === true
-    );
-    
-    if (shouldDelete) {
-      console.log('🗑️ ノード削除実行:', { 
-        nodeId, 
-        reason: '空の新規ノードまたは内容を削除したノード',
-        originalText: currentNode?.text,
-        skipMapSwitchDelete: options.skipMapSwitchDelete
-      });
-      setEditingNodeId(null);
-      setEditText('');
-      await deleteNode(nodeId);
-      return;
-    }
-    
-    // マップ切り替え時の削除保護をログ出力
-    if (isEmpty && !isRoot && options.skipMapSwitchDelete) {
-      console.log('🛡️ マップ切り替え時削除保護:', { 
-        nodeId, 
-        text: textToSave,
-        reason: 'マップ切り替え時は空ノードでも削除しない'
-      });
-    }
-    
-    if (isEmpty && !isRoot) {
-      console.log('⚠️ 空のテキストだが削除しない:', { 
-        nodeId, 
-        reason: '既存の内容があったノード',
-        originalText: currentNode?.text
-      });
-      // 空でも既存の内容があった場合は削除せず、元の内容を復元
-      if (currentNode?.text) {
-        await updateNode(nodeId, { text: currentNode.text }, true, { allowDuringEdit: true, source: 'finishEdit-restore' });
+    // 一時ノードの特別処理
+    if (isTemporary) {
+      console.log('📦 一時ノードの編集完了処理:', { nodeId, isEmpty, textToSave });
+      
+      if (isEmpty) {
+        // 空の一時ノードは削除
+        console.log('🗑️ 空の一時ノードを削除:', nodeId);
+        setEditingNodeId(null);
+        setEditText('');
+        await deleteNode(nodeId); // ローカルのみ削除（元々DBにない）
+        return;
+      } else {
+        // テキストがある一時ノードはDBに保存して正式なノードにする
+        console.log('📤 一時ノードをDBに保存:', { nodeId, text: textToSave.trim() });
+        
+        try {
+          // 親ノードを取得
+          const parentNode = findParentNode(nodeId);
+          if (!parentNode) {
+            throw new Error('親ノードが見つかりません');
+          }
+          
+          // DBに保存
+          const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+          const adapter = getCurrentAdapter();
+          
+          // 一時フラグを除去してDB保存用データを作成
+          const nodeDataForDB = { ...currentNode };
+          delete nodeDataForDB.isTemporary;
+          nodeDataForDB.text = textToSave.trim();
+          
+          const dbResult = await adapter.addNode(dataRef.current.id, nodeDataForDB, parentNode.id);
+          
+          if (dbResult.success) {
+            console.log('✅ 一時ノードのDB保存成功:', nodeId);
+            
+            // ローカルデータでisTemporaryを除去してテキストを更新
+            await updateNode(nodeId, { 
+              text: textToSave.trim(), 
+              isTemporary: undefined // 一時フラグを除去
+            }, false, { // 既にDB保存済みなのsyncToCloud=false
+              allowDuringEdit: true, 
+              source: 'finishEdit-temporaryToReal' 
+            });
+            
+            // ID再生成があった場合の処理
+            if (dbResult.newId && dbResult.newId !== nodeId) {
+              console.log('🔄 一時ノードID再生成:', {
+                originalId: nodeId,
+                newId: dbResult.newId
+              });
+              await updateNodeId(nodeId, dbResult.newId);
+            }
+            
+          } else {
+            console.error('❌ 一時ノードのDB保存失敗:', dbResult.error);
+            // 失敗してもローカルではテキストを保持
+            await updateNode(nodeId, { 
+              text: textToSave.trim(),
+              isTemporary: undefined
+            }, false, {
+              allowDuringEdit: true, 
+              source: 'finishEdit-temporaryLocalOnly' 
+            });
+          }
+          
+        } catch (error) {
+          console.error('❌ 一時ノードのDB保存エラー:', error);
+          // エラーでもローカルではテキストを保持
+          await updateNode(nodeId, { 
+            text: textToSave.trim(),
+            isTemporary: undefined
+          }, false, {
+            allowDuringEdit: true, 
+            source: 'finishEdit-temporaryError' 
+          });
+        }
       }
-    } else if (!isEmpty) {
-      console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-      await updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
+    } else {
+      // 既存ノードの通常処理
+      
+      // 削除判定：明確な条件でのみ削除（マップ切り替え時は削除を無効化）
+      const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete && (
+        // 新規作成されたノード（元々空だった）で、テキストが空の場合のみ削除
+        (!currentNode.text || currentNode.text.trim() === '') ||
+        // または、明示的に削除を要求された場合
+        options.forceDelete === true
+      );
+      
+      if (shouldDelete) {
+        console.log('🗑️ ノード削除実行:', { 
+          nodeId, 
+          reason: '空の新規ノードまたは内容を削除したノード',
+          originalText: currentNode?.text,
+          skipMapSwitchDelete: options.skipMapSwitchDelete
+        });
+        setEditingNodeId(null);
+        setEditText('');
+        await deleteNode(nodeId);
+        return;
+      }
+      
+      // マップ切り替え時の削除保護をログ出力
+      if (isEmpty && !isRoot && options.skipMapSwitchDelete) {
+        console.log('🛡️ マップ切り替え時削除保護:', { 
+          nodeId, 
+          text: textToSave,
+          reason: 'マップ切り替え時は空ノードでも削除しない'
+        });
+      }
+      
+      if (isEmpty && !isRoot) {
+        console.log('⚠️ 空のテキストだが削除しない:', { 
+          nodeId, 
+          reason: '既存の内容があったノード',
+          originalText: currentNode?.text
+        });
+        // 空でも既存の内容があった場合は削除せず、元の内容を復元
+        if (currentNode?.text) {
+          await updateNode(nodeId, { text: currentNode.text }, true, { allowDuringEdit: true, source: 'finishEdit-restore' });
+        }
+      } else if (!isEmpty) {
+        console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
+        await updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
+      }
     }
     
     // 編集状態をリセット（対象ノードが現在編集中の場合のみ）
@@ -661,7 +694,7 @@ export const useMindMapNodes = (data, updateData) => {
       });
       
       // テキスト保存は実行するが、編集状態の変更はスキップ
-      if (!isEmpty) {
+      if (!isEmpty && !isTemporary) { // 一時ノードは上で処理済み
         console.log('📝 finishEdit - 保護モード: テキストのみ保存:', textToSave.trim());
         updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-protected' });
       }
