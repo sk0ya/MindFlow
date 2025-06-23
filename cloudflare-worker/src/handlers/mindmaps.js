@@ -581,15 +581,41 @@ async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) 
     console.log('🚀 バッチ実行開始（総文数:', statements.length, '）');
     
     try {
+      console.log('🔍 バッチ実行前のstatements詳細:');
+      statements.forEach((stmt, index) => {
+        console.log(`  Statement[${index}]:`, stmt.source || 'SQL準備文');
+      });
+      
       const batchResult = await db.batch(statements);
       console.log('✅ バッチ実行結果:', {
         totalStatements: statements.length,
         results: batchResult ? batchResult.length : 'undefined',
-        firstResultSuccess: batchResult && batchResult[0] ? batchResult[0].success : 'N/A'
+        firstResultSuccess: batchResult && batchResult[0] ? batchResult[0].success : 'N/A',
+        allResultsDetails: batchResult ? batchResult.map((r, i) => ({ 
+          index: i, 
+          success: r.success, 
+          error: r.error || null,
+          changes: r.meta?.changes || 0
+        })) : 'N/A'
       });
+      
+      // 失敗した操作があるかチェック
+      if (batchResult) {
+        const failures = batchResult.filter(r => !r.success);
+        if (failures.length > 0) {
+          console.error('❌ バッチ内で失敗した操作:', failures);
+          throw new Error(`バッチ内で${failures.length}個の操作が失敗しました`);
+        }
+      }
+      
       console.log('✅ updateMindMapRelational 安全更新完了');
     } catch (batchError) {
       console.error('❌ バッチ実行エラー:', batchError);
+      console.error('❌ エラー詳細:', {
+        name: batchError.name,
+        message: batchError.message,
+        cause: batchError.cause
+      });
       console.error('❌ 失敗した文:', statements.length, '文中の一部');
       throw new Error(`バッチ処理失敗: ${batchError.message}`);
     }
