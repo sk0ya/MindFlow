@@ -30,7 +30,7 @@ export const useKeyboardShortcuts = ({
 }) => {
   
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = async (e) => {
       // デバッグ用：キーイベントをログ出力
       console.log('🎹 キーイベント:', {
         key: e.key,
@@ -104,16 +104,16 @@ export const useKeyboardShortcuts = ({
           case 'Tab':
             e.preventDefault();
             console.log('⭕ Tab → 子ノード追加:', { selectedNodeId });
-            addChildNode(selectedNodeId, '', true);
+            await addChildNode(selectedNodeId, '', true);
             break;
           
           case 'Enter':
             e.preventDefault();
             console.log('⭕ Enter → 兄弟ノード追加:', { selectedNodeId });
             if (selectedNodeId === 'root') {
-              addChildNode('root', '', true);
+              await addChildNode('root', '', true);
             } else {
-              addSiblingNode(selectedNodeId, '', true);
+              await addSiblingNode(selectedNodeId, '', true);
             }
             break;
           

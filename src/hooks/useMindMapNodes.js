@@ -199,7 +199,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 兄弟ノードを追加
-  const addSiblingNode = (nodeId, nodeText = '', startEditing = false) => {
+  const addSiblingNode = async (nodeId, nodeText = '', startEditing = false) => {
     if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
     
     const parentNode = findParentNode(nodeId);
@@ -237,7 +237,23 @@ export const useMindMapNodes = (data, updateData) => {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData({ ...data, rootNode: newRootNode });
+    await updateData({ ...data, rootNode: newRootNode });
+    
+    // 2. ストレージアダプターを通じて反映
+    console.log('🔄 兄弟ノード追加同期開始:', newSibling.id);
+    try {
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      const result = await adapter.addNode(data.id, newSibling, parentNode.id);
+      
+      if (result.success) {
+        console.log('✅ 兄弟ノード追加完了:', newSibling.id);
+      } else {
+        console.warn('⚠️ 兄弟ノード追加失敗（リトライキューに追加）:', result.error);
+      }
+    } catch (error) {
+      console.warn('⚠️ 兄弟ノード追加失敗:', error.message);
+    }
     
     // データ状態確認
     setTimeout(() => {
