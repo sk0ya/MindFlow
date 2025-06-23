@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { createNewNode, calculateNodePosition, COLORS } from '../utils/dataTypes.js';
+import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../utils/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../utils/autoLayout.js';
 import { getCurrentAdapter } from '../utils/storageAdapter.js';
 
@@ -143,7 +143,8 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
     console.log('📝 addChildNode: データをディープクローン中...');
-    const clonedData = deepClone(data);
+    const currentData = dataRef.current;
+    const clonedData = deepClone(currentData);
     
     // 1. クローンされたデータに対してローカル状態を即座に更新
     const addChildRecursive = (node) => {
@@ -295,7 +296,8 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
     console.log('📝 deleteNode: データをディープクローン中...');
-    const clonedData = deepClone(data);
+    const currentData = dataRef.current;
+    const clonedData = deepClone(currentData);
     
     // 1. クローンされたデータに対してローカル状態を即座に更新
     const deleteNodeRecursive = (node) => {
@@ -455,8 +457,10 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 削除判定：明確な条件でのみ削除（マップ切り替え時は削除を無効化）
     const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete && (
-      // 既存ノードが元々空だった場合（新規作成後に内容を入力せずにblur）
-      !currentNode.text || currentNode.text.trim() === ''
+      // 新規作成されたノード（元々空だった）で、テキストが空の場合のみ削除
+      (!currentNode.text || currentNode.text.trim() === '') ||
+      // または、明示的に削除を要求された場合
+      options.forceDelete === true
     );
     
     if (shouldDelete) {
