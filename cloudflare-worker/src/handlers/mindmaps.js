@@ -135,7 +135,72 @@ function countNodesInData(data) {
 }
 
 async function getMindMap(db, userId, mindmapId) {
-  // リレーショナル形式から直接読み込み
+  console.log('🔍 getMindMap 開始:', { userId, mindmapId });
+  
+  // マインドマップ基本情報取得（データ形式を判定するため）
+  const mindmap = await db.prepare(
+    'SELECT * FROM mindmaps WHERE user_id = ? AND id = ?'
+  ).bind(userId, mindmapId).first();
+  
+  if (!mindmap) {
+    console.error('❌ マインドマップが見つかりません:', { userId, mindmapId });
+    const error = new Error('Mind map not found');
+    error.status = 404;
+    throw error;
+  }
+  
+  console.log('📋 マインドマップ情報:', {
+    id: mindmap.id,
+    title: mindmap.title,
+    hasDataColumn: mindmap.data !== undefined,
+    hasNodeCount: mindmap.node_count !== undefined
+  });
+  
+  // レガシー形式（dataカラム）が存在する場合の処理
+  if (mindmap.data !== undefined && mindmap.data !== null) {
+    console.log('🔄 レガシー形式検出 - 自動マイグレーション開始');
+    
+    try {
+      // レガシーデータを解析
+      const legacyData = JSON.parse(mindmap.data);
+      console.log('📋 レガシーデータ解析完了:', {
+        title: legacyData.title,
+        hasRootNode: !!legacyData.rootNode,
+        nodeCount: countNodesInData(legacyData)
+      });
+      
+      // リレーショナル形式に自動マイグレーション
+      const now = new Date().toISOString();
+      await createMindMapRelationalFromLegacy(db, userId, mindmapId, legacyData, now);
+      
+      // レガシーdataカラムをクリア（マイグレーション完了フラグ）
+      await db.prepare(
+        'UPDATE mindmaps SET data = NULL WHERE id = ?'
+      ).bind(mindmapId).run();
+      
+      console.log('✅ 自動マイグレーション完了 - リレーショナル形式で再読み込み');
+      
+      // マイグレーション後にリレーショナル形式で再読み込み
+      return await getMindMapRelational(db, userId, mindmapId);
+      
+    } catch (error) {
+      console.error('❌ レガシーデータマイグレーションエラー:', error);
+      console.error('❌ レガシーデータ内容:', mindmap.data);
+      
+      // マイグレーションに失敗した場合は、レガシーデータをそのまま返す
+      console.log('⚠️ マイグレーション失敗 - レガシー形式で返却');
+      const legacyData = JSON.parse(mindmap.data);
+      return {
+        ...legacyData,
+        id: mindmap.id,
+        createdAt: mindmap.created_at,
+        updatedAt: mindmap.updated_at
+      };
+    }
+  }
+  
+  // リレーショナル形式として処理
+  console.log('✅ リレーショナル形式として処理');
   return await getMindMapRelational(db, userId, mindmapId);
 }
 
@@ -344,6 +409,57 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
   }
   
   return rootNode;
+}
+
+// レガシーデータからリレーショナル形式への変換用関数
+async function createMindMapRelationalFromLegacy(db, userId, mindmapId, legacyData, now) {
+  console.log('🔄 createMindMapRelationalFromLegacy 開始:', {
+    mindmapId,
+    title: legacyData.title,
+    hasRootNode: !!legacyData.rootNode
+  });
+  
+  const statements = [];
+  
+  // マインドマップのメタデータを更新（dataカラムは残してNULLにはしない）
+  statements.push(
+    db.prepare(
+      'UPDATE mindmaps SET category = ?, theme = ?, settings = ?, node_count = ?, updated_at = ? WHERE id = ?'
+    ).bind(
+      legacyData.category || 'general',
+      legacyData.theme || 'default',
+      JSON.stringify(legacyData.settings || {}),
+      countNodesInData(legacyData),
+      now,
+      mindmapId
+    )
+  );
+  
+  // 既存のリレーショナルデータをクリア（外部キー制約を考慮して順序実行）
+  // 1. 添付ファイルを削除
+  statements.push(
+    db.prepare('DELETE FROM attachments WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)').bind(mindmapId)
+  );
+  // 2. リンクを削除
+  statements.push(
+    db.prepare('DELETE FROM node_links WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)').bind(mindmapId)
+  );
+  // 3. ノードを削除
+  statements.push(
+    db.prepare('DELETE FROM nodes WHERE mindmap_id = ?').bind(mindmapId)
+  );
+  
+  // ノード作成
+  if (legacyData.rootNode) {
+    console.log('🌳 レガシーrootNodeをリレーショナル形式に変換');
+    const nodeStatements = createNodeStatements(db, legacyData.rootNode, mindmapId, null, now);
+    statements.push(...nodeStatements);
+  }
+  
+  // 一括実行
+  console.log('🚀 レガシーマイグレーション バッチ実行:', statements.length, '文');
+  await db.batch(statements);
+  console.log('✅ createMindMapRelationalFromLegacy 完了');
 }
 
 // リレーショナル形式での新規作成
