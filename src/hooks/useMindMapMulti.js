@@ -256,6 +256,16 @@ export const useMindMapMulti = (data, setData, updateData) => {
         });
         try {
           const adapter = getCurrentAdapter();
+          
+          // 🔧 保留中の操作を完了させる
+          if (adapter.pendingOperations && adapter.pendingOperations.size > 0) {
+            console.log('⏳ 保留中の操作を完了中...', adapter.pendingOperations.size, '件');
+            await adapter.retryPendingOperations();
+          }
+          
+          // 🔧 少し待機して確実に同期を完了させる
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           await adapter.updateMap(data.id, data);
           console.log('✅ 現在のマップ保存完了:', data.title);
         } catch (saveError) {
