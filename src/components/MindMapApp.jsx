@@ -453,9 +453,14 @@ const MindMapApp = () => {
     removeNodeMapLink(nodeId, linkId);
   };
 
-  const handleNavigateToMap = (mapId) => {
-    switchToMap(mapId);
-    setShowNodeMapLinksPanel(false);
+  const handleNavigateToMap = async (mapId) => {
+    try {
+      await switchToMap(mapId);
+      setShowNodeMapLinksPanel(false);
+    } catch (error) {
+      console.error('マップナビゲーションエラー:', error);
+      alert('マップの切り替えに失敗しました: ' + error.message);
+    }
   };
   
   // 認証関連ハンドラー

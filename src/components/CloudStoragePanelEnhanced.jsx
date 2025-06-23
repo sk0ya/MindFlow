@@ -223,7 +223,14 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
                     key={map.id}
                     className={`map-item ${map.id === currentMapId ? 'current' : ''}`}
                   >
-                    <div className="map-info" onClick={() => switchToMap(map.id)}>
+                    <div className="map-info" onClick={async () => {
+                      try {
+                        await switchToMap(map.id);
+                      } catch (error) {
+                        console.error('マップ切り替えエラー:', error);
+                        alert('マップの切り替えに失敗しました: ' + error.message);
+                      }
+                    }}>
                       <div className="map-title">{map.title}</div>
                       <div className="map-meta">
                         <span className="map-category">{map.category || '未分類'}</span>

@@ -210,13 +210,20 @@ const MainApp = ({
             onCreateMap={multiMapOps.createMindMap}
             onRenameMap={multiMapOps.renameMindMap}
             onDeleteMap={multiMapOps.deleteMindMapById}
-            onSwitchMap={(mapId) => multiMapOps.switchToMap(
-              mapId, 
-              false, 
-              mindMap.setSelectedNodeId, 
-              mindMap.setEditingNodeId, 
-              mindMap.setEditText
-            )}
+            onSwitchMap={async (mapId) => {
+              try {
+                await multiMapOps.switchToMap(
+                  mapId, 
+                  false, 
+                  mindMap.setSelectedNodeId, 
+                  mindMap.setEditingNodeId, 
+                  mindMap.setEditText
+                );
+              } catch (error) {
+                console.error('マップ切り替えエラー:', error);
+                alert('マップの切り替えに失敗しました: ' + error.message);
+              }
+            }}
             onClose={() => setShowSidebar(false)}
             onRefresh={multiMapOps.refreshAllMindMaps}
             onChangeCategory={multiMapOps.changeMapCategory}
@@ -286,7 +293,14 @@ const MainApp = ({
             onRemoveLink={(linkId) => {
               console.log('🔗 マップリンク削除:', { nodeId: mapLinksPanel.node.id, linkId });
             }}
-            onNavigateToMap={(mapId) => multiMapOps.switchToMap(mapId)}
+            onNavigateToMap={async (mapId) => {
+              try {
+                await multiMapOps.switchToMap(mapId);
+              } catch (error) {
+                console.error('マップナビゲーションエラー:', error);
+                alert('マップの切り替えに失敗しました: ' + error.message);
+              }
+            }}
             onClose={() => setMapLinksPanel({ isOpen: false, node: null, position: null })}
           />
         )}
