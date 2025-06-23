@@ -240,22 +240,63 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード追加開始', nodeData.id);
       
+      // データ検証とデバッグログ
+      console.log('📤 ノード追加リクエストデータ:', {
+        mapId,
+        nodeId: nodeData.id,
+        parentId,
+        nodeDataKeys: Object.keys(nodeData),
+        nodeDataSize: JSON.stringify(nodeData).length,
+        hasValidId: !!nodeData.id && typeof nodeData.id === 'string',
+        hasValidText: nodeData.text !== undefined,
+        hasValidCoords: typeof nodeData.x === 'number' && typeof nodeData.y === 'number',
+        hasChildren: Array.isArray(nodeData.children)
+      });
+      
+      // データ検証
+      if (!nodeData.id || typeof nodeData.id !== 'string') {
+        throw new Error('Invalid node ID');
+      }
+      if (!parentId || typeof parentId !== 'string') {
+        throw new Error('Invalid parent ID');
+      }
+      if (typeof nodeData.x !== 'number' || typeof nodeData.y !== 'number') {
+        throw new Error('Invalid node coordinates');
+      }
+      
       const { authManager } = await import('./authManager.js');
+      const requestBody = {
+        mapId,
+        node: nodeData,
+        parentId,
+        operation: 'add'
+      };
+      
+      console.log('📤 完全なリクエストボディ:', JSON.stringify(requestBody, null, 2));
+      
       const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          mapId,
-          node: nodeData,
-          parentId,
-          operation: 'add'
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
+        let errorDetails = `Status: ${response.status}`;
+        try {
+          const errorBody = await response.text();
+          console.error('❌ ノード追加サーバーエラー詳細:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorBody,
+            requestData: requestBody
+          });
+          errorDetails += `, Body: ${errorBody}`;
+        } catch (e) {
+          console.error('❌ エラーレスポンス読み取り失敗:', e);
+        }
+        throw new Error(`API エラー: ${errorDetails}`);
       }
 
       const result = await response.json();
