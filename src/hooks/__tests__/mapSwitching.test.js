@@ -39,13 +39,13 @@ jest.mock('../../utils/dataTypes', () => ({
 }));
 
 // Mock useMindMapNodes
-jest.mock('../useMindMapNodes', () => {
-  return jest.fn(() => ({
+jest.mock('../useMindMapNodes', () => ({
+  useMindMapNodes: jest.fn(() => ({
     updateNode: jest.fn(),
     editingNodeId: null,
     finishEdit: jest.fn()
-  }));
-});
+  }))
+}));
 
 describe('Map Switching Data Loss Issue', () => {
   let mockData, mockSetData, mockUpdateData, mockAdapter;

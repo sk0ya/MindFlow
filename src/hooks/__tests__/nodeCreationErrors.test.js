@@ -26,6 +26,8 @@ describe('ノード作成エラーの調査', () => {
     // authManagerのモック
     jest.doMock('../../utils/authManager.js', () => ({
       authManager: {
+        isAuthenticated: jest.fn(() => true),
+        getAuthToken: jest.fn(() => 'mock-token'),
         authenticatedFetch: mockAuthenticatedFetch
       }
     }));
