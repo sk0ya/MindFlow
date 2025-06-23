@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
 import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
 import { getCurrentAdapter } from '../utils/storageAdapter.js';
+import { realtimeSync } from '../utils/realtimeSync.js';
 
 // マルチマップ管理専用のカスタムフック
 export const useMindMapMulti = (data, setData, updateData) => {
