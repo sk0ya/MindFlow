@@ -73,17 +73,70 @@ export const useMindMapNodes = (data, updateData) => {
     }
   };
 
-  // ノード更新（完全分離版）
+  // ノード更新（DB-First方式）
   const updateNode = async (nodeId, updates, syncToCloud = true, options = {}) => {
-    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
+    console.log('📝 updateNode開始:', { nodeId, updates, syncToCloud });
+    
+    // syncToCloudがfalseの場合（ドラッグ操作など）は従来通りローカル先行
+    if (!syncToCloud) {
+      console.log('📝 ローカルのみ更新:', nodeId);
+      const currentData = dataRef.current;
+      const clonedData = deepClone(currentData);
+      
+      const updateNodeRecursive = (node) => {
+        if (node.id === nodeId) {
+          Object.assign(node, updates);
+          return node;
+        }
+        if (node.children) {
+          node.children.forEach(updateNodeRecursive);
+        }
+        return node;
+      };
+      
+      updateNodeRecursive(clonedData.rootNode);
+      
+      const updateOptions = {
+        skipHistory: false,
+        source: options.source || 'updateNode-local',
+        allowDuringEdit: options.allowDuringEdit || false,
+        immediate: true
+      };
+      
+      await updateData(clonedData, updateOptions);
+      return;
+    }
+    
+    // 1. 最初にDB操作を実行（syncToCloudがtrueの場合）
+    let dbResult = null;
+    
+    try {
+      console.log('📤 DB更新操作実行中:', nodeId);
+      
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      dbResult = await adapter.updateNode(dataRef.current.id, nodeId, updates);
+      
+      if (!dbResult.success) {
+        console.error('❌ DB更新操作失敗:', dbResult.error);
+        throw new Error(dbResult.error || 'ノード更新に失敗しました');
+      }
+      
+      console.log('✅ DB更新操作成功:', nodeId);
+      
+    } catch (error) {
+      console.error('❌ ノード更新DB操作失敗:', error);
+      // DB操作失敗時はローカル状態を変更せずにエラーを返す
+      throw error;
+    }
+    
+    // 2. DB操作成功後、ローカル状態を更新
+    console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
-    console.log('📝 updateNode: データをディープクローン中...', { nodeId, updates });
     const clonedData = deepClone(currentData);
     
-    // 1. クローンされたデータに対してローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
       if (node.id === nodeId) {
-        // 対象ノードを発見したらプロパティを更新
         Object.assign(node, updates);
         return node;
       }
@@ -94,65 +147,78 @@ export const useMindMapNodes = (data, updateData) => {
     };
     
     updateNodeRecursive(clonedData.rootNode);
-    const newData = clonedData;
     
-    // 更新オプションの準備
     const updateOptions = {
       skipHistory: false,
       source: options.source || 'updateNode',
       allowDuringEdit: options.allowDuringEdit || false,
-      ...(updates.attachments ? { saveImmediately: true } : { immediate: true })
+      saveImmediately: false // DB操作済みなので即座保存は不要
     };
     
-    await updateData(newData, updateOptions);
+    await updateData(clonedData, updateOptions);
     
-    // 2. ストレージアダプターを通じて反映
-    if (syncToCloud) {
-      console.log('🔄 ノード個別同期開始:', nodeId);
-      try {
-        const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-        const adapter = getCurrentAdapter();
-        const result = await adapter.updateNode(data.id, nodeId, updates);
-        
-        if (result.success) {
-          console.log('✅ ノード更新完了:', nodeId);
-        } else {
-          console.warn('⚠️ ノード更新失敗（リトライキューに追加）:', result.error);
-        }
-      } catch (error) {
-        console.warn('⚠️ ノード更新失敗:', error.message);
-      }
-    } else {
-      console.log('📝 ローカルのみ更新:', nodeId);
-    }
+    console.log('✅ ローカル状態更新完了:', nodeId);
   };
 
-  // 子ノード追加（完全分離版）
+  // 子ノード追加（DB-First方式）
   const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
-    const newChild = createNewNode(nodeText, parentNode);
-    const childrenCount = parentNode.children?.length || 0;
-    const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
-    newChild.x = position.x;
-    newChild.y = position.y;
+    console.log('🔄 ノード追加開始:', { parentId, nodeText });
     
-    // 色を設定
-    newChild.color = getNodeColor(parentNode, childrenCount);
+    // 1. 最初にDB操作を実行
+    let dbResult = null;
+    let finalNodeData = null;
     
-    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
-    console.log('📝 addChildNode: データをディープクローン中...');
+    try {
+      // 仮のノードデータを作成（DB保存用）
+      const tempChild = createNewNode(nodeText, parentNode);
+      const childrenCount = parentNode.children?.length || 0;
+      const position = calculateNodePosition(parentNode, childrenCount, childrenCount + 1);
+      tempChild.x = position.x;
+      tempChild.y = position.y;
+      tempChild.color = getNodeColor(parentNode, childrenCount);
+      
+      console.log('📤 DB操作実行中:', tempChild.id);
+      
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      dbResult = await adapter.addNode(dataRef.current.id, tempChild, parentId);
+      
+      if (!dbResult.success) {
+        console.error('❌ DB操作失敗:', dbResult.error);
+        throw new Error(dbResult.error || 'ノード追加に失敗しました');
+      }
+      
+      // DB操作成功 - 確定したIDでノードデータを更新
+      finalNodeData = {
+        ...tempChild,
+        id: dbResult.newId || dbResult.result?.id || tempChild.id
+      };
+      
+      console.log('✅ DB操作成功:', {
+        originalId: tempChild.id,
+        finalId: finalNodeData.id
+      });
+      
+    } catch (error) {
+      console.error('❌ ノード追加DB操作失敗:', error);
+      // DB操作失敗時はローカル状態を変更せずにエラーを返す
+      throw error;
+    }
+    
+    // 2. DB操作成功後、確定したデータでローカル状態を更新
+    console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    // 1. クローンされたデータに対してローカル状態を即座に更新
     const addChildRecursive = (node) => {
       if (node.id === parentId) {
         if (!node.children) {
           node.children = [];
         }
-        node.children.push(newChild);
+        node.children.push(finalNodeData);
         return node;
       }
       if (node.children) {
@@ -169,69 +235,82 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, saveImmediately: true });
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
     
-    // 2. ストレージアダプターを通じて反映
-    console.log('🔄 ノード追加同期開始:', newChild.id);
-    let result = null;
-    try {
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      result = await adapter.addNode(data.id, newChild, parentId);
-      
-      if (result.success) {
-        console.log('✅ ノード追加完了:', newChild.id);
-        
-        // ID再生成があった場合、ローカルデータを更新
-        if (result.newId && result.newId !== newChild.id) {
-          console.log('🔄 ID再生成によるローカルデータ更新:', {
-            originalId: newChild.id,
-            newId: result.newId
-          });
-          await updateNodeId(newChild.id, result.newId);
-        }
-      } else {
-        console.warn('⚠️ ノード追加失敗（リトライキューに追加）:', result.error);
-      }
-    } catch (error) {
-      console.warn('⚠️ ノード追加失敗:', error.message);
-    }
+    console.log('✅ ローカル状態更新完了:', finalNodeData.id);
     
-    // 編集状態を同時に設定
+    // 編集状態を設定
     if (startEditing) {
-      // ID再生成があった場合は新しいIDを使用
-      const nodeIdToEdit = result?.newId || newChild.id;
-      setSelectedNodeId(nodeIdToEdit);
-      // 遅延なしで即座に編集モード開始（blur競合を防止）
-      setEditingNodeId(nodeIdToEdit);
-      setEditText(newChild.text || ''); // ノードのテキストを使用
+      setSelectedNodeId(finalNodeData.id);
+      setEditingNodeId(finalNodeData.id);
+      setEditText(finalNodeData.text || '');
     }
     
-    // ID再生成があった場合は新しいIDを返す
-    return result?.newId || newChild.id;
+    return finalNodeData.id;
   };
 
-  // 兄弟ノードを追加
+  // 兄弟ノードを追加（DB-First方式）
   const addSiblingNode = async (nodeId, nodeText = '', startEditing = false) => {
     if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
     
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
     
-    const newSibling = createNewNode(nodeText, parentNode);
+    console.log('🔄 兄弟ノード追加開始:', { nodeId, parentNode: parentNode.id, nodeText });
     
-    // 色の設定
-    if (parentNode.id === 'root') {
-      const siblingIndex = parentNode.children?.length || 0;
-      newSibling.color = getNodeColor(parentNode, siblingIndex);
-    } else {
-      const existingSibling = findNode(nodeId);
-      if (existingSibling) {
-        newSibling.color = existingSibling.color;
+    // 1. 最初にDB操作を実行
+    let dbResult = null;
+    let finalNodeData = null;
+    
+    try {
+      // 仮のノードデータを作成（DB保存用）
+      const tempSibling = createNewNode(nodeText, parentNode);
+      
+      // 色の設定
+      if (parentNode.id === 'root') {
+        const siblingIndex = parentNode.children?.length || 0;
+        tempSibling.color = getNodeColor(parentNode, siblingIndex);
       } else {
-        newSibling.color = parentNode.color || '#666';
+        const existingSibling = findNode(nodeId);
+        if (existingSibling) {
+          tempSibling.color = existingSibling.color;
+        } else {
+          tempSibling.color = parentNode.color || '#666';
+        }
       }
+      
+      console.log('📤 DB操作実行中:', tempSibling.id);
+      
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      dbResult = await adapter.addNode(dataRef.current.id, tempSibling, parentNode.id);
+      
+      if (!dbResult.success) {
+        console.error('❌ DB操作失敗:', dbResult.error);
+        throw new Error(dbResult.error || '兄弟ノード追加に失敗しました');
+      }
+      
+      // DB操作成功 - 確定したIDでノードデータを更新
+      finalNodeData = {
+        ...tempSibling,
+        id: dbResult.newId || dbResult.result?.id || tempSibling.id
+      };
+      
+      console.log('✅ DB操作成功:', {
+        originalId: tempSibling.id,
+        finalId: finalNodeData.id
+      });
+      
+    } catch (error) {
+      console.error('❌ 兄弟ノード追加DB操作失敗:', error);
+      // DB操作失敗時はローカル状態を変更せずにエラーを返す
+      throw error;
     }
+    
+    // 2. DB操作成功後、確定したデータでローカル状態を更新
+    console.log('📝 ローカル状態更新開始');
+    const currentData = dataRef.current;
+    const clonedData = deepClone(currentData);
     
     const addSiblingRecursive = (node) => {
       if (node.id === parentNode.id) {
@@ -239,80 +318,39 @@ export const useMindMapNodes = (data, updateData) => {
         if (currentIndex === -1) return node;
         
         const newChildren = [...(node.children || [])];
-        newChildren.splice(currentIndex + 1, 0, newSibling);
+        newChildren.splice(currentIndex + 1, 0, finalNodeData);
         return { ...node, children: newChildren };
       }
       return { ...node, children: node.children?.map(addSiblingRecursive) || [] };
     };
     
-    let newRootNode = addSiblingRecursive(data.rootNode);
-    if (data.settings?.autoLayout !== false) {
+    let newRootNode = addSiblingRecursive(clonedData.rootNode);
+    if (clonedData.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    await updateData({ ...data, rootNode: newRootNode });
+    const newData = { ...clonedData, rootNode: newRootNode };
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
     
-    // 2. ストレージアダプターを通じて反映
-    console.log('🔄 兄弟ノード追加同期開始:', newSibling.id);
-    let result = null;
-    try {
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      result = await adapter.addNode(data.id, newSibling, parentNode.id);
-      
-      if (result.success) {
-        console.log('✅ 兄弟ノード追加完了:', newSibling.id);
-        
-        // ID再生成があった場合、ローカルデータを更新
-        if (result.newId && result.newId !== newSibling.id) {
-          console.log('🔄 ID再生成によるローカルデータ更新:', {
-            originalId: newSibling.id,
-            newId: result.newId
-          });
-          await updateNodeId(newSibling.id, result.newId);
-        }
-      } else {
-        console.warn('⚠️ 兄弟ノード追加失敗（リトライキューに追加）:', result.error);
-      }
-    } catch (error) {
-      console.warn('⚠️ 兄弟ノード追加失敗:', error.message);
-    }
+    console.log('✅ ローカル状態更新完了:', finalNodeData.id);
     
-    // データ状態確認
-    setTimeout(() => {
-      // ID再生成があった場合は新しいIDを使用
-      const finalNodeId = result?.newId || newSibling.id;
-      const actualNode = findNode(finalNodeId);
-      console.log('🔍 兄弟ノード作成後のデータ確認:', { 
-        nodeId: finalNodeId, 
-        exists: !!actualNode,
-        nodeData: actualNode,
-        allNodeIds: flattenNodes().map(n => n.id)
-      });
-    }, 100);
-    
-    // 編集状態を同時に設定
+    // 編集状態を設定
     if (startEditing) {
-      // ID再生成があった場合は新しいIDを使用
-      const nodeIdToEdit = result?.newId || newSibling.id;
-      setSelectedNodeId(nodeIdToEdit);
-      // 遅延なしで即座に編集モード開始（blur競合を防止）
-      setEditingNodeId(nodeIdToEdit);
-      setEditText(newSibling.text || ''); // ノードのテキストを使用
+      setSelectedNodeId(finalNodeData.id);
+      setEditingNodeId(finalNodeData.id);
+      setEditText(finalNodeData.text || '');
     }
     
-    // ID再生成があった場合は新しいIDを返す
-    return result?.newId || newSibling.id;
+    return finalNodeData.id;
   };
 
-  // ノードを削除（即座DB反映）
+  // ノードを削除（DB-First方式）
   const deleteNode = async (nodeId) => {
     if (nodeId === 'root') return false;
     
     console.log('🗑️ deleteNode実行開始:', { 
       nodeId, 
-      timestamp: Date.now(),
-      callStack: new Error().stack
+      timestamp: Date.now()
     });
     
     // 削除後に選択するノードを決定
@@ -338,12 +376,34 @@ export const useMindMapNodes = (data, updateData) => {
       nodeToSelect = 'root';
     }
     
-    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
-    console.log('📝 deleteNode: データをディープクローン中...');
+    // 1. 最初にDB操作を実行
+    let dbResult = null;
+    
+    try {
+      console.log('📤 DB削除操作実行中:', nodeId);
+      
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      dbResult = await adapter.deleteNode(dataRef.current.id, nodeId);
+      
+      if (!dbResult.success) {
+        console.error('❌ DB削除操作失敗:', dbResult.error);
+        throw new Error(dbResult.error || 'ノード削除に失敗しました');
+      }
+      
+      console.log('✅ DB削除操作成功:', nodeId);
+      
+    } catch (error) {
+      console.error('❌ ノード削除DB操作失敗:', error);
+      // DB操作失敗時はローカル状態を変更せずにエラーを返す
+      throw error;
+    }
+    
+    // 2. DB操作成功後、ローカル状態を更新
+    console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    // 1. クローンされたデータに対してローカル状態を即座に更新
     const deleteNodeRecursive = (node) => {
       if (node.children) {
         node.children = node.children.filter(child => child.id !== nodeId);
@@ -360,23 +420,9 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, saveImmediately: true });
+    await updateData(newData, { skipHistory: false, saveImmediately: false }); // DB操作済みなので即座保存は不要
     
-    // 2. ストレージアダプターを通じて反映
-    console.log('🔄 ノード削除同期開始:', nodeId);
-    try {
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-      const adapter = getCurrentAdapter();
-      const result = await adapter.deleteNode(data.id, nodeId);
-      
-      if (result.success) {
-        console.log('✅ ノード削除完了:', nodeId);
-      } else {
-        console.warn('⚠️ ノード削除失敗（リトライキューに追加）:', result.error);
-      }
-    } catch (error) {
-      console.warn('⚠️ ノード削除失敗:', error.message);
-    }
+    console.log('✅ ローカル状態更新完了:', nodeId);
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {
@@ -392,8 +438,8 @@ export const useMindMapNodes = (data, updateData) => {
     updateNode(nodeId, { x, y }, false);
   };
 
-  // ノードの親を変更
-  const changeParent = (nodeId, newParentId) => {
+  // ノードの親を変更（DB-First方式）
+  const changeParent = async (nodeId, newParentId) => {
     if (nodeId === 'root' || nodeId === newParentId) return false;
     
     // 循環参照防止
@@ -415,6 +461,36 @@ export const useMindMapNodes = (data, updateData) => {
     const newParent = findNode(newParentId);
     
     if (!nodeToMove || !newParent) return false;
+    
+    console.log('🔄 ノード親変更開始:', { nodeId, newParentId });
+    
+    // 1. 最初にDB操作を実行
+    let dbResult = null;
+    
+    try {
+      console.log('📤 DB親変更操作実行中:', nodeId);
+      
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+      const adapter = getCurrentAdapter();
+      dbResult = await adapter.moveNode(dataRef.current.id, nodeId, newParentId);
+      
+      if (!dbResult.success) {
+        console.error('❌ DB親変更操作失敗:', dbResult.error);
+        throw new Error(dbResult.error || 'ノード親変更に失敗しました');
+      }
+      
+      console.log('✅ DB親変更操作成功:', nodeId);
+      
+    } catch (error) {
+      console.error('❌ ノード親変更DB操作失敗:', error);
+      // DB操作失敗時はローカル状態を変更せずにエラーを返す
+      throw error;
+    }
+    
+    // 2. DB操作成功後、ローカル状態を更新
+    console.log('📝 ローカル状態更新開始');
+    const currentData = dataRef.current;
+    const clonedData = deepClone(currentData);
     
     // 現在の親から削除
     const removeFromParent = (node) => {
@@ -446,24 +522,26 @@ export const useMindMapNodes = (data, updateData) => {
       };
     };
     
-    let newRootNode = removeFromParent(data.rootNode);
+    let newRootNode = removeFromParent(clonedData.rootNode);
     newRootNode = addToNewParent(newRootNode);
     
-    if (data.settings?.autoLayout !== false) {
+    if (clonedData.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    updateData(
-      { ...data, rootNode: newRootNode },
-      {
-        operationType: 'node_move',
-        operationData: {
-          nodeId,
-          newPosition: { x: nodeToMove.x, y: nodeToMove.y },
-          newParentId
-        }
+    const newData = { ...clonedData, rootNode: newRootNode };
+    await updateData(newData, {
+      skipHistory: false,
+      saveImmediately: false, // DB操作済みなので即座保存は不要
+      operationType: 'node_move',
+      operationData: {
+        nodeId,
+        newPosition: { x: nodeToMove.x, y: nodeToMove.y },
+        newParentId
       }
-    );
+    });
+    
+    console.log('✅ ローカル状態更新完了:', nodeId);
     return true;
   };
 
