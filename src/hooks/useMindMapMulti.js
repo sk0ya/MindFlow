@@ -192,36 +192,63 @@ export const useMindMapMulti = (data, setData, updateData) => {
     
     try {
       // 🔧 マップ切り替え前に編集中のノードを適切に保存
-      if (setEditingNodeId && setEditText && finishEdit) {
-        const editingInput = document.querySelector('.node-input');
-        const currentEditingNodeId = editingInput ? editingInput.dataset.nodeId : null;
-        const currentEditText = editingInput ? editingInput.value : '';
+      const editingInput = document.querySelector('.node-input');
+      const currentEditingNodeId = editingInput ? editingInput.dataset.nodeId : null;
+      const currentEditText = editingInput ? editingInput.value : '';
+      
+      console.log('🔍 マップ切り替え前の状態確認:', {
+        hasEditingInput: !!editingInput,
+        currentEditingNodeId,
+        currentEditText,
+        hasFinishEdit: typeof finishEdit === 'function',
+        hasSetEditingNodeId: typeof setEditingNodeId === 'function',
+        hasSetEditText: typeof setEditText === 'function'
+      });
+      
+      // 編集状態があり、必要な関数が揃っている場合のみ保存処理実行
+      if (currentEditingNodeId && currentEditText !== undefined && typeof finishEdit === 'function') {
+        console.log('💾 マップ切り替え前の編集保存開始:', { 
+          nodeId: currentEditingNodeId, 
+          text: currentEditText,
+          isEmpty: !currentEditText || currentEditText.trim() === '',
+          textLength: currentEditText?.length || 0
+        });
         
-        if (currentEditingNodeId && currentEditText !== undefined) {
-          console.log('💾 マップ切り替え前の編集保存:', { 
-            nodeId: currentEditingNodeId, 
-            text: currentEditText,
-            isEmpty: !currentEditText || currentEditText.trim() === ''
+        // 編集中のテキストを保存（削除判定を無効化）
+        try {
+          await finishEdit(currentEditingNodeId, currentEditText, { 
+            skipMapSwitchDelete: true,  // マップ切り替え時の削除を無効化
+            allowDuringEdit: true,
+            source: 'mapSwitch'
           });
+          console.log('✅ マップ切り替え前の編集保存完了');
           
-          // 編集中のテキストを保存（削除判定を無効化）
-          try {
-            await finishEdit(currentEditingNodeId, currentEditText, { 
-              skipMapSwitchDelete: true,  // マップ切り替え時の削除を無効化
-              allowDuringEdit: true,
-              source: 'mapSwitch'
-            });
-            console.log('✅ マップ切り替え前の編集保存完了');
-            
-            // 編集状態をクリア（DOM要素の重複を防ぐ）
-            const currentEditingInput = document.querySelector('.node-input');
-            if (currentEditingInput) {
-              currentEditingInput.blur();
-              currentEditingInput.remove();
-            }
-          } catch (editError) {
-            console.warn('⚠️ マップ切り替え前の編集保存失敗:', editError);
+          // 編集状態をクリア（DOM要素の重複を防ぐ）
+          const currentEditingInput = document.querySelector('.node-input');
+          if (currentEditingInput) {
+            currentEditingInput.blur();
+            currentEditingInput.remove();
           }
+        } catch (editError) {
+          console.warn('⚠️ マップ切り替え前の編集保存失敗:', editError);
+        }
+      } else if (currentEditingNodeId && !finishEdit) {
+        console.warn('⚠️ 編集中のノードが検出されましたが、finishEdit関数が提供されていません:', {
+          nodeId: currentEditingNodeId,
+          text: currentEditText,
+          finishEditType: typeof finishEdit
+        });
+      }
+      
+      // 🔧 現在のマップデータを保存してから切り替え
+      if (data && data.id && data.id !== mapId) {
+        console.log('💾 マップ切り替え前に現在のマップを保存:', data.id);
+        try {
+          const adapter = getCurrentAdapter();
+          await adapter.updateMap(data.id, data);
+          console.log('✅ 現在のマップ保存完了:', data.title);
+        } catch (saveError) {
+          console.warn('⚠️ 現在のマップ保存失敗:', saveError);
         }
       }
       
