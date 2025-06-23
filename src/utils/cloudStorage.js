@@ -190,6 +190,21 @@ class CloudStorageClient {
       } : null
     });
     
+    // 🔧 取得データの詳細確認
+    console.log('📥 取得データ詳細分析:', {
+      mapId: result?.id,
+      title: result?.title,
+      rootNodeChildren: result?.rootNode?.children?.length || 0,
+      childrenIds: result?.rootNode?.children?.map(c => c.id) || [],
+      childrenDetails: result?.rootNode?.children?.map(c => ({
+        id: c.id,
+        text: c.text,
+        hasChildren: c.children?.length > 0,
+        childrenCount: c.children?.length || 0
+      })) || [],
+      totalDataSize: JSON.stringify(result).length
+    });
+    
     // データ構造の検証と正規化
     if (result && result.rootNode) {
       // rootNodeが文字列の場合はパース
@@ -264,11 +279,36 @@ class CloudStorageClient {
       id: id // リクエストURLのIDと一致させる
     };
     
-    console.log('送信データ:', JSON.stringify(dataToSend, null, 2));
+    // 🔧 詳細な送信データログ
+    console.log('📤 実際の送信データ詳細:', {
+      mapId: dataToSend.id,
+      title: dataToSend.title,
+      hasRootNode: !!dataToSend.rootNode,
+      rootNodeId: dataToSend.rootNode?.id,
+      rootNodeChildren: dataToSend.rootNode?.children?.length || 0,
+      childrenIds: dataToSend.rootNode?.children?.map(c => c.id) || [],
+      childrenDetails: dataToSend.rootNode?.children?.map(c => ({
+        id: c.id,
+        text: c.text,
+        hasChildren: c.children?.length > 0,
+        childrenCount: c.children?.length || 0
+      })) || [],
+      jsonSize: JSON.stringify(dataToSend).length
+    });
+    
     const result = await this.request(`/mindmaps/${id}`, {
       method: 'PUT',
       body: JSON.stringify(dataToSend)
     });
+    
+    // 🔧 レスポンスデータの検証
+    console.log('📥 サーバーレスポンス詳細:', {
+      responseTitle: result.title,
+      hasRootNode: !!result.rootNode,
+      rootNodeChildren: result.rootNode?.children?.length || 0,
+      responseJsonSize: JSON.stringify(result).length
+    });
+    
     console.log('☁️ クラウド: マップ更新完了:', result.title);
     return result;
   }

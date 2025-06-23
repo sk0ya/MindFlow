@@ -242,7 +242,17 @@ export const useMindMapMulti = (data, setData, updateData) => {
       
       // 🔧 現在のマップデータを保存してから切り替え
       if (data && data.id && data.id !== mapId) {
-        console.log('💾 マップ切り替え前に現在のマップを保存:', data.id);
+        console.log('💾 マップ切り替え前に現在のマップを保存:', {
+          mapId: data.id,
+          title: data.title,
+          rootNodeChildren: data.rootNode?.children?.length || 0,
+          childrenIds: data.rootNode?.children?.map(c => c.id) || [],
+          childrenDetails: data.rootNode?.children?.map(c => ({
+            id: c.id,
+            text: c.text,
+            hasChildren: c.children?.length > 0
+          })) || []
+        });
         try {
           const adapter = getCurrentAdapter();
           await adapter.updateMap(data.id, data);
@@ -279,9 +289,12 @@ export const useMindMapMulti = (data, setData, updateData) => {
           id: c.id,
           text: c.text,
           hasX: typeof c.x === 'number',
-          hasY: typeof c.y === 'number'
+          hasY: typeof c.y === 'number',
+          hasChildren: c.children?.length > 0,
+          childrenCount: c.children?.length || 0
         })) || [],
-        isClonedData: originalTargetMap !== targetMap // 参照が異なることを確認
+        isClonedData: originalTargetMap !== targetMap, // 参照が異なることを確認
+        originalMapChildren: originalTargetMap.rootNode?.children?.length || 0
       });
       
       // マップ表示（完全に独立したデータ）
@@ -294,13 +307,22 @@ export const useMindMapMulti = (data, setData, updateData) => {
           id: c.id,
           text: c.text,
           hasX: typeof c.x === 'number',
-          hasY: typeof c.y === 'number'
+          hasY: typeof c.y === 'number',
+          hasChildren: c.children?.length > 0,
+          childrenCount: c.children?.length || 0,
+          color: c.color
         })) || [],
         dataIndependence: {
           fromOriginal: originalTargetMap.rootNode !== coloredMap.rootNode,
           fromTarget: targetMap.rootNode !== coloredMap.rootNode,
           childrenFromOriginal: originalTargetMap.rootNode?.children !== coloredMap.rootNode?.children,
           childrenFromTarget: targetMap.rootNode?.children !== coloredMap.rootNode?.children
+        },
+        dataIntegrity: {
+          originalChildren: originalTargetMap.rootNode?.children?.length || 0,
+          targetChildren: targetMap.rootNode?.children?.length || 0,
+          coloredChildren: coloredMap.rootNode?.children?.length || 0,
+          isConsistent: (originalTargetMap.rootNode?.children?.length || 0) === (coloredMap.rootNode?.children?.length || 0)
         }
       });
       
@@ -308,6 +330,24 @@ export const useMindMapMulti = (data, setData, updateData) => {
       if (data && coloredMap.rootNode.children === data.rootNode?.children) {
         console.error('❌ 重大な問題: 新しいマップが既存マップと子ノード配列を共有しています！');
         throw new Error('データ参照共有エラー: マップ間でデータが共有されています');
+      }
+      
+      // 🔧 データ消失チェック（問題特定用）
+      const originalChildren = originalTargetMap.rootNode?.children?.length || 0;
+      const finalChildren = coloredMap.rootNode?.children?.length || 0;
+      if (originalChildren !== finalChildren) {
+        console.error('❌ データ消失検出!', {
+          originalChildren,
+          finalChildren,
+          lost: originalChildren - finalChildren,
+          mapId: mapId,
+          mapTitle: coloredMap.title
+        });
+        // デバッグ用に詳細な差分を出力
+        console.error('詳細差分:', {
+          originalChildrenIds: originalTargetMap.rootNode?.children?.map(c => c.id) || [],
+          finalChildrenIds: coloredMap.rootNode?.children?.map(c => c.id) || []
+        });
       }
       
       setData(coloredMap);

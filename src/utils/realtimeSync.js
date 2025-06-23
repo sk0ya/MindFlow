@@ -96,7 +96,7 @@ class RealtimeSync {
     try {
       console.log('📝 ノード更新をDB反映:', nodeId, updates);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const response = await fetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -134,7 +134,7 @@ class RealtimeSync {
     try {
       console.log('🗑️ ノード削除をDB反映:', nodeId);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const response = await fetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -170,7 +170,7 @@ class RealtimeSync {
     try {
       console.log('🔄 ノード移動をDB反映:', nodeId, '->', newParentId);
       
-      const response = await fetch(`${this.baseUrl}/nodes/${nodeId}/move`, {
+      const response = await fetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}/move`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({

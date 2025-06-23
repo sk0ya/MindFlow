@@ -241,7 +241,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: ノード追加開始', nodeData.id);
       
       const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes`, {
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -282,7 +282,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: ノード更新開始', nodeId);
       
       const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -321,7 +321,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: ノード削除開始', nodeId);
       
       const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}`, {
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -358,7 +358,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
       
       const { authManager } = await import('./authManager.js');
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${nodeId}/move`, {
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}/move`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
