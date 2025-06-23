@@ -22,6 +22,15 @@ describe('Cloud Sync Integration Tests', () => {
     };
     Object.defineProperty(window, 'localStorage', { value: mockLocalStorage, writable: true });
 
+    // AuthManagerのモック
+    jest.doMock('../../utils/authManager.js', () => ({
+      authManager: {
+        isAuthenticated: jest.fn(() => true),
+        getAuthToken: jest.fn(() => 'mock-token'),
+        authenticatedFetch: global.fetch
+      }
+    }));
+
     // DOM のクリア
     document.body.innerHTML = '';
   });
@@ -29,6 +38,53 @@ describe('Cloud Sync Integration Tests', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     jest.clearAllMocks();
+  });
+
+  describe('ノード削除エラーハンドリング', () => {
+    test('404エラー（既に削除済み）の場合は成功として扱う', async () => {
+      // CloudStorageAdapterを直接インポート
+      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
+      const adapter = new CloudStorageAdapter();
+      
+      // 404レスポンスをモック（初期化時の呼び出しをスキップしてdeleteNode用のみ）
+      global.fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ message: 'initialized' })
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('Not Found')
+        });
+
+      // 削除を実行
+      const result = await adapter.deleteNode('test-map', 'non-existent-node');
+      
+      // 404は成功として扱われることを確認
+      expect(result.success).toBe(true);
+      expect(result.result.message).toBe('Node already deleted');
+    });
+
+    test('他のエラーコードの場合は失敗として扱う', async () => {
+      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
+      const adapter = new CloudStorageAdapter();
+      
+      // 500エラーをモック（初期化時の呼び出しをスキップしてdeleteNode用のみ）
+      global.fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ message: 'initialized' })
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve('Internal Server Error')
+        });
+
+      // 削除を実行してエラーが投げられることを確認
+      await expect(adapter.deleteNode('test-map', 'test-node')).rejects.toThrow('API エラー: 500');
+    });
   });
 
   describe('編集中データ保護機能', () => {

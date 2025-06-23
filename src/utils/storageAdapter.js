@@ -440,6 +440,11 @@ class CloudStorageAdapter {
       });
 
       if (!response.ok) {
+        // 404の場合は既に削除済みなので成功として扱う
+        if (response.status === 404) {
+          console.log('☁️ クラウド: ノード削除完了 (既に削除済み)');
+          return { success: true, result: { message: 'Node already deleted' } };
+        }
         throw new Error(`API エラー: ${response.status}`);
       }
 
