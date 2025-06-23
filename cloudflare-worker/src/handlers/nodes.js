@@ -186,11 +186,14 @@ async function createNode(db, userId, mindmapId, requestData) {
   const nodeData = requestData.node || requestData; // node プロパティがある場合はそれを使用
   const parentId = requestData.parentId || nodeData.parent_id;
   
+  // 'root' 文字列をnullに変換（リレーショナル構造では root ノードの parent_id は NULL）
+  const dbParentId = (parentId === 'root' || parentId === null || parentId === undefined) ? null : parentId;
+  
   // 親ノード存在確認（rootノード以外）
-  if (parentId && parentId !== 'root') {
+  if (dbParentId !== null) {
     const parentNode = await db.prepare(
       'SELECT id FROM nodes WHERE id = ? AND mindmap_id = ?'
-    ).bind(parentId, mindmapId).first();
+    ).bind(dbParentId, mindmapId).first();
     
     if (!parentNode) {
       const error = new Error('Parent node not found');
@@ -212,8 +215,8 @@ async function createNode(db, userId, mindmapId, requestData) {
     nodeId,
     mindmapId,
     nodeData.text || '',
-    nodeData.type || 'branch',
-    parentId || null,
+    dbParentId === null ? 'root' : 'branch',
+    dbParentId,
     nodeData.x || nodeData.position_x || 0,  // x → position_x
     nodeData.y || nodeData.position_y || 0,  // y → position_y
     JSON.stringify(nodeData.style_settings || nodeData.styleSettings || {}),

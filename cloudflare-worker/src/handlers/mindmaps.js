@@ -355,6 +355,8 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
   nodes.forEach(node => {
     const hierarchicalNode = nodeMap.get(node.id);
     
+    console.log(`🔍 ノード処理: ${node.id}, parent_id: ${node.parent_id}, type: ${node.type}`);
+    
     if (node.parent_id) {
       const parent = nodeMap.get(node.parent_id);
       if (parent) {
@@ -369,7 +371,7 @@ function buildHierarchicalStructure(nodes, attachments, links, mindmapId = null)
         console.warn(`⚠️ 複数のrootNodeが検出されました: 既存=${rootNode.id}, 新規=${node.id}`);
       }
       rootNode = hierarchicalNode;
-      console.log(`🌱 rootNode設定: ${node.id}`);
+      console.log(`🌱 rootNode設定: ${node.id}, テキスト: "${node.text}"`);
     }
   });
   
@@ -490,7 +492,16 @@ async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) 
   }
   
   // 一括実行
-  await db.batch(statements);
+  try {
+    const batchResult = await db.batch(statements);
+    console.log('✅ createMindMapRelational バッチ実行結果:', {
+      totalStatements: statements.length,
+      results: batchResult ? batchResult.length : 'undefined'
+    });
+  } catch (batchError) {
+    console.error('❌ createMindMapRelational バッチ実行エラー:', batchError);
+    throw new Error(`バッチ処理失敗: ${batchError.message}`);
+  }
 }
 
 // リレーショナル形式での安全な更新（データ損失防止）
@@ -568,8 +579,20 @@ async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) 
     
     // 一括実行（トランザクション保護）
     console.log('🚀 バッチ実行開始（総文数:', statements.length, '）');
-    await db.batch(statements);
-    console.log('✅ updateMindMapRelational 安全更新完了');
+    
+    try {
+      const batchResult = await db.batch(statements);
+      console.log('✅ バッチ実行結果:', {
+        totalStatements: statements.length,
+        results: batchResult ? batchResult.length : 'undefined',
+        firstResultSuccess: batchResult && batchResult[0] ? batchResult[0].success : 'N/A'
+      });
+      console.log('✅ updateMindMapRelational 安全更新完了');
+    } catch (batchError) {
+      console.error('❌ バッチ実行エラー:', batchError);
+      console.error('❌ 失敗した文:', statements.length, '文中の一部');
+      throw new Error(`バッチ処理失敗: ${batchError.message}`);
+    }
   } catch (error) {
     console.error('❌ updateMindMapRelational エラー:', error);
     console.error('❌ エラースタック:', error.stack);
@@ -589,16 +612,20 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
   
   const statements = [];
   
-  // ノード作成（INSERT OR REPLACEで安全に更新）
+  // ノード作成（INSERT OR IGNOREで安全に作成、その後UPDATEで更新）
+  // 'root' 文字列をnullに変換（リレーショナル構造では root ノードの parent_id は NULL）
+  const dbParentId = (parentId === 'root' || parentId === null || parentId === undefined) ? null : parentId;
+  
+  // まずINSERT OR IGNOREで作成を試みる
   statements.push(
     db.prepare(
-      'INSERT OR REPLACE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT OR IGNORE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       node.id,
       mindmapId,
-      parentId,
+      dbParentId,
       node.text || '',
-      parentId ? 'branch' : 'root',
+      dbParentId === null ? 'root' : 'branch',
       node.x || 0,
       node.y || 0,
       JSON.stringify({
@@ -613,6 +640,32 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       node.collapsed || false,
       now,
       now
+    )
+  );
+  
+  // 次にUPDATEで更新を試みる（既存の場合）
+  statements.push(
+    db.prepare(
+      'UPDATE nodes SET parent_id = ?, text = ?, type = ?, position_x = ?, position_y = ?, style_settings = ?, notes = ?, tags = ?, collapsed = ?, updated_at = ? WHERE id = ? AND mindmap_id = ?'
+    ).bind(
+      dbParentId,
+      node.text || '',
+      dbParentId === null ? 'root' : 'branch',
+      node.x || 0,
+      node.y || 0,
+      JSON.stringify({
+        fontSize: node.fontSize,
+        fontWeight: node.fontWeight,
+        backgroundColor: node.backgroundColor,
+        textColor: node.textColor,
+        color: node.color
+      }),
+      node.notes || '',
+      JSON.stringify(node.tags || []),
+      node.collapsed || false,
+      now,
+      node.id,
+      mindmapId
     )
   );
   
