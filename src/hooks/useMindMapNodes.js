@@ -530,14 +530,31 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 一時ノードの特別処理
     if (isTemporary) {
-      console.log('📦 一時ノードの編集完了処理:', { nodeId, isEmpty, textToSave });
+      console.log('📦 一時ノードの編集完了処理:', { 
+        nodeId, 
+        isEmpty, 
+        textToSave,
+        skipMapSwitchDelete: options.skipMapSwitchDelete 
+      });
       
-      if (isEmpty) {
-        // 空の一時ノードは削除
+      if (isEmpty && !options.skipMapSwitchDelete) {
+        // 空の一時ノードは削除（マップ切り替え時は保護）
         console.log('🗑️ 空の一時ノードを削除:', nodeId);
         setEditingNodeId(null);
         setEditText('');
         await deleteNode(nodeId); // ローカルのみ削除（元々DBにない）
+        return;
+      } else if (isEmpty && options.skipMapSwitchDelete) {
+        // マップ切り替え時は空の一時ノードも保護
+        console.log('🛡️ マップ切り替え時の一時ノード保護:', nodeId);
+        // 一時フラグを除去して通常ノードに変換（空テキストでも）
+        await updateNode(nodeId, { 
+          text: '', // 空テキストで保存
+          isTemporary: undefined 
+        }, false, {
+          allowDuringEdit: true, 
+          source: 'finishEdit-tempToNormalOnMapSwitch' 
+        });
         return;
       } else {
         // テキストがある一時ノードはDBに保存して正式なノードにする
@@ -697,6 +714,9 @@ export const useMindMapNodes = (data, updateData) => {
       if (!isEmpty && !isTemporary) { // 一時ノードは上で処理済み
         console.log('📝 finishEdit - 保護モード: テキストのみ保存:', textToSave.trim());
         updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-protected' });
+      } else if (isTemporary) {
+        // 一時ノードの保護モード処理は上で完了
+        console.log('📦 一時ノードの保護モード処理完了:', nodeId);
       }
       return;
     }
