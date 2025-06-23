@@ -180,6 +180,15 @@ export const useMindMapNodes = (data, updateData) => {
       
       if (result.success) {
         console.log('✅ ノード追加完了:', newChild.id);
+        
+        // ID再生成があった場合、ローカルデータを更新
+        if (result.newId && result.newId !== newChild.id) {
+          console.log('🔄 ID再生成によるローカルデータ更新:', {
+            originalId: newChild.id,
+            newId: result.newId
+          });
+          await updateNodeId(newChild.id, result.newId);
+        }
       } else {
         console.warn('⚠️ ノード追加失敗（リトライキューに追加）:', result.error);
       }
@@ -248,6 +257,15 @@ export const useMindMapNodes = (data, updateData) => {
       
       if (result.success) {
         console.log('✅ 兄弟ノード追加完了:', newSibling.id);
+        
+        // ID再生成があった場合、ローカルデータを更新
+        if (result.newId && result.newId !== newSibling.id) {
+          console.log('🔄 ID再生成によるローカルデータ更新:', {
+            originalId: newSibling.id,
+            newId: result.newId
+          });
+          await updateNodeId(newSibling.id, result.newId);
+        }
       } else {
         console.warn('⚠️ 兄弟ノード追加失敗（リトライキューに追加）:', result.error);
       }
@@ -595,6 +613,43 @@ export const useMindMapNodes = (data, updateData) => {
     updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
   };
 
+  // ノードIDを更新（UNIQUE制約違反対応）
+  const updateNodeId = async (oldId, newId) => {
+    try {
+      console.log('🔄 ノードID更新開始:', { oldId, newId });
+      
+      const updateNodeIdRecursive = (node) => {
+        if (node.id === oldId) {
+          return { ...node, id: newId };
+        }
+        if (node.children) {
+          return { 
+            ...node, 
+            children: node.children.map(updateNodeIdRecursive) 
+          };
+        }
+        return node;
+      };
+      
+      const newRootNode = updateNodeIdRecursive(data.rootNode);
+      const newData = { ...data, rootNode: newRootNode };
+      
+      await updateData(newData, { skipHistory: true, saveImmediately: false });
+      
+      // 選択・編集状態も更新
+      if (selectedNodeId === oldId) {
+        setSelectedNodeId(newId);
+      }
+      if (editingNodeId === oldId) {
+        setEditingNodeId(newId);
+      }
+      
+      console.log('✅ ノードID更新完了:', { oldId, newId });
+    } catch (error) {
+      console.error('❌ ノードID更新失敗:', error);
+    }
+  };
+
   return {
     selectedNodeId,
     editingNodeId,
@@ -614,6 +669,7 @@ export const useMindMapNodes = (data, updateData) => {
     applyAutoLayout,
     startEdit,
     finishEdit,
-    toggleCollapse
+    toggleCollapse,
+    updateNodeId
   };
 };

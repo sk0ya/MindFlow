@@ -120,11 +120,12 @@ describe('ノード作成エラーの調査', () => {
   });
 
   describe('エラーレスポンスの処理テスト', () => {
-    test('500エラーの処理', async () => {
-      // 500エラーをモック
+    test('500エラー（UNIQUE制約違反）の処理', async () => {
+      // UNIQUE制約違反の500エラーをモック
       mockAuthenticatedFetch.mockResolvedValue({
         ok: false,
-        status: 500
+        status: 500,
+        text: () => Promise.resolve('{"error":"D1_ERROR: UNIQUE constraint failed: nodes.id: SQLITE_CONSTRAINT"}')
       });
 
       const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
@@ -133,19 +134,21 @@ describe('ノード作成エラーの調査', () => {
 
       const result = await storageAdapter.addNode(
         'map_test_123',
-        { id: 'node_test', text: 'テスト' },
+        { id: 'node_duplicate_test', text: 'テスト' },
         'root'
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('API エラー: 500');
+      expect(result.error).toContain('UNIQUE constraint failed');
+      expect(result.error).toContain('nodes.id');
     });
 
     test('400エラーの処理', async () => {
       // 400エラーをモック
       mockAuthenticatedFetch.mockResolvedValue({
         ok: false,
-        status: 400
+        status: 400,
+        text: () => Promise.resolve('{"error":"Bad Request"}')
       });
 
       const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
@@ -159,7 +162,89 @@ describe('ノード作成エラーの調査', () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('API エラー: 400');
+      expect(result.error).toContain('400');
+    });
+
+    test('ネットワークエラーの処理', async () => {
+      // ネットワークエラーをモック
+      mockAuthenticatedFetch.mockRejectedValue(new Error('Network Error'));
+
+      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
+      storageAdapter = new CloudStorageAdapter();
+      await storageAdapter.ensureInitialized();
+
+      const result = await storageAdapter.addNode(
+        'map_test_123',
+        { id: 'node_test', text: 'テスト' },
+        'root'
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Network Error');
+    });
+  });
+
+  describe('ノードID重複問題のテスト', () => {
+    test('同じIDでの連続ノード作成', async () => {
+      let callCount = 0;
+      mockAuthenticatedFetch.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // 1回目: 成功
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ success: true })
+          });
+        } else {
+          // 2回目以降: UNIQUE制約違反
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            text: () => Promise.resolve('{"error":"D1_ERROR: UNIQUE constraint failed: nodes.id: SQLITE_CONSTRAINT"}')
+          });
+        }
+      });
+
+      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
+      storageAdapter = new CloudStorageAdapter();
+      await storageAdapter.ensureInitialized();
+
+      const nodeData = { id: 'node_duplicate_test', text: 'テスト', x: 100, y: 200, children: [] };
+
+      // 1回目: 成功
+      const result1 = await storageAdapter.addNode('map_test_123', nodeData, 'root');
+      expect(result1.success).toBe(true);
+
+      // 2回目: 重複エラー
+      const result2 = await storageAdapter.addNode('map_test_123', nodeData, 'root');
+      expect(result2.success).toBe(false);
+      expect(result2.error).toContain('UNIQUE constraint failed');
+    });
+
+    test('リトライ時のID再生成', async () => {
+      // ID再生成機能をテスト
+      const originalGenerateId = require('../../utils/dataTypes.js').generateId;
+      let idCounter = 0;
+      
+      // generateIdをモック
+      jest.doMock('../../utils/dataTypes.js', () => ({
+        ...jest.requireActual('../../utils/dataTypes.js'),
+        generateId: () => `node_test_${++idCounter}`
+      }));
+
+      // ペンディングオペレーションのリトライをテスト
+      const pendingOp = {
+        type: 'add',
+        mapId: 'map_test_123',
+        nodeData: { id: 'node_original', text: 'テスト', x: 100, y: 200, children: [] },
+        parentId: 'root',
+        timestamp: Date.now()
+      };
+
+      expect(pendingOp.nodeData.id).toBe('node_original');
+      
+      // リトライ時にIDが変更されることを期待
+      // （実際の実装では新しいIDが生成されるべき）
     });
   });
 

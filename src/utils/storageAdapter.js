@@ -293,6 +293,12 @@ class CloudStorageAdapter {
             requestData: requestBody
           });
           errorDetails += `, Body: ${errorBody}`;
+          
+          // UNIQUE制約違反の場合は特別処理
+          if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
+            console.warn('🔄 UNIQUE制約違反検出: ノードIDを再生成してリトライします', nodeData.id);
+            return await this.retryWithNewId(mapId, nodeData, parentId);
+          }
         } catch (e) {
           console.error('❌ エラーレスポンス読み取り失敗:', e);
         }
@@ -315,6 +321,66 @@ class CloudStorageAdapter {
       });
       return { success: false, error: error.message };
     }
+  }
+
+  // UNIQUE制約違反時のID再生成リトライ
+  async retryWithNewId(mapId, originalNodeData, parentId, maxRetries = 3) {
+    const { generateId } = await import('./dataTypes.js');
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // 新しいIDを生成
+        const newId = generateId();
+        const newNodeData = { ...originalNodeData, id: newId };
+        
+        console.log(`🔄 リトライ ${attempt}/${maxRetries}: 新ID生成`, {
+          originalId: originalNodeData.id,
+          newId: newId,
+          attempt
+        });
+
+        // 新しいIDでリクエスト再送信
+        const { authManager } = await import('./authManager.js');
+        const requestBody = {
+          mapId,
+          node: newNodeData,
+          parentId,
+          operation: 'add'
+        };
+
+        const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ ID再生成リトライ成功:', newId);
+          return { success: true, result, newId };
+        } else {
+          const errorBody = await response.text();
+          console.warn(`❌ リトライ ${attempt} 失敗:`, errorBody);
+          
+          // 再度UNIQUE制約違反の場合は次のリトライへ
+          if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
+            continue;
+          } else {
+            // 他のエラーの場合は即座に失敗
+            throw new Error(`API エラー: Status: ${response.status}, Body: ${errorBody}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ リトライ ${attempt} でエラー:`, error);
+        if (attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
+    
+    throw new Error(`ID再生成リトライが ${maxRetries} 回失敗しました`);
   }
 
   async updateNode(mapId, nodeId, updates) {
@@ -523,3 +589,6 @@ setInterval(() => {
     adapter.retryPendingOperations();
   }
 }, 30000);
+
+// テスト用にクラスをexport
+export { CloudStorageAdapter, LocalStorageAdapter, StorageAdapterFactory };
