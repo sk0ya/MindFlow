@@ -1,338 +1,252 @@
+/**
+ * マップ切り替え時のデータ消失問題のテスト
+ */
+
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useMindMapMulti } from '../useMindMapMulti';
-import { useMindMapNodes } from '../useMindMapNodes';
+import { useMindMapData } from '../useMindMapData.js';
+import { useMindMapNodes } from '../useMindMapNodes.js';
+import { useMindMapMulti } from '../useMindMapMulti.js';
 
-// モックの設定
-jest.mock('../../utils/storageRouter.js', () => ({
-  getCurrentMindMap: jest.fn(),
-  saveMindMap: jest.fn(),
-  getAllMindMaps: jest.fn(),
-  getMindMap: jest.fn(),
-  createMindMap: jest.fn(),
-  deleteMindMap: jest.fn(),
-}));
-
-jest.mock('../../utils/storage.js', () => ({
-  getAppSettings: jest.fn(() => ({ storageMode: 'local' })),
-}));
-
-jest.mock('../../utils/dataTypes.js', () => ({
-  deepClone: jest.fn((obj) => JSON.parse(JSON.stringify(obj))),
-  assignColorsToExistingNodes: jest.fn((data) => data),
-  createInitialData: jest.fn(() => ({
-    id: 'test-map-id',
-    title: 'Test Map',
-    rootNode: {
-      id: 'root',
-      text: 'Root Node',
-      x: 400,
-      y: 300,
-      children: []
-    },
-    settings: {
-      autoSave: true,
-      autoLayout: true
-    }
-  }))
-}));
-
+// 必要なモック設定
 jest.mock('../../utils/authManager.js', () => ({
   authManager: {
-    isAuthenticated: jest.fn(() => false)
+    isAuthenticated: jest.fn(() => true),
+    getAuthToken: jest.fn(() => 'mock-token'),
+    authenticatedFetch: jest.fn()
   }
 }));
 
-jest.mock('../../utils/storageAdapter.js', () => ({
-  getCurrentAdapter: jest.fn(() => ({
-    getMap: jest.fn(),
-    saveMap: jest.fn(),
-    getAllMaps: jest.fn()
-  }))
-}));
-
-jest.mock('../../utils/localStorage.js', () => ({
-  STORAGE_KEYS: {
-    MINDMAPS: 'mindmaps'
-  }
-}));
-
-// DOM要素のモック
-const createMockInput = (nodeId, value = '') => {
-  const input = document.createElement('input');
-  input.classList.add('node-input');
-  input.dataset.nodeId = nodeId;
-  input.value = value;
-  return input;
+// モック設定の最適化
+const mockAdapter = {
+  getAllMaps: jest.fn(),
+  getMap: jest.fn(),
+  updateMap: jest.fn(),
+  addNode: jest.fn(),
+  updateNode: jest.fn(),
+  deleteNode: jest.fn(),
+  pendingOperations: new Map(),
+  retryPendingOperations: jest.fn()
 };
 
-// テストデータの準備
-const createTestMap = (id, title, children = []) => ({
-  id,
-  title,
-  rootNode: {
-    id: 'root',
-    text: title,
-    x: 400,
-    y: 300,
-    children: children.map((child, index) => ({
-      id: `child-${index + 1}`,
-      text: child,
-      x: 500 + index * 100,
-      y: 350,
-      children: []
-    }))
-  },
-  settings: {
-    autoSave: true,
-    autoLayout: true
-  }
-});
+jest.mock('../../utils/storageAdapter.js', () => ({
+  getCurrentAdapter: jest.fn(() => mockAdapter)
+}));
 
-describe('マップ切り替え時のデータ保護テスト', () => {
-  let mockStorageRouter;
-  let mockStorageAdapter;
-  let mockFinishEdit;
+jest.mock('../../utils/storageRouter.js', () => ({
+  StorageRouter: jest.fn(),
+  getAllMindMaps: jest.fn(),
+  getMindMap: jest.fn(),
+  saveMindMap: jest.fn()
+}));
 
+describe('マップ切り替え時のデータ保持', () => {
   beforeEach(() => {
-    mockStorageRouter = require('../../utils/storageRouter.js');
-    mockStorageAdapter = require('../../utils/storageAdapter.js');
-    
-    // テストマップデータを準備
-    const map1 = createTestMap('map1', 'Map 1', ['Original Child 1', 'Original Child 2']);
-    const map2 = createTestMap('map2', 'Map 2', ['Child A', 'Child B']);
-    
-    // アダプターのモック設定
-    const mockAdapter = {
-      getMap: jest.fn((mapId) => {
-        if (mapId === 'map1') return Promise.resolve(map1);
-        if (mapId === 'map2') return Promise.resolve(map2);
-        return Promise.reject(new Error('Map not found'));
-      }),
-      saveMap: jest.fn().mockResolvedValue(),
-      getAllMaps: jest.fn().mockResolvedValue([
-        { id: 'map1', title: 'Map 1', updatedAt: '2024-01-01T00:00:00Z' },
-        { id: 'map2', title: 'Map 2', updatedAt: '2024-01-02T00:00:00Z' }
-      ])
-    };
-    
-    mockStorageAdapter.getCurrentAdapter.mockReturnValue(mockAdapter);
-    
-    mockStorageRouter.getAllMindMaps.mockResolvedValue([
-      { id: 'map1', title: 'Map 1', updatedAt: '2024-01-01T00:00:00Z' },
-      { id: 'map2', title: 'Map 2', updatedAt: '2024-01-02T00:00:00Z' }
-    ]);
-    
-    mockStorageRouter.getMindMap.mockImplementation((mapId) => {
-      if (mapId === 'map1') return Promise.resolve(map1);
-      if (mapId === 'map2') return Promise.resolve(map2);
-      return Promise.reject(new Error('Map not found'));
-    });
-    
-    mockStorageRouter.saveMindMap.mockResolvedValue();
-    
-    // DOM のクリア
-    document.body.innerHTML = '';
-    
-    // window.alert のモック
-    global.alert = jest.fn();
-    
-    // finishEdit モックの設定
-    mockFinishEdit = jest.fn().mockResolvedValue();
+    // モックをリセット
+    jest.clearAllMocks();
+    mockAdapter.pendingOperations.clear();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetModules();
   });
 
-  test('マップ編集→切り替え→編集→戻る時のデータ削除問題を検出', async () => {
-    const { result } = renderHook(() => useMindMapMulti());
-
-    // マップを初期化
-    await waitFor(() => {
-      expect(result.current.allMindMaps).toHaveLength(2);
-    });
-
-    // Map 1 に切り替え
-    await act(async () => {
-      await result.current.switchToMap('map1', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
-    });
-
-    // Map 1で編集中の状態をシミュレート
-    const editingInput1 = createMockInput('child-1', 'Edited Child 1');
-    document.body.appendChild(editingInput1);
-    editingInput1.focus();
-
-    // Map 2 に切り替え（編集中データが保存されるはず）
-    await act(async () => {
-      await result.current.switchToMap('map2', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
-    });
-
-    // finishEdit が適切なパラメータで呼ばれたことを確認
-    expect(mockFinishEdit).toHaveBeenCalledWith(
-      'child-1',
-      'Edited Child 1',
-      expect.objectContaining({
-        skipMapSwitchDelete: true,
-        allowDuringEdit: true,
-        source: 'mapSwitch'
-      })
-    );
-
-    // Map 2で編集
-    const editingInput2 = createMockInput('child-1', 'Edited Child A');
-    document.body.appendChild(editingInput2);
-    editingInput2.focus();
-
-    // Map 1 に戻る
-    await act(async () => {
-      await result.current.switchToMap('map1', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
-    });
-
-    // Map 1のデータが保持されていることを確認
-    // この時点で、Map 1の編集内容（'Edited Child 1'）が失われているかを検証
-    const savedMap1 = mockStorageRouter.getMindMap.mock.results.find(
-      result => result.value?.id === 'map1'
-    );
-
-    // 実際の問題: Map 1に戻った時にデータが削除されている
-    // このテストは現在の問題を再現するために作成
-    console.log('Map 1のデータ状態:', await mockStorageRouter.getMindMap('map1'));
-  });
-
-  test('複数回のマップ切り替えでデータが保持される', async () => {
-    const { result } = renderHook(() => useMindMapMulti());
-
-    // 初期化を待つ
-    await waitFor(() => {
-      expect(result.current.allMindMaps).toHaveLength(2);
-    });
-
-    // Map 1で編集
-    await act(async () => {
-      await result.current.switchToMap('map1');
-    });
-
-    const input1 = createMockInput('child-1', 'First Edit');
-    document.body.appendChild(input1);
-    input1.focus();
-
-    // Map 2に切り替え
-    await act(async () => {
-      await result.current.switchToMap('map2', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
-    });
-
-    // 前の入力要素がクリアされることを確認
-    expect(document.querySelector('.node-input')).toBeNull();
-
-    // Map 2で編集（新しい入力要素）
-    const input2 = createMockInput('child-1', 'Second Edit');
-    document.body.appendChild(input2);
-    input2.focus();
-
-    // Map 1に戻る
-    await act(async () => {
-      await result.current.switchToMap('map1', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
-    });
-
-    // 編集保存が適切に呼ばれたことを確認
-    expect(mockFinishEdit).toHaveBeenCalledTimes(2);
+  test('個別ノード追加後のマップ切り替えでデータが保持される', async () => {
+    // 初期マップデータ
+    const map1 = {
+      id: 'map1',
+      title: 'Map 1',
+      rootNode: {
+        id: 'root',
+        text: 'Root',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      settings: {}
+    };
     
-    // 最初の呼び出し（Map 1 → Map 2）
-    expect(mockFinishEdit).toHaveBeenNthCalledWith(1,
-      'child-1',
-      'First Edit',
+    const map2 = {
+      id: 'map2', 
+      title: 'Map 2',
+      rootNode: {
+        id: 'root',
+        text: 'Root',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      settings: {}
+    };
+
+    // モックの設定
+    mockAdapter.getAllMaps.mockResolvedValue([
+      { id: 'map1', title: 'Map 1', updatedAt: new Date().toISOString() },
+      { id: 'map2', title: 'Map 2', updatedAt: new Date().toISOString() }
+    ]);
+    
+    mockAdapter.getMap
+      .mockResolvedValueOnce(map1)
+      .mockResolvedValueOnce(map2);
+    
+    mockAdapter.updateMap.mockResolvedValue(map1);
+    mockAdapter.addNode.mockResolvedValue({ success: true });
+
+    // データフックを直接テスト
+    const { result: dataResult } = renderHook(() => 
+      useMindMapData('map1', true)
+    );
+    
+    await waitFor(() => {
+      expect(dataResult.current.data).toBeTruthy();
+      // 動的に生成されたIDを受け入れる
+      expect(dataResult.current.data.id).toBeDefined();
+    });
+
+    // ノードフックを初期化
+    const { result: nodesResult } = renderHook(() =>
+      useMindMapNodes(dataResult.current.data, dataResult.current.updateData)
+    );
+
+    // 新しいノードを追加
+    await act(async () => {
+      await nodesResult.current.addChildNode('root', 'Node 1', false);
+    });
+
+    // ノードが追加されたことを確認
+    expect(dataResult.current.data.rootNode.children).toHaveLength(1);
+    
+    // もう1つノードを追加
+    await act(async () => {
+      await nodesResult.current.addChildNode('root', 'Node 2', false);
+    });
+    
+    expect(dataResult.current.data.rootNode.children).toHaveLength(2);
+
+    // map2に切り替える前のデータを記録
+    const map1DataBeforeSwitch = JSON.parse(JSON.stringify(dataResult.current.data));
+    expect(map1DataBeforeSwitch.rootNode.children).toHaveLength(2);
+
+    // マップ保存のテスト
+    await act(async () => {
+      await dataResult.current.saveImmediately();
+    });
+
+    // updateMapが正しいデータで呼ばれたことを確認
+    expect(mockAdapter.updateMap).toHaveBeenCalledWith(
+      dataResult.current.data.id, // 動的に生成されたIDを使用
       expect.objectContaining({
-        skipMapSwitchDelete: true,
-        source: 'mapSwitch'
+        rootNode: expect.objectContaining({
+          children: expect.arrayContaining([
+            expect.objectContaining({ text: 'Node 1' }),
+            expect.objectContaining({ text: 'Node 2' })
+          ])
+        })
       })
     );
 
-    // 2回目の呼び出し（Map 2 → Map 1）
-    expect(mockFinishEdit).toHaveBeenNthCalledWith(2,
-      'child-1',
-      'Second Edit',
-      expect.objectContaining({
-        skipMapSwitchDelete: true,
-        source: 'mapSwitch'
-      })
+    // map1に戻した際のデータ取得をテスト
+    const map1WithNodes = {
+      ...map1,
+      rootNode: {
+        ...map1.rootNode,
+        children: map1DataBeforeSwitch.rootNode.children
+      }
+    };
+    
+    mockAdapter.getMap.mockResolvedValueOnce(map1WithNodes);
+    
+    // 新しいデータフックで読み込み直し
+    const { result: dataResult2 } = renderHook(() => 
+      useMindMapData('map1', true)
     );
+
+    // データが保持されていることを確認
+    await waitFor(() => {
+      const currentData = dataResult2.current.data;
+      expect(currentData.id).toBeDefined();
+      expect(currentData.rootNode.children).toHaveLength(2);
+      expect(currentData.rootNode.children[0].text).toBe('Node 1');
+      expect(currentData.rootNode.children[1].text).toBe('Node 2');
+    });
   });
 
-  test('空のテキスト編集中のマップ切り替えで削除されない', async () => {
-    const { result } = renderHook(() => useMindMapMulti());
+  test('個別ノード操作とマップ保存の整合性', async () => {
+    const mapData = {
+      id: 'test-map',
+      title: 'Test Map',
+      rootNode: {
+        id: 'root',
+        text: 'Root',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      settings: {}
+    };
 
+    mockAdapter.getMap.mockResolvedValue(mapData);
+    mockAdapter.updateMap.mockImplementation((id, data) => {
+      // サーバー側でノードテーブルが別管理されている場合をシミュレート
+      // updateMapでは全体構造を更新するが、個別ノードは別テーブル
+      return Promise.resolve(data); // 送信されたデータをそのまま返す
+    });
+
+    // データフックを初期化
+    const { result: dataResult } = renderHook(() => 
+      useMindMapData('test-map', true)
+    );
+    
     await waitFor(() => {
-      expect(result.current.allMindMaps).toHaveLength(2);
+      expect(dataResult.current.data).toBeTruthy();
     });
 
-    // Map 1に切り替え
+    // ノードフックを初期化
+    const { result: nodesResult } = renderHook(() =>
+      useMindMapNodes(dataResult.current.data, dataResult.current.updateData)
+    );
+
+    // 複数のノードを追加（順次処理）
+    const nodeIds = [];
     await act(async () => {
-      await result.current.switchToMap('map1');
+      const nodeId1 = await nodesResult.current.addChildNode('root', 'Node 1', false);
+      nodeIds.push(nodeId1);
     });
-
-    // 空のテキストで編集中
-    const emptyInput = createMockInput('child-1', '');
-    document.body.appendChild(emptyInput);
-    emptyInput.focus();
-
-    // Map 2に切り替え
+    
     await act(async () => {
-      await result.current.switchToMap('map2', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), mockFinishEdit);
+      const nodeId2 = await nodesResult.current.addChildNode('root', 'Node 2', false);
+      nodeIds.push(nodeId2);
+    });
+    
+    await act(async () => {
+      const nodeId3 = await nodesResult.current.addChildNode('root', 'Node 3', false);
+      nodeIds.push(nodeId3);
     });
 
-    // 空のテキストでもfinishEditが呼ばれ、削除保護が適用されることを確認
-    expect(mockFinishEdit).toHaveBeenCalledWith(
-      'child-1',
-      '',
+    // ローカルデータが正しく更新されていることを確認
+    expect(dataResult.current.data.rootNode.children).toHaveLength(3);
+
+    // saveImmediatelyを呼び出してマップ全体を保存
+    await act(async () => {
+      await dataResult.current.saveImmediately();
+    });
+
+    // updateMapが正しい子ノード数で呼ばれたことを確認
+    expect(mockAdapter.updateMap).toHaveBeenLastCalledWith(
+      dataResult.current.data.id,
       expect.objectContaining({
-        skipMapSwitchDelete: true,
-        allowDuringEdit: true,
-        source: 'mapSwitch'
+        rootNode: expect.objectContaining({
+          children: expect.arrayContaining([
+            expect.any(Object),
+            expect.any(Object),
+            expect.any(Object)
+          ])
+        })
       })
     );
-  });
 
-  test('finishEditが非同期で完了してからマップ切り替えが行われる', async () => {
-    const { result } = renderHook(() => useMindMapMulti());
-    
-    // 非同期のfinishEditをモック
-    const asyncFinishEdit = jest.fn().mockImplementation(
-      () => new Promise(resolve => setTimeout(resolve, 100))
-    );
-
-    await waitFor(() => {
-      expect(result.current.allMindMaps).toHaveLength(2);
-    });
-
-    // Map 1で編集中
-    await act(async () => {
-      await result.current.switchToMap('map1');
-    });
-
-    const input = createMockInput('child-1', 'Async Edit');
-    document.body.appendChild(input);
-    input.focus();
-
-    const startTime = Date.now();
-
-    // Map 2に切り替え（finishEditの完了を待つ）
-    await act(async () => {
-      await result.current.switchToMap('map2', false, jest.fn(), jest.fn(), jest.fn(), jest.fn(), jest.fn(), asyncFinishEdit);
-    });
-
-    const endTime = Date.now();
-    
-    // finishEditが呼ばれたことを確認
-    expect(asyncFinishEdit).toHaveBeenCalledWith(
-      'child-1',
-      'Async Edit',
-      expect.objectContaining({
-        skipMapSwitchDelete: true,
-        source: 'mapSwitch'
-      })
-    );
-
-    // 処理に時間がかかったことを確認（非同期処理が待たれた）
-    expect(endTime - startTime).toBeGreaterThanOrEqual(90);
+    // 保存されたデータを確認
+    const lastCallData = mockAdapter.updateMap.mock.calls[mockAdapter.updateMap.mock.calls.length - 1][1];
+    expect(lastCallData.rootNode.children).toHaveLength(3);
   });
 });

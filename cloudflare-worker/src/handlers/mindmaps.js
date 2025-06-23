@@ -454,8 +454,23 @@ async function createMindMapRelationalFromLegacy(db, userId, mindmapId, legacyDa
   // ノード作成
   if (legacyData.rootNode) {
     console.log('🌳 レガシーrootNodeをリレーショナル形式に変換');
-    const nodeStatements = createNodeStatements(db, legacyData.rootNode, mindmapId, null, now);
-    statements.push(...nodeStatements);
+    // すべてのノードをフラットに処理
+    const nodeDetails = new Map();
+    
+    function collectNodeIds(node, parentId = null) {
+      nodeDetails.set(node.id, { node, parentId });
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(child => collectNodeIds(child, node.id));
+      }
+    }
+    
+    collectNodeIds(legacyData.rootNode);
+    
+    // 各ノードを作成
+    for (const [nodeId, info] of nodeDetails.entries()) {
+      const nodeStmts = createNodeStatements(db, info.node, mindmapId, info.parentId, now);
+      statements.push(...nodeStmts);
+    }
   }
   
   // 一括実行
@@ -487,8 +502,23 @@ async function createMindMapRelational(db, userId, mindmapId, mindmapData, now) 
   
   // ノード作成
   if (mindmapData.rootNode) {
-    const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
-    statements.push(...nodeStatements);
+    // すべてのノードをフラットに処理
+    const nodeDetails = new Map();
+    
+    function collectNodeIds(node, parentId = null) {
+      nodeDetails.set(node.id, { node, parentId });
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(child => collectNodeIds(child, node.id));
+      }
+    }
+    
+    collectNodeIds(mindmapData.rootNode);
+    
+    // 各ノードを作成
+    for (const [nodeId, info] of nodeDetails.entries()) {
+      const nodeStmts = createNodeStatements(db, info.node, mindmapId, info.parentId, now);
+      statements.push(...nodeStmts);
+    }
   }
   
   // 一括実行
@@ -541,16 +571,24 @@ async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) 
       
       // 新しいノード構造からすべてのノードIDを収集
       const newNodeIds = new Set();
+      const nodeDetails = new Map(); // ノードの詳細情報を保持
       
-      function collectNodeIds(node) {
+      function collectNodeIds(node, parentId = null) {
         newNodeIds.add(node.id);
+        nodeDetails.set(node.id, { node, parentId });
         if (node.children && Array.isArray(node.children)) {
-          node.children.forEach(child => collectNodeIds(child));
+          node.children.forEach(child => collectNodeIds(child, node.id));
         }
       }
       
       collectNodeIds(mindmapData.rootNode);
       console.log('🆕 新しいノード数:', newNodeIds.size);
+      console.log('📋 ノード詳細:', Array.from(nodeDetails.entries()).map(([id, info]) => ({
+        id,
+        text: info.node.text,
+        parentId: info.parentId,
+        hasChildren: info.node.children?.length > 0
+      })));
       
       // 削除すべきノード（既存にあるが新しい構造にない）
       const nodesToDelete = [...existingNodeIds].filter(id => !newNodeIds.has(id));
@@ -572,9 +610,12 @@ async function updateMindMapRelational(db, userId, mindmapId, mindmapData, now) 
       }
       
       // 新しい／更新ノードを作成／更新
-      const nodeStatements = createNodeStatements(db, mindmapData.rootNode, mindmapId, null, now);
-      console.log('🔧 作成／更新するノード文の数:', nodeStatements.length);
-      statements.push(...nodeStatements);
+      // すべてのノードの親子関係を正しく設定するため、nodeDetailsから作成
+      for (const [nodeId, info] of nodeDetails.entries()) {
+        const nodeStmts = createNodeStatements(db, info.node, mindmapId, info.parentId, now);
+        statements.push(...nodeStmts);
+      }
+      console.log('🔧 作成／更新するノード文の数:', statements.length - 1); // mindmap更新文を除く
     }
     
     // 一括実行（トランザクション保護）
@@ -718,17 +759,8 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
     });
   }
   
-  // 子ノード処理（再帰的）
-  if (node.children && Array.isArray(node.children)) {
-    console.log('🌳 子ノード処理開始:', node.id, '子ノード数:', node.children.length);
-    node.children.forEach((child, index) => {
-      console.log(`  └─ 子ノード[${index}]:`, child.id, child.text || '（空）');
-      const childStatements = createNodeStatements(db, child, mindmapId, node.id, now);
-      statements.push(...childStatements);
-    });
-  } else {
-    console.log('🍁 子ノードなし:', node.id);
-  }
+  // 子ノード処理は親関数で既に処理されているため、ここでは処理しない
+  // updateMindMapRelational内でnodeDetailsを使って全ノードをフラットに処理している
   
   console.log('📋 createNodeStatements 完了:', node.id, '総文数:', statements.length);
   return statements;
