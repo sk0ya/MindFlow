@@ -241,7 +241,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
         });
       }
       
-      // 🔧 現在のマップデータを保存してから切り替え
+      // 🔧 現在のマップデータを保存してから切り替え（一時ノードを除外）
       if (data && data.id && data.id !== mapId) {
         console.log('💾 マップ切り替え前に現在のマップを保存:', {
           mapId: data.id,
@@ -251,12 +251,23 @@ export const useMindMapMulti = (data, setData, updateData) => {
           childrenDetails: data.rootNode?.children?.map(c => ({
             id: c.id,
             text: c.text,
+            isTemporary: c.isTemporary,
             hasChildren: c.children?.length > 0
           })) || []
         });
+        
         try {
+          // 一時ノードを除外したデータを作成
+          const dataForSaving = removeTemporaryNodes(data);
+          
+          console.log('📝 一時ノード除外後の保存データ:', {
+            originalChildren: data.rootNode?.children?.length || 0,
+            filteredChildren: dataForSaving.rootNode?.children?.length || 0,
+            removedTempNodes: (data.rootNode?.children?.length || 0) - (dataForSaving.rootNode?.children?.length || 0)
+          });
+          
           const adapter = getCurrentAdapter();
-          await adapter.updateMap(data.id, data);
+          await adapter.updateMap(data.id, dataForSaving);
           console.log('✅ 現在のマップ保存完了:', data.title);
         } catch (saveError) {
           console.warn('⚠️ 現在のマップ保存失敗:', saveError);
@@ -405,6 +416,29 @@ export const useMindMapMulti = (data, setData, updateData) => {
     }
   }, [data?.id, currentMapId]);
 
+  // 一時ノードを除外したデータを作成
+  const removeTemporaryNodes = (mapData) => {
+    if (!mapData || !mapData.rootNode) return mapData;
+    
+    const clonedData = deepClone(mapData);
+    
+    function filterTemporaryNodes(node) {
+      if (!node) return node;
+      
+      // 一時ノードでない子ノードのみをフィルタリング
+      if (node.children && Array.isArray(node.children)) {
+        node.children = node.children
+          .filter(child => !child.isTemporary) // 一時ノードを除外
+          .map(child => filterTemporaryNodes(child)); // 再帰的に処理
+      }
+      
+      return node;
+    }
+    
+    clonedData.rootNode = filterTemporaryNodes(clonedData.rootNode);
+    return clonedData;
+  };
+
   return {
     allMindMaps,
     currentMapId,
@@ -415,6 +449,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     deleteMindMapById,
     changeMapCategory,
     getAvailableCategories,
-    switchToMap
+    switchToMap,
+    removeTemporaryNodes
   };
 };
