@@ -186,8 +186,8 @@ async function createNode(db, userId, mindmapId, requestData) {
   const nodeData = requestData.node || requestData; // node プロパティがある場合はそれを使用
   const parentId = requestData.parentId || nodeData.parent_id;
   
-  // 'root' 文字列をnullに変換（リレーショナル構造では root ノードの parent_id は NULL）
-  const dbParentId = (parentId === 'root' || parentId === null || parentId === undefined) ? null : parentId;
+  // リレーショナル構造でのparent_id設定: rootノード自体のみparent_id = NULL
+  const dbParentId = (parentId === null || parentId === undefined) ? null : parentId;
   
   // 親ノード存在確認（rootノード以外）
   if (dbParentId !== null) {

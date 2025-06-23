@@ -613,13 +613,13 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
   const statements = [];
   
   // ノード作成（INSERT OR IGNOREで安全に作成、その後UPDATEで更新）
-  // 'root' 文字列をnullに変換（リレーショナル構造では root ノードの parent_id は NULL）
-  const dbParentId = (parentId === 'root' || parentId === null || parentId === undefined) ? null : parentId;
+  // リレーショナル構造でのparent_id設定: rootノード自体のみparent_id = NULL
+  const dbParentId = (parentId === null || parentId === undefined) ? null : parentId;
   
-  // まずINSERT OR IGNOREで作成を試みる
+  // INSERT OR REPLACEで安全にノード作成/更新
   statements.push(
     db.prepare(
-      'INSERT OR IGNORE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT OR REPLACE INTO nodes (id, mindmap_id, parent_id, text, type, position_x, position_y, style_settings, notes, tags, collapsed, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       node.id,
       mindmapId,
@@ -640,32 +640,6 @@ function createNodeStatements(db, node, mindmapId, parentId, now) {
       node.collapsed || false,
       now,
       now
-    )
-  );
-  
-  // 次にUPDATEで更新を試みる（既存の場合）
-  statements.push(
-    db.prepare(
-      'UPDATE nodes SET parent_id = ?, text = ?, type = ?, position_x = ?, position_y = ?, style_settings = ?, notes = ?, tags = ?, collapsed = ?, updated_at = ? WHERE id = ? AND mindmap_id = ?'
-    ).bind(
-      dbParentId,
-      node.text || '',
-      dbParentId === null ? 'root' : 'branch',
-      node.x || 0,
-      node.y || 0,
-      JSON.stringify({
-        fontSize: node.fontSize,
-        fontWeight: node.fontWeight,
-        backgroundColor: node.backgroundColor,
-        textColor: node.textColor,
-        color: node.color
-      }),
-      node.notes || '',
-      JSON.stringify(node.tags || []),
-      node.collapsed || false,
-      now,
-      node.id,
-      mindmapId
     )
   );
   
