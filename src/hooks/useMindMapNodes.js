@@ -173,10 +173,11 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 2. ストレージアダプターを通じて反映
     console.log('🔄 ノード追加同期開始:', newChild.id);
+    let result = null;
     try {
       const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
-      const result = await adapter.addNode(data.id, newChild, parentId);
+      result = await adapter.addNode(data.id, newChild, parentId);
       
       if (result.success) {
         console.log('✅ ノード追加完了:', newChild.id);
@@ -198,13 +199,16 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 編集状態を同時に設定
     if (startEditing) {
-      setSelectedNodeId(newChild.id);
+      // ID再生成があった場合は新しいIDを使用
+      const nodeIdToEdit = result?.newId || newChild.id;
+      setSelectedNodeId(nodeIdToEdit);
       // 遅延なしで即座に編集モード開始（blur競合を防止）
-      setEditingNodeId(newChild.id);
+      setEditingNodeId(nodeIdToEdit);
       setEditText(newChild.text || ''); // ノードのテキストを使用
     }
     
-    return newChild.id;
+    // ID再生成があった場合は新しいIDを返す
+    return result?.newId || newChild.id;
   };
 
   // 兄弟ノードを追加
@@ -250,10 +254,11 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 2. ストレージアダプターを通じて反映
     console.log('🔄 兄弟ノード追加同期開始:', newSibling.id);
+    let result = null;
     try {
       const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
-      const result = await adapter.addNode(data.id, newSibling, parentNode.id);
+      result = await adapter.addNode(data.id, newSibling, parentNode.id);
       
       if (result.success) {
         console.log('✅ 兄弟ノード追加完了:', newSibling.id);
@@ -275,9 +280,11 @@ export const useMindMapNodes = (data, updateData) => {
     
     // データ状態確認
     setTimeout(() => {
-      const actualNode = findNode(newSibling.id);
+      // ID再生成があった場合は新しいIDを使用
+      const finalNodeId = result?.newId || newSibling.id;
+      const actualNode = findNode(finalNodeId);
       console.log('🔍 兄弟ノード作成後のデータ確認:', { 
-        nodeId: newSibling.id, 
+        nodeId: finalNodeId, 
         exists: !!actualNode,
         nodeData: actualNode,
         allNodeIds: flattenNodes().map(n => n.id)
@@ -286,13 +293,16 @@ export const useMindMapNodes = (data, updateData) => {
     
     // 編集状態を同時に設定
     if (startEditing) {
-      setSelectedNodeId(newSibling.id);
+      // ID再生成があった場合は新しいIDを使用
+      const nodeIdToEdit = result?.newId || newSibling.id;
+      setSelectedNodeId(nodeIdToEdit);
       // 遅延なしで即座に編集モード開始（blur競合を防止）
-      setEditingNodeId(newSibling.id);
+      setEditingNodeId(nodeIdToEdit);
       setEditText(newSibling.text || ''); // ノードのテキストを使用
     }
     
-    return newSibling.id;
+    // ID再生成があった場合は新しいIDを返す
+    return result?.newId || newSibling.id;
   };
 
   // ノードを削除（即座DB反映）
