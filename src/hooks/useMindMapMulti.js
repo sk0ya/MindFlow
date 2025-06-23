@@ -206,11 +206,19 @@ export const useMindMapMulti = (data, setData, updateData) => {
           
           // 編集中のテキストを保存（削除判定を無効化）
           try {
-            finishEdit(currentEditingNodeId, currentEditText, { 
+            await finishEdit(currentEditingNodeId, currentEditText, { 
               skipMapSwitchDelete: true,  // マップ切り替え時の削除を無効化
               allowDuringEdit: true,
               source: 'mapSwitch'
             });
+            console.log('✅ マップ切り替え前の編集保存完了');
+            
+            // 編集状態をクリア（DOM要素の重複を防ぐ）
+            const currentEditingInput = document.querySelector('.node-input');
+            if (currentEditingInput) {
+              currentEditingInput.blur();
+              currentEditingInput.remove();
+            }
           } catch (editError) {
             console.warn('⚠️ マップ切り替え前の編集保存失敗:', editError);
           }

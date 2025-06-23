@@ -391,7 +391,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 編集終了
-  const finishEdit = (nodeId, newText, options = {}) => {
+  const finishEdit = async (nodeId, newText, options = {}) => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
     const currentNode = findNode(nodeId);
@@ -427,7 +427,7 @@ export const useMindMapNodes = (data, updateData) => {
       });
       setEditingNodeId(null);
       setEditText('');
-      deleteNode(nodeId);
+      await deleteNode(nodeId);
       return;
     }
     
@@ -448,11 +448,11 @@ export const useMindMapNodes = (data, updateData) => {
       });
       // 空でも既存の内容があった場合は削除せず、元の内容を復元
       if (currentNode?.text) {
-        updateNode(nodeId, { text: currentNode.text }, true, { allowDuringEdit: true, source: 'finishEdit-restore' });
+        await updateNode(nodeId, { text: currentNode.text }, true, { allowDuringEdit: true, source: 'finishEdit-restore' });
       }
     } else if (!isEmpty) {
       console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-      updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
+      await updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
     }
     
     // 編集状態をリセット（対象ノードが現在編集中の場合のみ）
@@ -476,7 +476,7 @@ export const useMindMapNodes = (data, updateData) => {
       
       if (!isEmpty) {
         console.log('📝 finishEdit - テキストのみ保存:', textToSave.trim());
-        updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-textOnly' });
+        await updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-textOnly' });
       }
       // 編集状態は変更せずにreturn
       return;
