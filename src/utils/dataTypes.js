@@ -171,36 +171,37 @@ export const assignColorsToExistingNodes = (mindMapData) => {
     return mindMapData || createInitialData();
   }
   
+  // 🔧 重要: 完全なディープクローンを作成してオブジェクト参照の共有を防止
+  console.log('🎨 assignColorsToExistingNodes: ディープクローンを実行中...');
+  const clonedData = deepClone(mindMapData);
+  
   const assignColors = (node, parentColor = null, isRootChild = false, childIndex = 0) => {
-    const updatedNode = { ...node };
-    
     if (node.id === 'root') {
       // ルートノードには色を設定しない
-      updatedNode.color = undefined;
+      node.color = undefined;
     } else if (isRootChild) {
       // ルートノードの子要素の場合、色が未設定なら順番に割り当て
       if (!node.color) {
-        updatedNode.color = COLORS[childIndex % COLORS.length];
+        node.color = COLORS[childIndex % COLORS.length];
       }
     } else if (!node.color && parentColor) {
       // 他の場合は親の色を継承
-      updatedNode.color = parentColor;
+      node.color = parentColor;
     }
     
-    // 子ノードも再帰的に処理
+    // 子ノードも再帰的に処理（インプレース変更）
     if (node.children) {
-      updatedNode.children = node.children.map((child, index) =>
-        assignColors(child, updatedNode.color, node.id === 'root', index)
+      node.children.forEach((child, index) =>
+        assignColors(child, node.color, node.id === 'root', index)
       );
     }
-    
-    return updatedNode;
   };
   
-  return {
-    ...mindMapData,
-    rootNode: assignColors(mindMapData.rootNode)
-  };
+  // クローンされたデータに対して色の割り当てを実行
+  assignColors(clonedData.rootNode);
+  
+  console.log('🎨 assignColorsToExistingNodes: 色の割り当て完了');
+  return clonedData;
 };
 
 export const validateFile = (file) => {

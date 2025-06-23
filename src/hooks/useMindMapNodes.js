@@ -75,14 +75,26 @@ export const useMindMapNodes = (data, updateData) => {
 
   // ノード更新（完全分離版）
   const updateNode = async (nodeId, updates, syncToCloud = true, options = {}) => {
-    // 1. ローカル状態を即座に更新
+    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
+    const currentData = dataRef.current;
+    console.log('📝 updateNode: データをディープクローン中...', { nodeId, updates });
+    const clonedData = deepClone(currentData);
+    
+    // 1. クローンされたデータに対してローカル状態を即座に更新
     const updateNodeRecursive = (node) => {
-      if (node.id === nodeId) return { ...node, ...updates };
-      return { ...node, children: node.children?.map(updateNodeRecursive) || [] };
+      if (node.id === nodeId) {
+        // 対象ノードを発見したらプロパティを更新
+        Object.assign(node, updates);
+        return node;
+      }
+      if (node.children) {
+        node.children.forEach(updateNodeRecursive);
+      }
+      return node;
     };
     
-    const currentData = dataRef.current;
-    const newData = { ...currentData, rootNode: updateNodeRecursive(currentData.rootNode) };
+    updateNodeRecursive(clonedData.rootNode);
+    const newData = clonedData;
     
     // 更新オプションの準備
     const updateOptions = {
@@ -94,19 +106,22 @@ export const useMindMapNodes = (data, updateData) => {
     
     await updateData(newData, updateOptions);
     
-    // 2. ストレージアダプターを通じて反映（現在は無効化）
+    // 2. ストレージアダプターを通じて反映
     if (syncToCloud) {
-      console.log('⚠️ ノード個別同期は一時的に無効化されています:', nodeId);
-      // APIサーバーのノードエンドポイント修正後に有効化
-      /*
+      console.log('🔄 ノード個別同期開始:', nodeId);
       try {
+        const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
         const adapter = getCurrentAdapter();
-        await adapter.updateNode(data.id, nodeId, updates);
-        console.log('✅ ノード更新完了:', nodeId);
+        const result = await adapter.updateNode(data.id, nodeId, updates);
+        
+        if (result.success) {
+          console.log('✅ ノード更新完了:', nodeId);
+        } else {
+          console.warn('⚠️ ノード更新失敗（リトライキューに追加）:', result.error);
+        }
       } catch (error) {
         console.warn('⚠️ ノード更新失敗:', error.message);
       }
-      */
     } else {
       console.log('📝 ローカルのみ更新:', nodeId);
     }
@@ -126,33 +141,50 @@ export const useMindMapNodes = (data, updateData) => {
     // 色を設定
     newChild.color = getNodeColor(parentNode, childrenCount);
     
-    // 1. ローカル状態を即座に更新
+    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
+    console.log('📝 addChildNode: データをディープクローン中...');
+    const clonedData = deepClone(data);
+    
+    // 1. クローンされたデータに対してローカル状態を即座に更新
     const addChildRecursive = (node) => {
       if (node.id === parentId) {
-        return { ...node, children: [...(node.children || []), newChild] };
+        if (!node.children) {
+          node.children = [];
+        }
+        node.children.push(newChild);
+        return node;
       }
-      return { ...node, children: node.children?.map(addChildRecursive) || [] };
+      if (node.children) {
+        node.children.forEach(addChildRecursive);
+      }
+      return node;
     };
     
-    let newRootNode = addChildRecursive(data.rootNode);
-    if (data.settings?.autoLayout !== false) {
+    addChildRecursive(clonedData.rootNode);
+    
+    let newRootNode = clonedData.rootNode;
+    if (clonedData.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    const newData = { ...data, rootNode: newRootNode };
+    const newData = { ...clonedData, rootNode: newRootNode };
     await updateData(newData, { skipHistory: false, saveImmediately: true });
     
-    // 2. ストレージアダプターを通じて反映（現在は無効化）
-    console.log('⚠️ ノード追加のクラウド同期は一時的に無効化されています:', newChild.id);
-    /*
+    // 2. ストレージアダプターを通じて反映
+    console.log('🔄 ノード追加同期開始:', newChild.id);
     try {
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
-      await adapter.addNode(data.id, newChild, parentId);
-      console.log('✅ ノード追加完了:', newChild.id);
+      const result = await adapter.addNode(data.id, newChild, parentId);
+      
+      if (result.success) {
+        console.log('✅ ノード追加完了:', newChild.id);
+      } else {
+        console.warn('⚠️ ノード追加失敗（リトライキューに追加）:', result.error);
+      }
     } catch (error) {
       console.warn('⚠️ ノード追加失敗:', error.message);
     }
-    */
     
     // 編集状態を同時に設定
     if (startEditing) {
@@ -261,35 +293,44 @@ export const useMindMapNodes = (data, updateData) => {
       nodeToSelect = 'root';
     }
     
-    // 1. ローカル状態を即座に更新
+    // 🔧 重要: データ参照共有を防ぐため完全なディープクローンを実行
+    console.log('📝 deleteNode: データをディープクローン中...');
+    const clonedData = deepClone(data);
+    
+    // 1. クローンされたデータに対してローカル状態を即座に更新
     const deleteNodeRecursive = (node) => {
-      return {
-        ...node,
-        children: (node.children || [])
-          .filter(child => child.id !== nodeId)
-          .map(deleteNodeRecursive)
-      };
+      if (node.children) {
+        node.children = node.children.filter(child => child.id !== nodeId);
+        node.children.forEach(deleteNodeRecursive);
+      }
+      return node;
     };
     
-    let newRootNode = deleteNodeRecursive(data.rootNode);
-    if (data.settings?.autoLayout !== false) {
+    deleteNodeRecursive(clonedData.rootNode);
+    
+    let newRootNode = clonedData.rootNode;
+    if (clonedData.settings?.autoLayout !== false) {
       newRootNode = applyAutoLayout(newRootNode);
     }
     
-    const newData = { ...data, rootNode: newRootNode };
+    const newData = { ...clonedData, rootNode: newRootNode };
     await updateData(newData, { skipHistory: false, saveImmediately: true });
     
-    // 2. ストレージアダプターを通じて反映（現在は無効化）
-    console.log('⚠️ ノード削除のクラウド同期は一時的に無効化されています:', nodeId);
-    /*
+    // 2. ストレージアダプターを通じて反映
+    console.log('🔄 ノード削除同期開始:', nodeId);
     try {
+      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
-      await adapter.deleteNode(data.id, nodeId);
-      console.log('✅ ノード削除完了:', nodeId);
+      const result = await adapter.deleteNode(data.id, nodeId);
+      
+      if (result.success) {
+        console.log('✅ ノード削除完了:', nodeId);
+      } else {
+        console.warn('⚠️ ノード削除失敗（リトライキューに追加）:', result.error);
+      }
     } catch (error) {
       console.warn('⚠️ ノード削除失敗:', error.message);
     }
-    */
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {

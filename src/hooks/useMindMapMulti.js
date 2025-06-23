@@ -253,7 +253,11 @@ export const useMindMapMulti = (data, setData, updateData) => {
       }
       
       const adapter = getCurrentAdapter();
-      const targetMap = await adapter.getMap(mapId);
+      const originalTargetMap = await adapter.getMap(mapId);
+      
+      // 🔧 重要: マップデータを完全にディープクローンして参照共有を防止
+      console.log('🛡️ マップデータを安全にクローン中...');
+      const targetMap = deepClone(originalTargetMap);
       
       // データ整合性チェック
       if (!targetMap?.id || !targetMap?.rootNode) {
@@ -276,10 +280,11 @@ export const useMindMapMulti = (data, setData, updateData) => {
           text: c.text,
           hasX: typeof c.x === 'number',
           hasY: typeof c.y === 'number'
-        })) || []
+        })) || [],
+        isClonedData: originalTargetMap !== targetMap // 参照が異なることを確認
       });
       
-      // マップ表示（読み取り専用）
+      // マップ表示（完全に独立したデータ）
       const coloredMap = assignColorsToExistingNodes(targetMap);
       
       console.log('🎨 色付け後データ検証:', {
@@ -290,8 +295,20 @@ export const useMindMapMulti = (data, setData, updateData) => {
           text: c.text,
           hasX: typeof c.x === 'number',
           hasY: typeof c.y === 'number'
-        })) || []
+        })) || [],
+        dataIndependence: {
+          fromOriginal: originalTargetMap.rootNode !== coloredMap.rootNode,
+          fromTarget: targetMap.rootNode !== coloredMap.rootNode,
+          childrenFromOriginal: originalTargetMap.rootNode?.children !== coloredMap.rootNode?.children,
+          childrenFromTarget: targetMap.rootNode?.children !== coloredMap.rootNode?.children
+        }
       });
+      
+      // 🔧 データ独立性の最終確認
+      if (data && coloredMap.rootNode.children === data.rootNode?.children) {
+        console.error('❌ 重大な問題: 新しいマップが既存マップと子ノード配列を共有しています！');
+        throw new Error('データ参照共有エラー: マップ間でデータが共有されています');
+      }
       
       setData(coloredMap);
       setCurrentMapId(mapId);

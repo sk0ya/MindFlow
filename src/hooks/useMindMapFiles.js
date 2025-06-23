@@ -21,9 +21,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
 
   // ファイル添付機能（R2ストレージ対応）
   const attachFileToNode = async (nodeId, file) => {
-    // アプリ初期化中はファイルアップロードを無効化
+    // アプリ初期化中はファイルアップロードを無効化（ユーザー向けメッセージを改善）
     if (isAppInitializing()) {
-      throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
+      throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
     }
     try {
       logger.info(`📎 ファイル添付開始: ${file.name} (${formatFileSize(file.size)})`, {
@@ -319,9 +319,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
 
   // ファイルをダウンロード（R2ストレージ対応）
   const downloadFile = async (file, nodeId = null) => {
-    // アプリ初期化中はファイルダウンロードを無効化
+    // アプリ初期化中はファイルダウンロードを無効化（ユーザー向けメッセージを改善）
     if (isAppInitializing()) {
-      throw new Error('アプリケーションの初期化が完了していません。少しお待ちください。');
+      throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
     }
     try {
       // R2ストレージのファイルの場合
