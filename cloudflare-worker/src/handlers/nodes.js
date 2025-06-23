@@ -166,6 +166,40 @@ async function getNode(db, userId, mindmapId, nodeId) {
 }
 
 /**
+ * 安全なID生成 - UNIQUE制約違反を防ぐ
+ */
+async function generateSafeNodeId(db, maxAttempts = 10) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // タイムスタンプベースの強化されたID生成
+    const timestamp = Date.now();
+    const randomPart1 = Math.random().toString(36).substr(2, 9);
+    const randomPart2 = Math.random().toString(36).substr(2, 9);
+    const attemptSuffix = attempt > 1 ? `_retry${attempt}` : '';
+    
+    const newId = `node_${timestamp}_${randomPart1}${randomPart2}${attemptSuffix}`;
+    
+    console.log(`🔧 ID生成試行 ${attempt}/${maxAttempts}:`, newId);
+    
+    // データベースでIDの重複をチェック
+    const existingNode = await db.prepare(
+      'SELECT id FROM nodes WHERE id = ?'
+    ).bind(newId).first();
+    
+    if (!existingNode) {
+      console.log('✅ ユニークID生成成功:', newId);
+      return newId;
+    }
+    
+    console.warn(`⚠️ ID重複検出 (試行 ${attempt}):`, newId);
+    
+    // 少し待機してから次の試行
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  
+  throw new Error(`${maxAttempts}回試行してもユニークIDを生成できませんでした`);
+}
+
+/**
  * 新しいノードを作成
  */
 async function createNode(db, userId, mindmapId, requestData) {
@@ -190,7 +224,7 @@ async function createNode(db, userId, mindmapId, requestData) {
   const dbParentId = (parentId === null || parentId === undefined) ? null : parentId;
   
   // 親ノード存在確認（rootノード以外）
-  if (dbParentId !== null) {
+  if (dbParentId !== null && dbParentId !== 'root') {
     const parentNode = await db.prepare(
       'SELECT id FROM nodes WHERE id = ? AND mindmap_id = ?'
     ).bind(dbParentId, mindmapId).first();
@@ -202,38 +236,124 @@ async function createNode(db, userId, mindmapId, requestData) {
     }
   }
 
-  const nodeId = nodeData.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // クライアント側のIDをバックアップし、安全なIDを生成
+  const originalId = nodeData.id;
+  let safeNodeId;
+  
+  try {
+    safeNodeId = await generateSafeNodeId(db);
+  } catch (error) {
+    console.error('❌ 安全なID生成失敗:', error);
+    throw new Error('IDの生成に失敗しました');
+  }
+
+  console.log('🔄 ID変更:', {
+    original: originalId,
+    safe: safeNodeId
+  });
+
   const now = new Date().toISOString();
 
-  // ノード作成 - クライアント側の座標形式 (x, y) をサーバー側 (position_x, position_y) に変換
-  await db.prepare(`
-    INSERT INTO nodes 
-    (id, mindmap_id, text, type, parent_id, position_x, position_y, 
-     style_settings, notes, tags, collapsed, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    nodeId,
-    mindmapId,
-    nodeData.text || '',
-    dbParentId === null ? 'root' : 'branch',
-    dbParentId,
-    nodeData.x || nodeData.position_x || 0,  // x → position_x
-    nodeData.y || nodeData.position_y || 0,  // y → position_y
-    JSON.stringify(nodeData.style_settings || nodeData.styleSettings || {}),
-    nodeData.notes || '',
-    JSON.stringify(nodeData.tags || []),
-    nodeData.collapsed || false,
-    now,
-    now
-  ).run();
+  try {
+    // ノード作成 - クライアント側の座標形式 (x, y) をサーバー側 (position_x, position_y) に変換
+    await db.prepare(`
+      INSERT INTO nodes 
+      (id, mindmap_id, text, type, parent_id, position_x, position_y, 
+       style_settings, notes, tags, collapsed, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      safeNodeId,
+      mindmapId,
+      nodeData.text || '',
+      (dbParentId === null || dbParentId === 'root') ? 'root' : 'branch',
+      (dbParentId === 'root') ? null : dbParentId,
+      nodeData.x || nodeData.position_x || 0,  // x → position_x
+      nodeData.y || nodeData.position_y || 0,  // y → position_y
+      JSON.stringify({
+        fontSize: nodeData.fontSize,
+        fontWeight: nodeData.fontWeight,
+        backgroundColor: nodeData.backgroundColor,
+        textColor: nodeData.textColor,
+        color: nodeData.color
+      }),
+      nodeData.notes || '',
+      JSON.stringify(nodeData.tags || []),
+      nodeData.collapsed || false,
+      now,
+      now
+    ).run();
 
-  // マインドマップの更新日時を更新
-  await db.prepare(
-    'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
-  ).bind(now, mindmapId).run();
+    // 添付ファイル処理
+    if (nodeData.attachments && Array.isArray(nodeData.attachments)) {
+      for (const att of nodeData.attachments) {
+        const attachmentId = att.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await db.prepare(
+          'INSERT INTO attachments (id, node_id, file_name, original_name, file_size, mime_type, storage_path, attachment_type, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(
+          attachmentId,
+          safeNodeId,
+          att.name || 'untitled',
+          att.name || 'untitled',
+          att.size || 0,
+          att.type || 'application/octet-stream',
+          att.storagePath || `legacy/${attachmentId}`,
+          att.isImage ? 'image' : 'file',
+          now
+        ).run();
+      }
+    }
 
-  console.log('✅ Node created:', nodeId);
-  return { id: nodeId, created_at: now };
+    // リンク処理
+    if (nodeData.mapLinks && Array.isArray(nodeData.mapLinks)) {
+      for (const link of nodeData.mapLinks) {
+        const linkId = link.id || `link_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        try {
+          const url = new URL(link.url);
+          await db.prepare(
+            'INSERT INTO node_links (id, node_id, url, title, description, domain, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          ).bind(
+            linkId,
+            safeNodeId,
+            link.url,
+            link.title || link.url,
+            link.description || '',
+            url.hostname,
+            now
+          ).run();
+        } catch (e) {
+          console.warn('Invalid URL in mapLinks:', link.url);
+        }
+      }
+    }
+
+    // マインドマップの更新日時を更新
+    await db.prepare(
+      'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
+    ).bind(now, mindmapId).run();
+
+    console.log('✅ Node created:', safeNodeId);
+    
+    return { 
+      id: safeNodeId, 
+      originalId: originalId,
+      newId: safeNodeId !== originalId ? safeNodeId : undefined,
+      created_at: now 
+    };
+
+  } catch (error) {
+    console.error('❌ ノード作成エラー:', error);
+    
+    // UNIQUE制約違反の場合は詳細ログ
+    if (error.message && error.message.includes('UNIQUE constraint')) {
+      console.error('❌ UNIQUE制約違反詳細:', {
+        nodeId: safeNodeId,
+        originalId: originalId,
+        errorMessage: error.message
+      });
+    }
+    
+    throw new Error(`ノード作成失敗: ${error.message}`);
+  }
 }
 
 /**

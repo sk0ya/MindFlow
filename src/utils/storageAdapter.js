@@ -294,7 +294,7 @@ class CloudStorageAdapter {
           });
           errorDetails += `, Body: ${errorBody}`;
           
-          // UNIQUE制約違反の場合は特別処理
+          // UNIQUE制約違反の場合は特別処理（バックエンドで既に処理されているが念のため）
           if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
             console.warn('🔄 UNIQUE制約違反検出: ノードIDを再生成してリトライします', nodeData.id);
             return await this.retryWithNewId(mapId, nodeData, parentId);
@@ -306,8 +306,20 @@ class CloudStorageAdapter {
       }
 
       const result = await response.json();
-      console.log('☁️ クラウド: ノード追加完了');
-      return { success: true, result };
+      console.log('☁️ クラウド: ノード追加完了', {
+        originalId: nodeData.id,
+        finalId: result.id,
+        newId: result.newId
+      });
+      
+      // バックエンドで新しいIDが生成された場合はそれを返す
+      const finalResult = { 
+        success: true, 
+        result,
+        newId: result.newId || result.id // バックエンドで生成された新しいID
+      };
+      
+      return finalResult;
 
     } catch (error) {
       console.error('☁️ クラウド: ノード追加失敗:', error);

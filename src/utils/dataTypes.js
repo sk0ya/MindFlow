@@ -32,12 +32,44 @@ export const THEMES = {
   }
 };
 
+// ID生成でタイムスタンプの重複を防ぐためのカウンター
+let idCounter = 0;
+let lastTimestamp = 0;
+
 export const generateId = () => {
-  return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const now = Date.now();
+  
+  // 同じタイムスタンプの場合はカウンターを増加
+  if (now === lastTimestamp) {
+    idCounter++;
+  } else {
+    idCounter = 0;
+    lastTimestamp = now;
+  }
+  
+  // より強固なランダム文字列を生成
+  const randomPart1 = Math.random().toString(36).substr(2, 9);
+  const randomPart2 = Math.random().toString(36).substr(2, 9);
+  
+  return `node_${now}_${idCounter}_${randomPart1}${randomPart2}`;
 };
 
 export const generateMapId = () => {
-  return `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const now = Date.now();
+  
+  // 同じタイムスタンプの場合はカウンターを増加
+  if (now === lastTimestamp) {
+    idCounter++;
+  } else {
+    idCounter = 0;
+    lastTimestamp = now;
+  }
+  
+  // より強固なランダム文字列を生成
+  const randomPart1 = Math.random().toString(36).substr(2, 9);
+  const randomPart2 = Math.random().toString(36).substr(2, 9);
+  
+  return `map_${now}_${idCounter}_${randomPart1}${randomPart2}`;
 };
 
 export const createInitialData = () => ({
