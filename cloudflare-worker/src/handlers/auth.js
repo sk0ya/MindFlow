@@ -38,6 +38,8 @@ export async function handleAuthRequest(request, env) {
           response = await handleGoogleAuth(request, env);
         } else if (action === 'google-callback') {
           response = await handleGoogleCallback(request, env);
+        } else if (action === 'health') {
+          response = await handleHealthCheck(request, env);
         } else {
           throw new Error(`Unknown auth action: ${action}`);
         }
@@ -326,5 +328,24 @@ async function handleGoogleCallback(request, env) {
   const redirectUrl = `${env.FRONTEND_URL}/auth-callback?token=${authResult.token}`;
   
   return Response.redirect(redirectUrl, 302);
+}
+
+// 健全性チェック
+async function handleHealthCheck(request, env) {
+  try {
+    // データベース接続をテスト
+    const testQuery = await env.DB.prepare('SELECT 1 as test').first();
+    
+    return {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: testQuery ? 'connected' : 'disconnected'
+    };
+  } catch (error) {
+    console.error('Health check failed:', error);
+    const errorResponse = new Error('Health check failed');
+    errorResponse.status = 503;
+    throw errorResponse;
+  }
 }
 

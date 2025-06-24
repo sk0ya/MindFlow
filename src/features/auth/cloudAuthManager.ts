@@ -398,17 +398,29 @@ class CloudAuthManager {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const token = this.getCloudSyncToken();
-      if (!token) return false;
-
-      const response = await fetch(`${this.API_BASE_URL}/auth/health`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // まず基本的な API 接続をテスト
+      const response = await fetch(`${this.API_BASE_URL}/api/auth/health`, {
+        method: 'GET'
       });
 
-      return response.ok;
+      if (!response.ok) {
+        console.warn('Basic API health check failed:', response.status);
+        return false;
+      }
+
+      // 認証トークンがある場合は認証済みエンドポイントもテスト
+      const token = this.getCloudSyncToken();
+      if (token) {
+        const authResponse = await fetch(`${this.API_BASE_URL}/api/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        return authResponse.ok;
+      }
+
+      return true; // 基本接続が成功していればOK
     } catch (error) {
       console.error('Auth health check error:', error);
       return false;
