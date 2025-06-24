@@ -229,15 +229,20 @@ export class DataConverter {
   }
 
   /**
-   * データ整合性チェック
+   * データ整合性チェック（統合版）
    * @param {Object} data - チェック対象データ
+   * @param {string} format - データ形式（'hierarchical' | 'relational'）
    * @returns {Object} - チェック結果
    */
-  static validateData(data) {
+  static validateData(data, format = 'relational') {
     const errors = [];
     const warnings = [];
 
-    // 必須フィールドチェック
+    if (format === 'hierarchical') {
+      return this.validateHierarchicalData(data);
+    }
+
+    // リレーショナルデータのバリデーション
     if (!data.mindmap?.id) {
       errors.push('mindmap.id is required');
     }
@@ -279,11 +284,99 @@ export class DataConverter {
   }
 
   /**
-   * データ統計情報の取得
+   * 階層型データのバリデーション（新規追加）
+   */
+  static validateHierarchicalData(data) {
+    const errors = [];
+    const warnings = [];
+
+    // 基本フィールドチェック
+    if (!data.id) {
+      errors.push('mindmap id is required');
+    }
+    if (!data.title) {
+      warnings.push('mindmap title is empty');
+    }
+    if (!data.rootNode) {
+      errors.push('rootNode is required');
+      return { isValid: false, errors, warnings };
+    }
+
+    // ルートノードのチェック
+    if (data.rootNode.id !== 'root') {
+      errors.push('rootNode.id must be "root"');
+    }
+    if (!data.rootNode.text) {
+      warnings.push('rootNode.text is empty');
+    }
+
+    // 再帰的ノードチェック
+    const nodeIds = new Set();
+    const validateNodeRecursive = (node, depth = 0) => {
+      if (!node.id) {
+        errors.push(`Node at depth ${depth} missing id`);
+        return;
+      }
+      
+      if (nodeIds.has(node.id)) {
+        errors.push(`Duplicate node id: ${node.id}`);
+      } else {
+        nodeIds.add(node.id);
+      }
+
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(child => validateNodeRecursive(child, depth + 1));
+      }
+    };
+
+    validateNodeRecursive(data.rootNode);
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * ファイル添付のバリデーション（統合）
+   */
+  static validateFile(file) {
+    const errors = [];
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_FILE_TYPES = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'text/plain', 'application/pdf', 'application/json'
+    ];
+    
+    if (!file) {
+      errors.push('ファイルが選択されていません');
+      return errors;
+    }
+    
+    if (file.size > MAX_FILE_SIZE) {
+      errors.push(`ファイルサイズが大きすぎます (${Math.round(file.size / 1024 / 1024)}MB > 10MB)`);
+    }
+    
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      errors.push(`サポートされていないファイル形式です: ${file.type}`);
+    }
+    
+    return errors;
+  }
+
+  /**
+   * データ統計情報の取得（統合版）
    * @param {Object} data - 統計対象データ
+   * @param {string} format - データ形式（'hierarchical' | 'relational'）
    * @returns {Object} - 統計情報
    */
-  static getDataStats(data) {
+  static getDataStats(data, format = 'relational') {
+    if (format === 'hierarchical') {
+      return this.getHierarchicalStats(data);
+    }
+
+    // リレーショナルデータの統計
     const stats = {
       totalNodes: data.nodes?.length || 0,
       totalAttachments: data.attachments?.length || 0,
@@ -324,6 +417,114 @@ export class DataConverter {
 
     return stats;
   }
+
+  /**
+   * 階層型データの統計（新規追加）
+   */
+  static getHierarchicalStats(data) {
+    const stats = {
+      totalNodes: 0,
+      totalAttachments: 0,
+      totalLinks: 0,
+      maxDepth: 0,
+      nodesByLevel: {}
+    };
+
+    const countNodeRecursive = (node, depth = 0) => {
+      stats.totalNodes++;
+      stats.maxDepth = Math.max(stats.maxDepth, depth);
+      stats.nodesByLevel[depth] = (stats.nodesByLevel[depth] || 0) + 1;
+      
+      if (node.attachments) {
+        stats.totalAttachments += node.attachments.length;
+      }
+      if (node.mapLinks) {
+        stats.totalLinks += node.mapLinks.length;
+      }
+      
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(child => countNodeRecursive(child, depth + 1));
+      }
+    };
+
+    if (data.rootNode) {
+      countNodeRecursive(data.rootNode);
+    }
+
+    return stats;
+  }
+  /**
+   * データクリーニング（統合）
+   * 破損したデータや無効なノードを除去
+   */
+  static cleanupData(data, format = 'hierarchical') {
+    if (format === 'hierarchical') {
+      return this.cleanupHierarchicalData(data);
+    }
+    
+    // リレーショナルデータのクリーニング
+    const cleaned = JSON.parse(JSON.stringify(data));
+    
+    if (cleaned.nodes) {
+      cleaned.nodes = cleaned.nodes.filter(node => {
+        return node && node.id && typeof node.id === 'string';
+      });
+    }
+    
+    return cleaned;
+  }
+
+  /**
+   * 階層型データのクリーニング
+   */
+  static cleanupHierarchicalData(data) {
+    if (!data || !data.rootNode) {
+      return null;
+    }
+    
+    const cleaned = JSON.parse(JSON.stringify(data));
+    
+    const cleanupNodeRecursive = (node) => {
+      if (!node || !node.id) {
+        return null;
+      }
+      
+      // 基本フィールドの正規化
+      if (typeof node.text !== 'string') {
+        node.text = '';
+      }
+      if (typeof node.x !== 'number') {
+        node.x = 0;
+      }
+      if (typeof node.y !== 'number') {
+        node.y = 0;
+      }
+      if (!Array.isArray(node.children)) {
+        node.children = [];
+      }
+      if (!Array.isArray(node.attachments)) {
+        node.attachments = [];
+      }
+      if (!Array.isArray(node.mapLinks)) {
+        node.mapLinks = [];
+      }
+      
+      // 子ノードの再帰クリーニング
+      node.children = node.children
+        .map(cleanupNodeRecursive)
+        .filter(child => child !== null);
+      
+      return node;
+    };
+    
+    cleaned.rootNode = cleanupNodeRecursive(cleaned.rootNode);
+    return cleaned.rootNode ? cleaned : null;
+  }
 }
 
 export default DataConverter;
+
+// 後方互換性のためのユーティリティエクスポート
+export const validateData = DataConverter.validateData;
+export const validateFile = DataConverter.validateFile;
+export const cleanupData = DataConverter.cleanupData;

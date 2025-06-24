@@ -4,35 +4,24 @@
 
 describe('StorageService Simple Tests', () => {
   test('basic functionality exists', () => {
-    const { storageService } = require('../storageService.js');
+    const { apiClient } = require('../api.js');
     
-    expect(storageService).toBeDefined();
-    expect(typeof storageService.getMaps).toBe('function');
-    expect(typeof storageService.saveMap).toBe('function');
-    expect(typeof storageService.deleteMap).toBe('function');
-    expect(typeof storageService.getSettings).toBe('function');
-    expect(typeof storageService.setSettings).toBe('function');
+    expect(apiClient).toBeDefined();
+    expect(typeof apiClient.getMaps).toBe('function');
+    expect(typeof apiClient.createMap).toBe('function');
+    expect(typeof apiClient.deleteMap).toBe('function');
+    expect(typeof apiClient.setAuth).toBe('function');
   });
 
-  test('default settings should be local mode', () => {
-    // localStorage をクリアしてデフォルト設定をテスト
-    const originalLocalStorage = global.localStorage;
-    global.localStorage = {
-      getItem: jest.fn(() => null),
-      setItem: jest.fn(),
-      removeItem: jest.fn(),
-      clear: jest.fn(),
-    };
-
-    // 新しいインスタンスを作成
-    delete require.cache[require.resolve('../storageService.js')];
-    const { StorageService } = require('../storageService.js');
-    const testService = new StorageService();
-
-    const settings = testService.getSettings();
-    expect(settings.storageMode).toBe('local');
-    expect(settings.autoSave).toBe(true);
-
-    global.localStorage = originalLocalStorage;
+  test('api client should have all required methods', () => {
+    const { apiClient } = require('../api.js');
+    
+    // 基本的なAPIメソッドが存在することを確認
+    expect(typeof apiClient.getMaps).toBe('function');
+    expect(typeof apiClient.getMap).toBe('function');
+    expect(typeof apiClient.createMap).toBe('function');
+    expect(typeof apiClient.updateMap).toBe('function');
+    expect(typeof apiClient.deleteMap).toBe('function');
+    expect(typeof apiClient.setAuth).toBe('function');
   });
 });

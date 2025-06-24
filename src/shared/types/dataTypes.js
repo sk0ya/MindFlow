@@ -81,7 +81,7 @@ export const createInitialData = () => ({
   updatedAt: new Date().toISOString(),
   rootNode: {
     id: 'root',
-    text: 'メイントピック',
+    text: 'メインテーマ',
     x: 400,
     y: 300,
     fontSize: 16,

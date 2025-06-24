@@ -1,59 +1,34 @@
 /**
- * マップデータ操作のユーティリティ関数
+ * マップデータ操作のユーティリティ関数（ノード操作統合版）
  */
 
-// シンプルなID生成（タイムスタンプベース）
-export function generateId() {
-  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+import { generateId as dataTypesGenerateId, generateMapId, createNewNode, deepClone } from '../types/dataTypes.js';
 
-// 初期マップデータを作成
-export function createInitialMapData(id = generateId(), title = '新しいマインドマップ') {
-  return {
-    id,
-    title,
-    rootNode: {
-      id: 'root',
-      text: 'メインテーマ',
-      x: 400,
-      y: 300,
-      children: [],
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#333333',
-    },
-    settings: {
-      autoSave: true,
-      autoLayout: true,
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-}
+// ID生成はdataTypes.jsに統一（後方互換性のためのエイリアス）
+export const generateId = dataTypesGenerateId;
 
-// ノードを作成
-export function createNode(text = '', parentNode = null) {
-  const node = {
-    id: generateId(),
-    text,
-    children: [],
-    fontSize: 14,
-    fontWeight: 'normal',
-    color: '#666666',
-  };
+// 初期マップデータを作成（dataTypes.jsに統一、ここはエイリアス）
+import { createInitialData } from '../types/dataTypes.js';
+export const createInitialMapData = (id = generateMapId(), title = '新しいマインドマップ') => {
+  const data = createInitialData();
+  if (id !== data.id) data.id = id;
+  if (title !== data.title) data.title = title;
+  return data;
+};
 
-  // 親ノードがある場合は位置を計算
+// ノード作成はdataTypes.jsに統一（ここはエイリアス）
+export const createNode = (text = '', parentNode = null) => {
+  const node = createNewNode(text, parentNode);
+  
+  // 位置計算の調整（既存ロジックを維持）
   if (parentNode) {
-    const childCount = parentNode.children.length;
+    const childCount = parentNode.children ? parentNode.children.length : 0;
     node.x = parentNode.x + 200;
     node.y = parentNode.y + (childCount - 1) * 60 - 30;
-  } else {
-    node.x = 400;
-    node.y = 300;
   }
-
+  
   return node;
-}
+};
 
 // ノードを検索（再帰的）
 export function findNode(rootNode, nodeId) {
@@ -143,7 +118,5 @@ export function deleteNode(mapData, nodeId) {
   };
 }
 
-// マップデータを深くクローン
-export function cloneMapData(mapData) {
-  return JSON.parse(JSON.stringify(mapData));
-}
+// データクローンはdataTypes.jsに統一（ここはエイリアス）
+export const cloneMapData = (mapData) => deepClone(mapData);

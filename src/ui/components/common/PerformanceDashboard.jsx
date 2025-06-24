@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import PropTypes from 'prop-types';
-import { usePerformanceMonitor } from '../../../core/hooks/useRealtimeOptimization';
+import { usePerformanceMonitor } from '../../../features/collaboration/useRealtimeOptimization.js';
 
 /**
  * パフォーマンス監視ダッシュボード
