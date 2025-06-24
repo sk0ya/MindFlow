@@ -1,5 +1,5 @@
 import { cloneDeep } from 'lodash-es';
-import { COORDINATES, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index.js';
+import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index.js';
 
 // ファイル関連の定数（定数ファイルから参照）
 export const MAX_FILE_SIZE = STORAGE.MAX_FILE_SIZE;
