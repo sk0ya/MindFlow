@@ -274,7 +274,7 @@ class CloudStorageAdapter {
 
       // マップ更新を実行してルートノードを同期
       const updateResult = await this.updateMap(mapId, mapData);
-      if (!updateResult.success) {
+      if (!updateResult || !updateResult.id) {
         throw new Error('マップ更新に失敗しました');
       }
 
