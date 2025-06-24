@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, loadFromStorage, saveToStorage } from '../utils/storage.js';
+import { getAppSettings, saveAppSettings, loadFromStorage, saveToStorage } from '../utils/storageUtils.js';
 import { STORAGE_KEYS } from '../utils/dataTypes.js';
 import SyncStatusIndicator from './SyncStatusIndicator.jsx';
 import AuthModal from './AuthModal.jsx';

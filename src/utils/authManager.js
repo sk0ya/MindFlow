@@ -1,5 +1,7 @@
 // 認証管理システム
 
+import { getAllMindMaps } from './storageRouter.js';
+
 const AUTH_STORAGE_KEY = 'mindflow_auth';
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ
 
@@ -30,7 +32,6 @@ class AuthManager {
           setTimeout(async () => {
             try {
               console.log('🔄 自動ログイン時マップ一覧同期開始...');
-              const { getAllMindMaps } = await import('./storageRouter.js');
               await getAllMindMaps();
               console.log('✅ 自動ログイン時マップ一覧同期完了');
             } catch (syncError) {
@@ -157,7 +158,6 @@ class AuthManager {
       // ログイン成功時にマップ一覧を同期
       try {
         console.log('🔄 ログイン成功時マップ一覧同期開始...');
-        const { getAllMindMaps } = await import('./storageRouter.js');
         await getAllMindMaps();
         console.log('✅ ログイン成功時マップ一覧同期完了');
       } catch (syncError) {

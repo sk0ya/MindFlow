@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { isFirstTimeSetup, setStorageMode } from '../utils/storageRouter.js';
-import { getAppSettings } from '../utils/storage.js';
+import { getAppSettings } from '../utils/storageUtils.js';
 import { hasLocalData } from '../utils/localStorage.js';
+import { authManager } from '../utils/authManager.js';
 
 // アプリ初期化専用フック - シーケンスを一本化
 export const useAppInitialization = () => {
@@ -49,7 +50,6 @@ export const useAppInitialization = () => {
             });
           } else if (settings.storageMode === 'cloud') {
             // クラウドモード - 認証状態をチェック
-            const { authManager } = await import('../utils/authManager.js');
             const isAuthenticated = authManager.isAuthenticated();
             
             console.log('☁️ クラウドモード: 認証状態 =', isAuthenticated);

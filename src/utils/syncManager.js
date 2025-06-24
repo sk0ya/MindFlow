@@ -1,6 +1,7 @@
 // オフライン対応とデータ同期管理
 
 import { STORAGE_KEYS } from './dataTypes.js';
+import { cloudStorage } from './cloudStorage.js';
 
 class SyncManager {
   constructor() {
@@ -86,7 +87,6 @@ class SyncManager {
   }
 
   async executeOperation(operation) {
-    const { cloudStorage } = await import('./cloudStorage.js');
     
     switch (operation.type) {
       case 'save':
@@ -110,7 +110,6 @@ class SyncManager {
     }
 
     try {
-      const { cloudStorage } = await import('./cloudStorage.js');
       
       // 1. ローカルの変更をクラウドに送信
       await this.processSyncQueue();

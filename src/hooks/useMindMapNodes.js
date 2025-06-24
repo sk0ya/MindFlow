@@ -113,7 +113,6 @@ export const useMindMapNodes = (data, updateData) => {
     try {
       console.log('📤 DB更新操作実行中:', nodeId);
       
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
       dbResult = await adapter.updateNode(dataRef.current.id, nodeId, updates);
       
@@ -328,7 +327,6 @@ export const useMindMapNodes = (data, updateData) => {
       try {
         console.log('📤 DB削除操作実行中:', nodeId);
         
-        const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
         const adapter = getCurrentAdapter();
         const dbResult = await adapter.deleteNode(dataRef.current.id, nodeId);
         
@@ -419,7 +417,6 @@ export const useMindMapNodes = (data, updateData) => {
     try {
       console.log('📤 DB親変更操作実行中:', nodeId);
       
-      const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
       const adapter = getCurrentAdapter();
       dbResult = await adapter.moveNode(dataRef.current.id, nodeId, newParentId);
       
@@ -562,8 +559,7 @@ export const useMindMapNodes = (data, updateData) => {
         
         try {
           // DBアダプターを取得
-          const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-          const adapter = getCurrentAdapter();
+            const adapter = getCurrentAdapter();
           
           // 親ノードを取得
           const parentNode = findParentNode(nodeId);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
-import { deepClone, assignColorsToExistingNodes } from '../utils/dataTypes.js';
+import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
+import { getAppSettings } from '../utils/storageUtils.js';
 import { getCurrentAdapter } from '../utils/storageAdapter.js';
 import { realtimeSync } from '../utils/realtimeSync.js';
 
@@ -35,7 +36,6 @@ export const useMindMapMulti = (data, setData, updateData) => {
   // 新規マップ作成（完全分離版）
   const createMindMap = async (title = '新しいマインドマップ', category = '未分類') => {
     try {
-      const { createInitialData } = await import('../utils/dataTypes.js');
       
       const newMap = createInitialData();
       newMap.title = title;
@@ -69,7 +69,6 @@ export const useMindMapMulti = (data, setData, updateData) => {
   // マップ名変更（リアルタイム同期対応）
   const renameMindMap = async (mapId, newTitle) => {
     try {
-      const { getAppSettings } = await import('../utils/storage.js');
       const settings = getAppSettings();
       
       console.log('✏️ マップ名変更:', mapId, '->', newTitle);
@@ -85,7 +84,6 @@ export const useMindMapMulti = (data, setData, updateData) => {
         }
       } else {
         // ローカル更新
-        const { getAllMindMaps, saveMindMap } = await import('../utils/storageRouter.js');
         const allMaps = await getAllMindMaps();
         const mapIndex = allMaps.findIndex(map => map.id === mapId);
         
@@ -118,7 +116,6 @@ export const useMindMapMulti = (data, setData, updateData) => {
     }
     
     try {
-      const { getAppSettings } = await import('../utils/storage.js');
       const settings = getAppSettings();
       
       console.log('🗑️ マップ削除開始:', mapId);
@@ -132,7 +129,6 @@ export const useMindMapMulti = (data, setData, updateData) => {
         console.log('☁️ クラウドマップ削除成功');
       } else {
         // ローカルから削除
-        const { deleteMindMap } = await import('../utils/storageRouter.js');
         await deleteMindMap(mapId);
         console.log('🏠 ローカルマップ削除成功');
       }
@@ -385,8 +381,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     const initializeMaps = async () => {
       try {
         console.log('🔄 初期化時のマップ一覧読み込み開始');
-        const { getAppSettings } = await import('../utils/storage.js');
-        const settings = getAppSettings();
+          const settings = getAppSettings();
         
         if (settings.storageMode === 'cloud') {
           // クラウドモードの場合はrefreshAllMindMapsを呼ぶ

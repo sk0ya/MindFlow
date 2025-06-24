@@ -2,7 +2,7 @@
  * シンプルなストレージサービスのテスト
  */
 
-import { storageService } from '../storage.js';
+import { StorageService, storageService } from '../storageService.js';
 
 // モック設定
 jest.mock('../api.js', () => ({
@@ -45,7 +45,11 @@ describe('StorageService', () => {
 
     test('getMaps should return local maps', async () => {
       const mockMaps = [{ id: '1', title: 'Test Map' }];
+      
+      // モックをクリアしてから設定
+      jest.clearAllMocks();
       localStorageMock.getItem.mockImplementation((key) => {
+        console.log('localStorage.getItem called with key:', key);
         if (key === 'mindflow_settings') {
           return JSON.stringify({ storageMode: 'local' });
         }
@@ -55,25 +59,32 @@ describe('StorageService', () => {
         return null;
       });
 
-      // インスタンスを再作成して新しい設定を読み込む
-      const { StorageService } = require('../storage.js');
-      const testStorageService = new (StorageService || class {
-        getSettings() { return { storageMode: 'local' }; }
-        getLocalMaps() { return mockMaps; }
-        async getMaps() { return this.getLocalMaps(); }
-      })();
+      // 新しいインスタンスを作成
+      const testStorageService = new StorageService();
+      console.log('StorageService settings:', testStorageService.settings);
+      console.log('getLocalMaps call result:', testStorageService.getLocalMaps());
 
       const maps = await testStorageService.getMaps();
+      console.log('Returned maps:', maps);
       expect(maps).toEqual(mockMaps);
     });
 
     test('saveMap should save to localStorage', async () => {
       const mapData = { id: '1', title: 'Test Map', rootNode: {} };
       
-      // 既存のマップがない場合
-      localStorageMock.getItem.mockReturnValue('[]');
+      // 既存のマップがない場合の設定
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'mindflow_settings') {
+          return JSON.stringify({ storageMode: 'local' });
+        }
+        if (key === 'mindflow_maps') {
+          return '[]';
+        }
+        return null;
+      });
       
-      await storageService.saveMap(mapData);
+      const testStorageService = new StorageService();
+      await testStorageService.saveMap(mapData);
       
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'mindflow_maps',
@@ -96,20 +107,24 @@ describe('StorageService', () => {
 
     test('getMaps should fallback to local on cloud failure', async () => {
       const { apiClient } = require('../api.js');
-      const mockLocalMaps = [{ id: '1', title: 'Local Map' }];
+      const mockLocalMaps = [{ id: '1', title: 'Test Map', rootNode: {} }];
       
       // API エラーをシミュレート
       apiClient.getMaps.mockRejectedValue(new Error('Network error'));
       
       // ローカルデータをセット
       localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'mindflow_settings') {
+          return JSON.stringify({ storageMode: 'cloud' });
+        }
         if (key === 'mindflow_maps') {
           return JSON.stringify(mockLocalMaps);
         }
         return null;
       });
 
-      const maps = await storageService.getMaps();
+      const testStorageService = new StorageService();
+      const maps = await testStorageService.getMaps();
       expect(maps).toEqual(mockLocalMaps);
     });
   });

@@ -45,7 +45,7 @@ jest.mock('../../utils/realtimeSync.js', () => ({
   updateCursor: jest.fn()
 }));
 
-jest.mock('../../utils/storage.js', () => ({
+jest.mock('../../utils/storageUtils.js', () => ({
   getAppSettings: jest.fn(() => ({ storageMode: 'local' })),
   loadFromStorage: jest.fn(() => ({})),
   saveToStorage: jest.fn()

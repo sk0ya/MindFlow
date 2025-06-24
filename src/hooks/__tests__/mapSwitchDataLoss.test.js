@@ -40,7 +40,7 @@ jest.mock('../../utils/storageRouter.js', () => ({
 }));
 
 // ストレージ設定をクラウドモードに設定
-jest.mock('../../utils/storage.js', () => ({
+jest.mock('../../utils/storageUtils.js', () => ({
   getAppSettings: jest.fn(() => ({ storageMode: 'cloud' }))
 }));
 

@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { storageService } from '../services/storage.js';
+import { storageService } from '../services/storageService.js';
 import { createInitialMapData, generateId } from '../utils/mapUtils.js';
 
 export function useCurrentMap(mapId) {

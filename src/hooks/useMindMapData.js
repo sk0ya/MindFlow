@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled } from '../utils/storageRouter.js';
-import { getAppSettings } from '../utils/storage.js';
+import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAllMindMaps, getMindMap } from '../utils/storageRouter.js';
+import { getAppSettings } from '../utils/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../utils/dataTypes.js';
+import { authManager } from '../utils/authManager.js';
 
 // データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
@@ -45,7 +46,6 @@ export const useMindMapData = (isAppReady = false) => {
         return;
       }
       
-      const { saveMindMap } = await import('../utils/storageRouter.js');
       await saveMindMap(dataToSave);
       console.log('💾 即座保存完了:', dataToSave.title);
     } catch (error) {
@@ -105,7 +105,6 @@ export const useMindMapData = (isAppReady = false) => {
       setIsLoadingFromCloud(true);
       
       // 認証状態を確認
-      const { authManager } = await import('../utils/authManager.js');
       if (!authManager.isAuthenticated()) {
         console.log('⏳ 未認証: クラウド同期を待機');
         return;
@@ -114,7 +113,6 @@ export const useMindMapData = (isAppReady = false) => {
       console.log('🔄 認証済み: クラウド同期開始');
       
       // クラウドからマインドマップ一覧を取得
-      const { getAllMindMaps } = await import('../utils/storageRouter.js');
       const cloudMaps = await getAllMindMaps();
       
       if (cloudMaps && cloudMaps.length > 0) {
@@ -124,7 +122,6 @@ export const useMindMapData = (isAppReady = false) => {
         )[0];
         
         console.log('📥 最新のクラウドマップを読み込み:', latestMap.title);
-        const { getMindMap } = await import('../utils/storageRouter.js');
         const fullMapData = await getMindMap(latestMap.id);
         
         if (fullMapData) {
@@ -141,7 +138,6 @@ export const useMindMapData = (isAppReady = false) => {
         
         // クラウドに保存
         try {
-          const { saveMindMap } = await import('../utils/storageRouter.js');
           await saveMindMap(newMap);
           console.log('✅ 新規マップのクラウド保存完了');
         } catch (saveError) {

@@ -1,5 +1,9 @@
 // ストレージモード切り替えロジック専用ルーター
-import { getAppSettings, saveAppSettings } from './storage.js';
+import { getAppSettings, saveAppSettings } from './storageUtils.js';
+import { cloudStorage } from './cloudStorage.js';
+import { getAllMindMapsLocal, getCurrentMindMapLocal, saveMindMapLocal, deleteMindMapLocal, createNewMindMapLocal, exportMindMapAsJSONLocal, importMindMapFromJSONLocal } from './localStorage.js';
+import { createInitialData } from './dataTypes.js';
+import { authManager } from './authManager.js';
 
 // 初回セットアップ完了チェック
 export const isFirstTimeSetup = () => {
@@ -41,10 +45,8 @@ export const setStorageMode = async (mode) => {
 // 統一インターファェース - 全てのマインドマップを取得
 export const getAllMindMaps = async () => {
   if (isCloudStorageEnabled()) {
-    const { cloudStorage } = await import('./cloudStorage.js');
     return await cloudStorage.getAllMindMapsCloud();
   } else {
-    const { getAllMindMapsLocal } = await import('./localStorage.js');
     return getAllMindMapsLocal();
   }
 };
@@ -55,7 +57,6 @@ export const getCurrentMindMap = async () => {
     console.log('☁️ クラウドモード: getCurrentMindMap をスキップ（個別ロード方式）');
     return null;
   } else {
-    const { getCurrentMindMapLocal } = await import('./localStorage.js');
     return getCurrentMindMapLocal();
   }
 };
@@ -63,10 +64,8 @@ export const getCurrentMindMap = async () => {
 // 統一インターファェース - マインドマップ保存
 export const saveMindMap = async (mindMapData) => {
   if (isCloudStorageEnabled()) {
-    const { cloudStorage } = await import('./cloudStorage.js');
     return await cloudStorage.updateMindMapCloud(mindMapData.id, mindMapData);
   } else {
-    const { saveMindMapLocal } = await import('./localStorage.js');
     return await saveMindMapLocal(mindMapData);
   }
 };
@@ -74,11 +73,9 @@ export const saveMindMap = async (mindMapData) => {
 // 統一インターファェース - マインドマップ削除
 export const deleteMindMap = async (mapId) => {
   if (isCloudStorageEnabled()) {
-    const { cloudStorage } = await import('./cloudStorage.js');
     await cloudStorage.deleteMindMapCloud(mapId);
     return null; // クラウドでは削除後の現在マップは管理しない
   } else {
-    const { deleteMindMapLocal } = await import('./localStorage.js');
     return deleteMindMapLocal(mapId);
   }
 };
@@ -86,13 +83,10 @@ export const deleteMindMap = async (mapId) => {
 // 統一インターファェース - 新しいマインドマップ作成
 export const createNewMindMap = async (title = '新しいマインドマップ') => {
   if (isCloudStorageEnabled()) {
-    const { cloudStorage } = await import('./cloudStorage.js');
-    const { createInitialData } = await import('./dataTypes.js');
     const newMap = createInitialData();
     newMap.title = title;
     return await cloudStorage.createMindMapCloud(newMap);
   } else {
-    const { createNewMindMapLocal } = await import('./localStorage.js');
     return await createNewMindMapLocal(title);
   }
 };
@@ -100,10 +94,8 @@ export const createNewMindMap = async (title = '新しいマインドマップ')
 // 統一インターファェース - 特定マップ取得
 export const getMindMap = async (mapId) => {
   if (isCloudStorageEnabled()) {
-    const { cloudStorage } = await import('./cloudStorage.js');
     return await cloudStorage.getMindMapCloud(mapId);
   } else {
-    const { getAllMindMapsLocal } = await import('./localStorage.js');
     const maps = getAllMindMapsLocal();
     const map = maps.find(m => m.id === mapId);
     if (!map) {
@@ -117,10 +109,8 @@ export const getMindMap = async (mapId) => {
 export const exportMindMapAsJSON = async (mindMapData) => {
   if (isCloudStorageEnabled()) {
     // クラウドでも同じエクスポート機能を使用
-    const { exportMindMapAsJSONLocal } = await import('./localStorage.js');
     exportMindMapAsJSONLocal(mindMapData);
   } else {
-    const { exportMindMapAsJSONLocal } = await import('./localStorage.js');
     exportMindMapAsJSONLocal(mindMapData);
   }
 };
@@ -140,7 +130,6 @@ export const importMindMapFromJSON = async (file) => {
             throw new Error('Invalid mind map format');
           }
           
-          const { cloudStorage } = await import('./cloudStorage.js');
           const importedMap = await cloudStorage.createMindMapCloud(mindMapData);
           resolve(importedMap);
         } catch (error) {
@@ -152,7 +141,6 @@ export const importMindMapFromJSON = async (file) => {
       reader.readAsText(file);
     });
   } else {
-    const { importMindMapFromJSONLocal } = await import('./localStorage.js');
     return await importMindMapFromJSONLocal(file);
   }
 };
@@ -160,8 +148,6 @@ export const importMindMapFromJSON = async (file) => {
 // 接続テスト
 export const testCloudConnection = async () => {
   try {
-    const { authManager } = await import('./authManager.js');
-    const { cloudStorage } = await import('./cloudStorage.js');
     
     if (!authManager.isAuthenticated()) {
       return false;

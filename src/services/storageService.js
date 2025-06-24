@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
   autoSave: true,
 };
 
-class StorageService {
+export class StorageService {
   constructor() {
     this.settings = this.getSettings();
   }
@@ -133,4 +133,3 @@ class StorageService {
 }
 
 export const storageService = new StorageService();
-export { StorageService };

@@ -18,7 +18,7 @@ import ConflictNotification from './ConflictNotification';
 import CollaborativeFeatures from './CollaborativeFeatures';
 import PerformanceDashboard from './PerformanceDashboard';
 import { exportMindMapAsJSON, importMindMapFromJSON, isFirstTimeSetup, setStorageMode } from '../utils/storageRouter';
-import { getAppSettings } from '../utils/storage';
+import { getAppSettings } from '../utils/storageUtils';
 import { hasLocalData } from '../utils/localStorage';
 import './MindMapApp.css';
 
@@ -31,6 +31,7 @@ import StorageModeSelector from './StorageModeSelector.jsx';
 import { useOnboarding } from '../hooks/useOnboarding.js';
 import { useAppInitialization } from '../hooks/useAppInitialization.js';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.js';
+import { realtimeSync } from '../utils/realtimeSync.js';
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -484,7 +485,6 @@ const MindMapApp = () => {
     
     // リアルタイム同期を再初期化
     try {
-      const { realtimeSync } = await import('../utils/realtimeSync.js');
       realtimeSync.reinitialize();
       console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
     } catch (initError) {

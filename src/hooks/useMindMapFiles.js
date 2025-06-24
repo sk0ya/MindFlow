@@ -3,6 +3,10 @@ import { createFileAttachment } from '../utils/dataTypes.js';
 import { optimizeFile, formatFileSize } from '../utils/fileOptimization.js';
 import { validateFile } from '../utils/fileValidation.js';
 import { logger } from '../utils/logger.js';
+import { isCloudStorageEnabled, getCurrentMindMap } from '../utils/storageRouter.js';
+import { getAppSettings } from '../utils/storageUtils.js';
+import { authManager } from '../utils/authManager.js';
+import { cloudStorage } from '../utils/cloudStorage.js';
 
 export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   // アプリ初期化状態をチェック
@@ -61,8 +65,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       });
       
       // 2. ストレージモードに応じたファイル保存
-      const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
-      const { getAppSettings } = await import('../utils/storage.js');
       
       // デバッグ: ストレージモード確認
       const settings = getAppSettings();
@@ -77,7 +79,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         // クラウドモード: R2ストレージにアップロード
         console.log('☁️ クラウドモード: R2ストレージにアップロード');
         
-        const { authManager } = await import('../utils/authManager.js');
         const authHeader = authManager.getAuthHeader();
         
         console.log('🔐 認証情報確認:', {
@@ -262,12 +263,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       // R2ストレージのファイルの場合、サーバーからも削除
       if (fileToRemove && fileToRemove.isR2Storage && fileToRemove.r2FileId) {
         try {
-          const { authManager } = await import('../utils/authManager.js');
           const authHeader = authManager.getAuthHeader();
           
           if (authHeader) {
-            const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
-            const { getCurrentMindMap } = await import('../utils/storageRouter.js');
             
             let mapId = null;
             if (isCloudStorageEnabled()) {
@@ -328,8 +326,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       if (file.isR2Storage && file.r2FileId) {
         
         // 現在のマインドマップIDを取得（クラウドモード対応）
-        const { isCloudStorageEnabled } = await import('../utils/storageRouter.js');
-        const { getCurrentMindMap } = await import('../utils/storageRouter.js');
         
         let mapId = null;
         if (isCloudStorageEnabled()) {
@@ -351,14 +347,12 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           console.log('downloadURL使用:', file.downloadUrl);
           
           // 認証ヘッダーを準備
-          const { authManager } = await import('../utils/authManager.js');
           let headers = {};
           
           const authHeader = authManager.getAuthHeader();
           if (authHeader) {
             headers['Authorization'] = authHeader;
           } else {
-            const { cloudStorage } = await import('../utils/cloudStorage.js');
             const userId = await cloudStorage.getUserId();
             headers['X-User-ID'] = userId;
           }
@@ -382,7 +376,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           }
         }
         // 認証ヘッダーを準備
-        const { authManager } = await import('../utils/authManager.js');
         let headers = {};
         
         console.log('認証状態確認:', {
@@ -397,7 +390,6 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           console.log('JWT認証ヘッダー使用:', authHeader.substring(0, 20) + '...');
         } else {
           // 認証が無効な環境の場合のフォールバック
-          const { cloudStorage } = await import('../utils/cloudStorage.js');
           const userId = await cloudStorage.getUserId();
           headers['X-User-ID'] = userId;
           console.log('X-User-IDフォールバック:', userId);

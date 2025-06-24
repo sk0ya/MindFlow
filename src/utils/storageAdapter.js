@@ -1,5 +1,9 @@
 // ストレージモード別の処理を完全分離するアダプター
-import { getAppSettings } from './storage.js';
+import { getAppSettings } from './storageUtils.js';
+import { getAllMindMapsLocal, saveMindMapLocal, deleteMindMapLocal } from './localStorage.js';
+import { cloudStorage } from './cloudStorage.js';
+import { authManager } from './authManager.js';
+import { generateId } from './dataTypes.js';
 
 // ローカルストレージ専用の処理
 class LocalStorageAdapter {
@@ -8,7 +12,6 @@ class LocalStorageAdapter {
   }
 
   async getAllMaps() {
-    const { getAllMindMapsLocal } = await import('./localStorage.js');
     const maps = getAllMindMapsLocal();
     console.log('🏠 ローカル: マップ一覧取得', maps.length, '件');
     return maps;
@@ -25,21 +28,18 @@ class LocalStorageAdapter {
   }
 
   async createMap(mapData) {
-    const { saveMindMapLocal } = await import('./localStorage.js');
     await saveMindMapLocal(mapData);
     console.log('🏠 ローカル: マップ作成完了', mapData.title);
     return mapData;
   }
 
   async updateMap(mapId, mapData) {
-    const { saveMindMapLocal } = await import('./localStorage.js');
     await saveMindMapLocal(mapData);
     console.log('🏠 ローカル: マップ更新完了', mapData.title);
     return mapData;
   }
 
   async deleteMap(mapId) {
-    const { deleteMindMapLocal } = await import('./localStorage.js');
     const result = deleteMindMapLocal(mapId);
     console.log('🏠 ローカル: マップ削除完了', mapId);
     return result;
@@ -79,7 +79,6 @@ class CloudStorageAdapter {
 
   // 認証状態の詳細チェック
   async debugAuthState() {
-    const { authManager } = await import('./authManager.js');
     
     const authState = {
       isAuthenticated: authManager.isAuthenticated(),
@@ -100,7 +99,6 @@ class CloudStorageAdapter {
   }
 
   async initialize() {
-    const { authManager } = await import('./authManager.js');
     
     console.log('☁️ クラウド: 初期化開始', {
       isAuthenticated: authManager.isAuthenticated(),
@@ -120,7 +118,6 @@ class CloudStorageAdapter {
   }
 
   async getAuthHeaders() {
-    const { authManager } = await import('./authManager.js');
     
     console.log('🔍 認証状態確認:', {
       isAuthenticated: authManager.isAuthenticated(),
@@ -159,7 +156,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ一覧取得開始');
       
-      const { cloudStorage } = await import('./cloudStorage.js');
       const maps = await cloudStorage.getAllMindMapsCloud();
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
@@ -175,7 +171,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
-      const { cloudStorage } = await import('./cloudStorage.js');
       const map = await cloudStorage.getMindMapCloud(mapId);
       console.log('☁️ クラウド: マップ取得完了', map.title);
       return map;
@@ -191,7 +186,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
       
-      const { cloudStorage } = await import('./cloudStorage.js');
       const result = await cloudStorage.createMindMapCloud(mapData);
       console.log('☁️ クラウド: マップ作成完了', result.title);
       return result;
@@ -207,7 +201,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ更新開始', mapId);
       
-      const { cloudStorage } = await import('./cloudStorage.js');
       const result = await cloudStorage.updateMindMapCloud(mapId, mapData);
       console.log('☁️ クラウド: マップ更新完了', result.title);
       return result;
@@ -223,7 +216,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ削除開始', mapId);
       
-      const { cloudStorage } = await import('./cloudStorage.js');
       const result = await cloudStorage.deleteMindMapCloud(mapId);
       console.log('☁️ クラウド: マップ削除完了');
       return result;
@@ -237,7 +229,6 @@ class CloudStorageAdapter {
   // ルートノード存在確認（Parent node not found エラー対策）
   async ensureRootNodeExists(mapId) {
     try {
-      const { authManager } = await import('./authManager.js');
       
       // サーバー側でのマップ取得を試行してルートノードの同期を確認
       const response = await authManager.authenticatedFetch(`${this.baseUrl}/maps/${mapId}`, {
@@ -297,7 +288,6 @@ class CloudStorageAdapter {
 
   // ルートノードチェックなしでノード追加（リトライ用）
   async addNodeWithoutRootCheck(mapId, nodeData, parentId) {
-    const { authManager } = await import('./authManager.js');
     const requestBody = {
       mapId,
       node: nodeData,
@@ -373,7 +363,6 @@ class CloudStorageAdapter {
         }
       }
       
-      const { authManager } = await import('./authManager.js');
       const requestBody = {
         mapId,
         node: nodeData,
@@ -462,7 +451,6 @@ class CloudStorageAdapter {
 
   // UNIQUE制約違反時のID再生成リトライ
   async retryWithNewId(mapId, originalNodeData, parentId, maxRetries = 3) {
-    const { generateId } = await import('./dataTypes.js');
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -477,7 +465,6 @@ class CloudStorageAdapter {
         });
 
         // 新しいIDでリクエスト再送信
-        const { authManager } = await import('./authManager.js');
         const requestBody = {
           mapId,
           node: newNodeData,
@@ -525,7 +512,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード更新開始', nodeId);
       
-      const { authManager } = await import('./authManager.js');
       const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'PUT',
         headers: {
@@ -564,7 +550,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード削除開始', nodeId);
       
-      const { authManager } = await import('./authManager.js');
       const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
         method: 'DELETE',
         headers: {
@@ -606,7 +591,6 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
       
-      const { authManager } = await import('./authManager.js');
       const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}/move`, {
         method: 'PUT',
         headers: {

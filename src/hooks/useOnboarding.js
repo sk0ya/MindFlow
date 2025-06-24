@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings } from '../utils/storage.js';
+import { getAppSettings, saveAppSettings } from '../utils/storageUtils.js';
 
 // オンボーディング管理用カスタムフック
 export const useOnboarding = () => {

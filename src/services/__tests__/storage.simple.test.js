@@ -4,7 +4,7 @@
 
 describe('StorageService Simple Tests', () => {
   test('basic functionality exists', () => {
-    const { storageService } = require('../storage.js');
+    const { storageService } = require('../storageService.js');
     
     expect(storageService).toBeDefined();
     expect(typeof storageService.getMaps).toBe('function');
@@ -25,8 +25,8 @@ describe('StorageService Simple Tests', () => {
     };
 
     // 新しいインスタンスを作成
-    delete require.cache[require.resolve('../storage.js')];
-    const { StorageService } = require('../storage.js');
+    delete require.cache[require.resolve('../storageService.js')];
+    const { StorageService } = require('../storageService.js');
     const testService = new StorageService();
 
     const settings = testService.getSettings();

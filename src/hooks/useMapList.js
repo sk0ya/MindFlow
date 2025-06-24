@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { storageService } from '../services/storage.js';
+import { storageService } from '../services/storageService.js';
 
 export function useMapList() {
   const [maps, setMaps] = useState([]);

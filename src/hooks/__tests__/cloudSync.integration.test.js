@@ -3,6 +3,8 @@
  * 実際のユーザー操作をシミュレートして、データ保護機能が正しく動作することを確認
  */
 
+import { CloudStorageAdapter } from '../../utils/storageAdapter.js';
+
 describe('Cloud Sync Integration Tests', () => {
   let originalFetch;
   let mockLocalStorage;
@@ -32,7 +34,7 @@ describe('Cloud Sync Integration Tests', () => {
     }));
 
     // ストレージ設定をクラウドモードに設定
-    jest.doMock('../../utils/storage.js', () => ({
+    jest.doMock('../../utils/storageUtils.js', () => ({
       getAppSettings: jest.fn(() => ({ storageMode: 'cloud' }))
     }));
 
@@ -48,7 +50,6 @@ describe('Cloud Sync Integration Tests', () => {
   describe('ノード削除エラーハンドリング', () => {
     test('404エラー（既に削除済み）の場合は成功として扱う', async () => {
       // CloudStorageAdapterを直接作成
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       
       // 初期化レスポンスと404レスポンスをモック
       global.fetch
@@ -75,7 +76,6 @@ describe('Cloud Sync Integration Tests', () => {
 
     test('他のエラーコードの場合は失敗として扱う', async () => {
       // CloudStorageAdapterを直接作成
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       
       // 初期化レスポンスと500エラーレスポンスをモック
       global.fetch

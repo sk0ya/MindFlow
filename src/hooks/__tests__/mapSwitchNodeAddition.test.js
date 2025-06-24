@@ -42,7 +42,7 @@ jest.mock('../../utils/storageRouter.js', () => ({
   saveMindMap: jest.fn()
 }));
 
-jest.mock('../../utils/storage.js', () => ({
+jest.mock('../../utils/storageUtils.js', () => ({
   getAppSettings: jest.fn(() => ({ storageMode: 'cloud' }))
 }));
 

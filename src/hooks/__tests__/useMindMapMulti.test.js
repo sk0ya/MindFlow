@@ -32,7 +32,7 @@ jest.mock('../../utils/dataTypes.js', () => ({
   }))
 }));
 
-jest.mock('../../utils/storage.js', () => ({
+jest.mock('../../utils/storageUtils.js', () => ({
   getAppSettings: jest.fn(() => ({ storageMode: 'local' }))
 }));
 

@@ -1,6 +1,8 @@
 // 完全分離：クラウドストレージ専用処理
 // Cloudflare Workers APIクライアント
 
+import { authManager } from './authManager.js';
+
 const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
 class CloudStorageClient {
@@ -11,7 +13,6 @@ class CloudStorageClient {
   async getUserId() {
     // 認証マネージャーから動的にインポート
     try {
-      const { authManager } = await import('./authManager.js');
       
       // 認証済みの場合は必ずemailをuserIdとして使用（統一化）
       if (authManager.isAuthenticated()) {
@@ -40,7 +41,6 @@ class CloudStorageClient {
     
     // 認証マネージャーを動的にインポート（循環依存回避）
     try {
-      const { authManager } = await import('./authManager.js');
       
       // 認証が有効な場合は認証済みリクエストを使用
       if (authManager.isAuthenticated()) {

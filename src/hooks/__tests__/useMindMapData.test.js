@@ -10,7 +10,7 @@ jest.mock('../../utils/storageRouter.js', () => ({
   getMindMap: jest.fn(),
 }));
 
-jest.mock('../../utils/storage.js', () => ({
+jest.mock('../../utils/storageUtils.js', () => ({
   getAppSettings: jest.fn(),
 }));
 
@@ -59,7 +59,7 @@ describe('useMindMapData - Cloud Sync Tests', () => {
   beforeEach(() => {
     // モジュールを再インポートしてフレッシュなモックを取得
     mockStorageRouter = require('../../utils/storageRouter.js');
-    mockStorage = require('../../utils/storage.js');
+    mockStorage = require('../../utils/storageUtils.js');
     mockDataTypes = require('../../utils/dataTypes.js');
 
     // デフォルトのモック実装

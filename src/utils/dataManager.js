@@ -1,5 +1,5 @@
 // 統一データ管理システム - 全ての保存・同期操作を統括
-import { getAppSettings } from './storage.js';
+import { getAppSettings } from './storageUtils.js';
 import { getCurrentAdapter } from './storageAdapter.js';
 import { deepClone } from './dataTypes.js';
 

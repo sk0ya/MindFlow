@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useMapList } from '../hooks/useMapList.js';
 import { useCurrentMap } from '../hooks/useCurrentMap.js';
 import { useNodes } from '../hooks/useNodes.js';
-import { storageService } from '../services/storage.js';
+import { storageService } from '../services/storageService.js';
 
 export function SimpleMindMapApp() {
   const [currentMapId, setCurrentMapId] = useState(null);

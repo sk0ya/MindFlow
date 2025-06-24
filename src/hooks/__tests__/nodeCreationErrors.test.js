@@ -4,6 +4,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { CloudStorageAdapter } from '../../utils/storageAdapter.js';
 
 // StorageAdapterをモック化
 const mockAddNode = jest.fn();
@@ -44,7 +45,6 @@ describe('ノード作成エラーの調査', () => {
 
   describe('子ノード追加のリクエスト形式テスト', () => {
     test('子ノード追加時のリクエストデータ構造', async () => {
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 
@@ -66,7 +66,6 @@ describe('ノード作成エラーの調査', () => {
     });
 
     test('兄弟ノード追加時のリクエストデータ構造', async () => {
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 
@@ -96,7 +95,6 @@ describe('ノード作成エラーの調査', () => {
         error: 'D1_ERROR: UNIQUE constraint failed: nodes.id: SQLITE_CONSTRAINT'
       });
 
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 
@@ -118,7 +116,6 @@ describe('ノード作成エラーの調査', () => {
         error: 'API エラー: Status: 400, Body: {"error":"Bad Request"}'
       });
 
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 
@@ -139,7 +136,6 @@ describe('ノード作成エラーの調査', () => {
         error: 'Network Error'
       });
 
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 
@@ -176,7 +172,6 @@ describe('ノード作成エラーの調査', () => {
         }
       });
 
-      const { CloudStorageAdapter } = await import('../../utils/storageAdapter.js');
       storageAdapter = new CloudStorageAdapter();
       await storageAdapter.ensureInitialized();
 

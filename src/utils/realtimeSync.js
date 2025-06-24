@@ -1,5 +1,5 @@
 // リアルタイム同期システム - 操作ベースの即座DB反映
-import { getAppSettings } from './storage.js';
+import { getAppSettings } from './storageUtils.js';
 import { authManager } from './authManager.js';
 
 class RealtimeSync {
