@@ -21,6 +21,10 @@ export default {
     '<rootDir>/src/**/__tests__/**/*.(js|jsx)',
     '<rootDir>/src/**/*.(test|spec).(js|jsx)'
   ],
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/'
+  ],
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
     '!src/main.jsx',

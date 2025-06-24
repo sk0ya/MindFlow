@@ -2,7 +2,9 @@
 import { getAppSettings } from './storageUtils.js';
 import { getAllMindMapsLocal, saveMindMapLocal, deleteMindMapLocal } from './localStorage.js';
 import { cloudStorage } from './cloudStorage.js';
+import { cloudSyncAdapter } from './cloudSyncAdapter.js';
 import { authManager } from '../../features/auth/authManager.js';
+import { cloudAuthManager } from '../../features/auth/cloudAuthManager.js';
 import { generateId } from '../../shared/types/dataTypes.js';
 
 // ローカルストレージ専用の処理
@@ -67,14 +69,15 @@ class LocalStorageAdapter {
   }
 }
 
-// クラウドストレージ専用の処理
+// クラウドストレージ専用の処理（リアルタイム同期対応）
 class CloudStorageAdapter {
   constructor() {
-    this.name = 'クラウドストレージ';
+    this.name = 'クラウドストレージ（同期対応）';
     this.baseUrl = '';
     this.pendingOperations = new Map();
     this.isInitialized = false;
     this.initPromise = this.initialize();
+    this.useSyncAdapter = true; // 新しい同期機能を使用
   }
 
   // 認証状態の詳細チェック
@@ -156,6 +159,14 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ一覧取得開始');
       
+      // 新しい同期アダプターを使用
+      if (this.useSyncAdapter && cloudAuthManager.isCloudAuthEnabled()) {
+        const maps = await cloudSyncAdapter.getAllMaps();
+        console.log('🔄 同期アダプター: マップ一覧取得完了', maps.length, '件');
+        return maps;
+      }
+      
+      // フォールバック: 従来のクラウドストレージ
       const maps = await cloudStorage.getAllMindMapsCloud();
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
@@ -171,6 +182,14 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
+      // 新しい同期アダプターを使用
+      if (this.useSyncAdapter && cloudAuthManager.isCloudAuthEnabled()) {
+        const map = await cloudSyncAdapter.getMap(mapId);
+        console.log('🔄 同期アダプター: マップ取得完了', map.title);
+        return map;
+      }
+      
+      // フォールバック: 従来のクラウドストレージ
       const map = await cloudStorage.getMindMapCloud(mapId);
       console.log('☁️ クラウド: マップ取得完了', map.title);
       return map;
