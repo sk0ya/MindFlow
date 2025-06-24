@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useMindMapData } from '../useMindMapData';
+import { useMindMapData } from '../useMindMapData.js';
 
 // モックの設定
 jest.mock('../../utils/storageRouter.js', () => ({
@@ -261,17 +261,18 @@ describe('useMindMapData - Cloud Sync Tests', () => {
       // ストレージ設定をクラウドモードに設定
       mockStorage.getAppSettings.mockReturnValue({ storageMode: 'cloud' });
 
-      mockStorageRouter.getAllMindMaps = jest.fn().mockResolvedValue(mockCloudMaps);
-      mockStorageRouter.getMindMap = jest.fn().mockResolvedValue(mockFullMapData);
+      // モックの再設定
+      mockStorageRouter.getAllMindMaps.mockReset();
+      mockStorageRouter.getMindMap.mockReset();
+      mockStorageRouter.getAllMindMaps.mockResolvedValue(mockCloudMaps);
+      mockStorageRouter.getMindMap.mockResolvedValue(mockFullMapData);
 
       const { result } = renderHook(() => useMindMapData(true));
 
       await waitFor(() => {
         expect(result.current.data).toBeTruthy();
-      });
-
-      // 最新のマップが読み込まれていることを確認
-      expect(result.current.data.title).toBe('Cloud Map 2');
+        expect(result.current.data.title).toBe('Cloud Map 2');
+      }, { timeout: 3000 });
     });
 
     test('クラウドデータが空の場合は新規マップを作成', async () => {

@@ -1,9 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
-import { useMindMapMulti } from '../useMindMapMulti';
-import useMindMapNodes from '../useMindMapNodes';
+import { useMindMapMulti } from '../useMindMapMulti.js';
+import useMindMapNodes from '../useMindMapNodes.js';
 
 // Mock the storage modules
-jest.mock('../../utils/storageRouter', () => ({
+jest.mock('../../utils/storageRouter.js', () => ({
   getCurrentMindMap: jest.fn(),
   getAllMindMaps: jest.fn().mockResolvedValue([]),
   createNewMindMap: jest.fn(),
@@ -12,7 +12,7 @@ jest.mock('../../utils/storageRouter', () => ({
   isCloudStorageEnabled: jest.fn().mockReturnValue(false)
 }));
 
-jest.mock('../../utils/storageAdapter', () => ({
+jest.mock('../../utils/storageAdapter.js', () => ({
   getCurrentAdapter: jest.fn(() => ({
     getAllMaps: jest.fn().mockResolvedValue([]),
     getMap: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('../../utils/storageAdapter', () => ({
   }))
 }));
 
-jest.mock('../../utils/dataTypes', () => ({
+jest.mock('../../utils/dataTypes.js', () => ({
   deepClone: jest.fn(data => JSON.parse(JSON.stringify(data))),
   assignColorsToExistingNodes: jest.fn(data => data),
   createInitialData: jest.fn(() => ({
@@ -38,8 +38,21 @@ jest.mock('../../utils/dataTypes', () => ({
   }))
 }));
 
+jest.mock('../../utils/realtimeSync.js', () => ({
+  initialize: jest.fn(),
+  cleanup: jest.fn(),
+  onDataUpdate: jest.fn(),
+  updateCursor: jest.fn()
+}));
+
+jest.mock('../../utils/storage.js', () => ({
+  getAppSettings: jest.fn(() => ({ storageMode: 'local' })),
+  loadFromStorage: jest.fn(() => ({})),
+  saveToStorage: jest.fn()
+}));
+
 // Mock useMindMapNodes
-jest.mock('../useMindMapNodes', () => ({
+jest.mock('../useMindMapNodes.js', () => ({
   useMindMapNodes: jest.fn(() => ({
     updateNode: jest.fn(),
     editingNodeId: null,

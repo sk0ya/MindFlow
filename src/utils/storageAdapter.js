@@ -234,6 +234,102 @@ class CloudStorageAdapter {
     }
   }
 
+  // ルートノード存在確認（Parent node not found エラー対策）
+  async ensureRootNodeExists(mapId) {
+    try {
+      const { authManager } = await import('./authManager.js');
+      
+      // サーバー側でのマップ取得を試行してルートノードの同期を確認
+      const response = await authManager.authenticatedFetch(`${this.baseUrl}/maps/${mapId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`マップ取得失敗: ${response.status}`);
+      }
+
+      const mapData = await response.json();
+      console.log('🔍 サーバー側マップ状態:', {
+        mapId,
+        hasRootNode: !!mapData.rootNode,
+        rootNodeId: mapData.rootNode?.id,
+        serverChildrenCount: mapData.rootNode?.children?.length || 0
+      });
+
+      if (!mapData.rootNode || mapData.rootNode.id !== 'root') {
+        console.warn('⚠️ サーバー側でルートノードが正しく設定されていません');
+        throw new Error('ルートノードがサーバー側で認識されていません');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ ルートノード存在確認エラー:', error);
+      throw error;
+    }
+  }
+
+  // 強制マップ同期（Parent node not found エラー対策）
+  async forceMapSync(mapId) {
+    try {
+      // まずマップを取得して、現在のデータでマップを更新する
+      // これによりルートノードがサーバー側で確実に認識される
+      const mapData = await this.getMap(mapId);
+      if (!mapData) {
+        throw new Error('マップデータが取得できません');
+      }
+
+      // マップ更新を実行してルートノードを同期
+      const updateResult = await this.updateMap(mapId, mapData);
+      if (!updateResult.success) {
+        throw new Error('マップ更新に失敗しました');
+      }
+
+      console.log('✅ マップ強制更新でルートノード同期完了');
+      return true;
+    } catch (error) {
+      console.error('❌ マップ同期エラー:', error);
+      throw error;
+    }
+  }
+
+  // ルートノードチェックなしでノード追加（リトライ用）
+  async addNodeWithoutRootCheck(mapId, nodeData, parentId) {
+    const { authManager } = await import('./authManager.js');
+    const requestBody = {
+      mapId,
+      node: nodeData,
+      parentId,
+      operation: 'add'
+    };
+    
+    console.log('🔄 ルートノードチェックなしでリトライ実行');
+    
+    const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`リトライも失敗: Status: ${response.status}, Body: ${errorBody}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ リトライ成功:', result);
+    
+    return { 
+      success: true, 
+      result,
+      newId: result.newId || result.id
+    };
+  }
+
   // ノード操作（クラウドモードでは即座反映）
   async addNode(mapId, nodeData, parentId) {
     try {
@@ -262,6 +358,19 @@ class CloudStorageAdapter {
       }
       if (typeof nodeData.x !== 'number' || typeof nodeData.y !== 'number') {
         throw new Error('Invalid node coordinates');
+      }
+
+      // ルートノードの場合の特別処理
+      if (parentId === 'root') {
+        console.log('🔍 ルートノードへの追加: サーバー側でルートノード存在確認');
+        
+        // ルートノード確認のため先にマップ情報を同期
+        try {
+          await this.ensureRootNodeExists(mapId);
+          console.log('✅ ルートノード存在確認完了');
+        } catch (rootError) {
+          console.warn('⚠️ ルートノード確認失敗、通常の処理を継続:', rootError.message);
+        }
       }
       
       const { authManager } = await import('./authManager.js');
@@ -298,6 +407,22 @@ class CloudStorageAdapter {
           if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
             console.warn('🔄 UNIQUE制約違反検出: ノードIDを再生成してリトライします', nodeData.id);
             return await this.retryWithNewId(mapId, nodeData, parentId);
+          }
+          
+          // Parent node not found エラーの場合は特別処理
+          if (response.status === 400 && errorBody.includes('Parent node not found')) {
+            console.warn('🔄 Parent node not found 検出: ルートノード同期後リトライします', { mapId, parentId });
+            try {
+              // 強制的にマップ情報を更新してルートノードを同期
+              await this.forceMapSync(mapId);
+              console.log('✅ マップ同期完了、ノード追加をリトライします');
+              
+              // 同じパラメータでリトライ
+              return await this.addNodeWithoutRootCheck(mapId, nodeData, parentId);
+            } catch (syncError) {
+              console.error('❌ マップ同期失敗:', syncError);
+              throw new Error(`Parent node not found (マップ同期も失敗): ${syncError.message}`);
+            }
           }
         } catch (e) {
           console.error('❌ エラーレスポンス読み取り失敗:', e);
