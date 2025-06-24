@@ -1,11 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-// Debug function only in development
+// Debug functions only in development
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   import('./debug-sync.js').then(({ debugSync }) => {
     (window as any).debugSync = debugSync;
   });
+  
+  // クラウドモードデバッグ機能
+  import('./debug-cloud.js');
 }
 
 const rootElement = document.getElementById('root');
