@@ -56,6 +56,30 @@ export const useMindMapMulti = (data, setData, updateData) => {
       // マップ一覧を更新
       await refreshAllMindMaps();
       
+      // クラウドモードの場合、作成されたマップがサーバーに反映されるまで待機
+      if (adapter.constructor.name === 'CloudStorageAdapter') {
+        const mapId = result.id || newMap.id;
+        console.log('🔍 クラウドマップ作成後の検証開始:', mapId);
+        
+        // 最大3回、1秒間隔でマップの存在確認
+        for (let i = 0; i < 3; i++) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+            const verifyMap = await adapter.getMap(mapId);
+            if (verifyMap && verifyMap.id === mapId) {
+              console.log('✅ クラウドマップ検証成功:', verifyMap.title);
+              break;
+            }
+            console.warn(`⚠️ マップ検証失敗 (${i + 1}/3):`, mapId);
+          } catch (verifyError) {
+            console.warn(`⚠️ マップ検証エラー (${i + 1}/3):`, verifyError.message);
+            if (i === 2) {
+              throw new Error('作成されたマップのサーバー検証に失敗しました');
+            }
+          }
+        }
+      }
+      
       // 新規作成したマップに切り替え
       await switchToMap(result.id || newMap.id, true);
       return result.id || newMap.id;
