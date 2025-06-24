@@ -1,27 +1,12 @@
 import { cloneDeep } from 'lodash-es';
+import { COORDINATES, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index.js';
 
-// ファイル関連の定数
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const ALLOWED_FILE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'text/plain',
-  'application/pdf',
-  'application/json'
-];
+// ファイル関連の定数（定数ファイルから参照）
+export const MAX_FILE_SIZE = STORAGE.MAX_FILE_SIZE;
+export const ALLOWED_FILE_TYPES = VALIDATION.ALLOWED_FILE_TYPES;
 
-export const COLORS = [
-  '#4285f4',
-  '#34a853',
-  '#ea4335',
-  '#fbbc04',
-  '#9c27b0',
-  '#ff9800',
-  '#795548',
-  '#607d8b',
-];
+// カラーパレット（定数ファイルから参照）
+export const COLORS = COLOR_CONSTANTS.NODE_COLORS;
 
 export const THEMES = {
   default: {
@@ -74,28 +59,28 @@ export const generateMapId = () => {
 
 export const createInitialData = () => ({
   id: generateMapId(),
-  title: '新しいマインドマップ',
+  title: DEFAULTS.NEW_MAP_TITLE,
   category: '未分類',
   theme: 'default',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   rootNode: {
     id: 'root',
-    text: 'メインテーマ',
-    x: 400,
-    y: 300,
-    fontSize: 16,
-    fontWeight: 'normal',
+    text: DEFAULTS.ROOT_NODE_TEXT,
+    x: COORDINATES.ROOT_NODE_X,
+    y: COORDINATES.ROOT_NODE_Y,
+    fontSize: TYPOGRAPHY.DEFAULT_FONT_SIZE,
+    fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
     children: [],
     attachments: [],
     mapLinks: []
   },
   settings: {
-    autoSave: true,
-    autoLayout: true,
-    snapToGrid: false,
-    showGrid: false,
-    animationEnabled: true
+    autoSave: DEFAULTS.AUTO_SAVE,
+    autoLayout: DEFAULTS.AUTO_LAYOUT,
+    snapToGrid: DEFAULTS.SNAP_TO_GRID,
+    showGrid: DEFAULTS.SHOW_GRID,
+    animationEnabled: DEFAULTS.ANIMATION_ENABLED
   }
 });
 
@@ -103,10 +88,10 @@ export const createNewNode = (text = '', parentNode = null) => {
   return {
     id: generateId(),
     text,
-    x: parentNode ? parentNode.x + 150 : 400,
-    y: parentNode ? parentNode.y : 300,
-    fontSize: 14,
-    fontWeight: 'normal',
+    x: parentNode ? parentNode.x + LAYOUT.RADIAL_BASE_RADIUS : COORDINATES.DEFAULT_CENTER_X,
+    y: parentNode ? parentNode.y : COORDINATES.DEFAULT_CENTER_Y,
+    fontSize: TYPOGRAPHY.DEFAULT_FONT_SIZE - 2, // 子ノードは少し小さく
+    fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
     children: [],
     attachments: [], // ファイル添付用
     mapLinks: [] // 他のマインドマップへのリンク
@@ -114,9 +99,12 @@ export const createNewNode = (text = '', parentNode = null) => {
 };
 
 export const calculateNodePosition = (parentNode, childIndex, totalChildren) => {
-  if (!parentNode) return { x: 400, y: 300 };
+  if (!parentNode) return { 
+    x: COORDINATES.DEFAULT_CENTER_X, 
+    y: COORDINATES.DEFAULT_CENTER_Y 
+  };
   
-  const distance = 180;
+  const distance = LAYOUT.RADIAL_BASE_RADIUS;
   const startAngle = -90;
   const angleStep = totalChildren > 1 ? 180 / (totalChildren - 1) : 0;
   const angle = startAngle + (angleStep * childIndex);

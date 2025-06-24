@@ -3,6 +3,7 @@
  */
 
 import { generateId as dataTypesGenerateId, generateMapId, createNewNode, deepClone } from '../types/dataTypes.js';
+import { LAYOUT } from '../constants/index.js';
 
 // ID生成はdataTypes.jsに統一（後方互換性のためのエイリアス）
 export const generateId = dataTypesGenerateId;
@@ -23,7 +24,7 @@ export const createNode = (text = '', parentNode = null) => {
   // 位置計算の調整（既存ロジックを維持）
   if (parentNode) {
     const childCount = parentNode.children ? parentNode.children.length : 0;
-    node.x = parentNode.x + 200;
+    node.x = parentNode.x + LAYOUT.LEVEL_SPACING;
     node.y = parentNode.y + (childCount - 1) * 60 - 30;
   }
   

@@ -1,15 +1,16 @@
-﻿// 自動レイアウト機能のユーティリティ
+// 自動レイアウト機能のユーティリティ
 import { cloneDeep } from 'lodash-es';
+import { COORDINATES, LAYOUT } from '../constants/index.js';
 
 /**
  * 放射状レイアウト - ルートノードを中心に子ノードを円形に配置
  */
 export const radialLayout = (rootNode, options = {}) => {
   const {
-    centerX = 400,
-    centerY = 300,
-    baseRadius = 150,
-    radiusIncrement = 120,
+    centerX = COORDINATES.DEFAULT_CENTER_X,
+    centerY = COORDINATES.DEFAULT_CENTER_Y,
+    baseRadius = LAYOUT.RADIAL_BASE_RADIUS,
+    radiusIncrement = LAYOUT.RADIAL_RADIUS_INCREMENT,
     angleOffset = 0
   } = options;
 
@@ -49,10 +50,10 @@ export const radialLayout = (rootNode, options = {}) => {
  */
 export const hierarchicalLayout = (rootNode, options = {}) => {
   const {
-    centerX = 400,
-    centerY = 300,
-    levelSpacing = 200,
-    nodeSpacing = 80,
+    centerX = COORDINATES.DEFAULT_CENTER_X,
+    centerY = COORDINATES.DEFAULT_CENTER_Y,
+    levelSpacing = LAYOUT.LEVEL_SPACING,
+    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN,
     direction = 'horizontal' // 'horizontal' or 'vertical'
   } = options;
 
@@ -100,12 +101,12 @@ export const hierarchicalLayout = (rootNode, options = {}) => {
  */
 export const improvedMindMapLayout = (rootNode, options = {}) => {
   const {
-    centerX = 400,
-    centerY = 300,
-    baseRadius = 180,
-    levelSpacing = 200,
-    minVerticalSpacing = 60,
-    maxVerticalSpacing = 120,
+    centerX = COORDINATES.DEFAULT_CENTER_X,
+    centerY = COORDINATES.DEFAULT_CENTER_Y,
+    baseRadius = LAYOUT.RADIAL_BASE_RADIUS + 30, // 少し大きめ
+    levelSpacing = LAYOUT.LEVEL_SPACING,
+    minVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN - 20,
+    maxVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN + 40,
     preserveRootPosition = false
   } = options;
 
