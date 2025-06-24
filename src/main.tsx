@@ -1,14 +1,19 @@
-﻿import React from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { debugSync } from './debug-sync.js'
 
 // Make debug function available globally
 if (typeof window !== 'undefined') {
-  window.debugSync = debugSync;
+  (window as any).debugSync = debugSync;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

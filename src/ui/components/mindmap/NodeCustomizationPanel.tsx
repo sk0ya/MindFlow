@@ -1,12 +1,28 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import type { MindMapNode } from '../../../shared/types';
 
-const NodeCustomizationPanel = ({
+interface NodeCustomizationPanelProps {
+  selectedNode: MindMapNode | null;
+  onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onClose: () => void;
+  position: { x: number; y: number };
+}
+
+interface NodeCustomizations {
+  fontSize: string;
+  fontWeight: string;
+  fontStyle: string;
+  borderStyle: string;
+  borderWidth: string;
+}
+
+const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
   selectedNode,
   onUpdateNode,
   onClose,
   position
 }) => {
-  const [customizations, setCustomizations] = useState({
+  const [customizations, setCustomizations] = useState<NodeCustomizations>({
     fontSize: '14px',
     fontWeight: 'bold',
     fontStyle: 'normal',
@@ -27,7 +43,7 @@ const NodeCustomizationPanel = ({
     }
   }, [selectedNode]);
 
-  const handleChange = (property, value) => {
+  const handleChange = (property: keyof NodeCustomizations, value: string) => {
     const newCustomizations = { ...customizations, [property]: value };
     setCustomizations(newCustomizations);
     

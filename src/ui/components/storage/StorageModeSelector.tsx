@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import './StorageModeSelector.css';
+import { StorageMode } from '../../../shared/types';
 
-const StorageModeSelector = ({ onModeSelect, hasLocalData = false }) => {
-  const [selectedMode, setSelectedMode] = useState(hasLocalData ? 'local' : null);
+interface StorageModeSelectorProps {
+  onModeSelect: (mode: StorageMode) => void;
+  hasLocalData?: boolean;
+}
 
-  const handleModeSelect = (mode) => {
+const StorageModeSelector: React.FC<StorageModeSelectorProps> = ({ onModeSelect, hasLocalData = false }) => {
+  const [selectedMode, setSelectedMode] = useState<StorageMode | null>(hasLocalData ? 'local' : null);
+
+  const handleModeSelect = (mode: StorageMode) => {
     setSelectedMode(mode);
   };
 

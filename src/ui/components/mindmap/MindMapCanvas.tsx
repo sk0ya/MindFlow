@@ -1,9 +1,53 @@
-﻿import React, { useRef, useCallback, useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import Node from './Node';
 import Connection from '../common/Connection';
+import type { MindMapData, MindMapNode, FileAttachment } from '../../../shared/types';
 
-const MindMapCanvas = ({
+interface MindMapCanvasProps {
+  data: MindMapData;
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  editText: string;
+  setEditText: (text: string) => void;
+  onSelectNode: (nodeId: string | null) => void;
+  onStartEdit: (nodeId: string) => void;
+  onFinishEdit: (nodeId: string, text: string) => void;
+  onDragNode: (nodeId: string, x: number, y: number) => void;
+  onChangeParent?: (nodeId: string, newParentId: string) => void;
+  onAddChild: (parentId: string) => void;
+  onAddSibling: (nodeId: string) => void;
+  onDeleteNode: (nodeId: string) => void;
+  onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
+  onToggleCollapse: (nodeId: string) => void;
+  onNavigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  onFileUpload: (nodeId: string, file: File) => void;
+  onRemoveFile: (nodeId: string, fileId: string) => void;
+  onShowImageModal: (file: FileAttachment) => void;
+  onShowFileActionMenu: (file: FileAttachment, position: { x: number; y: number }) => void;
+  onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
+  zoom: number;
+  setZoom: (zoom: number) => void;
+  pan: { x: number; y: number };
+  setPan: (pan: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void;
+}
+
+interface DragState {
+  isDragging: boolean;
+  draggedNodeId: string | null;
+  dropTargetId: string | null;
+}
+
+interface Connection {
+  from: MindMapNode | { x: number; y: number };
+  to: MindMapNode | { x: number; y: number };
+  hasToggleButton: boolean;
+  nodeId?: string;
+  isCollapsed?: boolean;
+  isToggleConnection?: boolean;
+  color?: string;
+}
+
+const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   data,
   selectedNodeId,
   editingNodeId,
@@ -30,16 +74,16 @@ const MindMapCanvas = ({
   pan,
   setPan
 }) => {
-  const svgRef = useRef(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
-  const [dragState, setDragState] = useState({
+  const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedNodeId: null,
     dropTargetId: null
   });
 
-  const flattenVisibleNodes = (node) => {
+  const flattenVisibleNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
     if (!node?.collapsed && node?.children) {
       node.children.forEach(child => 
@@ -52,7 +96,7 @@ const MindMapCanvas = ({
   const allNodes = flattenVisibleNodes(data.rootNode);
   
   // ドロップターゲット検出のためのヘルパー関数
-  const getNodeAtPosition = useCallback((x, y) => {
+  const getNodeAtPosition = useCallback((x: number, y: number): MindMapNode | null => {
     // SVG座標系での位置を取得
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return null;
@@ -83,7 +127,7 @@ const MindMapCanvas = ({
   }, [allNodes, zoom, pan, dragState.draggedNodeId]);
 
   // ドラッグ開始時の処理
-  const handleDragStart = useCallback((nodeId) => {
+  const handleDragStart = useCallback((nodeId: string) => {
     setDragState({
       isDragging: true,
       draggedNodeId: nodeId,
@@ -92,7 +136,7 @@ const MindMapCanvas = ({
   }, []);
 
   // ドラッグ中の処理
-  const handleDragMove = useCallback((x, y) => {
+  const handleDragMove = useCallback((x: number, y: number) => {
     if (!dragState.isDragging) return;
     
     const targetNode = getNodeAtPosition(x, y);
@@ -103,7 +147,7 @@ const MindMapCanvas = ({
   }, [dragState.isDragging, getNodeAtPosition]);
 
   // ドラッグ終了時の処理
-  const handleDragEnd = useCallback((nodeId, x, y) => {
+  const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
     if (dragState.dropTargetId && dragState.dropTargetId !== nodeId) {
       // 親要素を変更
       if (onChangeParent) {
@@ -121,7 +165,7 @@ const MindMapCanvas = ({
     });
   }, [dragState.dropTargetId, onChangeParent, onDragNode]);
   
-  const connections = [];
+  const connections: Connection[] = [];
   allNodes.forEach(node => {
     if (node.children && node.children.length > 0) {
       const isRootNode = node.id === 'root';
@@ -203,7 +247,7 @@ const MindMapCanvas = ({
     }
   });
 
-  const handleWheel = (e) => {
+  const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     
     if (svgRef.current) {
@@ -213,7 +257,7 @@ const MindMapCanvas = ({
     }
   };
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (e.target === svgRef.current) {
       isPanningRef.current = true;
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
@@ -221,7 +265,7 @@ const MindMapCanvas = ({
     }
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: MouseEvent) => {
     if (isPanningRef.current) {
       const deltaX = e.clientX - lastPanPointRef.current.x;
       const deltaY = e.clientY - lastPanPointRef.current.y;
@@ -239,7 +283,7 @@ const MindMapCanvas = ({
     isPanningRef.current = false;
   };
 
-  const handleBackgroundClick = (e) => {
+  const handleBackgroundClick = (e: React.MouseEvent) => {
     if (e.target === svgRef.current) {
       // 編集中の場合は編集を確定してから選択をクリア
       if (editingNodeId) {
@@ -250,7 +294,7 @@ const MindMapCanvas = ({
   };
 
   // ノード選択時に編集を確定する処理
-  const handleNodeSelect = useCallback((nodeId) => {
+  const handleNodeSelect = useCallback((nodeId: string | null) => {
     // 編集中で、異なるノードが選択された場合は編集を確定
     // ただし、Node.jsxのblur処理に委任（editTextの同期問題を避けるため）
     if (editingNodeId && editingNodeId !== nodeId) {
@@ -261,7 +305,7 @@ const MindMapCanvas = ({
     onSelectNode(nodeId);
   }, [editingNodeId, onSelectNode]);
 
-  const handleKeyDown = useCallback((e) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     console.log('🖱️ Canvas handleKeyDown:', { key: e.key, selectedNodeId, editingNodeId });
     if (selectedNodeId && !editingNodeId) {
       // 基本的なナビゲーションのみ処理（Tab/Enter/削除はuseKeyboardShortcutsに委任）
@@ -441,37 +485,5 @@ const MindMapCanvas = ({
   );
 };
 
-MindMapCanvas.propTypes = {
-  data: PropTypes.shape({
-    rootNode: PropTypes.object.isRequired
-  }).isRequired,
-  selectedNodeId: PropTypes.string,
-  editingNodeId: PropTypes.string,
-  editText: PropTypes.string.isRequired,
-  setEditText: PropTypes.func.isRequired,
-  onSelectNode: PropTypes.func.isRequired,
-  onStartEdit: PropTypes.func.isRequired,
-  onFinishEdit: PropTypes.func.isRequired,
-  onDragNode: PropTypes.func.isRequired,
-  onChangeParent: PropTypes.func,
-  onAddChild: PropTypes.func.isRequired,
-  onAddSibling: PropTypes.func.isRequired,
-  onDeleteNode: PropTypes.func.isRequired,
-  onRightClick: PropTypes.func,
-  onToggleCollapse: PropTypes.func.isRequired,
-  onNavigateToDirection: PropTypes.func.isRequired,
-  onFileUpload: PropTypes.func.isRequired,
-  onRemoveFile: PropTypes.func.isRequired,
-  onShowImageModal: PropTypes.func.isRequired,
-  onShowFileActionMenu: PropTypes.func.isRequired,
-  onShowNodeMapLinks: PropTypes.func.isRequired,
-  zoom: PropTypes.number.isRequired,
-  setZoom: PropTypes.func.isRequired,
-  pan: PropTypes.shape({
-    x: PropTypes.number.isRequired,
-    y: PropTypes.number.isRequired
-  }).isRequired,
-  setPan: PropTypes.func.isRequired
-};
 
 export default MindMapCanvas;

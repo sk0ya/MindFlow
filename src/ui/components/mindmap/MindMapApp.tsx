@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useMindMap } from '../../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
@@ -38,7 +38,10 @@ import { useNodeHandlers } from './hooks/useNodeHandlers.js';
 import { useAppActions } from './hooks/useAppActions.js';
 import { useRealtimeHandlers } from './hooks/useRealtimeHandlers.js';
 
-const MindMapApp = () => {
+// Types
+import type { MindMapNode, MindMapData, User } from '../../../shared/types';
+
+const MindMapApp: React.FC = () => {
   // URL パラメータで認証トークンをチェック
   const urlParams = new URLSearchParams(window.location.search);
   const authToken = urlParams.get('token');
@@ -180,32 +183,32 @@ const MindMapApp = () => {
   };
 
   // コンテキストメニューのハンドラー
-  const handleRightClick = (e, nodeId) => {
+  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
     nodeHandlers.handleRightClick(e, nodeId);
     uiState.handleCloseAllPanels();
   };
 
-  const handleCopyNode = (node) => {
+  const handleCopyNode = (node: MindMapNode) => {
     const clipboard = nodeHandlers.handleCopyNode(node);
     uiState.setClipboard(clipboard);
   };
 
-  const handlePasteNode = (parentId) => {
+  const handlePasteNode = (parentId: string) => {
     nodeHandlers.handlePasteNode(parentId, uiState.clipboard);
   };
 
   // ノードマップリンクのハンドラー
-  const handleShowNodeMapLinks = (node, position) => {
+  const handleShowNodeMapLinks = (node: MindMapNode, position: { x: number; y: number }) => {
     uiState.handleShowNodeMapLinks(node, position);
   };
 
-  const handleNavigateToMap = async (mapId) => {
+  const handleNavigateToMap = async (mapId: string) => {
     try {
       await mapHandlers.handleNavigateToMap(mapId);
       uiState.handleCloseNodeMapLinksPanel();
     } catch (error) {
       console.error('マップナビゲーションエラー:', error);
-      alert('マップの切り替えに失敗しました: ' + error.message);
+      alert('マップの切り替えに失敗しました: ' + (error as Error).message);
     }
   };
 
@@ -213,7 +216,7 @@ const MindMapApp = () => {
   if (isAuthVerification && !authHandlers.authState.isAuthenticated) {
     return (
       <AuthVerification 
-        onAuthSuccess={(user) => {
+        onAuthSuccess={(user: User) => {
           // 認証状態を更新
           authHandlers.setAuthState({
             isAuthenticated: true,
@@ -223,7 +226,7 @@ const MindMapApp = () => {
           // URLからトークンを除去
           window.history.replaceState({}, document.title, window.location.pathname);
         }}
-        onAuthError={(error) => {
+        onAuthError={(error: Error) => {
           console.error('Authentication failed:', error);
           // エラー時もホームに戻る
           setTimeout(() => {

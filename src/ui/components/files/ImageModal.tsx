@@ -1,14 +1,25 @@
 import React, { useEffect, useCallback } from 'react';
-import PropTypes from 'prop-types';
 
-const ImageModal = ({ isOpen, image, onClose }) => {
-  const handleKeyDown = useCallback((e) => {
+interface ImageFile {
+  dataURL: string;
+  name: string;
+  size: number;
+}
+
+interface ImageModalProps {
+  isOpen: boolean;
+  image: ImageFile | null;
+  onClose: () => void;
+}
+
+const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
     }
   }, [onClose]);
 
-  const handleBackdropClick = useCallback((e) => {
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -187,7 +198,7 @@ const ImageModal = ({ isOpen, image, onClose }) => {
 };
 
 // ファイルサイズのフォーマット関数
-const formatFileSize = (bytes) => {
+const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   
   const k = 1024;
@@ -197,14 +208,5 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-ImageModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  image: PropTypes.shape({
-    dataURL: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    size: PropTypes.number.isRequired
-  }),
-  onClose: PropTypes.func.isRequired
-};
 
 export default ImageModal;

@@ -1,7 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import PropTypes from 'prop-types';
+import type { MindMapData, MindMapNode } from '../../../shared/types';
 
-const MindMapSidebar = ({ 
+interface MindMapSidebarProps {
+  mindMaps: MindMapData[];
+  currentMapId: string | null;
+  onSelectMap: (mapId: string) => void;
+  onCreateMap: (title: string, category?: string) => void;
+  onDeleteMap: (mapId: string) => void;
+  onRenameMap: (mapId: string, newTitle: string) => void;
+  onChangeCategory: (mapId: string, category: string) => void;
+  availableCategories: string[];
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+const MindMapSidebar: React.FC<MindMapSidebarProps> = ({ 
   mindMaps, 
   currentMapId, 
   onSelectMap, 
@@ -13,19 +26,19 @@ const MindMapSidebar = ({
   isCollapsed,
   onToggleCollapse 
 }) => {
-  const [editingMapId, setEditingMapId] = useState(null);
+  const [editingMapId, setEditingMapId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
-  const [draggedMap, setDraggedMap] = useState(null);
-  const [dragOverCategory, setDragOverCategory] = useState(null);
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set<string>());
+  const [draggedMap, setDraggedMap] = useState<MindMapData | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
 
-  const handleStartRename = useCallback((mapId, currentTitle) => {
+  const handleStartRename = useCallback((mapId: string, currentTitle: string) => {
     setEditingMapId(mapId);
     setEditingTitle(currentTitle);
   }, []);
 
-  const handleFinishRename = useCallback((mapId) => {
+  const handleFinishRename = useCallback((mapId: string) => {
     if (editingTitle.trim() && editingTitle.trim() !== '') {
       onRenameMap(mapId, editingTitle.trim());
     }
@@ -38,7 +51,7 @@ const MindMapSidebar = ({
     setEditingTitle('');
   }, []);
 
-  const handleKeyDown = useCallback((e, mapId) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, mapId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleFinishRename(mapId);
@@ -48,7 +61,7 @@ const MindMapSidebar = ({
     }
   }, [handleFinishRename, handleCancelRename]);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ja-JP', {
       month: 'short',
@@ -58,9 +71,9 @@ const MindMapSidebar = ({
     });
   };
 
-  const getNodeCount = (rootNode) => {
+  const getNodeCount = (rootNode: MindMapNode): number => {
     if (!rootNode) return 0;
-    const count = (node) => {
+    const count = (node: MindMapNode): number => {
       let total = 1;
       if (node.children) {
         node.children.forEach(child => {
@@ -81,7 +94,7 @@ const MindMapSidebar = ({
   });
 
   // カテゴリー別にグループ化
-  const groupedMaps = filteredMindMaps.reduce((groups, map) => {
+  const groupedMaps = filteredMindMaps.reduce((groups: Record<string, MindMapData[]>, map) => {
     const category = map.category || '未分類';
     if (!groups[category]) {
       groups[category] = [];
@@ -91,7 +104,7 @@ const MindMapSidebar = ({
   }, {});
 
   // カテゴリー折りたたみトグル
-  const toggleCategoryCollapse = (category) => {
+  const toggleCategoryCollapse = (category: string) => {
     const newCollapsed = new Set(collapsedCategories);
     if (newCollapsed.has(category)) {
       newCollapsed.delete(category);
@@ -102,24 +115,24 @@ const MindMapSidebar = ({
   };
 
   // ドラッグ&ドロップ機能
-  const handleDragStart = (e, map) => {
+  const handleDragStart = (e: React.DragEvent, map: MindMapData) => {
     setDraggedMap(map);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e, category) => {
+  const handleDragOver = (e: React.DragEvent, category: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverCategory(category);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setDragOverCategory(null);
     }
   };
 
-  const handleDrop = (e, category) => {
+  const handleDrop = (e: React.DragEvent, category: string) => {
     e.preventDefault();
     if (draggedMap && draggedMap.category !== category) {
       onChangeCategory(draggedMap.id, category);
@@ -791,23 +804,5 @@ const MindMapSidebar = ({
   );
 };
 
-MindMapSidebar.propTypes = {
-  mindMaps: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    title: PropTypes.string.isRequired,
-    category: PropTypes.string,
-    rootNode: PropTypes.object.isRequired,
-    updatedAt: PropTypes.string.isRequired
-  })).isRequired,
-  currentMapId: PropTypes.string,
-  onSelectMap: PropTypes.func.isRequired,
-  onCreateMap: PropTypes.func.isRequired,
-  onDeleteMap: PropTypes.func.isRequired,
-  onRenameMap: PropTypes.func.isRequired,
-  onChangeCategory: PropTypes.func.isRequired,
-  availableCategories: PropTypes.arrayOf(PropTypes.string).isRequired,
-  isCollapsed: PropTypes.bool.isRequired,
-  onToggleCollapse: PropTypes.func.isRequired
-};
 
 export default MindMapSidebar;

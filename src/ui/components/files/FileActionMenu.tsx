@@ -1,7 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
-import PropTypes from 'prop-types';
 
-const FileActionMenu = ({ 
+interface FileItem {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataURL?: string;
+  isImage: boolean;
+}
+
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface FileActionMenuProps {
+  isOpen: boolean;
+  file: FileItem | null;
+  position: Position;
+  onClose: () => void;
+  onDownload: (file: FileItem) => void;
+  onRename: (fileId: string, newName: string) => void;
+  onDelete: (fileId: string) => void;
+  onView: (file: FileItem) => void;
+}
+
+const FileActionMenu: React.FC<FileActionMenuProps> = ({ 
   isOpen, 
   file, 
   position, 
@@ -11,10 +35,10 @@ const FileActionMenu = ({
   onDelete, 
   onView 
 }) => {
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const menuRef = useRef(null);
-  const inputRef = useRef(null);
+  const [isRenaming, setIsRenaming] = useState<boolean>(false);
+  const [newFileName, setNewFileName] = useState<string>('');
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen && file) {
@@ -36,13 +60,13 @@ const FileActionMenu = ({
   }, [isRenaming, newFileName]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         handleClose();
       }
     };
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         handleClose();
       }
@@ -67,17 +91,17 @@ const FileActionMenu = ({
     setIsRenaming(true);
   };
 
-  const handleRenameSubmit = (e) => {
+  const handleRenameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = newFileName.trim();
-    if (trimmedName && trimmedName !== file.name) {
+    if (file && trimmedName && trimmedName !== file.name) {
       onRename(file.id, trimmedName);
     }
     setIsRenaming(false);
     handleClose();
   };
 
-  const handleRenameKeyDown = (e) => {
+  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleRenameSubmit(e);
     } else if (e.key === 'Escape') {
@@ -86,25 +110,29 @@ const FileActionMenu = ({
   };
 
   const handleRenameCancel = () => {
-    setNewFileName(file.name);
+    setNewFileName(file?.name || '');
     setIsRenaming(false);
   };
 
   const handleDownload = () => {
-    onDownload(file);
-    handleClose();
+    if (file) {
+      onDownload(file);
+      handleClose();
+    }
   };
 
   const handleDelete = () => {
-    if (window.confirm(`「${file.name}」を削除しますか？`)) {
+    if (file && window.confirm(`「${file.name}」を削除しますか？`)) {
       onDelete(file.id);
       handleClose();
     }
   };
 
   const handleView = () => {
-    onView(file);
-    handleClose();
+    if (file) {
+      onView(file);
+      handleClose();
+    }
   };
 
   if (!isOpen || !file) {
@@ -316,7 +344,7 @@ const FileActionMenu = ({
 };
 
 // ファイルタイプに基づいたアイコンを取得
-const getFileIcon = (fileType) => {
+const getFileIcon = (fileType: string): string => {
   if (fileType.startsWith('image/')) {
     return '🖼️';
   }
@@ -333,25 +361,5 @@ const getFileIcon = (fileType) => {
   }
 };
 
-FileActionMenu.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  file: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    type: PropTypes.string.isRequired,
-    size: PropTypes.number.isRequired,
-    dataURL: PropTypes.string,
-    isImage: PropTypes.bool.isRequired
-  }),
-  position: PropTypes.shape({
-    x: PropTypes.number.isRequired,
-    y: PropTypes.number.isRequired
-  }).isRequired,
-  onClose: PropTypes.func.isRequired,
-  onDownload: PropTypes.func.isRequired,
-  onRename: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onView: PropTypes.func.isRequired
-};
 
 export default FileActionMenu;

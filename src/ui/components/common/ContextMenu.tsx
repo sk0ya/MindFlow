@@ -1,6 +1,52 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { MindMapNode } from '../../../shared/types';
 
-const ContextMenu = ({
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface ContextMenuProps {
+  visible: boolean;
+  position: Position;
+  selectedNode: MindMapNode | null;
+  onAddChild: (parentId: string) => void;
+  onAddSibling: (nodeId: string) => void;
+  onDelete: (nodeId: string) => void;
+  onCustomize: (node: MindMapNode) => void;
+  onCopy: (node: MindMapNode) => void;
+  onPaste: (parentId: string) => void;
+  onChangeColor: (nodeId: string, color: string) => void;
+  onClose: () => void;
+}
+
+interface MenuItemAction {
+  icon: string;
+  label: string;
+  action: () => void;
+  shortcut?: string;
+  disabled?: boolean;
+  danger?: boolean;
+}
+
+interface MenuItemSeparator {
+  type: 'separator';
+}
+
+interface ColorOption {
+  color: string;
+  label: string;
+}
+
+interface MenuItemSubmenu {
+  icon: string;
+  label: string;
+  submenu: ColorOption[];
+}
+
+type MenuItem = MenuItemAction | MenuItemSeparator | MenuItemSubmenu;
+
+const ContextMenu: React.FC<ContextMenuProps> = ({
   visible,
   position,
   selectedNode,
@@ -13,12 +59,12 @@ const ContextMenu = ({
   onChangeColor,
   onClose
 }) => {
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -31,7 +77,7 @@ const ContextMenu = ({
 
   // ESCキーで閉じる
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
@@ -45,7 +91,7 @@ const ContextMenu = ({
 
   if (!visible || !selectedNode) return null;
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     {
       icon: '➕',
       label: '子ノードを追加',
@@ -121,17 +167,17 @@ const ContextMenu = ({
     }
   ];
 
-  const handleColorSelect = (color) => {
+  const handleColorSelect = (color: string): void => {
     onChangeColor(selectedNode.id, color);
     onClose();
   };
 
-  const renderMenuItem = (item, index) => {
+  const renderMenuItem = (item: MenuItem, index: number): React.ReactNode => {
     if (item.type === 'separator') {
       return <div key={index} className="menu-separator" />;
     }
 
-    if (item.submenu) {
+    if ('submenu' in item) {
       return (
         <div key={index} className="menu-item submenu-parent">
           <div className="menu-item-content">

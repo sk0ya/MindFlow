@@ -5,23 +5,48 @@
 import React, { useState, useEffect } from 'react';
 import { useMapList } from '../../../features/mindmap/useMapList.js';
 import { useCurrentMap } from '../../../features/mindmap/useCurrentMap.js';
-import { apiClient } from '../../../core/storage/api.js';
+import { apiClient, storageService } from '../../../core/storage/api.js';
 
-export function SimpleMindMapApp() {
-  const [currentMapId, setCurrentMapId] = useState(null);
-  const [selectedNodeId, setSelectedNodeId] = useState('root');
-  const [editingNodeId, setEditingNodeId] = useState(null);
-  const [editText, setEditText] = useState('');
+// Types
+interface NodeData {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  children?: NodeData[];
+  fontSize?: number;
+  fontWeight?: string;
+  collapsed?: boolean;
+  attachments?: any[];
+  mapLinks?: any[];
+  color?: string;
+}
+
+interface MapData {
+  id: string;
+  title: string;
+  rootNode: NodeData;
+  settings?: {
+    autoSave?: boolean;
+    autoLayout?: boolean;
+  };
+}
+
+export const SimpleMindMapApp: React.FC = () => {
+  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
   
   const { maps, loadMaps, deleteMap } = useMapList();
   const { mapData, updateMap, createNewMap, saving } = useCurrentMap(currentMapId);
   // ノード操作のシンプルな実装
   const nodeOps = {
-    addChild: (parentId, text) => console.log('addChild:', parentId, text),
-    addSibling: (nodeId, text) => console.log('addSibling:', nodeId, text),
-    update: (nodeId, updates) => console.log('update:', nodeId, updates),
-    remove: (nodeId) => console.log('remove:', nodeId),
-    find: (nodeId) => mapData?.rootNode
+    addChild: (parentId: string, text?: string) => console.log('addChild:', parentId, text),
+    addSibling: (nodeId: string, text?: string) => console.log('addSibling:', nodeId, text),
+    update: (nodeId: string, updates: Partial<NodeData>) => console.log('update:', nodeId, updates),
+    remove: (nodeId: string) => console.log('remove:', nodeId),
+    find: (nodeId: string): NodeData | undefined => mapData?.rootNode
   };
 
   // 初期マップの設定
@@ -43,14 +68,14 @@ export function SimpleMindMapApp() {
   };
 
   // マップを切り替え
-  const handleSwitchMap = (mapId) => {
+  const handleSwitchMap = (mapId: string) => {
     setCurrentMapId(mapId);
     setSelectedNodeId('root');
     setEditingNodeId(null);
   };
 
   // ノード編集開始
-  const startEditing = (nodeId) => {
+  const startEditing = (nodeId: string) => {
     const node = nodeOps.find(nodeId);
     if (node) {
       setEditingNodeId(nodeId);
@@ -68,7 +93,7 @@ export function SimpleMindMapApp() {
   };
 
   // キーボード操作
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (editingNodeId) {
       if (e.key === 'Enter') {
         finishEditing();
@@ -83,19 +108,15 @@ export function SimpleMindMapApp() {
 
     if (e.key === 'Tab') {
       // 子ノード追加
-      const newNodeId = addChild(selectedNodeId);
-      if (newNodeId) {
-        setSelectedNodeId(newNodeId);
-        startEditing(newNodeId);
-      }
+      nodeOps.addChild(selectedNodeId);
+      // Note: This is a placeholder implementation
+      // In a real implementation, you would get the actual new node ID
       e.preventDefault();
     } else if (e.key === 'Enter') {
       // 兄弟ノード追加
-      const newNodeId = addSibling(selectedNodeId);
-      if (newNodeId) {
-        setSelectedNodeId(newNodeId);
-        startEditing(newNodeId);
-      }
+      nodeOps.addSibling(selectedNodeId);
+      // Note: This is a placeholder implementation
+      // In a real implementation, you would get the actual new node ID
       e.preventDefault();
     } else if (e.key === ' ') {
       // 編集開始
@@ -104,7 +125,7 @@ export function SimpleMindMapApp() {
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       // ノード削除
       if (selectedNodeId !== 'root') {
-        remove(selectedNodeId);
+        nodeOps.remove(selectedNodeId);
         setSelectedNodeId('root');
       }
       e.preventDefault();
@@ -207,7 +228,18 @@ export function SimpleMindMapApp() {
 }
 
 // シンプルなキャンバスコンポーネント
-function SimpleCanvas({ 
+interface SimpleCanvasProps {
+  mapData: MapData;
+  selectedNodeId: string;
+  editingNodeId: string | null;
+  editText: string;
+  onSelectNode: (nodeId: string) => void;
+  onEditTextChange: (text: string) => void;
+  onStartEditing: (nodeId: string) => void;
+  onFinishEditing: () => void;
+}
+
+const SimpleCanvas: React.FC<SimpleCanvasProps> = ({ 
   mapData, 
   selectedNodeId, 
   editingNodeId, 
@@ -216,8 +248,8 @@ function SimpleCanvas({
   onEditTextChange,
   onStartEditing,
   onFinishEditing 
-}) {
-  const renderNode = (node, level = 0) => {
+}) => {
+  const renderNode = (node: NodeData, level = 0): React.ReactNode => {
     const isSelected = node.id === selectedNodeId;
     const isEditing = node.id === editingNodeId;
 
@@ -246,7 +278,7 @@ function SimpleCanvas({
             <input
               type="text"
               value={editText}
-              onChange={(e) => onEditTextChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onEditTextChange(e.target.value)}
               onBlur={onFinishEditing}
               style={{
                 border: 'none',
@@ -300,4 +332,4 @@ function SimpleCanvas({
       {renderNode(mapData.rootNode)}
     </div>
   );
-}
+};

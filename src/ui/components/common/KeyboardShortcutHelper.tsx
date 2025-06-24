@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import './KeyboardShortcutHelper.css';
 
-const KeyboardShortcutHelper = ({ isVisible, onClose }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+interface ShortcutItem {
+  keys: string[];
+  description: string;
+  context: string;
+}
 
-  const shortcuts = [
+interface ShortcutCategory {
+  category: string;
+  items: ShortcutItem[];
+}
+
+interface KeyboardShortcutHelperProps {
+  isVisible: boolean;
+  onClose: () => void;
+}
+
+const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisible, onClose }) => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const shortcuts: ShortcutCategory[] = [
     {
       category: 'ノード操作',
       items: [
@@ -52,7 +68,7 @@ const KeyboardShortcutHelper = ({ isVisible, onClose }) => {
   })).filter(category => category.items.length > 0);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isVisible) {
         onClose();
       }
@@ -143,8 +159,14 @@ const KeyboardShortcutHelper = ({ isVisible, onClose }) => {
 };
 
 // ツールバーボタン用のショートカット表示コンポーネント
-export const ShortcutTooltip = ({ shortcut, children, description }) => {
-  const [isHovered, setIsHovered] = useState(false);
+interface ShortcutTooltipProps {
+  shortcut?: string;
+  children: React.ReactNode;
+  description: string;
+}
+
+export const ShortcutTooltip: React.FC<ShortcutTooltipProps> = ({ shortcut, children, description }) => {
+  const [isHovered, setIsHovered] = useState<boolean>(false);
 
   return (
     <div 

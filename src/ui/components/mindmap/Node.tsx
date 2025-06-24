@@ -1,7 +1,39 @@
-﻿import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
-import PropTypes from 'prop-types';
+import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
+import type { MindMapNode, FileAttachment } from '../../../shared/types';
 
-const Node = ({
+interface NodeProps {
+  node: MindMapNode;
+  isSelected: boolean;
+  isEditing: boolean;
+  isDragTarget?: boolean;
+  onSelect: (nodeId: string | null) => void;
+  onStartEdit: (nodeId: string) => void;
+  onFinishEdit: (nodeId: string, text: string) => void;
+  onDragStart?: (nodeId: string) => void;
+  onDragMove?: (x: number, y: number) => void;
+  onDragEnd?: (nodeId: string, x: number, y: number) => void;
+  onAddChild: (parentId: string) => void;
+  onAddSibling: (nodeId: string) => void;
+  onDelete: (nodeId: string) => void;
+  onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
+  onFileUpload: (nodeId: string, files: FileList) => void;
+  onRemoveFile: (nodeId: string, fileId: string) => void;
+  onShowImageModal: (file: FileAttachment) => void;
+  onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
+  editText: string;
+  setEditText: (text: string) => void;
+  zoom: number;
+  pan: { x: number; y: number };
+  svgRef: React.RefObject<SVGSVGElement>;
+}
+
+interface MousePosition {
+  x: number;
+  y: number;
+}
+
+const Node: React.FC<NodeProps> = ({
   node,
   isSelected,
   isEditing,
@@ -29,10 +61,10 @@ const Node = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [mouseDownPos, setMouseDownPos] = useState(null);
+  const [mouseDownPos, setMouseDownPos] = useState<MousePosition | null>(null);
   const [isComposing, setIsComposing] = useState(false);
-  const inputRef = useRef(null);
-  const blurTimeoutRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -48,7 +80,7 @@ const Node = ({
     }
   }, [isEditing, node.id]);
 
-  const handleMouseDown = useCallback((e) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
@@ -66,7 +98,7 @@ const Node = ({
     }
   }, [node.x, node.y, zoom, svgRef]);
 
-  const handleMouseMove = useCallback((e) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (mouseDownPos && !isDragging) {
       // ドラッグ開始判定（5px以上移動でドラッグとみなす）
       const distance = Math.sqrt(
@@ -89,7 +121,7 @@ const Node = ({
     }
   }, [isDragging, mouseDownPos, onDragMove, onDragStart, node.id]);
 
-  const handleMouseUp = useCallback((e) => {
+  const handleMouseUp = useCallback((e: MouseEvent) => {
     if (isDragging && svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
       const svgX = (e.clientX - svgRect.left) / zoom;
@@ -149,7 +181,7 @@ const Node = ({
     };
   }, []);
 
-  const handleClick = useCallback((e) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
@@ -165,13 +197,13 @@ const Node = ({
     }
   }, [node.id, isDragging, isSelected, isEditing, onStartEdit, onSelect]);
 
-  const handleDoubleClick = useCallback((e) => {
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     onStartEdit(node.id);
   }, [node.id, onStartEdit]);
 
-  const handleRightClick = useCallback((e) => {
+  const handleRightClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (onRightClick) {
@@ -188,7 +220,7 @@ const Node = ({
     onFinishEdit(node.id, editText);
   }, [node.id, editText, onFinishEdit]);
 
-  const handleKeyDown = useCallback((e) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     console.log('🎹 Node.jsx handleKeyDown:', { key: e.key, isComposing, editText });
     
     // IME変換中は何もしない
@@ -218,7 +250,7 @@ const Node = ({
     setIsComposing(false);
   }, []);
 
-  const handleInputBlur = useCallback((e) => {
+  const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     // IME変換中でない場合のみ編集を終了
     if (!isComposing) {
       console.log('🎹 Node.jsx blur処理:', { 
@@ -249,7 +281,7 @@ const Node = ({
   }, [node.id, node.text, editText, onFinishEdit, isComposing]);
 
   // ファイルアップロードのハンドラ
-  const handleFileUpload = useCallback((e) => {
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0 && onFileUpload) {
       onFileUpload(node.id, files);
@@ -258,13 +290,13 @@ const Node = ({
     e.target.value = '';
   }, [node.id, onFileUpload]);
   
-  const handleRemoveFile = useCallback((fileId) => {
+  const handleRemoveFile = useCallback((fileId: string) => {
     if (onRemoveFile) {
       onRemoveFile(node.id, fileId);
     }
   }, [node.id, onRemoveFile]);
 
-  const handleImageDoubleClick = useCallback((e, file) => {
+  const handleImageDoubleClick = useCallback((e: React.MouseEvent, file: FileAttachment & { isImage?: boolean }) => {
     e.stopPropagation();
     e.preventDefault();
     if (onShowImageModal && file.isImage) {
@@ -272,7 +304,7 @@ const Node = ({
     }
   }, [onShowImageModal]);
 
-  const handleFileActionMenu = useCallback((e, file) => {
+  const handleFileActionMenu = useCallback((e: React.MouseEvent | { stopPropagation: () => void; preventDefault: () => void; clientX: number; clientY: number }, file: FileAttachment) => {
     e.stopPropagation();
     e.preventDefault();
     if (onShowFileActionMenu) {
@@ -287,7 +319,7 @@ const Node = ({
     }
   }, [onShowFileActionMenu, node.id]);
 
-  const handleShowMapLinks = useCallback((e) => {
+  const handleShowMapLinks = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (onShowNodeMapLinks) {
@@ -645,51 +677,10 @@ const Node = ({
   );
 };
 
-Node.propTypes = {
-  node: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    text: PropTypes.string.isRequired,
-    x: PropTypes.number.isRequired,
-    y: PropTypes.number.isRequired,
-    fontSize: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    fontWeight: PropTypes.string,
-    fontStyle: PropTypes.string,
-    attachments: PropTypes.arrayOf(PropTypes.object),
-    mapLinks: PropTypes.arrayOf(PropTypes.object)
-  }).isRequired,
-  isSelected: PropTypes.bool.isRequired,
-  isEditing: PropTypes.bool.isRequired,
-  isDragTarget: PropTypes.bool,
-  onSelect: PropTypes.func.isRequired,
-  onStartEdit: PropTypes.func.isRequired,
-  onFinishEdit: PropTypes.func.isRequired,
-  onDragStart: PropTypes.func,
-  onDragMove: PropTypes.func,
-  onDragEnd: PropTypes.func,
-  onAddChild: PropTypes.func.isRequired,
-  onAddSibling: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onRightClick: PropTypes.func,
-  onFileUpload: PropTypes.func.isRequired,
-  onRemoveFile: PropTypes.func.isRequired,
-  onShowImageModal: PropTypes.func.isRequired,
-  onShowFileActionMenu: PropTypes.func.isRequired,
-  onShowNodeMapLinks: PropTypes.func.isRequired,
-  editText: PropTypes.string.isRequired,
-  setEditText: PropTypes.func.isRequired,
-  zoom: PropTypes.number.isRequired,
-  pan: PropTypes.shape({
-    x: PropTypes.number.isRequired,
-    y: PropTypes.number.isRequired
-  }).isRequired,
-  svgRef: PropTypes.shape({
-    current: PropTypes.instanceOf(Element)
-  }).isRequired
-};
 
 // React.memoでパフォーマンス最適化
 // propsの浅い比較で再レンダリングを防ぐ
-export default memo(Node, (prevProps, nextProps) => {
+export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
   // ノードの基本情報が変わった場合は再レンダリング
   if (prevProps.node.id !== nextProps.node.id ||
       prevProps.node.text !== nextProps.node.text ||
