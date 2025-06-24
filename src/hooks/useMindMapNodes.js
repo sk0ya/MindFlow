@@ -561,22 +561,66 @@ export const useMindMapNodes = (data, updateData) => {
         console.log('📤 一時ノードをDBに保存:', { nodeId, text: textToSave.trim() });
         
         try {
+          // DBアダプターを取得
+          const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
+          const adapter = getCurrentAdapter();
+          
           // 親ノードを取得
           const parentNode = findParentNode(nodeId);
           if (!parentNode) {
             throw new Error('親ノードが見つかりません');
           }
           
-          // DBに保存
-          const { getCurrentAdapter } = await import('../utils/storageAdapter.js');
-          const adapter = getCurrentAdapter();
+          // 親ノードが一時ノードの場合は先に保存する必要がある
+          if (parentNode.isTemporary) {
+            console.log('🔄 親ノードも一時ノード: 先に親ノードを保存します', parentNode.id);
+            
+            // 親ノードに祖父ノードがある場合の処理
+            const grandParentNode = findParentNode(parentNode.id);
+            if (grandParentNode && grandParentNode.isTemporary) {
+              console.log('⚠️ 祖父ノードも一時ノード: 階層保存が複雑になるため、一時ノードのままDBに保存をスキップ');
+              throw new Error('階層的な一時ノードの保存は複雑になるため、親ノードを先に編集完了してください');
+            }
+            
+            // 親ノードのテキストが空でない場合のみ保存
+            if (parentNode.text && parentNode.text.trim()) {
+              const parentNodeDataForDB = { ...parentNode };
+              delete parentNodeDataForDB.isTemporary;
+              
+              const grandParentIdForDB = grandParentNode ? 
+                (grandParentNode.id === 'root' ? 'root' : grandParentNode.id) : 'root';
+              
+              const parentDbResult = await adapter.addNode(dataRef.current.id, parentNodeDataForDB, grandParentIdForDB);
+              
+              if (parentDbResult.success) {
+                console.log('✅ 親ノードのDB保存成功:', parentNode.id);
+                
+                // 親ノードの一時フラグを除去
+                await updateNode(parentNode.id, { isTemporary: undefined }, false, { 
+                  allowDuringEdit: true, 
+                  source: 'finishEdit-parentSaved' 
+                });
+                
+                // ID再生成があった場合
+                if (parentDbResult.newId && parentDbResult.newId !== parentNode.id) {
+                  await updateNodeId(parentNode.id, parentDbResult.newId);
+                }
+              }
+            } else {
+              console.log('⚠️ 親ノードのテキストが空のため、一時ノードのままDBに保存をスキップ');
+              throw new Error('親ノードにテキストを入力してから、子ノードを保存してください');
+            }
+          }
           
           // 一時フラグを除去してDB保存用データを作成
           const nodeDataForDB = { ...currentNode };
           delete nodeDataForDB.isTemporary;
           nodeDataForDB.text = textToSave.trim();
           
-          const dbResult = await adapter.addNode(dataRef.current.id, nodeDataForDB, parentNode.id);
+          // 親ノードIDの適切な設定（rootの場合は'root'として扱う）
+          const parentIdForDB = parentNode.id === 'root' ? 'root' : parentNode.id;
+          
+          const dbResult = await adapter.addNode(dataRef.current.id, nodeDataForDB, parentIdForDB);
           
           if (dbResult.success) {
             console.log('✅ 一時ノードのDB保存成功:', nodeId);
