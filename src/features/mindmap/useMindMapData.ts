@@ -3,6 +3,7 @@ import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAllMindMaps, 
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { authManager } from '../auth/authManager.js';
+import { realtimeSync } from '../../core/sync/realtimeSync.js';
 
 // データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
@@ -278,6 +279,43 @@ export const useMindMapData = (isAppReady = false) => {
       }
     };
   }, []);
+
+  // リアルタイム同期のイベントリスナー設定
+  useEffect(() => {
+    if (!isAppReady || !data || data.isPlaceholder) return;
+    
+    const settings = getAppSettings();
+    if (settings.storageMode !== 'cloud') return;
+    
+    // マップ更新イベントをリッスン
+    const unsubscribe = realtimeSync.addEventListener('map_updated', async (event) => {
+      console.log('🔄 リアルタイム同期: マップ更新検出', event.data.id);
+      
+      // 現在のマップIDと一致する場合のみ更新
+      if (event.data.id === data.id) {
+        try {
+          // 最新データを取得
+          const updatedMap = await getMindMap(event.data.id);
+          if (updatedMap) {
+            // リアルタイム更新は履歴をスキップし、編集中は保護
+            updateData(assignColorsToExistingNodes(updatedMap), {
+              skipHistory: true,
+              source: 'realtime-sync',
+              allowDuringEdit: false // 編集中は更新をスキップ
+            });
+            console.log('✅ リアルタイム同期: マップ更新適用');
+          }
+        } catch (error) {
+          console.error('❌ リアルタイム同期エラー:', error);
+        }
+      }
+    });
+    
+    // クリーンアップ
+    return () => {
+      unsubscribe();
+    };
+  }, [isAppReady, data]);
 
   return {
     data,

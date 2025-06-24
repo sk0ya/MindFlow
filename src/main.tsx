@@ -21,6 +21,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   
   // シンプル化クラウドストレージテスト
   import('./test-simplified-cloud.js');
+  
+  // ブラウザ間同期テスト
+  import('./test-cross-browser-sync.js');
 }
 
 const rootElement = document.getElementById('root');

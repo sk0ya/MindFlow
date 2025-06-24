@@ -31,7 +31,7 @@ export const getAppSettings = () => {
     language: 'ja',
     storageMode: null, // 初期状態では未設定
     cloudSync: true, // デフォルトで自動同期を有効に
-    realtimeSync: false // リアルタイム同期はデフォルト無効
+    enableRealtimeSync: true // リアルタイム同期を有効化
   });
 };
 
