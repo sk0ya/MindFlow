@@ -7,10 +7,11 @@ export default {
     '^lodash-es$': 'lodash'
   },
   transform: {
-    '^.+\\.(js|jsx)$': ['babel-jest', {
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
       presets: [
         ['@babel/preset-env', { targets: { node: 'current' } }],
-        ['@babel/preset-react', { runtime: 'automatic' }]
+        ['@babel/preset-react', { runtime: 'automatic' }],
+        '@babel/preset-typescript'
       ]
     }]
   },
@@ -18,17 +19,17 @@ export default {
     'node_modules/(?!(lodash-es)/)'
   ],
   testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.(js|jsx)',
-    '<rootDir>/src/**/*.(test|spec).(js|jsx)'
+    '<rootDir>/src/**/__tests__/**/*.(js|jsx|ts|tsx)',
+    '<rootDir>/src/**/*.(test|spec).(js|jsx|ts|tsx)'
   ],
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/dist/'
   ],
   collectCoverageFrom: [
-    'src/**/*.{js,jsx}',
+    'src/**/*.{js,jsx,ts,tsx}',
     '!src/main.jsx',
-    '!src/**/*.stories.{js,jsx}',
+    '!src/**/*.stories.{js,jsx,ts,tsx}',
     '!src/setupTests.js'
   ],
   coverageReporters: ['text', 'lcov', 'html'],

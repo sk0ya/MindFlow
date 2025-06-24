@@ -55,7 +55,7 @@ class CloudAuthManager {
   private checkTokenValidity() {
     if (!authManager.isAuthenticated()) return;
 
-    const token = authManager.getToken();
+    const token = authManager.getAuthToken();
     if (!token) return;
 
     try {
@@ -244,7 +244,7 @@ class CloudAuthManager {
    */
   private async refreshToken() {
     try {
-      const currentToken = authManager.getToken();
+      const currentToken = authManager.getAuthToken();
       if (!currentToken) return;
 
       const response = await fetch(`${this.API_BASE_URL}/auth/refresh`, {
@@ -332,7 +332,7 @@ class CloudAuthManager {
    * 有効なクラウドトークンを持っているかチェック
    */
   hasValidCloudToken(): boolean {
-    const token = authManager.getToken();
+    const token = authManager.getAuthToken();
     if (!token) return false;
 
     try {
@@ -348,7 +348,7 @@ class CloudAuthManager {
    */
   getCloudSyncToken(): string | null {
     if (!this.isCloudAuthEnabled()) return null;
-    return authManager.getToken();
+    return authManager.getAuthToken();
   }
 
   /**
