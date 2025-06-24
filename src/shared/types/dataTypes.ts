@@ -1,5 +1,84 @@
 import { cloneDeep } from 'lodash-es';
-import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index.js';
+import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
+
+// 基本的な型定義
+export interface MindMapNode {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize?: number;
+  fontWeight?: string;
+  fontStyle?: string;
+  color?: string;
+  borderStyle?: string;
+  borderWidth?: number;
+  backgroundColor?: string;
+  collapsed?: boolean;
+  children: MindMapNode[];
+  attachments: FileAttachment[];
+  mapLinks: NodeMapLink[];
+}
+
+export interface MindMapData {
+  id: string;
+  title: string;
+  category?: string;
+  theme?: string;
+  createdAt: string;
+  updatedAt: string;
+  rootNode: MindMapNode;
+  settings: MindMapSettings;
+}
+
+export interface MindMapSettings {
+  autoSave: boolean;
+  autoLayout: boolean;
+  snapToGrid?: boolean;
+  showGrid?: boolean;
+  animationEnabled?: boolean;
+}
+
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataURL?: string;
+  downloadUrl?: string;
+  storagePath?: string;
+  thumbnailUrl?: string;
+  r2FileId?: string;
+  isR2Storage?: boolean;
+  nodeId?: string;
+  isImage: boolean;
+  createdAt: string;
+  isOptimized?: boolean;
+  originalSize?: number;
+  optimizedSize?: number;
+  compressionRatio?: string;
+  optimizedType?: string;
+}
+
+export interface NodeMapLink {
+  id: string;
+  targetMapId: string;
+  targetMapTitle: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface Theme {
+  name: string;
+  background: string;
+  connectionColor: string;
+  textColor: string;
+}
 
 // ファイル関連の定数（定数ファイルから参照）
 export const MAX_FILE_SIZE = STORAGE.MAX_FILE_SIZE;
@@ -8,7 +87,7 @@ export const ALLOWED_FILE_TYPES = VALIDATION.ALLOWED_FILE_TYPES;
 // カラーパレット（定数ファイルから参照）
 export const COLORS = COLOR_CONSTANTS.NODE_COLORS;
 
-export const THEMES = {
+export const THEMES: Record<string, Theme> = {
   default: {
     name: 'デフォルト',
     background: 'white',
@@ -57,7 +136,7 @@ export const generateMapId = () => {
   return `map_${now}_${idCounter}_${randomPart1}${randomPart2}`;
 };
 
-export const createInitialData = () => ({
+export const createInitialData = (): MindMapData => ({
   id: generateMapId(),
   title: DEFAULTS.NEW_MAP_TITLE,
   category: '未分類',
@@ -84,7 +163,7 @@ export const createInitialData = () => ({
   }
 });
 
-export const createNewNode = (text = '', parentNode = null) => {
+export const createNewNode = (text: string = '', parentNode: MindMapNode | null = null): MindMapNode => {
   return {
     id: generateId(),
     text,
@@ -98,7 +177,7 @@ export const createNewNode = (text = '', parentNode = null) => {
   };
 };
 
-export const calculateNodePosition = (parentNode, childIndex, totalChildren) => {
+export const calculateNodePosition = (parentNode: MindMapNode | null, childIndex: number, totalChildren: number): Position => {
   if (!parentNode) return { 
     x: COORDINATES.DEFAULT_CENTER_X, 
     y: COORDINATES.DEFAULT_CENTER_Y 
@@ -116,7 +195,7 @@ export const calculateNodePosition = (parentNode, childIndex, totalChildren) => 
   return { x, y };
 };
 
-export const deepClone = (obj) => {
+export const deepClone = <T>(obj: T): T => {
   return cloneDeep(obj);
 };
 
@@ -129,11 +208,11 @@ export const STORAGE_KEYS = {
 };
 
 // ファイル関連のユーティリティ
-export const isImageFile = (file) => {
+export const isImageFile = (file: File): boolean => {
   return file && file.type && file.type.startsWith('image/');
 };
 
-export const getFileIcon = (file) => {
+export const getFileIcon = (file: File): string => {
   if (isImageFile(file)) {
     return '🖼️';
   }
@@ -150,16 +229,21 @@ export const getFileIcon = (file) => {
   }
 };
 
-export const readFileAsDataURL = (file) => {
+export const readFileAsDataURL = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
+    reader.onload = (e) => resolve(e.target?.result as string);
     reader.onerror = (e) => reject(e);
     reader.readAsDataURL(file);
   });
 };
 
-export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = null, optimizationInfo = null) => {
+export const createFileAttachment = (
+  file: File, 
+  dataURL: string | null = null, 
+  uploadedFileInfo: any = null, 
+  optimizationInfo: any = null
+): FileAttachment => {
   return {
     id: uploadedFileInfo?.id || generateId(),
     name: file.name,
@@ -184,7 +268,7 @@ export const createFileAttachment = (file, dataURL = null, uploadedFileInfo = nu
 };
 
 // 既存のノードに色を自動割り当てする
-export const assignColorsToExistingNodes = (mindMapData) => {
+export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapData => {
   // rootNodeが存在しない場合の対応
   if (!mindMapData || !mindMapData.rootNode) {
     console.warn('Invalid mindmap data or missing rootNode:', mindMapData);
@@ -195,7 +279,7 @@ export const assignColorsToExistingNodes = (mindMapData) => {
   console.log('🎨 assignColorsToExistingNodes: ディープクローンを実行中...');
   const clonedData = deepClone(mindMapData);
   
-  const assignColors = (node, parentColor = null, isRootChild = false, childIndex = 0) => {
+  const assignColors = (node: MindMapNode, parentColor: string | null = null, isRootChild: boolean = false, childIndex: number = 0) => {
     if (node.id === 'root') {
       // ルートノードには色を設定しない
       node.color = undefined;
@@ -224,7 +308,7 @@ export const assignColorsToExistingNodes = (mindMapData) => {
   return clonedData;
 };
 
-export const validateFile = (file) => {
+export const validateFile = (file: File): string[] => {
   const errors = [];
   
   if (!file) {
@@ -243,7 +327,7 @@ export const validateFile = (file) => {
   return errors;
 };
 
-export const formatFileSize = (bytes) => {
+export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   
   const k = 1024;
@@ -254,7 +338,7 @@ export const formatFileSize = (bytes) => {
 };
 
 // ノード用マインドマップリンクを作成
-export const createNodeMapLink = (targetMapId, targetMapTitle, description = '') => ({
+export const createNodeMapLink = (targetMapId: string, targetMapTitle: string, description: string = ''): NodeMapLink => ({
   id: generateId(),
   targetMapId,
   targetMapTitle,
