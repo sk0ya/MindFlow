@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import MindMapApp from './components/MindMapApp';
+import MindMapApp from './ui/components/mindmap/MindMapApp';
 
 const App = () => {
   return <MindMapApp />;

@@ -1,8 +1,8 @@
 // Debug script to test sync functionality
-import { authManager } from './utils/authManager.js';
-import { cloudStorage } from './utils/cloudStorage.js';
-import { saveMindMap } from './utils/storageRouter.js';
-import { createInitialData } from './utils/dataTypes.js';
+import { authManager } from './features/auth/authManager.js';
+import { cloudStorage } from './core/storage/cloudStorage.js';
+import { saveMindMap } from './core/storage/storageRouter.js';
+import { createInitialData } from './shared/types/dataTypes.js';
 
 export const debugSync = async () => {
   console.log('=== Sync Debug Test ===');
