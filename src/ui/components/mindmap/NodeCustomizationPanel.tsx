@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { MindMapNode } from '../../../shared/types';
+import type { MindMapNode } from '../../../shared/types/dataTypes.js';
 
 interface NodeCustomizationPanelProps {
   selectedNode: MindMapNode | null;
@@ -34,11 +34,11 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
   useEffect(() => {
     if (selectedNode) {
       setCustomizations({
-        fontSize: selectedNode.fontSize || '14px',
+        fontSize: selectedNode.fontSize ? `${selectedNode.fontSize}px` : '14px',
         fontWeight: selectedNode.fontWeight || 'bold',
         fontStyle: selectedNode.fontStyle || 'normal',
         borderStyle: selectedNode.borderStyle || 'solid',
-        borderWidth: selectedNode.borderWidth || '2px'
+        borderWidth: selectedNode.borderWidth ? `${selectedNode.borderWidth}px` : '2px'
       });
     }
   }, [selectedNode]);
@@ -49,7 +49,18 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
     
     // リアルタイムで変更を適用
     if (selectedNode) {
-      onUpdateNode(selectedNode.id, newCustomizations);
+      const updateData: Partial<MindMapNode> = {};
+      
+      // 数値型のプロパティは適切に変換
+      if (property === 'fontSize') {
+        updateData.fontSize = parseInt(value, 10);
+      } else if (property === 'borderWidth') {
+        updateData.borderWidth = parseInt(value, 10);
+      } else {
+        updateData[property] = value;
+      }
+      
+      onUpdateNode(selectedNode.id, updateData);
     }
   };
 

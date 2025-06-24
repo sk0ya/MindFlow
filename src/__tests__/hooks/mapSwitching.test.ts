@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti.js';
-import useMindMapNodes from '../../features/mindmap/useMindMapNodes.js';
+import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 
 // Mock the storage modules
 jest.mock('../../core/storage/storageRouter.js', () => ({

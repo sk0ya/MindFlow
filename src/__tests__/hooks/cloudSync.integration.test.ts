@@ -99,8 +99,8 @@ describe('Cloud Sync Integration Tests', () => {
 
       // マップ切り替え前の編集状態チェック
       const editingInput = document.querySelector('.node-input');
-      const currentEditingNodeId = editingInput?.dataset.nodeId;
-      const currentEditText = editingInput?.value;
+      const currentEditingNodeId = (editingInput as HTMLElement)?.dataset?.nodeId;
+      const currentEditText = (editingInput as HTMLInputElement)?.value;
 
       expect(currentEditingNodeId).toBe('node-1');
       expect(currentEditText).toBe('編集中のテキスト');
@@ -161,7 +161,7 @@ describe('Cloud Sync Integration Tests', () => {
       mockLocalStorage.setItem('auth_token', 'test-token');
 
       // APIレスポンスをモック
-      global.fetch.mockResolvedValueOnce({
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           maps: [
@@ -192,7 +192,7 @@ describe('Cloud Sync Integration Tests', () => {
 
     test('ネットワークエラー時はローカルデータを使用', async () => {
       // APIエラーをモック
-      global.fetch.mockRejectedValueOnce(new Error('Network error'));
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockRejectedValueOnce(new Error('Network error'));
 
       // エラーハンドリングをシミュレート
       let data = null;
@@ -220,8 +220,13 @@ describe('Cloud Sync Integration Tests', () => {
         title: 'Broken Map',
         rootNode: {
           id: 'root',
-          text: 'Root'
-          // children プロパティがない
+          text: 'Root',
+          x: 0,
+          y: 0,
+          attachments: [],
+          mapLinks: [],
+          children: undefined as any
+          // children プロパティが不正
         }
       };
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { getAppSettings, saveAppSettings, loadFromStorage, saveToStorage } from '../utils/storageUtils.js';
-import { STORAGE_KEYS } from '../utils/dataTypes.js';
-import SyncStatusIndicator from './SyncStatusIndicator.jsx';
-import AuthModal from './AuthModal.jsx';
-import { authManager } from '../utils/authManager.js';
+import { getAppSettings, saveAppSettings } from '../../../shared/utils/storageUtils.js';
+import { STORAGE_KEYS } from '../../../shared/types/dataTypes.js';
+import SyncStatusIndicator from './SyncStatusIndicator.tsx';
+import AuthModal from '../auth/AuthModal.tsx';
+import { authManager } from '../../../features/auth/authManager.js';
 import type { User, StorageMode } from '../../../shared/types/index.js';
 
 interface CloudStoragePanelProps {
