@@ -9,6 +9,18 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   
   // クラウドモードデバッグ機能
   import('./debug-cloud.js');
+  
+  // クラウド同期テストスイート
+  import('./test-cloud-sync.js');
+  
+  // ストレージ統合テスト
+  import('./test-storage-integration.js');
+  
+  // 同期診断ツール
+  import('./test-sync-diagnosis.js');
+  
+  // シンプル化クラウドストレージテスト
+  import('./test-simplified-cloud.js');
 }
 
 const rootElement = document.getElementById('root');

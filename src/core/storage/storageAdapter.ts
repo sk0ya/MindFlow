@@ -1,10 +1,7 @@
 // ストレージモード別の処理を完全分離するアダプター
 import { getAppSettings } from './storageUtils.js';
 import { getAllMindMapsLocal, saveMindMapLocal, deleteMindMapLocal } from './localStorage.js';
-import { cloudStorage } from './cloudStorage.js';
-import { cloudSyncAdapter } from './cloudSyncAdapter.js';
 import { authManager } from '../../features/auth/authManager.js';
-import { cloudAuthManager } from '../../features/auth/cloudAuthManager.js';
 import { generateId } from '../../shared/types/dataTypes.js';
 
 // ローカルストレージ専用の処理
@@ -69,15 +66,15 @@ class LocalStorageAdapter {
   }
 }
 
-// クラウドストレージ専用の処理（リアルタイム同期対応）
+// クラウドストレージ専用の処理（シンプル版）
 class CloudStorageAdapter {
   constructor() {
-    this.name = 'クラウドストレージ（同期対応）';
+    this.name = 'クラウドストレージ（シンプル版）';
     this.baseUrl = '';
     this.pendingOperations = new Map();
     this.isInitialized = false;
     this.initPromise = this.initialize();
-    this.useSyncAdapter = true; // 新しい同期機能を使用
+    this.useSyncAdapter = false; // シンプルな直接API通信を使用
   }
 
   // 認証状態の詳細チェック
@@ -156,20 +153,85 @@ class CloudStorageAdapter {
     return headers;
   }
 
+  // シンプルなAPI通信メソッド
+  async apiCall(endpoint, method = 'GET', data = null) {
+    await this.ensureInitialized();
+    
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = await this.getAuthHeaders();
+    
+    const options = {
+      method,
+      headers
+    };
+    
+    if (data && method !== 'GET') {
+      options.body = JSON.stringify(data);
+    }
+    
+    console.log('📤 API呼び出し:', { method, url, hasData: !!data });
+    
+    const response = await fetch(url, options);
+    
+    // 特別な処理が必要なステータスコード
+    if (response.status === 404 && method === 'DELETE') {
+      // DELETE操作で404の場合は既に削除済みとして成功扱い
+      console.log('☁️ 削除対象が見つからない (既に削除済み)');
+      return { message: 'Already deleted', success: true };
+    }
+    
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+        errorMessage += ` - ${errorBody}`;
+        
+        // UNIQUE制約違反の特別処理
+        if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
+          console.warn('🔄 UNIQUE制約違反検出: ノードIDの再生成が必要');
+          const error = new Error('UNIQUE_CONSTRAINT_VIOLATION');
+          error.originalError = errorMessage;
+          error.needsRetry = true;
+          throw error;
+        }
+        
+        // Parent node not found の特別処理
+        if (response.status === 400 && errorBody.includes('Parent node not found')) {
+          console.warn('🔄 Parent node not found 検出: マップ同期が必要');
+          const error = new Error('PARENT_NODE_NOT_FOUND');
+          error.originalError = errorMessage;
+          error.needsMapSync = true;
+          throw error;
+        }
+        
+      } catch (e) {
+        if (e.message === 'UNIQUE_CONSTRAINT_VIOLATION' || e.message === 'PARENT_NODE_NOT_FOUND') {
+          throw e; // 特別なエラーは再スロー
+        }
+        // JSON解析失敗は無視
+      }
+      
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.body = errorBody;
+      throw error;
+    }
+    
+    const result = await response.json();
+    console.log('📥 API応答:', { method, url, success: true });
+    return result;
+  }
+
   async getAllMaps() {
     try {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ一覧取得開始');
       
-      // 新しい同期アダプターを使用
-      if (this.useSyncAdapter && cloudAuthManager.isCloudAuthEnabled()) {
-        const maps = await cloudSyncAdapter.getAllMaps();
-        console.log('🔄 同期アダプター: マップ一覧取得完了', maps.length, '件');
-        return maps;
-      }
-      
-      // フォールバック: 従来のクラウドストレージ
-      const maps = await cloudStorage.getAllMindMapsCloud();
+      // シンプルな直接API通信
+      const response = await this.apiCall('/api/mindmaps', 'GET');
+      const maps = Array.isArray(response) ? response : (response.maps || []);
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
 
@@ -184,15 +246,8 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
-      // 新しい同期アダプターを使用
-      if (this.useSyncAdapter && cloudAuthManager.isCloudAuthEnabled()) {
-        const map = await cloudSyncAdapter.getMap(mapId);
-        console.log('🔄 同期アダプター: マップ取得完了', map.title);
-        return map;
-      }
-      
-      // フォールバック: 従来のクラウドストレージ
-      const map = await cloudStorage.getMindMapCloud(mapId);
+      // シンプルな直接API通信
+      const map = await this.apiCall(`/api/mindmaps/${mapId}`, 'GET');
       console.log('☁️ クラウド: マップ取得完了', map.title);
       return map;
 
@@ -207,7 +262,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
       
-      const result = await cloudStorage.createMindMapCloud(mapData);
+      const result = await this.apiCall('/api/mindmaps', 'POST', mapData);
       console.log('☁️ クラウド: マップ作成完了', result.title);
       return result;
 
@@ -222,7 +277,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ更新開始', mapId);
       
-      const result = await cloudStorage.updateMindMapCloud(mapId, mapData);
+      const result = await this.apiCall(`/api/mindmaps/${mapId}`, 'PUT', mapData);
       console.log('☁️ クラウド: マップ更新完了', result.title);
       return result;
 
@@ -237,7 +292,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ削除開始', mapId);
       
-      const result = await cloudStorage.deleteMindMapCloud(mapId);
+      const result = await this.apiCall(`/api/mindmaps/${mapId}`, 'DELETE');
       console.log('☁️ クラウド: マップ削除完了');
       return result;
 
@@ -252,32 +307,17 @@ class CloudStorageAdapter {
     try {
       
       // サーバー側でのマップ取得を試行してルートノードの同期を確認
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/maps/${mapId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
+      let mapData;
+      try {
+        mapData = await this.apiCall(`/api/mindmaps/${mapId}`, 'GET');
+      } catch (error) {
+        if (error.status === 404) {
           console.warn('⚠️ マップがサーバーに存在しません。ローカルデータから作成を試行します:', mapId);
-          // ローカルのマップデータを取得してサーバーに作成
-          const localMapData = await this.getMap(mapId);
-          if (localMapData) {
-            console.log('📤 ローカルマップをサーバーに同期:', localMapData.title);
-            const createResult = await this.updateMap(mapId, localMapData);
-            if (createResult && createResult.id) {
-              console.log('✅ マップ作成完了、ルートノード同期成功');
-              return true;
-            }
-          }
-          throw new Error('マップの作成に失敗しました');
+          // この場合はgetMapでローカル -> サーバー同期が期待できないので失敗扱い
+          throw new Error('マップがサーバーに存在しません');
         }
-        throw new Error(`マップ取得失敗: ${response.status}`);
+        throw error;
       }
-
-      const mapData = await response.json();
       console.log('🔍 サーバー側マップ状態:', {
         mapId,
         hasRootNode: !!mapData.rootNode,
@@ -332,20 +372,7 @@ class CloudStorageAdapter {
     
     console.log('🔄 ルートノードチェックなしでリトライ実行');
     
-    const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`リトライも失敗: Status: ${response.status}, Body: ${errorBody}`);
-    }
-
-    const result = await response.json();
+    const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
     console.log('✅ リトライ成功:', result);
     
     return { 
@@ -407,54 +434,7 @@ class CloudStorageAdapter {
       
       console.log('📤 完全なリクエストボディ:', JSON.stringify(requestBody, null, 2));
       
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        let errorDetails = `Status: ${response.status}`;
-        try {
-          const errorBody = await response.text();
-          console.error('❌ ノード追加サーバーエラー詳細:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorBody,
-            requestData: requestBody
-          });
-          errorDetails += `, Body: ${errorBody}`;
-          
-          // UNIQUE制約違反の場合は特別処理（バックエンドで既に処理されているが念のため）
-          if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
-            console.warn('🔄 UNIQUE制約違反検出: ノードIDを再生成してリトライします', nodeData.id);
-            return await this.retryWithNewId(mapId, nodeData, parentId);
-          }
-          
-          // Parent node not found エラーの場合は特別処理
-          if (response.status === 400 && errorBody.includes('Parent node not found')) {
-            console.warn('🔄 Parent node not found 検出: ルートノード同期後リトライします', { mapId, parentId });
-            try {
-              // 強制的にマップ情報を更新してルートノードを同期
-              await this.forceMapSync(mapId);
-              console.log('✅ マップ同期完了、ノード追加をリトライします');
-              
-              // 同じパラメータでリトライ
-              return await this.addNodeWithoutRootCheck(mapId, nodeData, parentId);
-            } catch (syncError) {
-              console.error('❌ マップ同期失敗:', syncError);
-              throw new Error(`Parent node not found (マップ同期も失敗): ${syncError.message}`);
-            }
-          }
-        } catch (e) {
-          console.error('❌ エラーレスポンス読み取り失敗:', e);
-        }
-        throw new Error(`API エラー: ${errorDetails}`);
-      }
-
-      const result = await response.json();
+      const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
       console.log('☁️ クラウド: ノード追加完了', {
         originalId: nodeData.id,
         finalId: result.id,
@@ -471,6 +451,27 @@ class CloudStorageAdapter {
       return finalResult;
 
     } catch (error) {
+      // 特別なエラーハンドリング
+      if (error.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
+        console.warn('🔄 UNIQUE制約違反: ノードIDを再生成してリトライします', nodeData.id);
+        return await this.retryWithNewId(mapId, nodeData, parentId);
+      }
+      
+      if (error.message === 'PARENT_NODE_NOT_FOUND') {
+        console.warn('🔄 Parent node not found: ルートノード同期後リトライします', { mapId, parentId });
+        try {
+          // 強制的にマップ情報を更新してルートノードを同期
+          await this.forceMapSync(mapId);
+          console.log('✅ マップ同期完了、ノード追加をリトライします');
+          
+          // 同じパラメータでリトライ
+          return await this.addNodeWithoutRootCheck(mapId, nodeData, parentId);
+        } catch (syncError) {
+          console.error('❌ マップ同期失敗:', syncError);
+          throw new Error(`Parent node not found (マップ同期も失敗): ${syncError.message}`);
+        }
+      }
+
       console.error('☁️ クラウド: ノード追加失敗:', error);
       // 失敗した操作をキューに追加
       this.pendingOperations.set(`add_${nodeData.id}`, {
@@ -507,28 +508,19 @@ class CloudStorageAdapter {
           operation: 'add'
         };
 
-        const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (response.ok) {
-          const result = await response.json();
+        try {
+          const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
           console.log('✅ ID再生成リトライ成功:', newId);
           return { success: true, result, newId };
-        } else {
-          const errorBody = await response.text();
-          console.warn(`❌ リトライ ${attempt} 失敗:`, errorBody);
+        } catch (error) {
+          console.warn(`❌ リトライ ${attempt} 失敗:`, error.message);
           
           // 再度UNIQUE制約違反の場合は次のリトライへ
-          if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
+          if (error.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
             continue;
           } else {
             // 他のエラーの場合は即座に失敗
-            throw new Error(`API エラー: Status: ${response.status}, Body: ${errorBody}`);
+            throw error;
           }
         }
       } catch (error) {
@@ -547,23 +539,11 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード更新開始', nodeId);
       
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          mapId,
-          updates,
-          operation: 'update'
-        })
+      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}`, 'PUT', {
+        mapId,
+        updates,
+        operation: 'update'
       });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('☁️ クラウド: ノード更新完了');
       return { success: true, result };
 
@@ -585,27 +565,10 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード削除開始', nodeId);
       
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          mapId,
-          operation: 'delete'
-        })
+      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}`, 'DELETE', {
+        mapId,
+        operation: 'delete'
       });
-
-      if (!response.ok) {
-        // 404の場合は既に削除済みなので成功として扱う
-        if (response.status === 404) {
-          console.log('☁️ クラウド: ノード削除完了 (既に削除済み)');
-          return { success: true, result: { message: 'Node already deleted' } };
-        }
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('☁️ クラウド: ノード削除完了');
       return { success: true, result };
 
@@ -626,23 +589,11 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
       
-      const response = await authManager.authenticatedFetch(`${this.baseUrl}/nodes/${mapId}/${nodeId}/move`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          mapId,
-          newParentId,
-          operation: 'move'
-        })
+      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}/move`, 'PUT', {
+        mapId,
+        newParentId,
+        operation: 'move'
       });
-
-      if (!response.ok) {
-        throw new Error(`API エラー: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('☁️ クラウド: ノード移動完了');
       return { success: true, result };
 
