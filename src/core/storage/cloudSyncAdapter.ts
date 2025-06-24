@@ -45,7 +45,7 @@ export class CloudSyncAdapter {
   };
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
     this.setupEventHandlers();
     this.startQueueProcessor();
   }

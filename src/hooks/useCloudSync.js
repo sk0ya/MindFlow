@@ -439,7 +439,7 @@ class CloudSyncService {
  */
 class APIClient {
   constructor(baseUrl, authToken) {
-    this.baseUrl = baseUrl || '/api';
+    this.baseUrl = baseUrl || 'https://mindflow-api-production.shigekazukoya.workers.dev';
     this.authToken = authToken;
   }
 

@@ -7,7 +7,7 @@ import { authManager } from './authManager.js';
 class CloudAuthManager {
   private readonly GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID;
   private readonly GITHUB_REDIRECT_URI = import.meta.env.VITE_GITHUB_REDIRECT_URI;
-  private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+  private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
   
   private authEventListeners: Set<(event: AuthEvent) => void> = new Set();
   private tokenRefreshTimer: NodeJS.Timeout | null = null;

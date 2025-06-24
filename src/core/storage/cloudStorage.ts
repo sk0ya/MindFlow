@@ -3,7 +3,7 @@
 
 import { authManager } from '../../features/auth/authManager.js';
 
-const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
 class CloudStorageClient {
   constructor() {

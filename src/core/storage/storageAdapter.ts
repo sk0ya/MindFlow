@@ -108,9 +108,11 @@ class CloudStorageAdapter {
       hasToken: !!authManager.getAuthToken()
     });
     
-    this.baseUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:8787/api' 
-      : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || (
+      window.location.hostname === 'localhost' 
+        ? 'http://localhost:8787/api' 
+        : 'https://mindflow-api-production.shigekazukoya.workers.dev/api'
+    );
     
     console.log('☁️ クラウド: 初期化完了', {
       baseUrl: this.baseUrl,
