@@ -28,6 +28,7 @@ import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper.jsx';
 import StorageModeSelector from '../storage/StorageModeSelector.jsx';
 import { useAppInitialization } from '../../../core/hooks/useAppInitialization.js';
 import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts.js';
+import { useCloudAuth } from '../../../features/auth/cloudAuthManager.js';
 
 // カスタムフックのインポート
 import { useAuthHandlers } from './hooks/useAuthHandlers.js';
@@ -49,6 +50,9 @@ const MindMapApp: React.FC = () => {
   
   // アプリ初期化（統一フロー）
   const initState = useAppInitialization();
+  
+  // クラウド認証状態管理
+  const cloudAuth = useCloudAuth();
 
   const {
     data,
@@ -175,6 +179,18 @@ const MindMapApp: React.FC = () => {
       console.log('✅ アプリ初期化完了');
     }
   }, [initState.isReady]);
+
+  // クラウドモード時の認証状態チェック
+  useEffect(() => {
+    const settings = getAppSettings();
+    if (settings.storageMode === 'cloud' && !cloudAuth.isAuthenticated) {
+      console.log('🔐 クラウドモードですが未認証のため、認証が必要です');
+      // 認証モーダルを表示するか、または認証プロセスを開始
+      if (cloudAuth.error) {
+        console.error('認証エラー:', cloudAuth.error);
+      }
+    }
+  }, [cloudAuth.isAuthenticated, cloudAuth.error]);
 
   // ファイルアクションメニューのハンドラーを拡張
   const handleCloseAllPanels = () => {

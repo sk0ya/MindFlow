@@ -220,6 +220,25 @@ class AuthManager {
     }
   }
 
+  // 認証データを設定（CloudAuthManager用）
+  async setAuthData(token, user) {
+    this.token = token;
+    this.user = user;
+    this.saveAuthData();
+    return { success: true, user: this.user };
+  }
+
+  // 汎用ログインメソッド（CloudAuthManager拡張用）
+  async login(...args) {
+    // 既存の認証処理を呼び出し
+    if (args.length === 1 && typeof args[0] === 'string') {
+      // Email形式の場合はMagic Link
+      return await this.sendMagicLink(args[0]);
+    }
+    // その他の形式はサポートなし
+    throw new Error('Unsupported login method');
+  }
+
   // ログアウト
   async logout() {
     this.clearAuthData();

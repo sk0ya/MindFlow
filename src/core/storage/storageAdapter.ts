@@ -718,7 +718,18 @@ class StorageAdapterFactory {
     
     if (settings.storageMode === 'cloud') {
       console.log('🏭 ストレージアダプター: クラウドモード選択');
-      return new CloudStorageAdapter();
+      try {
+        // 認証状態をチェック
+        const authManager = require('../../features/auth/authManager.js').authManager;
+        if (!authManager.isAuthenticated()) {
+          console.warn('⚠️ クラウドモードですが未認証のため、ローカルモードにフォールバック');
+          return new LocalStorageAdapter();
+        }
+        return new CloudStorageAdapter();
+      } catch (error) {
+        console.error('❌ クラウドストレージアダプター作成失敗、ローカルモードにフォールバック:', error);
+        return new LocalStorageAdapter();
+      }
     } else {
       console.log('🏭 ストレージアダプター: ローカルモード選択');
       return new LocalStorageAdapter();
