@@ -239,6 +239,20 @@ class CloudStorageAdapter {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          console.warn('⚠️ マップがサーバーに存在しません。ローカルデータから作成を試行します:', mapId);
+          // ローカルのマップデータを取得してサーバーに作成
+          const localMapData = await this.getMap(mapId);
+          if (localMapData) {
+            console.log('📤 ローカルマップをサーバーに同期:', localMapData.title);
+            const createResult = await this.updateMap(mapId, localMapData);
+            if (createResult && createResult.id) {
+              console.log('✅ マップ作成完了、ルートノード同期成功');
+              return true;
+            }
+          }
+          throw new Error('マップの作成に失敗しました');
+        }
         throw new Error(`マップ取得失敗: ${response.status}`);
       }
 
