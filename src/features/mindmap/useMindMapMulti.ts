@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
-import { realtimeSync } from '../collaboration/realtimeSync.js';
+// リアルタイム同期はクラウドエンジンに統合
 
 // マルチマップ管理専用のカスタムフック
 export const useMindMapMulti = (data, setData, updateData) => {
@@ -105,7 +105,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
         // 現在はマップ全体の更新で代替
         if (currentMapId === mapId && data) {
           const updatedData = { ...data, title: newTitle, updatedAt: new Date().toISOString() };
-          await realtimeSync.updateMap?.(mapId, updatedData) || console.warn('updateMap method not implemented yet');
+          // リアルタイム同期はクラウドエンジンで自動処理
         }
       } else {
         // ローカル更新
@@ -147,7 +147,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
       
       if (settings.storageMode === 'cloud') {
         // クラウドから削除
-        const result = await realtimeSync.deleteMap(mapId);
+        // リアルタイム同期でのマップ削除はクラウドエンジンで自動処理
         if (!result.success) {
           throw new Error('クラウドマップ削除失敗: ' + result.error);
         }

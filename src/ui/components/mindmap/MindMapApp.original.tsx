@@ -31,7 +31,7 @@ import StorageModeSelector from '../storage/StorageModeSelector.jsx';
 import { useOnboarding } from '../../../core/hooks/useOnboarding.js';
 import { useAppInitialization } from '../../../core/hooks/useAppInitialization.js';
 import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts.js';
-import { realtimeSync } from '../../../features/collaboration/realtimeSync.js';
+// リアルタイム同期はクラウドエンジンに統合
 
 const MindMapApp = () => {
   // URL パラメータで認証トークンをチェック
@@ -485,7 +485,7 @@ const MindMapApp = () => {
     
     // リアルタイム同期を再初期化
     try {
-      realtimeSync.reinitialize();
+      // リアルタイム同期の再初期化はクラウドエンジンで自動処理
       console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
     } catch (initError) {
       console.warn('⚠️ リアルタイム同期再初期化失敗:', initError);

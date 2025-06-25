@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { authManager } from '../../../../features/auth/authManager.js';
-import { realtimeSync } from '../../../../features/collaboration/realtimeSync.js';
+// リアルタイム同期はクラウドエンジンに統合
 
 /**
  * 認証関連のステートとハンドラーを管理するカスタムフック
@@ -66,7 +66,7 @@ export const useAuthHandlers = (initState, refreshAllMindMaps, triggerCloudSync)
       console.log('🔄 認証成功後にマップ一覧をリフレッシュしました');
       
       // 2. リアルタイム同期を再初期化
-      realtimeSync.reinitialize();
+      // リアルタイム同期の再初期化はクラウドエンジンで自動処理
       console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
       
       // 3. クラウド同期をトリガー

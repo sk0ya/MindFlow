@@ -3,7 +3,7 @@ import { getCurrentMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled,
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
-import { realtimeSync } from '../../core/sync/realtimeSync.js';
+// リアルタイム同期はクラウドエンジンに統合
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
 
 // データ管理専用のカスタムフック
@@ -16,13 +16,7 @@ export const useMindMapData = (isAppReady = false) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   const isSavingRef = useRef(false); // 同時保存処理防止フラグ
-  const realtimeSyncBlockedUntilRef = useRef(0); // リアルタイム同期ブロック時刻
-  
-  // 🔧 統一: リアルタイム同期ブロック期間3秒に統一（競合防止）
-  const blockRealtimeSyncTemporarily = (durationMs = 3000) => {
-    realtimeSyncBlockedUntilRef.current = Date.now() + durationMs;
-    console.log('🚫 リアルタイム同期を3秒間ブロック:', { durationMs, blockedUntil: new Date(realtimeSyncBlockedUntilRef.current).toISOString() });
-  };
+  // リアルタイム同期ブロック機能は削除（クラウドエンジンで処理）
   
   // 即座保存機能（編集中の安全性を考慮）
   const saveImmediately = async (dataToSave = data, options = {}) => {
@@ -94,7 +88,7 @@ export const useMindMapData = (isAppReady = false) => {
       console.log('💾 即座保存完了:', dataToSave.title);
       
       // 🔧 修正: 保存後にリアルタイム同期を一時的にブロック（無限ループ防止）
-      blockRealtimeSyncTemporarily(5000); // 5秒間ブロック
+      // リアルタイム同期ブロック機能は削除
       
       // 🔧 NEW: リアルタイム同期のスキップオプション
       if (options.skipRealtimeSync) {
@@ -454,6 +448,6 @@ export const useMindMapData = (isAppReady = false) => {
     saveMindMap: async () => await saveMindMap(data),
     isLoadingFromCloud,
     triggerCloudSync,
-    blockRealtimeSyncTemporarily
+    // blockRealtimeSyncTemporarily // 削除
   };
 };

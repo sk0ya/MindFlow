@@ -15,6 +15,13 @@ export class CloudEngine {
   private pendingOperations = new Map<string, any>();
   private lastSyncTime: string | null = null;
 
+  // リアルタイム同期機能（クラウド専用）
+  private isRealtimeSyncEnabled = false;
+  private pollingInterval: number | null = null;
+  private syncFrequency = 5000; // 5秒ごと
+  private eventListeners = new Map<string, Set<(event: any) => void>>();
+  private lastMapsSnapshot = new Map<string, string>(); // mapId -> updatedAt
+
   constructor() {
     if (!authManager.isAuthenticated()) {
       throw new Error('クラウドエンジンは認証が必要です');
@@ -692,6 +699,196 @@ export class CloudEngine {
   async clearAllData(): Promise<boolean> {
     console.log('☁️ クラウドモード: ローカルデータクリアは不要');
     return true;
+  }
+
+  // ========================================
+  // リアルタイム同期機能（クラウド専用）
+  // ========================================
+
+  startRealtimeSync(): void {
+    if (this.isRealtimeSyncEnabled) {
+      console.log('⚠️ リアルタイム同期は既に開始されています');
+      return;
+    }
+
+    console.log('🔄 クラウドエンジン: リアルタイム同期を開始します');
+    this.isRealtimeSyncEnabled = true;
+    
+    // 初回同期
+    this.performRealtimeSync();
+    
+    // 定期的な同期
+    this.pollingInterval = window.setInterval(() => {
+      this.performRealtimeSync();
+    }, this.syncFrequency);
+  }
+
+  stopRealtimeSync(): void {
+    if (!this.isRealtimeSyncEnabled) {
+      return;
+    }
+
+    console.log('⏹️ クラウドエンジン: リアルタイム同期を停止します');
+    this.isRealtimeSyncEnabled = false;
+    
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
+
+  setSyncFrequency(milliseconds: number): void {
+    this.syncFrequency = Math.max(1000, milliseconds);
+    
+    if (this.isRealtimeSyncEnabled) {
+      this.stopRealtimeSync();
+      this.startRealtimeSync();
+    }
+  }
+
+  private async performRealtimeSync(): Promise<void> {
+    if (!this.isRealtimeSyncEnabled) {
+      return;
+    }
+
+    try {
+      console.log('🔄 クラウドエンジン: リアルタイム同期実行中');
+      
+      // 全マップを取得
+      const maps = await this.getAllMaps();
+      
+      // 変更を検出
+      const changes = this.detectChanges(maps);
+      
+      // 変更があればイベントを発火
+      if (changes.length > 0) {
+        changes.forEach(change => {
+          this.emitEvent(change);
+        });
+      }
+
+      // スナップショットを更新
+      this.updateSnapshot(maps);
+      
+    } catch (error) {
+      console.error('❌ クラウドリアルタイム同期エラー:', error);
+      
+      this.emitEvent({
+        type: 'sync_error',
+        data: { 
+          error: error.message,
+          type: error.name || 'Unknown',
+          timestamp: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  private detectChanges(maps: MindMapData[]): any[] {
+    const changes: any[] = [];
+    const currentMapIds = new Set<string>();
+
+    maps.forEach(map => {
+      currentMapIds.add(map.id);
+      
+      const lastUpdated = this.lastMapsSnapshot.get(map.id);
+      
+      if (!lastUpdated) {
+        // 新しいマップ
+        changes.push({
+          type: 'map_created',
+          data: map,
+          timestamp: new Date().toISOString()
+        });
+      } else if (lastUpdated !== map.updatedAt) {
+        // 更新されたマップ
+        changes.push({
+          type: 'map_updated',
+          data: map,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // 削除されたマップを検出
+    this.lastMapsSnapshot.forEach((_, mapId) => {
+      if (!currentMapIds.has(mapId)) {
+        changes.push({
+          type: 'map_deleted',
+          data: { mapId },
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    if (changes.length > 0) {
+      console.log(`🔄 クラウドエンジン: ${changes.length}件の変更を検出しました`);
+    }
+
+    return changes;
+  }
+
+  private updateSnapshot(maps: MindMapData[]): void {
+    this.lastMapsSnapshot.clear();
+    maps.forEach(map => {
+      this.lastMapsSnapshot.set(map.id, map.updatedAt);
+    });
+  }
+
+  addEventListener(eventType: string, listener: (event: any) => void): () => void {
+    if (!this.eventListeners.has(eventType)) {
+      this.eventListeners.set(eventType, new Set());
+    }
+    
+    this.eventListeners.get(eventType)!.add(listener);
+    
+    // リスナー削除関数を返す
+    return () => {
+      const listeners = this.eventListeners.get(eventType);
+      if (listeners) {
+        listeners.delete(listener);
+      }
+    };
+  }
+
+  private emitEvent(event: any): void {
+    const listeners = this.eventListeners.get(event.type);
+    if (listeners) {
+      listeners.forEach(listener => {
+        try {
+          listener(event);
+        } catch (error) {
+          console.error(`イベントリスナーエラー (${event.type}):`, error);
+        }
+      });
+    }
+
+    // 全イベントリスナー
+    const allListeners = this.eventListeners.get('*');
+    if (allListeners) {
+      allListeners.forEach(listener => {
+        try {
+          listener(event);
+        } catch (error) {
+          console.error('全イベントリスナーエラー:', error);
+        }
+      });
+    }
+  }
+
+  getRealtimeSyncStatus(): any {
+    return {
+      isEnabled: this.isRealtimeSyncEnabled,
+      lastSyncTime: this.lastSyncTime,
+      syncFrequency: this.syncFrequency,
+      mapsInSnapshot: this.lastMapsSnapshot.size
+    };
+  }
+
+  async syncNow(): Promise<void> {
+    console.log('🔄 クラウドエンジン: 手動同期を実行します');
+    await this.performRealtimeSync();
   }
 }
 
