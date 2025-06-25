@@ -65,13 +65,8 @@ export class StorageManager {
   private createEngine(storageMode: string, isAuthenticated: boolean): void {
     try {
       if (storageMode === 'cloud') {
-        if (!isAuthenticated) {
-          console.warn('⚠️ クラウドモードですが未認証のため、ローカルモードにフォールバック');
-          this.currentEngine = localEngine;
-        } else {
-          console.log('☁️ クラウドエンジン作成');
-          this.currentEngine = createCloudEngine();
-        }
+        console.log('☁️ クラウドエンジン作成（認証状態:', isAuthenticated, '）');
+        this.currentEngine = createCloudEngine();
       } else {
         console.log('🏠 ローカルエンジン使用');
         this.currentEngine = localEngine;

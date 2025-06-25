@@ -23,9 +23,7 @@ export class CloudEngine {
   private lastMapsSnapshot = new Map<string, string>(); // mapId -> updatedAt
 
   constructor() {
-    if (!authManager.isAuthenticated()) {
-      throw new Error('クラウドエンジンは認証が必要です');
-    }
+    console.log('☁️ クラウドエンジン: 初期化開始（認証状態確認中）');
     this.initPromise = this.initialize();
   }
 
@@ -892,11 +890,8 @@ export class CloudEngine {
   }
 }
 
-// ファクトリー関数（認証状態チェック付き）
+// ファクトリー関数（認証待機状態を許可）
 export function createCloudEngine(): CloudEngine {
-  if (!authManager.isAuthenticated()) {
-    throw new Error('クラウドエンジンは認証が必要です');
-  }
-  
+  console.log('☁️ クラウドエンジンファクトリー: インスタンス作成（認証待機対応）');
   return new CloudEngine();
 }
