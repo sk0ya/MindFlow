@@ -57,6 +57,9 @@ export const useMindMapData = (isAppReady = false) => {
       await saveMindMap(dataToSave);
       console.log('💾 即座保存完了:', dataToSave.title);
       
+      // 🔧 修正: 保存後にリアルタイム同期を一時的にブロック（無限ループ防止）
+      blockRealtimeSyncTemporarily(5000); // 5秒間ブロック
+      
       // 🔧 NEW: リアルタイム同期のスキップオプション
       if (options.skipRealtimeSync) {
         console.log('⏭️ リアルタイム同期スキップ: サーバーファースト更新のため');
@@ -310,8 +313,20 @@ export const useMindMapData = (isAppReady = false) => {
         eventMapId: event.data.id,
         currentMapId: data.id,
         isMatch: event.data.id === data.id,
+        originUserId: event.originUserId,
+        currentUserId: authManager.getAuthState()?.user?.id,
         timestamp: event.timestamp
       });
+      
+      // 🔧 修正: 自分の更新を除外して無限ループを防止
+      const currentUser = authManager.getAuthState()?.user;
+      if (event.originUserId && currentUser?.id && event.originUserId === currentUser.id) {
+        console.log('⏸️ リアルタイム同期スキップ: 自分の更新のため除外', {
+          originUserId: event.originUserId,
+          currentUserId: currentUser.id
+        });
+        return;
+      }
       
       // 現在のマップIDと一致する場合のみ更新
       if (event.data.id === data.id) {

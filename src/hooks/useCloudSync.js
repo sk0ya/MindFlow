@@ -83,14 +83,19 @@ class CloudSyncService {
    * 定期同期を設定
    */
   setupPeriodicSync() {
-    // 30秒ごとに同期状態をチェック
+    // 🔧 修正: 定期同期の頻度を最適化（30秒→60秒）と条件強化
     this.periodicSyncInterval = setInterval(() => {
+      // オンライン状態、非同期中、未処理操作の存在をチェック
       if (this.syncStateManager.state.isOnline && 
           !this.syncStateManager.state.isSyncing &&
-          this.operationQueue) {
+          this.operationQueue && 
+          this.operationQueue.getPendingCount() > 0) { // 未処理操作がある場合のみ実行
+        console.log('🔄 定期同期: 未処理操作を処理', {
+          pendingCount: this.operationQueue.getPendingCount()
+        });
         this.operationQueue.processQueue();
       }
-    }, 30000);
+    }, 60000); // 60秒に延長
   }
 
   // ===== 操作API =====

@@ -806,15 +806,9 @@ export function reinitializeAdapter() {
   return currentAdapter;
 }
 
-// 定期的なリトライ（クラウドモードのみ）
-setInterval(() => {
-  const adapter = getCurrentAdapter();
-  // instanceof は本番環境で動作しないため、nameプロパティで判定
-  const isCloudAdapter = adapter.name && adapter.name.includes('クラウド');
-  if (isCloudAdapter && navigator.onLine && typeof adapter.retryPendingOperations === 'function') {
-    adapter.retryPendingOperations();
-  }
-}, 30000);
+// 🔧 修正: グローバルsetIntervalを削除してメモリリークを防止
+// 定期的なリトライはuseCloudSyncで管理されるため、ここでの実装は不要
+// 以前の実装: setInterval(() => { ... }, 30000);
 
 // テスト用にクラスをexport
 export { CloudStorageAdapter, LocalStorageAdapter, PendingStorageAdapter, StorageAdapterFactory };
