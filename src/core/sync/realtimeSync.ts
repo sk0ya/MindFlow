@@ -105,21 +105,22 @@ class RealtimeSync {
     try {
       const adapter = storageManager;
       
-      // クラウドアダプターでない場合はスキップ
-      // constructor.nameは本番環境で圧縮されるため、nameプロパティで判定
-      const isCloudAdapter = adapter.name && adapter.name.includes('クラウド');
+      // 新しいStorageManagerのエンジン情報を取得
+      const engineInfo = adapter.getEngineInfo();
+      const isCloudAdapter = engineInfo.mode === 'cloud';
+      
       if (!isCloudAdapter) {
-        console.log('⏸️ 同期スキップ: ローカルストレージアダプターのため', {
-          adapterType: adapter.constructor.name,
-          adapterName: adapter.name || 'unknown',
+        console.log('⏸️ 同期スキップ: ローカルモードのため', {
+          mode: engineInfo.mode,
+          engineName: engineInfo.name,
           isCloudAdapter: false
         });
         return;
       }
       
-      console.log('✅ クラウドアダプター検出: リアルタイム同期を実行', {
-        adapterType: adapter.constructor.name,
-        adapterName: adapter.name,
+      console.log('✅ クラウドモード検出: リアルタイム同期を実行', {
+        mode: engineInfo.mode,
+        engineName: engineInfo.name,
         isCloudAdapter: true
       });
 
