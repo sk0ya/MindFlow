@@ -94,29 +94,24 @@ export const useMindMapMulti = (data, setData, updateData) => {
   // マップ名変更（リアルタイム同期対応）
   const renameMindMap = async (mapId, newTitle) => {
     try {
-      const settings = getAppSettings();
-      
       console.log('✏️ マップ名変更:', mapId, '->', newTitle);
       
-      if (settings.storageMode === 'cloud') {
-        // クラウドでマップタイトル更新
-        // Note: 個別のタイトル更新APIを実装する必要があります
-        console.log('☁️ クラウドマップタイトル更新');
-        // 現在はマップ全体の更新で代替
-        if (currentMapId === mapId && data) {
-          const updatedData = { ...data, title: newTitle, updatedAt: new Date().toISOString() };
-          // リアルタイム同期はクラウドエンジンで自動処理
-        }
-      } else {
-        // ローカル更新
-        const allMaps = await getAllMindMaps();
-        const mapIndex = allMaps.findIndex(map => map.id === mapId);
+      // 統一インターフェース：StorageManagerを通して更新
+      const allMaps = await getAllMindMaps();
+      const mapIndex = allMaps.findIndex(map => map.id === mapId);
+      
+      if (mapIndex !== -1) {
+        const updatedMap = { 
+          ...allMaps[mapIndex], 
+          title: newTitle, 
+          updatedAt: new Date().toISOString() 
+        };
         
-        if (mapIndex !== -1) {
-          const updatedMap = { ...allMaps[mapIndex], title: newTitle, updatedAt: new Date().toISOString() };
-          await saveMindMap(updatedMap);
-          console.log('🏠 ローカルマップタイトル更新完了');
-        }
+        // StorageManagerが内部でローカル/クラウドを判定して処理
+        await storageManager.updateMindMap(mapId, updatedMap);
+        console.log('✅ マップタイトル更新完了:', newTitle);
+      } else {
+        throw new Error('マップが見つかりません');
       }
       
       // マップ一覧を更新
@@ -141,22 +136,14 @@ export const useMindMapMulti = (data, setData, updateData) => {
     }
     
     try {
-      const settings = getAppSettings();
-      
       console.log('🗑️ マップ削除開始:', mapId);
       
-      if (settings.storageMode === 'cloud') {
-        // クラウドから削除
-        // リアルタイム同期でのマップ削除はクラウドエンジンで自動処理
-        if (!result.success) {
-          throw new Error('クラウドマップ削除失敗: ' + result.error);
-        }
-        console.log('☁️ クラウドマップ削除成功');
-      } else {
-        // ローカルから削除
-        await deleteMindMap(mapId);
-        console.log('🏠 ローカルマップ削除成功');
+      // 統一インターフェース：StorageManagerを通して削除
+      const success = await deleteMindMap(mapId);
+      if (!success) {
+        throw new Error('マップ削除に失敗しました');
       }
+      console.log('✅ マップ削除成功:', mapId);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
@@ -412,18 +399,9 @@ export const useMindMapMulti = (data, setData, updateData) => {
           return;
         }
         
-        if (settings.storageMode === 'cloud') {
-          // クラウドモードの場合はrefreshAllMindMapsを呼ぶ
-          console.log('☁️ クラウドモードで初期化');
-          await refreshAllMindMaps();
-        } else {
-          // ローカルモードの場合は従来通り
-          console.log('🏠 ローカルモードで初期化');
-          const maps = await getAllMindMaps();
-          if (maps.length !== allMindMaps.length) {
-            setAllMindMaps(maps);
-          }
-        }
+        // 統一インターフェース：ストレージモードに関係なく同じ処理
+        console.log('🔄 マップ一覧初期化');
+        await refreshAllMindMaps();
       } catch (error) {
         console.error('❌ 初期化時のマップ一覧読み込み失敗:', error);
       }
@@ -436,16 +414,10 @@ export const useMindMapMulti = (data, setData, updateData) => {
   const reinitializeAfterModeSelection = async () => {
     try {
       console.log('🔄 ストレージモード選択後の再初期化開始');
-      const settings = getAppSettings();
       
-      if (settings.storageMode === 'cloud') {
-        console.log('☁️ クラウドモード選択: マップ読み込み開始');
-        await refreshAllMindMaps();
-      } else if (settings.storageMode === 'local') {
-        console.log('🏠 ローカルモード選択: マップ読み込み開始');
-        const maps = await getAllMindMaps();
-        setAllMindMaps(maps);
-      }
+      // 統一インターフェース：ストレージモードに関係なく同じ処理
+      console.log('🔄 モード選択後のマップ読み込み開始');
+      await refreshAllMindMaps();
       
       console.log('✅ ストレージモード選択後の再初期化完了');
     } catch (error) {
