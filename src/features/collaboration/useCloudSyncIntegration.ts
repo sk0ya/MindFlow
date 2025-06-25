@@ -17,8 +17,8 @@ export const useCloudSyncIntegration = (
   
   // クラウド同期設定
   const cloudSyncConfig = {
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
-    websocketUrl: import.meta.env.VITE_WS_URL || 'wss://api.mindflow.com/ws',
+    apiBaseUrl: '/api', // Default API base URL
+    websocketUrl: 'wss://api.mindflow.com/ws', // Default WebSocket URL
     authToken: authManager.getToken()
   };
 

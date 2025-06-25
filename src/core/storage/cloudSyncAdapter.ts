@@ -45,7 +45,10 @@ export class CloudSyncAdapter {
   };
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
+    // API base URL with environment detection
+    this.baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+      ? 'http://localhost:8787' 
+      : 'https://mindflow-api-production.shigekazukoya.workers.dev';
     this.setupEventHandlers();
     this.startQueueProcessor();
   }

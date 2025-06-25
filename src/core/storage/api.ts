@@ -3,11 +3,14 @@
  * ローカルとクラウドの統一インターフェースとして機能
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (
-  window.location.hostname === 'localhost' 
-    ? 'http://localhost:8787/api'
-    : 'https://mindflow-api-production.shigekazukoya.workers.dev/api'
-);
+const getAPIBase = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:8787/api';
+  }
+  return 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
+};
+
+const API_BASE = getAPIBase();
 
 const STORAGE_KEY = 'mindflow_maps';
 const SETTINGS_KEY = 'mindflow_settings';

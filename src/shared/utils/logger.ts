@@ -22,18 +22,18 @@ export const LOG_LEVEL_NAMES = {
 
 // 環境別デフォルトログレベル
 const getDefaultLogLevel = () => {
-  const env = import.meta.env.MODE || 'development';
-  
-  switch (env) {
-    case 'development':
-      return LOG_LEVELS.DEBUG;
-    case 'test':
-      return LOG_LEVELS.WARN;
-    case 'production':
-      return LOG_LEVELS.ERROR;
-    default:
-      return LOG_LEVELS.INFO;
+  // Jest環境のチェック
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return LOG_LEVELS.WARN;
   }
+  
+  // 本番環境のチェック
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return LOG_LEVELS.ERROR;
+  }
+  
+  // 開発環境がデフォルト
+  return LOG_LEVELS.DEBUG;
 };
 
 // ログ出力先の定義
@@ -384,17 +384,33 @@ class Logger {
   }
 }
 
+// 環境判定ヘルパー
+const getEnvironment = () => {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return 'test';
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return 'production';
+  }
+  return 'development';
+};
+
+const getLogOutputs = () => {
+  const env = getEnvironment();
+  return env === 'production' 
+    ? [LOG_OUTPUTS.STORAGE, LOG_OUTPUTS.REMOTE]
+    : [LOG_OUTPUTS.CONSOLE, LOG_OUTPUTS.STORAGE];
+};
+
 // グローバルロガーインスタンス
 export const logger = new Logger({
   level: getDefaultLogLevel(),
-  outputs: import.meta.env.MODE === 'production' 
-    ? [LOG_OUTPUTS.STORAGE, LOG_OUTPUTS.REMOTE]
-    : [LOG_OUTPUTS.CONSOLE, LOG_OUTPUTS.STORAGE],
-  remoteEndpoint: import.meta.env.VITE_LOG_ENDPOINT,
+  outputs: getLogOutputs(),
+  remoteEndpoint: undefined, // Remove Vite env dependency
   context: {
     app: 'MindFlow',
     version: '1.0.0',
-    environment: import.meta.env.MODE || 'development'
+    environment: getEnvironment()
   }
 });
 
@@ -449,7 +465,7 @@ export const commonFilters = {
 };
 
 // 開発環境での便利機能
-if (import.meta.env.MODE === 'development') {
+if (getEnvironment() === 'development') {
   // グローバルにロガーを公開（デバッグ用）
   if (typeof window !== 'undefined') {
     window.mindflowLogger = logger;

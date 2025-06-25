@@ -15,12 +15,10 @@ class RealtimeSync {
     this.isEnabled = settings.storageMode === 'cloud' && authManager.isAuthenticated();
     
     if (this.isEnabled) {
-      // 正しいAPIエンドポイントを使用
-      this.baseUrl = import.meta.env.VITE_API_BASE_URL || (
-        window.location.hostname === 'localhost' 
-          ? 'http://localhost:8787/api' 
-          : 'https://mindflow-api-production.shigekazukoya.workers.dev/api'
-      );
+      // APIエンドポイントを環境別に設定
+      this.baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+        ? 'http://localhost:8787/api' 
+        : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
       
       console.log('🔄 リアルタイム同期を有効化:', this.baseUrl);
     } else {

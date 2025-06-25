@@ -83,7 +83,22 @@ export const useAppInitialization = () => {
           
         } else {
           // ケース2: ストレージモード未設定の場合
-          if (hasData && !isFirstTime) {
+          const isAuthenticated = authManager.isAuthenticated();
+          
+          if (isAuthenticated) {
+            // 認証済みユーザーは自動的にクラウドモードを設定
+            console.log('🔄 認証済みユーザー → 自動的にクラウドモード設定');
+            await setStorageMode('cloud');
+            setInitState({
+              isInitializing: false,
+              showStorageModeSelector: false,
+              showAuthModal: false,
+              showOnboarding: false,
+              storageMode: 'cloud',
+              hasExistingLocalData: hasData,
+              isReady: true
+            });
+          } else if (hasData && !isFirstTime) {
             // ローカルデータがある場合はローカルモードを提案
             console.log('📁 既存ローカルデータ発見 → ローカルモードで継続');
             await setStorageMode('local');
@@ -133,14 +148,18 @@ export const useAppInitialization = () => {
       console.log('📝 ストレージモード選択:', mode);
       
       if (mode === 'cloud') {
-        // クラウドモード → 認証完了まで設定を延期
-        console.log('☁️ クラウドモード選択 → 認証画面表示（設定は認証後に永続化）');
+        // クラウドモード → 即座に設定して認証画面表示
+        console.log('☁️ クラウドモード選択 → 設定永続化と認証画面表示');
+        
+        // 即座にクラウドモードを永続化（認証前でも）
+        await setStorageMode('cloud');
+        
         setInitState(prev => ({
           ...prev,
           showStorageModeSelector: false,
           showAuthModal: true,
-          pendingStorageMode: 'cloud', // 一時的に保持
-          storageMode: null // まだ永続化しない
+          pendingStorageMode: null, // 既に永続化済み
+          storageMode: 'cloud' // 永続化完了
         }));
         
       } else {
@@ -165,39 +184,26 @@ export const useAppInitialization = () => {
 
   // 認証成功処理
   const handleAuthSuccess = async () => {
-    console.log('✅ 認証成功 → クラウドモード設定を永続化');
+    console.log('✅ 認証成功 → クラウドストレージ初期化');
     
     try {
-      // pendingStorageMode をチェック
-      if (initState.pendingStorageMode === 'cloud') {
-        console.log('🔄 認証成功後のクラウドモード永続化と初期化開始');
-        
-        // 1. ストレージモードを永続化
-        await setStorageMode('cloud');
-        console.log('✅ クラウドモード設定が永続化されました');
-        
-        // 2. ストレージアダプターを再初期化（クラウドアダプターに切り替え）
-        reinitializeAdapter();
-        console.log('✅ クラウドストレージアダプターが作成されました');
-        
-        // 3. 状態を更新
-        setInitState(prev => ({
-          ...prev,
-          showAuthModal: false,
-          storageMode: 'cloud',
-          pendingStorageMode: null,
-          isReady: true
-        }));
-        
-        console.log('✅ クラウドモード初期化完了');
-      } else {
-        // 通常の認証成功処理（既に認証済みの場合など）
-        setInitState(prev => ({
-          ...prev,
-          showAuthModal: false,
-          isReady: true
-        }));
-      }
+      // ストレージモードは既に設定済みなので、アダプターの初期化のみ
+      console.log('🔄 認証成功後のクラウドストレージアダプター初期化開始');
+      
+      // ストレージアダプターを再初期化（クラウドアダプターに切り替え）
+      reinitializeAdapter();
+      console.log('✅ クラウドストレージアダプターが作成されました');
+      
+      // 状態を更新
+      setInitState(prev => ({
+        ...prev,
+        showAuthModal: false,
+        storageMode: 'cloud',
+        pendingStorageMode: null,
+        isReady: true
+      }));
+      
+      console.log('✅ クラウドモード初期化完了');
     } catch (error) {
       console.error('❌ 認証成功後の初期化エラー:', error);
       // エラー時は認証画面を閉じるが、isReady は false のまま

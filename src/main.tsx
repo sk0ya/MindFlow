@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 // Debug functions only in development
-if (import.meta.env.DEV && typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
   import('./debug-sync.js').then(({ debugSync }) => {
     (window as any).debugSync = debugSync;
   });

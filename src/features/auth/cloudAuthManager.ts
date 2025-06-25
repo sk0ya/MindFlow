@@ -5,9 +5,11 @@ import { authManager } from './authManager.js';
  * 既存のAuthManagerを拡張してクラウド同期機能に対応
  */
 class CloudAuthManager {
-  private readonly GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID;
-  private readonly GITHUB_REDIRECT_URI = import.meta.env.VITE_GITHUB_REDIRECT_URI;
-  private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
+  private readonly GITHUB_CLIENT_ID = undefined; // Remove Vite env dependency
+  private readonly GITHUB_REDIRECT_URI = undefined; // Remove Vite env dependency
+  private readonly API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+    ? 'http://localhost:8787' 
+    : 'https://mindflow-api-production.shigekazukoya.workers.dev';
   
   private authEventListeners: Set<(event: AuthEvent) => void> = new Set();
   private tokenRefreshTimer: NodeJS.Timeout | null = null;

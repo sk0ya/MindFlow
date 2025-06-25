@@ -38,10 +38,8 @@ const AuthVerification: React.FC<AuthVerificationProps> = ({ onAuthSuccess, onAu
         // 成功コールバック
         onAuthSuccess?.(result.user);
         
-        // 3秒後にホームページにリダイレクト
-        setTimeout(() => {
-          window.location.href = '/MindFlow/';
-        }, 3000);
+        // ハードリダイレクトの代わりにReact Routerのナビゲーションを使用
+        // またはアプリ内の状態管理によるページ遷移を実装
         
       } catch (error) {
         console.error('Authentication verification failed:', error);

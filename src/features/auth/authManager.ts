@@ -9,7 +9,10 @@ class AuthManager {
   constructor() {
     this.token = null;
     this.user = null;
-    this.apiBase = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
+    // API base URL with environment detection
+    this.apiBase = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+      ? 'http://localhost:8787' 
+      : 'https://mindflow-api-production.shigekazukoya.workers.dev';
     
     this.loadAuthData();
     this.setupTokenRefresh();

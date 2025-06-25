@@ -3,7 +3,15 @@
 
 import { authManager } from '../../features/auth/authManager.js';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
+// API base URL with environment detection
+const getApiBase = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:8787';
+  }
+  return 'https://mindflow-api-production.shigekazukoya.workers.dev';
+};
+
+const API_BASE = getApiBase();
 
 class CloudStorageClient {
   constructor() {
