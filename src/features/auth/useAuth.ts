@@ -25,7 +25,7 @@ export const useAuth = () => {
       });
     };
 
-    // 🔧 修正: 認証チェック頻度を最適化（5秒→30秒）
+    // 🔧 統一: 認証チェック頻度を30秒に統一（競合防止）
     const authCheckInterval = setInterval(checkAuthState, 30000);
     
     return () => clearInterval(authCheckInterval);

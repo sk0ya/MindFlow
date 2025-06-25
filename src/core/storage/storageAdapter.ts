@@ -211,8 +211,8 @@ class CloudStorageAdapter implements CloudStorageAdapter {
     return headers;
   }
 
-  // シンプルなAPI通信メソッド
-  async apiCall(endpoint, method = 'GET', data = null) {
+  // 🔧 改善: タイムアウト・リトライ機能付きAPI通信メソッド
+  async apiCall(endpoint, method = 'GET', data = null, timeout = 30000, maxRetries = 3) {
     await this.ensureInitialized();
     
     const url = `${this.baseUrl}${endpoint}`;
@@ -227,15 +227,60 @@ class CloudStorageAdapter implements CloudStorageAdapter {
       options.body = JSON.stringify(data);
     }
     
-    console.log('📤 API呼び出し:', { method, url, hasData: !!data });
+    console.log('📤 API呼び出し:', { method, url, hasData: !!data, timeout, maxRetries });
     
-    const response = await fetch(url, options);
+    // リトライロジック
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        // 成功の場合はここで処理継続
+        return await this.handleResponse(response, method);
+        
+      } catch (error) {
+        clearTimeout(timeoutId);
+        
+        // タイムアウトエラーの処理
+        if (error.name === 'AbortError') {
+          console.warn(`⏱️ API呼び出しタイムアウト (${timeout}ms): 試行 ${attempt}/${maxRetries}`);
+          error = new Error(`Request timeout after ${timeout}ms`);
+        }
+        
+        // ネットワークエラーの処理
+        if (this.isRetryableError(error) && attempt < maxRetries) {
+          const delay = this.calculateBackoffDelay(attempt);
+          console.warn(`🔄 リトライ ${attempt}/${maxRetries} - ${delay}ms後に再試行:`, error.message);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // 最終的な失敗
+        console.error(`❌ API呼び出し最終失敗 (${attempt}/${maxRetries} 試行):`, error.message);
+        throw error;
+      }
+    }
+  }
+  
+  // レスポンス処理を分離
+  async handleResponse(response, method) {
     
     // 特別な処理が必要なステータスコード
     if (response.status === 404 && method === 'DELETE') {
-      // DELETE操作で404の場合は既に削除済みとして成功扱い
       console.log('☁️ 削除対象が見つからない (既に削除済み)');
       return { message: 'Already deleted', success: true };
+    }
+    
+    // 🔧 改善: レート制限エラーの特別処理
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After') || '60';
+      const error = new Error(`Rate limited. Retry after ${retryAfter} seconds`);
+      error.status = 429;
+      error.retryAfter = parseInt(retryAfter);
+      throw error;
     }
     
     if (!response.ok) {
@@ -265,9 +310,8 @@ class CloudStorageAdapter implements CloudStorageAdapter {
         
       } catch (e) {
         if (e.message === 'UNIQUE_CONSTRAINT_VIOLATION' || e.message === 'PARENT_NODE_NOT_FOUND') {
-          throw e; // 特別なエラーは再スロー
+          throw e;
         }
-        // JSON解析失敗は無視
       }
       
       const error = new Error(errorMessage);
@@ -278,8 +322,33 @@ class CloudStorageAdapter implements CloudStorageAdapter {
     }
     
     const result = await response.json();
-    console.log('📥 API応答:', { method, url, success: true });
+    console.log('📥 API応答成功:', { method, success: true });
     return result;
+  }
+  
+  // 🔧 新規: リトライ可能エラーの判定
+  isRetryableError(error) {
+    // ネットワークエラー、タイムアウト、5xxエラーはリトライ可能
+    const retryableMessages = [
+      'Request timeout',
+      'Network error',
+      'fetch failed',
+      'Failed to fetch'
+    ];
+    
+    const retryableStatuses = [500, 502, 503, 504];
+    
+    return (
+      retryableMessages.some(msg => error.message.includes(msg)) ||
+      retryableStatuses.includes(error.status) ||
+      error.name === 'TypeError' // ネットワーク関連エラー
+    );
+  }
+  
+  // 🔧 新規: 指数バックオフ遅延計算
+  calculateBackoffDelay(attempt) {
+    // 指数バックオフ: 1秒, 2秒, 4秒
+    return Math.min(1000 * Math.pow(2, attempt - 1), 10000);
   }
 
   async getAllMaps() {

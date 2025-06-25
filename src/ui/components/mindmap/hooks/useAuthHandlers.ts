@@ -35,8 +35,8 @@ export const useAuthHandlers = (initState, refreshAllMindMaps, triggerCloudSync)
     // 初回チェック
     checkAuthStatus();
     
-    // 定期的にチェック
-    const interval = setInterval(checkAuthStatus, 5000);
+    // 🔧 統一: 認証チェック頻度を30秒に統一（競合防止）
+    const interval = setInterval(checkAuthStatus, 30000);
     
     return () => clearInterval(interval);
   }, []);
@@ -59,30 +59,23 @@ export const useAuthHandlers = (initState, refreshAllMindMaps, triggerCloudSync)
     // 初期化フローの認証成功を通知
     initState.handleAuthSuccess();
     
-    // リアルタイム同期を再初期化
+    // 🔧 改善: 認証成功後の処理を順次実行化（競合防止）
     try {
-      realtimeSync.reinitialize();
-      console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
-    } catch (initError) {
-      console.warn('⚠️ リアルタイム同期再初期化失敗:', initError);
-    }
-    
-    // マップ一覧をリフレッシュ
-    try {
+      // 1. マップ一覧をリフレッシュ
       await refreshAllMindMaps();
       console.log('🔄 認証成功後にマップ一覧をリフレッシュしました');
-    } catch (refreshError) {
-      console.warn('⚠️ 認証後のマップ一覧リフレッシュに失敗:', refreshError);
-    }
-    
-    // クラウド同期をトリガー
-    if (triggerCloudSync) {
-      try {
+      
+      // 2. リアルタイム同期を再初期化
+      realtimeSync.reinitialize();
+      console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
+      
+      // 3. クラウド同期をトリガー
+      if (triggerCloudSync) {
         await triggerCloudSync();
         console.log('🔄 認証成功後のクラウド同期完了');
-      } catch (syncError) {
-        console.warn('⚠️ クラウド同期に失敗:', syncError);
       }
+    } catch (error) {
+      console.warn('⚠️ 認証成功後の初期化処理に失敗:', error);
     }
   };
   

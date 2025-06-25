@@ -18,10 +18,10 @@ export const useMindMapData = (isAppReady = false) => {
   const isSavingRef = useRef(false); // 同時保存処理防止フラグ
   const realtimeSyncBlockedUntilRef = useRef(0); // リアルタイム同期ブロック時刻
   
-  // 編集完了後の一時的なリアルタイム同期ブロック
+  // 🔧 統一: リアルタイム同期ブロック期間3秒に統一（競合防止）
   const blockRealtimeSyncTemporarily = (durationMs = 3000) => {
     realtimeSyncBlockedUntilRef.current = Date.now() + durationMs;
-    console.log('🚫 リアルタイム同期を一時ブロック:', { durationMs, blockedUntil: new Date(realtimeSyncBlockedUntilRef.current).toISOString() });
+    console.log('🚫 リアルタイム同期を3秒間ブロック:', { durationMs, blockedUntil: new Date(realtimeSyncBlockedUntilRef.current).toISOString() });
   };
   
   // 即座保存機能（編集中の安全性を考慮）
@@ -49,10 +49,24 @@ export const useMindMapData = (isAppReady = false) => {
       }
     }
     
-    // 🔧 同時保存処理の防止
+    // 🔧 改善: 同時保存処理防止とキューイング
     if (isSavingRef.current) {
       console.log('⏸️ 保存スキップ: 既に保存処理実行中');
-      return;
+      
+      // 保存待ちの最大時間（10秒）
+      const maxWaitTime = 10000;
+      const startTime = Date.now();
+      
+      // 保存完了まで待機（ポーリング）
+      while (isSavingRef.current && (Date.now() - startTime) < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // タイムアウトの場合は強制継続
+      if (isSavingRef.current) {
+        console.warn('⚠️ 保存タイムアウト: 強制継続');
+        isSavingRef.current = false;
+      }
     }
     
     try {
