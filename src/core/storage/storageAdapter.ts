@@ -282,7 +282,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: マップ一覧取得開始');
       
       // シンプルな直接API通信
-      const response = await this.apiCall('/api/mindmaps', 'GET');
+      const response = await this.apiCall('/mindmaps', 'GET');
       const maps = Array.isArray(response) ? response : (response.maps || []);
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
@@ -299,7 +299,7 @@ class CloudStorageAdapter {
       console.log('☁️ クラウド: マップ取得開始', mapId);
       
       // シンプルな直接API通信
-      const map = await this.apiCall(`/api/mindmaps/${mapId}`, 'GET');
+      const map = await this.apiCall(`/mindmaps/${mapId}`, 'GET');
       console.log('☁️ クラウド: マップ取得完了', map.title);
       return map;
 
@@ -314,7 +314,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ作成開始', mapData.title);
       
-      const result = await this.apiCall('/api/mindmaps', 'POST', mapData);
+      const result = await this.apiCall('/mindmaps', 'POST', mapData);
       console.log('☁️ クラウド: マップ作成完了', result.title);
       return result;
 
@@ -329,7 +329,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ更新開始', mapId);
       
-      const result = await this.apiCall(`/api/mindmaps/${mapId}`, 'PUT', mapData);
+      const result = await this.apiCall(`/mindmaps/${mapId}`, 'PUT', mapData);
       console.log('☁️ クラウド: マップ更新完了', result.title);
       return result;
 
@@ -344,7 +344,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: マップ削除開始', mapId);
       
-      const result = await this.apiCall(`/api/mindmaps/${mapId}`, 'DELETE');
+      const result = await this.apiCall(`/mindmaps/${mapId}`, 'DELETE');
       console.log('☁️ クラウド: マップ削除完了');
       return result;
 
@@ -361,7 +361,7 @@ class CloudStorageAdapter {
       // サーバー側でのマップ取得を試行してルートノードの同期を確認
       let mapData;
       try {
-        mapData = await this.apiCall(`/api/mindmaps/${mapId}`, 'GET');
+        mapData = await this.apiCall(`/mindmaps/${mapId}`, 'GET');
       } catch (error) {
         if (error.status === 404) {
           console.warn('⚠️ マップがサーバーに存在しません。ローカルデータから作成を試行します:', mapId);
@@ -424,7 +424,7 @@ class CloudStorageAdapter {
     
     console.log('🔄 ルートノードチェックなしでリトライ実行');
     
-    const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
+    const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
     console.log('✅ リトライ成功:', result);
     
     return { 
@@ -486,7 +486,7 @@ class CloudStorageAdapter {
       
       console.log('📤 完全なリクエストボディ:', JSON.stringify(requestBody, null, 2));
       
-      const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
+      const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
       console.log('☁️ クラウド: ノード追加完了', {
         originalId: nodeData.id,
         finalId: result.id,
@@ -561,7 +561,7 @@ class CloudStorageAdapter {
         };
 
         try {
-          const result = await this.apiCall(`/api/nodes/${mapId}`, 'POST', requestBody);
+          const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
           console.log('✅ ID再生成リトライ成功:', newId);
           return { success: true, result, newId };
         } catch (error) {
@@ -591,7 +591,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード更新開始', nodeId);
       
-      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}`, 'PUT', {
+      const result = await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'PUT', {
         mapId,
         updates,
         operation: 'update'
@@ -617,7 +617,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード削除開始', nodeId);
       
-      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}`, 'DELETE', {
+      const result = await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'DELETE', {
         mapId,
         operation: 'delete'
       });
@@ -641,7 +641,7 @@ class CloudStorageAdapter {
       await this.ensureInitialized();
       console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
       
-      const result = await this.apiCall(`/api/nodes/${mapId}/${nodeId}/move`, 'PUT', {
+      const result = await this.apiCall(`/nodes/${mapId}/${nodeId}/move`, 'PUT', {
         mapId,
         newParentId,
         operation: 'move'
