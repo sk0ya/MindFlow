@@ -245,6 +245,43 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     }
   }
 
+  // ===== 便利メソッド =====
+
+  /**
+   * 認証状態変更時のリスナーを追加（簡易API）
+   * @param callback - 認証状態変更時のコールバック
+   * @returns アンサブスクライブ関数
+   */
+  onAuthStateChange(callback: (authState: AuthState) => void): () => void {
+    return this.addEventListener('state_change', (event) => {
+      callback(this._state);
+    });
+  }
+
+  /**
+   * ログインイベントのリスナーを追加
+   * @param callback - ログイン時のコールバック
+   * @returns アンサブスクライブ関数
+   */
+  onLogin(callback: (user: User) => void): () => void {
+    return this.addEventListener('login', (event) => {
+      if (event.data?.user) {
+        callback(event.data.user);
+      }
+    });
+  }
+
+  /**
+   * ログアウトイベントのリスナーを追加
+   * @param callback - ログアウト時のコールバック
+   * @returns アンサブスクライブ関数
+   */
+  onLogout(callback: () => void): () => void {
+    return this.addEventListener('logout', () => {
+      callback();
+    });
+  }
+
   // ===== ユーティリティ =====
 
   async healthCheck(): Promise<boolean> {
@@ -339,6 +376,9 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
 
     // レガシーマネージャーにも設定
     await legacyAuthManager.setAuthData(token, user);
+    
+    // ログインイベントを発火
+    this.emit('login', { user, token });
   }
 
   private clearAuthData(): void {

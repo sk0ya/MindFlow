@@ -44,19 +44,29 @@ export const useMindMapData = (isAppReady = false) => {
   // 認証状態変更の監視とモード切り替え
   useEffect(() => {
     const handleAuthChange = async (authState) => {
-      if (authState.isAuthenticated) {
-        console.log('🔑 認証成功: クラウドモードに切り替え');
-        await unifiedSyncService.switchToCloudMode({
-          apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
-        });
-        await triggerCloudSync();
-      } else {
-        console.log('🔐 ログアウト: ローカルモードに切り替え');
-        await unifiedSyncService.switchToLocalMode();
+      try {
+        if (authState.isAuthenticated) {
+          console.log('🔑 認証成功: クラウドモードに切り替え');
+          await unifiedSyncService.switchToCloudMode({
+            apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          });
+          await triggerCloudSync();
+        } else {
+          console.log('🔐 ログアウト: ローカルモードに切り替え');
+          await unifiedSyncService.switchToLocalMode();
+        }
+      } catch (error) {
+        console.error('❌ 認証状態変更処理エラー:', error);
       }
     };
 
-    return unifiedAuthManager.onAuthStateChange(handleAuthChange);
+    // unifiedAuthManagerが利用可能かチェック
+    if (unifiedAuthManager && typeof unifiedAuthManager.onAuthStateChange === 'function') {
+      return unifiedAuthManager.onAuthStateChange(handleAuthChange);
+    } else {
+      console.warn('⚠️ unifiedAuthManager.onAuthStateChange is not available');
+      return () => {}; // noop cleanup function
+    }
   }, []);
   
   // 統一同期サービスを使用した保存機能
