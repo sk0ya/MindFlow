@@ -815,7 +815,12 @@ export const useMindMapNodes = (data, updateData) => {
       const newRootNode = updateNodeIdRecursive(data.rootNode);
       const newData = { ...data, rootNode: newRootNode };
       
-      await updateData(newData, { skipHistory: true, saveImmediately: false });
+      await updateData(newData, { 
+        skipHistory: true, 
+        saveImmediately: false,
+        allowDuringEdit: true, // ノードID更新は編集中でも実行必要
+        source: 'node-id-update'
+      });
       
       // 選択・編集状態も更新
       if (selectedNodeId === oldId) {

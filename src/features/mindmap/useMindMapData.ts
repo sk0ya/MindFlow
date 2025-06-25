@@ -218,7 +218,10 @@ export const useMindMapData = (isAppReady = false) => {
       immediate: options.immediate || false,
       saveImmediately: options.saveImmediately || false,
       skipHistory: options.skipHistory || false,
-      wasEditingProtected: isCurrentlyEditing && !options.allowDuringEdit
+      wasEditingProtected: isCurrentlyEditing && !options.allowDuringEdit,
+      source: options.source || 'unknown',
+      allowDuringEdit: options.allowDuringEdit || false,
+      wasEditing: isCurrentlyEditing || false
     });
     
     // カスタムコールバックがあれば実行
