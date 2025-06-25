@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSyncStatus } from '../../../core/storage/storageRouter.js';
+import { getSyncStatus } from '../../../core/storage/StorageManager';
 import { syncManager } from '../../../features/collaboration/syncManager.js';
 import { authManager } from '../../../features/auth/authManager.js';
 

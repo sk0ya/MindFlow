@@ -2,35 +2,36 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 // Debug functions only in development
-if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-  import('./debug-sync.js').then(({ debugSync }) => {
-    (window as any).debugSync = debugSync;
-  });
+// TODO: 新しいStorageManagerアーキテクチャに合わせてデバッグ機能を更新
+// if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+//   import('./debug-sync.js').then(({ debugSync }) => {
+//     (window as any).debugSync = debugSync;
+//   });
+//   
+//   // クラウドモードデバッグ機能
+//   import('./debug-cloud.js');
+//   
+//   // クラウド同期テストスイート
+//   import('./test-cloud-sync.js');
+//   
+//   // ストレージ統合テスト
+//   import('./test-storage-integration.js');
+//   
+//   // 同期診断ツール
+//   import('./test-sync-diagnosis.js');
   
-  // クラウドモードデバッグ機能
-  import('./debug-cloud.js');
-  
-  // クラウド同期テストスイート
-  import('./test-cloud-sync.js');
-  
-  // ストレージ統合テスト
-  import('./test-storage-integration.js');
-  
-  // 同期診断ツール
-  import('./test-sync-diagnosis.js');
-  
-  // シンプル化クラウドストレージテスト
-  import('./test-simplified-cloud.js');
-  
-  // ブラウザ間同期テスト
-  import('./test-cross-browser-sync.js');
-  
-  // リアルタイム同期修正テスト
-  import('./test-realtime-sync-fix.js');
-  
-  // クラウド認証タイミングテスト
-  import('./test-cloud-auth-timing.js');
-}
+//   // シンプル化クラウドストレージテスト
+//   import('./test-simplified-cloud.js');
+//   
+//   // ブラウザ間同期テスト
+//   import('./test-cross-browser-sync.js');
+//   
+//   // リアルタイム同期修正テスト
+//   import('./test-realtime-sync-fix.js');
+//   
+//   // クラウド認証タイミングテスト
+//   import('./test-cloud-auth-timing.js');
+// }
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

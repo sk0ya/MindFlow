@@ -3,7 +3,7 @@
  * ポーリングベースの簡易同期実装
  */
 
-import { getCurrentAdapter } from '../storage/storageAdapter.js';
+import { storageManager } from '../storage/StorageManager';
 import { getAppSettings } from '../storage/storageUtils.js';
 
 export interface SyncEvent {
@@ -103,7 +103,7 @@ class RealtimeSync {
     }
 
     try {
-      const adapter = getCurrentAdapter();
+      const adapter = storageManager;
       
       // クラウドアダプターでない場合はスキップ
       // constructor.nameは本番環境で圧縮されるため、nameプロパティで判定

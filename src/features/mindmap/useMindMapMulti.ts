@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, createNewMindMap, deleteMindMap, saveMindMap, isCloudStorageEnabled } from '../../core/storage/storageRouter.js';
+import { getCurrentMindMap, getAllMindMaps, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
-import { getCurrentAdapter } from '../../core/storage/storageAdapter.js';
 import { realtimeSync } from '../collaboration/realtimeSync.js';
 
 // マルチマップ管理専用のカスタムフック
@@ -48,24 +47,27 @@ export const useMindMapMulti = (data, setData, updateData) => {
       
       console.log('🆕 マップ作成開始:', title);
       
-      const adapter = getCurrentAdapter();
-      const result = await adapter.createMap(newMap);
+      const result = await storageManager.createMap(newMap);
       
-      console.log('✅ マップ作成完了:', result.title || title);
+      if (!result.success) {
+        throw new Error(result.error || 'マップ作成に失敗しました');
+      }
+      
+      console.log('✅ マップ作成完了:', result.data.title || title);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
       
       // クラウドモードの場合、作成されたマップがサーバーに反映されるまで待機
-      if (adapter.constructor.name === 'CloudStorageAdapter') {
-        const mapId = result.id || newMap.id;
+      if (isCloudStorageEnabled()) {
+        const mapId = result.data.id || newMap.id;
         console.log('🔍 クラウドマップ作成後の検証開始:', mapId);
         
         // 最大3回、1秒間隔でマップの存在確認
         for (let i = 0; i < 3; i++) {
           try {
             await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
-            const verifyMap = await adapter.getMap(mapId);
+            const verifyMap = await storageManager.getMap(mapId);
             if (verifyMap && verifyMap.id === mapId) {
               console.log('✅ クラウドマップ検証成功:', verifyMap.title);
               break;
@@ -81,8 +83,8 @@ export const useMindMapMulti = (data, setData, updateData) => {
       }
       
       // 新規作成したマップに切り替え
-      await switchToMap(result.id || newMap.id, true);
-      return result.id || newMap.id;
+      await switchToMap(result.data.id || newMap.id, true);
+      return result.data.id || newMap.id;
       
     } catch (error) {
       console.error('❌ マップ作成失敗:', error);

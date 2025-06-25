@@ -1,4 +1,4 @@
-// ストレージアダプターの型定義
+// 完全分離ストレージエンジンの型定義
 
 export interface MindMapData {
   id: string;
@@ -48,6 +48,60 @@ export interface Node {
   isTemporary?: boolean;
 }
 
+// 統一されたストレージ結果型
+export interface StorageResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  newId?: string;
+  local?: boolean; // ローカルモード専用フラグ
+}
+
+// 同期状態
+export interface SyncStatus {
+  isOnline: boolean;
+  pendingCount: number;
+  lastSync: string | null;
+  mode: 'local' | 'cloud';
+}
+
+// 統一ストレージエンジンインターフェース
+export interface StorageEngine {
+  readonly mode: 'local' | 'cloud';
+  readonly name: string;
+
+  // マップ管理
+  getAllMaps(): Promise<MindMapData[]>;
+  getMap(mapId: string): Promise<MindMapData>;
+  createMap(mapData: MindMapData): Promise<StorageResult<MindMapData>>;
+  updateMap(mapId: string, mapData: MindMapData): Promise<StorageResult<MindMapData>>;
+  deleteMap(mapId: string): Promise<StorageResult<MindMapData | null | boolean>>;
+
+  // 現在のマップ管理
+  getCurrentMap(): Promise<MindMapData | null>;
+  setCurrentMap(mapData: MindMapData): Promise<StorageResult<MindMapData>>;
+
+  // ノード操作
+  addNode(mapId: string, nodeData: Node, parentId: string): Promise<StorageResult<Node>>;
+  updateNode(mapId: string, nodeId: string, updates: Partial<Node>): Promise<StorageResult<Node>>;
+  deleteNode(mapId: string, nodeId: string): Promise<StorageResult<boolean>>;
+  moveNode(mapId: string, nodeId: string, newParentId: string): Promise<StorageResult<boolean>>;
+
+  // インポート・エクスポート
+  exportMapAsJSON(mapData: MindMapData): Promise<void>;
+  importMapFromJSON(file: File): Promise<StorageResult<MindMapData>>;
+
+  // 同期・接続
+  testConnection(): Promise<boolean>;
+  getSyncStatus(): SyncStatus;
+
+  // ユーティリティ
+  hasLocalData(): Promise<boolean>;
+  cleanupCorruptedData(): Promise<any>;
+  clearAllData(): Promise<boolean>;
+}
+
+// 旧型定義（後方互換性のため残す）
 export interface UpdateResult {
   success: boolean;
   error?: string;
@@ -63,19 +117,16 @@ export interface StorageAdapter {
   readonly name: string;
   readonly storageMode: 'local' | 'cloud';
   
-  // マップ操作
   getAllMaps(): Promise<MindMapData[]>;
   getMap(mapId: string): Promise<MindMapData>;
   createMap(mapData: MindMapData): Promise<MindMapData>;
   updateMap(mapId: string, mapData: MindMapData): Promise<MindMapData>;
   deleteMap(mapId: string): Promise<boolean>;
   
-  // ノード操作（クラウドのみ）
   addNode?(mapId: string, nodeData: Node, parentId: string): Promise<AddNodeResult>;
   updateNode?(mapId: string, nodeId: string, updates: Partial<Node>): Promise<UpdateResult>;
   deleteNode?(mapId: string, nodeId: string): Promise<UpdateResult>;
   
-  // 初期化
   initialize?(): Promise<void>;
   isInitialized?: boolean;
 }
@@ -88,7 +139,6 @@ export interface CloudStorageAdapter extends StorageAdapter {
   readonly storageMode: 'cloud';
   baseUrl: string;
   
-  // クラウド必須メソッド
   addNode(mapId: string, nodeData: Node, parentId: string): Promise<AddNodeResult>;
   updateNode(mapId: string, nodeId: string, updates: Partial<Node>): Promise<UpdateResult>;
   deleteNode(mapId: string, nodeId: string): Promise<UpdateResult>;

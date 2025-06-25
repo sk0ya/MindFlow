@@ -1,9 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../shared/types/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
-import { getCurrentAdapter } from '../../core/storage/storageAdapter.js';
+import { storageManager } from '../../core/storage/StorageManager';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
-import type { CloudStorageAdapter } from '../../core/storage/types.js';
 
 // ノード操作専用のカスタムフック
 export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) => {
@@ -115,7 +114,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
     try {
       console.log('📤 DB更新操作実行中:', nodeId);
       
-      const adapter = getCurrentAdapter();
+      const adapter = storageManager;
       dbResult = await adapter.updateNode(dataRef.current.id, nodeId, updates);
       
       if (!dbResult.success) {
@@ -329,7 +328,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
       try {
         console.log('📤 DB削除操作実行中:', nodeId);
         
-        const adapter = getCurrentAdapter();
+        const adapter = storageManager;
         const dbResult = await adapter.deleteNode(dataRef.current.id, nodeId);
         
         if (!dbResult.success) {
@@ -419,7 +418,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
     try {
       console.log('📤 DB親変更操作実行中:', nodeId);
       
-      const adapter = getCurrentAdapter();
+      const adapter = storageManager;
       dbResult = await adapter.moveNode(dataRef.current.id, nodeId, newParentId);
       
       if (!dbResult.success) {
@@ -561,7 +560,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
         
         try {
           // DBアダプターを取得
-            const adapter = getCurrentAdapter();
+            const adapter = storageManager;
           
           // 親ノードを取得
           const parentNode = findParentNode(nodeId);
@@ -698,7 +697,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
         console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
         
         // 🔧 NEW: クラウドモードではサーバーファースト更新
-        const adapter = getCurrentAdapter();
+        const adapter = storageManager;
         // 型安全なクラウドアダプター判定
         const isCloudAdapter = adapter.storageMode === 'cloud';
         
@@ -881,7 +880,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
   const refreshFromServer = async () => {
     try {
       console.log('📥 サーバーから最新データ取得開始');
-      const adapter = getCurrentAdapter();
+      const adapter = storageManager;
       const latestData = await adapter.getMap(dataRef.current.id);
       
       if (latestData) {

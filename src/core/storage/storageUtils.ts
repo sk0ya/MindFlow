@@ -1,17 +1,14 @@
 ﻿import { STORAGE_KEYS, createInitialData } from '../../shared/types/dataTypes.js';
 import { safeGetItem, safeSetItem, getStorageInfo, checkStorageSpace } from './storageManager.js';
 
-// localStorage.jsから機能をインポート（重複排除）
-import {
-  loadFromStorage as localLoadFromStorage,
-  saveToStorage as localSaveToStorage
-} from './localStorage.js';
+// ローカルエンジンから機能をインポート
+import { localEngine } from './local/LocalEngine';
 
 // ローカルストレージからデータを取得（localStorage.jsに統一）
-export const loadFromStorage = localLoadFromStorage;
+export const loadFromStorage = safeGetItem;
 
 // ローカルストレージにデータを保存（localStorage.jsに統一）
-export const saveToStorage = localSaveToStorage;
+export const saveToStorage = safeSetItem;
 
 
 

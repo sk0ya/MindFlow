@@ -1,6 +1,6 @@
 // 統一データ管理システム - 全ての保存・同期操作を統括
 import { getAppSettings } from './storageUtils.js';
-import { getCurrentAdapter } from './storageAdapter.js';
+import { storageManager } from '../../core/storage/StorageManager';
 import { deepClone } from './dataTypes.js';
 
 /**
@@ -316,11 +316,12 @@ class DataManager {
     
     try {
       this.syncInProgress = true;
-      const adapter = getCurrentAdapter();
-      
       // 確定操作はマップ全体を保存
       if (this.isCommitOperation(operationType)) {
-        await adapter.updateMap(this.currentData.id, this.currentData);
+        const result = await storageManager.updateMap(this.currentData.id, this.currentData);
+        if (!result.success) {
+          throw new Error(result.error || '保存に失敗しました');
+        }
         console.log('💾 DataManager: マップ全体保存完了', {
           id: operationId,
           type: operationType,
@@ -332,7 +333,10 @@ class DataManager {
           id: operationId,
           type: operationType
         });
-        await adapter.updateMap(this.currentData.id, this.currentData);
+        const result = await storageManager.updateMap(this.currentData.id, this.currentData);
+        if (!result.success) {
+          throw new Error(result.error || '保存に失敗しました');
+        }
       }
       
       this.lastSaveTime = Date.now();
@@ -427,7 +431,6 @@ class DataManager {
     
     // 同期的な保存（限定的）
     try {
-      const adapter = getCurrentAdapter();
       const settings = getAppSettings();
       
       if (settings.storageMode === 'local') {

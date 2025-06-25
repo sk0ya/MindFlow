@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { isFirstTimeSetup, setStorageMode } from '../storage/storageRouter.js';
+import { isFirstTimeSetup, setStorageMode } from '../storage/StorageManager';
 import { getAppSettings } from '../storage/storageUtils.js';
-import { hasLocalData } from '../storage/localStorage.js';
+import { localEngine } from '../storage/local/LocalEngine';
 import { authManager } from '../../features/auth/authManager.js';
-import { reinitializeAdapter } from '../storage/storageAdapter.js';
+import { reinitializeStorage } from '../storage/StorageManager';
 
 // アプリ初期化専用フック - シーケンスを一本化
 export const useAppInitialization = () => {
@@ -24,7 +24,7 @@ export const useAppInitialization = () => {
         console.log('🚀 アプリ初期化シーケンス開始');
         
         // Step 1: ローカルデータ存在チェック
-        const hasData = hasLocalData();
+        const hasData = await localEngine.hasLocalData();
         const isFirstTime = isFirstTimeSetup();
         const settings = getAppSettings();
         
@@ -166,7 +166,7 @@ export const useAppInitialization = () => {
         // ローカルモード → 即座に設定して初期化
         console.log('🏠 ローカルモード選択 → 設定永続化と初期化');
         await setStorageMode(mode);
-        reinitializeAdapter();
+        reinitializeStorage();
         
         setInitState(prev => ({
           ...prev,
@@ -191,7 +191,7 @@ export const useAppInitialization = () => {
       console.log('🔄 認証成功後のクラウドストレージアダプター初期化開始');
       
       // ストレージアダプターを再初期化（クラウドアダプターに切り替え）
-      reinitializeAdapter();
+      reinitializeStorage();
       console.log('✅ クラウドストレージアダプターが作成されました');
       
       // 状態を更新

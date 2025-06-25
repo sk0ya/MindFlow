@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAllMindMaps, getMindMap } from '../../core/storage/storageRouter.js';
+import { getCurrentMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, getAllMindMaps, getMindMap } from '../../core/storage/StorageManager';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';

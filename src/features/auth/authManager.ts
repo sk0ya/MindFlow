@@ -1,6 +1,6 @@
 // 認証管理システム
 
-import { getAllMindMaps } from '../../core/storage/storageRouter.js';
+import { getAllMindMaps } from '../../core/storage/StorageManager';
 
 const AUTH_STORAGE_KEY = 'mindflow_auth';
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ

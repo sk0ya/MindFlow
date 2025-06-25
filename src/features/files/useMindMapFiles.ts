@@ -3,10 +3,10 @@ import { createFileAttachment } from '../../shared/types/dataTypes.js';
 import { optimizeFile, formatFileSize } from './fileOptimization.js';
 import { validateFile } from './fileValidation.js';
 import { logger } from '../../shared/utils/logger.js';
-import { isCloudStorageEnabled, getCurrentMindMap } from '../../core/storage/storageRouter.js';
+import { isCloudStorageEnabled, getCurrentMindMap } from '../../core/storage/StorageManager';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { authManager } from '../auth/authManager.js';
-import { cloudStorage } from '../../core/storage/cloudStorage.js';
+// cloudStorageは新しいStorageManagerで統合
 
 export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   // アプリ初期化状態をチェック
@@ -353,7 +353,8 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           if (authHeader) {
             headers['Authorization'] = authHeader;
           } else {
-            const userId = await cloudStorage.getUserId();
+            const user = authManager.getCurrentUser();
+            const userId = user?.email || 'unknown';
             headers['X-User-ID'] = userId;
           }
           
@@ -390,7 +391,8 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           console.log('JWT認証ヘッダー使用:', authHeader.substring(0, 20) + '...');
         } else {
           // 認証が無効な環境の場合のフォールバック
-          const userId = await cloudStorage.getUserId();
+          const user = authManager.getCurrentUser();
+          const userId = user?.email || 'unknown';
           headers['X-User-ID'] = userId;
           console.log('X-User-IDフォールバック:', userId);
         }

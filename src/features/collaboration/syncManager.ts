@@ -1,7 +1,7 @@
 // オフライン対応とデータ同期管理
 
 import { STORAGE_KEYS } from '../../shared/types/dataTypes.js';
-import { cloudStorage } from '../../core/storage/cloudStorage.js';
+import { storageManager } from '../../core/storage/StorageManager';
 
 class SyncManager {
   constructor() {
@@ -90,13 +90,13 @@ class SyncManager {
     
     switch (operation.type) {
       case 'save':
-        await cloudStorage.updateMindMap(operation.mindmapId, operation.data);
+        await storageManager.updateMindMap(operation.mindmapId, operation.data);
         break;
       case 'delete':
-        await cloudStorage.deleteMindMap(operation.mindmapId);
+        await storageManager.deleteMindMap(operation.mindmapId);
         break;
       case 'create':
-        await cloudStorage.createMindMap(operation.data);
+        await storageManager.createMindMap(operation.data);
         break;
       default:
         throw new Error(`Unknown operation type: ${operation.type}`);
@@ -124,11 +124,11 @@ class SyncManager {
         }
         
         try {
-          await cloudStorage.updateMindMap(map.id, map);
+          await storageManager.updateMindMap(map.id, map);
         } catch (updateError) {
           // 更新に失敗した場合は新規作成を試行
           try {
-            const createResult = await cloudStorage.createMindMap(map);
+            const createResult = await storageManager.createMindMap(map);
           } catch (createError) {
             console.error('手動同期: マップ作成失敗', map.id, createError.message);
             throw createError; // エラーを再スロー
@@ -137,7 +137,7 @@ class SyncManager {
       }
 
       // 3. クラウドから最新データを取得
-      const cloudMaps = await cloudStorage.getAllMindMaps();
+      const cloudMaps = await storageManager.getAllMindMaps();
 
       // 4. コンフリクト解決
       const resolvedMaps = this.resolveConflicts(localMaps, cloudMaps.mindmaps || []);
