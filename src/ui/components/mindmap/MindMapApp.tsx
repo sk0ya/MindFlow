@@ -17,7 +17,7 @@ import ConnectionStatus from '../common/ConnectionStatus';
 import ConflictNotification from '../common/ConflictNotification';
 import CollaborativeFeatures from '../common/CollaborativeFeatures';
 import PerformanceDashboard from '../common/PerformanceDashboard';
-import { storageManager } from '../../../core/storage/StorageManager';
+import { storageManager } from '../../../core/storage/StorageManager.ts';
 import { getAppSettings } from '../../../core/storage/storageUtils';
 import './MindMapApp.css';
 
