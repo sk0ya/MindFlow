@@ -16,11 +16,26 @@ const mockEnv = {
 Object.defineProperty(global, 'import', {
   value: {
     meta: {
-      env: mockEnv
+      env: {
+        ...mockEnv,
+        NODE_ENV: 'test',
+        DEV: true
+      }
     }
   },
   writable: true
 });
+
+// Alternative approach for import.meta.env
+if (typeof globalThis !== 'undefined') {
+  globalThis.import = globalThis.import || {};
+  globalThis.import.meta = globalThis.import.meta || {};
+  globalThis.import.meta.env = globalThis.import.meta.env || {
+    ...mockEnv,
+    NODE_ENV: 'test',
+    DEV: true
+  };
+}
 
 // Mock fetch globally
 global.fetch = jest.fn();

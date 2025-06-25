@@ -3,6 +3,26 @@
  * 認証システムの統合テスト
  */
 
+// Mock cloudAuthManager to avoid import.meta.env issues
+jest.mock('../../features/auth/cloudAuthManager', () => ({
+  cloudAuthManager: {
+    signInWithGitHub: jest.fn(),
+    handleCallback: jest.fn(),
+    signOut: jest.fn(),
+    isAuthenticated: jest.fn(),
+    getCurrentUser: jest.fn(),
+    hasValidCloudToken: jest.fn(),
+    isCloudAuthEnabled: jest.fn(),
+    getCloudSyncToken: jest.fn(),
+    handleGitHubCallback: jest.fn(),
+    checkTokenValidity: jest.fn(),
+    healthCheck: jest.fn(),
+    cloudLogout: jest.fn(),
+    addEventListener: jest.fn(),
+    getCloudUser: jest.fn()
+  }
+}));
+
 // Using Jest testing framework
 import { cloudAuthManager } from '../../features/auth/cloudAuthManager';
 import { authManager } from '../../features/auth/authManager';

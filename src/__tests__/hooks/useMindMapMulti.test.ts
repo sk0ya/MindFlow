@@ -2,11 +2,11 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti';
 
 // モックの設定
-jest.mock('../../core/storage/storageAdapter.js', () => ({
+jest.mock('../../core/storage/storageAdapter.ts', () => ({
   getCurrentAdapter: jest.fn(),
 }));
 
-jest.mock('../../core/storage/storageRouter.js', () => ({
+jest.mock('../../core/storage/storageRouter.ts', () => ({
   getCurrentMindMap: jest.fn(),
   getAllMindMaps: jest.fn(),
   createNewMindMap: jest.fn(),

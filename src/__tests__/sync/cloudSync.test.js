@@ -3,24 +3,17 @@
  * クラウド同期機能の包括的テスト
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SyncStateManager } from '../../utils/SyncStateManager.js';
-import { OperationQueue } from '../../utils/OperationQueue.js';
-import { ConflictResolver } from '../../utils/ConflictResolver.js';
-import { VectorClock } from '../../utils/VectorClock.js';
-import { OperationTransformer } from '../../utils/OperationTransformer.js';
-
-// Mock dependencies
+// Mock dependencies and test functions first
 const mockApiClient = {
-  post: vi.fn(),
-  get: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn()
+  post: jest.fn(),
+  get: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn()
 };
 
 const mockWebSocket = {
-  readyState: WebSocket.OPEN,
-  send: vi.fn(),
+  readyState: 1, // WebSocket.OPEN
+  send: jest.fn(),
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
   close: vi.fn()

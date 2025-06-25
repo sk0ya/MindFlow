@@ -2,7 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
 
 // モックの設定
-jest.mock('../../core/storage/storageRouter.js', () => ({
+jest.mock('../../core/storage/storageRouter.ts', () => ({
   getCurrentMindMap: jest.fn(),
   saveMindMap: jest.fn(),
   isCloudStorageEnabled: jest.fn(),
@@ -10,7 +10,7 @@ jest.mock('../../core/storage/storageRouter.js', () => ({
   getMindMap: jest.fn(),
 }));
 
-jest.mock('../../core/storage/storageUtils.js', () => ({
+jest.mock('../../core/storage/storageUtils.ts', () => ({
   getAppSettings: jest.fn(),
 }));
 
