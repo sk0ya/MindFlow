@@ -621,23 +621,9 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
           if (dbResult.success) {
             console.log('✅ 一時ノードのDB保存成功:', nodeId);
             
-            // ローカルデータでisTemporaryを除去してテキストを更新
-            await updateNode(nodeId, { 
-              text: textToSave.trim(), 
-              isTemporary: undefined // 一時フラグを除去
-            }, false, { // 既にDB保存済みなのsyncToCloud=false
-              allowDuringEdit: true, 
-              source: 'finishEdit-temporaryToReal' 
-            });
-            
-            // ID再生成があった場合の処理
-            if (dbResult.newId && dbResult.newId !== nodeId) {
-              console.log('🔄 一時ノードID再生成:', {
-                originalId: nodeId,
-                newId: dbResult.newId
-              });
-              await updateNodeId(nodeId, dbResult.newId);
-            }
+            // 🔧 NEW: サーバーファーストアーキテクチャ
+            // サーバーからの最新データでローカルを更新（競合回避）
+            await updateFromServerResponse(dbResult, nodeId, textToSave.trim());
             
           } else {
             console.error('❌ 一時ノードのDB保存失敗:', dbResult.error);
@@ -708,7 +694,43 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
         }
       } else if (!isEmpty) {
         console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-        await updateNode(nodeId, { text: textToSave.trim() }, true, { allowDuringEdit: true, source: 'finishEdit-save' });
+        
+        // 🔧 NEW: クラウドモードではサーバーファースト更新
+        const adapter = getCurrentAdapter();
+        if (adapter && adapter.type === 'cloud') {
+          console.log('☁️ クラウドモード: サーバーファースト更新');
+          try {
+            // サーバーでノード更新
+            const updateResult = await adapter.updateNode(dataRef.current.id, nodeId, { 
+              text: textToSave.trim() 
+            });
+            
+            if (updateResult.success) {
+              // サーバー成功：最新データでローカル更新
+              await refreshFromServer();
+            } else {
+              // サーバー失敗：フォールバックでローカル更新
+              console.warn('⚠️ サーバー更新失敗、ローカルフォールバック');
+              await updateNode(nodeId, { text: textToSave.trim() }, false, { 
+                allowDuringEdit: true, 
+                source: 'finishEdit-cloud-fallback' 
+              });
+            }
+          } catch (error) {
+            console.error('❌ クラウド更新エラー:', error);
+            // エラー時はローカル更新
+            await updateNode(nodeId, { text: textToSave.trim() }, false, { 
+              allowDuringEdit: true, 
+              source: 'finishEdit-error-fallback' 
+            });
+          }
+        } else {
+          // ローカルモード：従来通り
+          await updateNode(nodeId, { text: textToSave.trim() }, true, { 
+            allowDuringEdit: true, 
+            source: 'finishEdit-local' 
+          });
+        }
       }
     }
     
@@ -797,6 +819,78 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
     };
     
     updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
+  };
+
+  // 🔧 NEW: サーバーレスポンスからローカル状態を更新（サーバーファースト）
+  const updateFromServerResponse = async (dbResult, originalNodeId, expectedText) => {
+    try {
+      console.log('🌐 サーバーレスポンスからローカル更新開始:', { 
+        originalNodeId, 
+        finalId: dbResult.finalId || dbResult.newId || originalNodeId,
+        expectedText 
+      });
+      
+      const finalNodeId = dbResult.finalId || dbResult.newId || originalNodeId;
+      const hasIdChanged = finalNodeId !== originalNodeId;
+      
+      if (hasIdChanged) {
+        // ID変更がある場合：まずIDを更新してからテキストを設定
+        console.log('🔄 ID変更を含むサーバーレスポンス処理:', {
+          originalId: originalNodeId,
+          finalId: finalNodeId
+        });
+        
+        // 1. IDのみ更新（テキストはサーバーから取得した内容を保持）
+        await updateNodeId(originalNodeId, finalNodeId);
+        
+        // 2. 最新のサーバー状態でローカルを更新（競合回避）
+        await refreshFromServer();
+      } else {
+        // ID変更なし：ローカルでテキストのみ更新
+        console.log('📝 テキストのみ更新:', { nodeId: originalNodeId, text: expectedText });
+        await updateNode(originalNodeId, { 
+          text: expectedText, 
+          isTemporary: undefined 
+        }, false, { 
+          allowDuringEdit: true, 
+          source: 'finishEdit-serverResponse' 
+        });
+      }
+      
+      console.log('✅ サーバーレスポンス処理完了:', finalNodeId);
+    } catch (error) {
+      console.error('❌ サーバーレスポンス処理エラー:', error);
+      // フォールバック：ローカルのみ更新
+      await updateNode(originalNodeId, { 
+        text: expectedText, 
+        isTemporary: undefined 
+      }, false, { 
+        allowDuringEdit: true, 
+        source: 'finishEdit-fallback' 
+      });
+    }
+  };
+
+  // サーバーから最新データを取得してローカル更新
+  const refreshFromServer = async () => {
+    try {
+      console.log('📥 サーバーから最新データ取得開始');
+      const adapter = getCurrentAdapter();
+      const latestData = await adapter.getMindMap(dataRef.current.id);
+      
+      if (latestData) {
+        console.log('✅ サーバーから最新データ取得完了');
+        // リアルタイム同期をスキップしてローカル更新
+        await updateData(latestData, {
+          skipHistory: false,
+          source: 'server-refresh',
+          allowDuringEdit: true,
+          skipRealtimeSync: true // 🔧 NEW: リアルタイム同期をスキップ
+        });
+      }
+    } catch (error) {
+      console.error('❌ サーバーからのデータ取得エラー:', error);
+    }
   };
 
   // ノードIDを更新（UNIQUE制約違反対応）

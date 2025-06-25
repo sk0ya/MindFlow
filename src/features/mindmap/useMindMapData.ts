@@ -24,7 +24,7 @@ export const useMindMapData = (isAppReady = false) => {
   };
   
   // 即座保存機能（編集中の安全性を考慮）
-  const saveImmediately = async (dataToSave = data) => {
+  const saveImmediately = async (dataToSave = data, options = {}) => {
     if (!dataToSave || dataToSave.isPlaceholder) return;
     
     // 🔧 同時保存処理の防止
@@ -56,6 +56,12 @@ export const useMindMapData = (isAppReady = false) => {
       
       await saveMindMap(dataToSave);
       console.log('💾 即座保存完了:', dataToSave.title);
+      
+      // 🔧 NEW: リアルタイム同期のスキップオプション
+      if (options.skipRealtimeSync) {
+        console.log('⏭️ リアルタイム同期スキップ: サーバーファースト更新のため');
+      }
+      
     } catch (error) {
       console.warn('⚠️ 即座保存失敗:', error.message);
     } finally {
@@ -214,9 +220,10 @@ export const useMindMapData = (isAppReady = false) => {
     // 保存処理
     if (options.saveImmediately) {
       // 即座保存（重要な操作用）
-      await saveImmediately(newData);
-    } else if (options.immediate) {
+      await saveImmediately(newData, { skipRealtimeSync: options.skipRealtimeSync });
+    } else if (options.immediate && !options.skipRealtimeSync) {
       // 通常の自動保存（2秒デバウンス）
+      // skipRealtimeSyncが指定されている場合は自動保存もスキップ
       startAutoSave();
     }
     
