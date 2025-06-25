@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getCurrentMindMap, saveMindMap, isCloudStorageEnabled, getAllMindMaps, getMindMap } from '../../core/storage/storageRouter.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
-import { authManager } from '../auth/authManager.js';
+import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
 import { realtimeSync } from '../../core/sync/realtimeSync.js';
 
 // データ管理専用のカスタムフック
@@ -314,17 +314,17 @@ export const useMindMapData = (isAppReady = false) => {
         currentMapId: data.id,
         isMatch: event.data.id === data.id,
         originUserId: event.originUserId,
-        currentUserId: authManager.user?.id,
+        currentUserId: unifiedAuthManager.user?.id,
         timestamp: event.timestamp
       });
       
       // 🔧 修正: ポーリングベースの同期では originUserId が含まれないため、
       // 一時ブロック機能で無限ループを防止
       // TODO: 将来的にWebSocketベースの同期でoriginUserIdを実装
-      if (event.originUserId && authManager.user?.id && event.originUserId === authManager.user.id) {
+      if (event.originUserId && unifiedAuthManager.user?.id && event.originUserId === unifiedAuthManager.user.id) {
         console.log('⏸️ リアルタイム同期スキップ: 自分の更新のため除外', {
           originUserId: event.originUserId,
-          currentUserId: authManager.user.id
+          currentUserId: unifiedAuthManager.user.id
         });
         return;
       }

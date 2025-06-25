@@ -21,11 +21,18 @@ const mockStorageRouter = {
   getAllMindMaps: jest.fn()
 };
 
-const mockAuthManager = {
-  getAuthState: jest.fn(() => ({
+const mockUnifiedAuthManager = {
+  user: { id: 'test-user-123' },
+  isAuthenticated: true,
+  state: {
     isAuthenticated: true,
-    user: { id: 'test-user-123' }
-  }))
+    user: { id: 'test-user-123' },
+    token: 'mock-token',
+    provider: 'email',
+    expiresAt: Date.now() + 3600000,
+    isLoading: false,
+    error: null
+  }
 };
 
 // モジュールモック
@@ -35,8 +42,8 @@ jest.mock('../../core/sync/realtimeSync.js', () => ({
 
 jest.mock('../../core/storage/storageRouter.js', () => mockStorageRouter);
 
-jest.mock('../../features/auth/authManager.js', () => ({
-  authManager: mockAuthManager
+jest.mock('../../features/auth/UnifiedAuthManager.js', () => ({
+  unifiedAuthManager: mockUnifiedAuthManager
 }));
 
 jest.mock('../../core/storage/storageUtils.js', () => ({
