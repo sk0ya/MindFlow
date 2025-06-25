@@ -66,7 +66,12 @@ export class LocalEngine {
     // データ整合性チェック
     const validMaps = maps.filter(map => {
       if (!map || !map.id || typeof map.id !== 'string') {
-        console.warn('🏠 無効なマップを除外 (IDなし):', map);
+        console.error('🚨 破損データ検出 (ID問題):', {
+          hasMap: !!map,
+          id: map?.id,
+          idType: typeof map?.id,
+          fullData: map
+        });
         return false;
       }
       if (!map.rootNode) {
@@ -79,7 +84,11 @@ export class LocalEngine {
     // 破損データをクリーンアップ
     if (validMaps.length !== maps.length) {
       await this.saveToStorage(STORAGE_KEYS.MINDMAPS, validMaps);
-      console.log('🏠 破損データをクリーンアップしました');
+      console.log('🏠 破損データをクリーンアップしました', {
+        before: maps.length,
+        after: validMaps.length,
+        removed: maps.length - validMaps.length
+      });
     }
     
     console.log('🏠 ローカル: マップ一覧取得', validMaps.length, '件');
@@ -122,14 +131,36 @@ export class LocalEngine {
   }
 
   async updateMap(mapId: string, mapData: MindMapData): Promise<StorageResult<MindMapData>> {
+    // 保存前のデータ検証
+    if (!mapId || typeof mapId !== 'string') {
+      console.error('🚨 無効なmapId:', { mapId, type: typeof mapId });
+      return { success: false, error: '無効なマップIDです' };
+    }
+    
+    if (!mapData || typeof mapData !== 'object') {
+      console.error('🚨 無効なmapData:', { mapData, type: typeof mapData });
+      return { success: false, error: '無効なマップデータです' };
+    }
+
     const allMaps = await this.getAllMaps();
     const existingIndex = allMaps.findIndex(map => map.id === mapId);
     
     const updatedMap: MindMapData = {
       ...mapData,
-      id: mapId,
+      id: mapId, // 明示的に文字列のIDを設定
       updatedAt: new Date().toISOString()
     };
+    
+    // 最終検証
+    if (!updatedMap.id || typeof updatedMap.id !== 'string') {
+      console.error('🚨 updatedMapのID検証失敗:', {
+        originalMapId: mapId,
+        mapDataId: mapData.id,
+        updatedMapId: updatedMap.id,
+        idType: typeof updatedMap.id
+      });
+      return { success: false, error: 'マップIDの生成に失敗しました' };
+    }
     
     if (existingIndex >= 0) {
       // 作成日時を保持

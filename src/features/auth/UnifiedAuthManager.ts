@@ -63,6 +63,14 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     return this._state.token;
   }
 
+  /**
+   * 認証状態を取得
+   * @returns 現在の認証状態
+   */
+  getAuthState(): AuthState {
+    return { ...this._state };
+  }
+
   // ===== 認証メソッド =====
 
   async login(method: 'email', options: MagicLinkOptions): Promise<AuthResult>;

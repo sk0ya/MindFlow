@@ -23,9 +23,19 @@ export const useMindMapData = (isAppReady = false) => {
       
       const initializeSyncService = async () => {
         try {
-          // 認証状態に基づいてモードを決定
-          const authState = unifiedAuthManager.getAuthState();
-          const mode = authState.isAuthenticated ? 'cloud' : 'local';
+          // 認証状態の安全な取得
+          let isAuthenticated = false;
+          try {
+            if (unifiedAuthManager && typeof unifiedAuthManager.getAuthState === 'function') {
+              const authState = unifiedAuthManager.getAuthState();
+              isAuthenticated = authState.isAuthenticated || false;
+            }
+          } catch (authError) {
+            console.warn('⚠️ 認証状態取得エラー, ローカルモードで続行:', authError);
+          }
+          
+          // モード決定（エラー時はローカルモード）
+          const mode = isAuthenticated ? 'cloud' : 'local';
           
           await unifiedSyncService.initialize(mode, {
             apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
@@ -34,6 +44,13 @@ export const useMindMapData = (isAppReady = false) => {
           console.log(`🔄 統一同期サービス初期化完了: ${mode}モード`);
         } catch (error) {
           console.error('❌ 統一同期サービス初期化失敗:', error);
+          // フォールバック: ローカルモードで初期化
+          try {
+            await unifiedSyncService.initialize('local');
+            console.log('🔄 フォールバック: ローカルモードで初期化完了');
+          } catch (fallbackError) {
+            console.error('❌ フォールバック初期化も失敗:', fallbackError);
+          }
         }
       };
       
@@ -95,12 +112,24 @@ export const useMindMapData = (isAppReady = false) => {
     
     // 統一同期サービスを使用（編集保護機能付き）
     try {
-      await unifiedSyncService.saveData(dataToSave, options);
-      console.log('💾 統一同期サービス保存完了:', dataToSave.title);
+      // 統一同期サービスが利用可能かチェック
+      if (unifiedSyncService && typeof unifiedSyncService.saveData === 'function') {
+        await unifiedSyncService.saveData(dataToSave, options);
+        console.log('💾 統一同期サービス保存完了:', dataToSave.title);
+      } else {
+        // フォールバック: 直接保存
+        await saveMindMap(dataToSave);
+        console.log('💾 直接保存完了:', dataToSave.title);
+      }
     } catch (error) {
       console.warn('⚠️ 統一同期サービス保存失敗:', error.message);
       // フォールバック: 直接保存
-      await saveMindMap(dataToSave);
+      try {
+        await saveMindMap(dataToSave);
+        console.log('💾 フォールバック保存完了:', dataToSave.title);
+      } catch (fallbackError) {
+        console.error('❌ フォールバック保存も失敗:', fallbackError);
+      }
     }
   };
 
