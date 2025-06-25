@@ -24,6 +24,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   
   // ブラウザ間同期テスト
   import('./test-cross-browser-sync.js');
+  
+  // リアルタイム同期修正テスト
+  import('./test-realtime-sync-fix.js');
 }
 
 const rootElement = document.getElementById('root');

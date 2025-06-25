@@ -29,9 +29,18 @@ class RealtimeSync {
    * 設定を確認して同期を開始
    */
   private checkAndStartSync() {
-    const settings = getAppSettings();
-    if (settings.storageMode === 'cloud' && settings.enableRealtimeSync !== false) {
-      this.start();
+    try {
+      const settings = getAppSettings();
+      if (settings.storageMode === 'cloud' && settings.enableRealtimeSync !== false) {
+        // 少し遅延してから開始（初期化完了を待つ）
+        setTimeout(() => {
+          this.start();
+        }, 1000);
+      } else {
+        console.log('⏸️ リアルタイム同期無効: ストレージモードまたは設定により');
+      }
+    } catch (error) {
+      console.error('❌ リアルタイム同期設定確認エラー:', error);
     }
   }
 
@@ -98,6 +107,7 @@ class RealtimeSync {
       
       // クラウドアダプターでない場合はスキップ
       if (!adapter.constructor.name.includes('Cloud')) {
+        console.log('⏸️ 同期スキップ: ローカルストレージアダプターのため');
         return;
       }
 
@@ -122,9 +132,19 @@ class RealtimeSync {
       
     } catch (error) {
       console.error('❌ 同期エラー:', error);
+      
+      // ストレージアダプターエラーの場合は詳細ログ
+      if (error.message.includes('require is not defined')) {
+        console.error('🚨 ESモジュールエラー: requireの使用が検出されました');
+      }
+      
       this.emitEvent({
         type: 'sync_error',
-        data: { error: error.message },
+        data: { 
+          error: error.message,
+          type: error.name || 'Unknown',
+          timestamp: new Date().toISOString()
+        },
         timestamp: new Date().toISOString()
       });
     }

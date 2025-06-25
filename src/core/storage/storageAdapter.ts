@@ -671,7 +671,7 @@ class StorageAdapterFactory {
       console.log('🏭 ストレージアダプター: クラウドモード選択');
       try {
         // 認証状態をチェック
-        const authManager = require('../../features/auth/authManager.js').authManager;
+        // Import is already at the top of the file
         if (!authManager.isAuthenticated()) {
           console.warn('⚠️ クラウドモードですが未認証のため、ローカルモードにフォールバック');
           return new LocalStorageAdapter();
