@@ -526,6 +526,29 @@ class CloudStorageAdapter implements CloudStorageAdapter {
         return await this.retryWithNewId(mapId, nodeData, parentId);
       }
       
+      if (error.message.includes('Mindmap not found') || error.message.includes('404')) {
+        console.warn('🔄 Mindmap not found: マップを作成してからノード追加をリトライします', { mapId });
+        try {
+          // 現在のローカルマップデータを取得
+          const { getCurrentMindMap } = await import('../storage/storageRouter.js');
+          const currentMap = await getCurrentMindMap();
+          if (currentMap) {
+            console.log('📤 マップをサーバーに作成中...', currentMap.title);
+            // マップ全体をサーバーに保存
+            await this.saveMindMap(currentMap);
+            console.log('✅ マップ作成完了、ノード追加をリトライします');
+            
+            // 同じパラメータでリトライ
+            return await this.addNodeWithoutRootCheck(mapId, nodeData, parentId);
+          } else {
+            throw new Error('Local map data not found');
+          }
+        } catch (syncError) {
+          console.error('❌ マップ作成失敗:', syncError);
+          throw new Error(`Mindmap creation failed: ${syncError.message}`);
+        }
+      }
+      
       if (error.message === 'PARENT_NODE_NOT_FOUND') {
         console.warn('🔄 Parent node not found: ルートノード同期後リトライします', { mapId, parentId });
         try {

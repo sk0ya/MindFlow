@@ -122,7 +122,7 @@ export const useMindMapData = (isAppReady = false) => {
       setIsLoadingFromCloud(true);
       
       // 認証状態を確認
-      if (!authManager.isAuthenticated()) {
+      if (!unifiedAuthManager.isAuthenticated) {
         console.log('⏳ 未認証: クラウド同期を待機');
         return;
       }
