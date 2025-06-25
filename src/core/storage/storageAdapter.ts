@@ -283,7 +283,18 @@ class CloudStorageAdapter {
       
       // シンプルな直接API通信
       const response = await this.apiCall('/mindmaps', 'GET');
-      const maps = Array.isArray(response) ? response : (response.maps || []);
+      
+      // APIレスポンス構造をデバッグ
+      console.log('🔍 API レスポンス構造:', {
+        isArray: Array.isArray(response),
+        keys: Object.keys(response || {}),
+        hasMindmaps: !!(response?.mindmaps),
+        hasMaps: !!(response?.maps),
+        mindmapsLength: response?.mindmaps?.length || 0,
+        mapsLength: response?.maps?.length || 0
+      });
+      
+      const maps = Array.isArray(response) ? response : (response.mindmaps || response.maps || []);
       console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
       return maps;
 
