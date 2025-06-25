@@ -4,6 +4,59 @@ import { getAllMindMapsLocal, saveMindMapLocal, deleteMindMapLocal } from './loc
 import { authManager } from '../../features/auth/authManager.js';
 import { generateId } from '../../shared/types/dataTypes.js';
 
+// ストレージモード未選択時の待機アダプター
+class PendingStorageAdapter {
+  constructor() {
+    this.name = 'ストレージモード選択待ち';
+  }
+
+  async getAllMaps() {
+    console.log('⏳ ストレージモード選択待ち: マップ読み込みを保留');
+    return [];
+  }
+
+  async getMap(mapId) {
+    console.log('⏳ ストレージモード選択待ち: マップ取得を保留');
+    throw new Error('ストレージモードが選択されていません');
+  }
+
+  async createMap(mapData) {
+    console.log('⏳ ストレージモード選択待ち: マップ作成を保留');
+    throw new Error('ストレージモードが選択されていません');
+  }
+
+  async updateMap(mapId, mapData) {
+    console.log('⏳ ストレージモード選択待ち: マップ更新を保留');
+    throw new Error('ストレージモードが選択されていません');
+  }
+
+  async deleteMap(mapId) {
+    console.log('⏳ ストレージモード選択待ち: マップ削除を保留');
+    throw new Error('ストレージモードが選択されていません');
+  }
+
+  // ノード操作（すべて保留）
+  async addNode(mapId, nodeData, parentId) {
+    console.log('⏳ ストレージモード選択待ち: ノード追加を保留');
+    return { success: false, pending: true };
+  }
+
+  async updateNode(mapId, nodeId, updates) {
+    console.log('⏳ ストレージモード選択待ち: ノード更新を保留');
+    return { success: false, pending: true };
+  }
+
+  async deleteNode(mapId, nodeId) {
+    console.log('⏳ ストレージモード選択待ち: ノード削除を保留');
+    return { success: false, pending: true };
+  }
+
+  async moveNode(mapId, nodeId, newParentId) {
+    console.log('⏳ ストレージモード選択待ち: ノード移動を保留');
+    return { success: false, pending: true };
+  }
+}
+
 // ローカルストレージ専用の処理
 class LocalStorageAdapter {
   constructor() {
@@ -667,6 +720,12 @@ class StorageAdapterFactory {
   static create() {
     const settings = getAppSettings();
     
+    // ストレージモード未選択の場合は待機アダプターを返す
+    if (settings.storageMode === null || settings.storageMode === undefined) {
+      console.log('⏳ ストレージアダプター: モード選択待ち');
+      return new PendingStorageAdapter();
+    }
+    
     if (settings.storageMode === 'cloud') {
       console.log('🏭 ストレージアダプター: クラウドモード選択');
       try {
@@ -714,4 +773,4 @@ setInterval(() => {
 }, 30000);
 
 // テスト用にクラスをexport
-export { CloudStorageAdapter, LocalStorageAdapter, StorageAdapterFactory };
+export { CloudStorageAdapter, LocalStorageAdapter, PendingStorageAdapter, StorageAdapterFactory };

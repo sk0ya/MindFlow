@@ -209,6 +209,9 @@ export const useMindMap = (isAppReady = false) => {
     
     // カテゴリー管理
     changeMapCategory: multiHook.changeMapCategory,
-    getAvailableCategories: multiHook.getAvailableCategories
+    getAvailableCategories: multiHook.getAvailableCategories,
+    
+    // 初期化管理
+    reinitializeAfterModeSelection: multiHook.reinitializeAfterModeSelection
   };
 };

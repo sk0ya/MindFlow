@@ -400,12 +400,18 @@ export const useMindMapMulti = (data, setData, updateData) => {
     }
   };
 
-  // 初期化時にallMindMapsを更新
+  // 初期化時にallMindMapsを更新（ストレージモード確認後）
   useEffect(() => {
     const initializeMaps = async () => {
       try {
         console.log('🔄 初期化時のマップ一覧読み込み開始');
-          const settings = getAppSettings();
+        const settings = getAppSettings();
+        
+        // ストレージモード未選択の場合は待機
+        if (settings.storageMode === null || settings.storageMode === undefined) {
+          console.log('⏳ ストレージモード選択待ち: マップ読み込みを保留');
+          return;
+        }
         
         if (settings.storageMode === 'cloud') {
           // クラウドモードの場合はrefreshAllMindMapsを呼ぶ
@@ -426,6 +432,27 @@ export const useMindMapMulti = (data, setData, updateData) => {
     
     initializeMaps();
   }, []);
+
+  // ストレージモード選択後の再初期化
+  const reinitializeAfterModeSelection = async () => {
+    try {
+      console.log('🔄 ストレージモード選択後の再初期化開始');
+      const settings = getAppSettings();
+      
+      if (settings.storageMode === 'cloud') {
+        console.log('☁️ クラウドモード選択: マップ読み込み開始');
+        await refreshAllMindMaps();
+      } else if (settings.storageMode === 'local') {
+        console.log('🏠 ローカルモード選択: マップ読み込み開始');
+        const maps = await getAllMindMaps();
+        setAllMindMaps(maps);
+      }
+      
+      console.log('✅ ストレージモード選択後の再初期化完了');
+    } catch (error) {
+      console.error('❌ ストレージモード選択後の再初期化失敗:', error);
+    }
+  };
 
   // data.idの変更を監視してcurrentMapIdを更新（ローカル・クラウド共通）
   useEffect(() => {
@@ -469,6 +496,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     changeMapCategory,
     getAvailableCategories,
     switchToMap,
-    removeTemporaryNodes
+    removeTemporaryNodes,
+    reinitializeAfterModeSelection
   };
 };

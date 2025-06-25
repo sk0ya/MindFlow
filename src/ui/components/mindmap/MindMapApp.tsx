@@ -48,12 +48,9 @@ const MindMapApp: React.FC = () => {
   const authToken = urlParams.get('token');
   const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
   
-  // アプリ初期化（統一フロー）
+  // アプリ初期化（統一フロー）- まず初期化状態を取得
   const initState = useAppInitialization();
   
-  // クラウド認証状態管理
-  const cloudAuth = useCloudAuth();
-
   const {
     data,
     selectedNodeId,
@@ -95,6 +92,7 @@ const MindMapApp: React.FC = () => {
     getAvailableCategories,
     addNodeMapLink,
     removeNodeMapLink,
+    reinitializeAfterModeSelection,
     // リアルタイム機能
     realtimeClient,
     isRealtimeConnected,
@@ -105,6 +103,49 @@ const MindMapApp: React.FC = () => {
     updateCursorPosition,
     triggerCloudSync
   } = useMindMap(initState.isReady);
+  
+  // クラウド認証状態管理
+  const cloudAuth = useCloudAuth();
+
+  // ストレージモード選択とリニューアルを統合したハンドラー
+  const handleStorageModeSelectWithReinit = async (mode) => {
+    try {
+      console.log('📝 ストレージモード選択 (統合版):', mode);
+      
+      // 元のhandleStorageModeSelectを実行
+      await initState.handleStorageModeSelect(mode);
+      
+      // マップデータの再初期化
+      if (typeof reinitializeAfterModeSelection === 'function') {
+        console.log('🔄 マップデータ再初期化開始');
+        await reinitializeAfterModeSelection();
+        console.log('✅ マップデータ再初期化完了');
+      } else {
+        console.warn('⚠️ reinitializeAfterModeSelection 関数が利用できません');
+      }
+    } catch (error) {
+      console.error('❌ ストレージモード選択とリニューアルエラー:', error);
+    }
+  };
+
+  // 認証成功時の統合ハンドラー
+  const handleAuthSuccessWithReinit = async () => {
+    try {
+      console.log('✅ 認証成功 (統合版)');
+      
+      // 元のhandleAuthSuccessを実行
+      await initState.handleAuthSuccess();
+      
+      // マップデータの再初期化
+      if (typeof reinitializeAfterModeSelection === 'function') {
+        console.log('🔄 認証成功後のマップデータ再初期化開始');
+        await reinitializeAfterModeSelection();
+        console.log('✅ 認証成功後のマップデータ再初期化完了');
+      }
+    } catch (error) {
+      console.error('❌ 認証成功とリニューアルエラー:', error);
+    }
+  };
 
   // カスタムフックで機能を分離
   const authHandlers = useAuthHandlers(initState, refreshAllMindMaps, triggerCloudSync);
@@ -495,7 +536,7 @@ const MindMapApp: React.FC = () => {
       <AuthModal
         isVisible={initState.showAuthModal}
         onClose={initState.handleAuthClose}
-        onAuthSuccess={authHandlers.handleAuthSuccess}
+        onAuthSuccess={handleAuthSuccessWithReinit}
       />
 
       {/* チュートリアルオーバーレイ */}
@@ -514,7 +555,7 @@ const MindMapApp: React.FC = () => {
       {/* ストレージモード選択画面 */}
       {initState.showStorageModeSelector && (
         <StorageModeSelector
-          onModeSelect={initState.handleStorageModeSelect}
+          onModeSelect={handleStorageModeSelectWithReinit}
           hasLocalData={initState.hasExistingLocalData}
         />
       )}

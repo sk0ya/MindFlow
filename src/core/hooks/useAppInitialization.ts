@@ -3,6 +3,7 @@ import { isFirstTimeSetup, setStorageMode } from '../storage/storageRouter.js';
 import { getAppSettings } from '../storage/storageUtils.js';
 import { hasLocalData } from '../storage/localStorage.js';
 import { authManager } from '../../features/auth/authManager.js';
+import { reinitializeAdapter } from '../storage/storageAdapter.js';
 
 // アプリ初期化専用フック - シーケンスを一本化
 export const useAppInitialization = () => {
@@ -133,6 +134,10 @@ export const useAppInitialization = () => {
       // ストレージモードを設定
       await setStorageMode(mode);
       
+      // ストレージアダプターを再初期化
+      console.log('🔄 ストレージモード選択後のアダプター再初期化');
+      reinitializeAdapter();
+      
       if (mode === 'cloud') {
         // クラウドモード → 認証画面
         console.log('☁️ クラウドモード選択 → 認証画面表示');
@@ -160,8 +165,13 @@ export const useAppInitialization = () => {
   };
 
   // 認証成功処理
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = async () => {
     console.log('✅ 認証成功 → クラウドモード開始');
+    
+    // 認証成功後にストレージアダプターを再初期化（クラウドアダプターに切り替え）
+    console.log('🔄 認証成功後のストレージアダプター再初期化');
+    reinitializeAdapter();
+    
     setInitState(prev => ({
       ...prev,
       showAuthModal: false,
