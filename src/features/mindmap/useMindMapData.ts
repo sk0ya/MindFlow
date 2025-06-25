@@ -289,25 +289,68 @@ export const useMindMapData = (isAppReady = false) => {
     
     // マップ更新イベントをリッスン
     const unsubscribe = realtimeSync.addEventListener('map_updated', async (event) => {
-      console.log('🔄 リアルタイム同期: マップ更新検出', event.data.id);
+      console.log('🔄 リアルタイム同期: マップ更新検出', {
+        eventMapId: event.data.id,
+        currentMapId: data.id,
+        isMatch: event.data.id === data.id,
+        timestamp: event.timestamp
+      });
       
       // 現在のマップIDと一致する場合のみ更新
       if (event.data.id === data.id) {
+        // 編集状態を事前チェック
+        const editingInput = document.querySelector('.node-input');
+        const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
+        
+        if (isCurrentlyEditing) {
+          console.log('✋ リアルタイム同期スキップ: 編集中のため保護', {
+            editingValue: editingInput.value,
+            activeElement: document.activeElement.tagName
+          });
+          return; // 編集中は即座にリターン
+        }
+        
         try {
+          console.log('📥 リアルタイム同期: 最新データ取得開始', event.data.id);
           // 最新データを取得
           const updatedMap = await getMindMap(event.data.id);
           if (updatedMap) {
+            // 再度編集状態をチェック（非同期処理後）
+            const editingInputAfter = document.querySelector('.node-input');
+            const isEditingAfter = editingInputAfter && document.activeElement === editingInputAfter;
+            
+            if (isEditingAfter) {
+              console.log('✋ リアルタイム同期スキップ: データ取得後も編集中', {
+                editingValue: editingInputAfter.value
+              });
+              return;
+            }
+            
             // リアルタイム更新は履歴をスキップし、編集中は保護
             updateData(assignColorsToExistingNodes(updatedMap), {
               skipHistory: true,
               source: 'realtime-sync',
               allowDuringEdit: false // 編集中は更新をスキップ
             });
-            console.log('✅ リアルタイム同期: マップ更新適用');
+            console.log('✅ リアルタイム同期: マップ更新適用完了', {
+              mapId: updatedMap.id,
+              title: updatedMap.title
+            });
+          } else {
+            console.warn('⚠️ リアルタイム同期: 更新データが空', event.data.id);
           }
         } catch (error) {
-          console.error('❌ リアルタイム同期エラー:', error);
+          console.error('❌ リアルタイム同期エラー:', {
+            error: error.message,
+            mapId: event.data.id,
+            stack: error.stack
+          });
         }
+      } else {
+        console.log('⏸️ リアルタイム同期: マップID不一致によりスキップ', {
+          eventMapId: event.data.id,
+          currentMapId: data.id
+        });
       }
     });
     
