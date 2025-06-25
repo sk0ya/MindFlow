@@ -1,6 +1,6 @@
 // 統一データ管理システム - 全ての保存・同期操作を統括
-import { getAppSettings } from './storageUtils.js';
-import { storageManager } from '../../core/storage/StorageManager';
+import { getAppSettings } from '../../core/storage/storageUtils.js';
+import { storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone } from './dataTypes.js';
 
 /**

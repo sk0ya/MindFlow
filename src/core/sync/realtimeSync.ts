@@ -3,7 +3,7 @@
  * ポーリングベースの簡易同期実装
  */
 
-import { storageManager } from '../storage/StorageManager';
+import { storageManager } from '../storage/StorageManager.js';
 import { getAppSettings } from '../storage/storageUtils.js';
 
 export interface SyncEvent {

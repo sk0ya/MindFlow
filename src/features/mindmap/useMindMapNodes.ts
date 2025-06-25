@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../shared/types/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
-import { storageManager } from '../../core/storage/StorageManager';
+import { storageManager } from '../../core/storage/StorageManager.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 
 // ノード操作専用のカスタムフック

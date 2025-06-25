@@ -3,7 +3,7 @@ import { createFileAttachment } from '../../shared/types/dataTypes.js';
 import { optimizeFile, formatFileSize } from './fileOptimization.js';
 import { validateFile } from './fileValidation.js';
 import { logger } from '../../shared/utils/logger.js';
-import { isCloudStorageEnabled, getCurrentMindMap } from '../../core/storage/StorageManager';
+import { isCloudStorageEnabled, getCurrentMindMap } from '../../core/storage/StorageManager.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { authManager } from '../auth/authManager.js';
 // cloudStorageは新しいStorageManagerで統合

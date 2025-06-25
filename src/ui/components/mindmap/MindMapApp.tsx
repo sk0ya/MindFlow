@@ -17,7 +17,7 @@ import ConnectionStatus from '../common/ConnectionStatus';
 import ConflictNotification from '../common/ConflictNotification';
 import CollaborativeFeatures from '../common/CollaborativeFeatures';
 import PerformanceDashboard from '../common/PerformanceDashboard';
-import { exportMindMapAsJSON, importMindMapFromJSON } from '../../../core/storage/StorageManager';
+import { storageManager } from '../../../core/storage/StorageManager.js';
 import { getAppSettings } from '../../../core/storage/storageUtils';
 import './MindMapApp.css';
 
@@ -180,7 +180,7 @@ const MindMapApp: React.FC = () => {
     updateCursorPosition
   );
   
-  const appActions = useAppActions(data, saveMindMap, exportMindMapAsJSON, importMindMapFromJSON);
+  const appActions = useAppActions(data, saveMindMap, storageManager.exportMindMapAsJSON, storageManager.importMindMapFromJSON);
   
   const realtimeHandlers = useRealtimeHandlers(initializeRealtime, isRealtimeConnected);
 

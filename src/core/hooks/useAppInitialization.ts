@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { isFirstTimeSetup, setStorageMode } from '../storage/StorageManager';
+import { isFirstTimeSetup, setStorageMode } from '../storage/StorageManager.js';
 import { getAppSettings } from '../storage/storageUtils.js';
-import { localEngine } from '../storage/local/LocalEngine';
+import { localEngine } from '../storage/local/LocalEngine.js';
 import { authManager } from '../../features/auth/authManager.js';
-import { reinitializeStorage } from '../storage/StorageManager';
+import { reinitializeStorage } from '../storage/StorageManager.js';
 
 // アプリ初期化専用フック - シーケンスを一本化
 export const useAppInitialization = () => {

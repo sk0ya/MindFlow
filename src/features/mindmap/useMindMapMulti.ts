@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager';
+import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { realtimeSync } from '../collaboration/realtimeSync.js';
@@ -18,8 +18,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     try {
       console.log('📋 マップ一覧取得開始');
       
-      const adapter = getCurrentAdapter();
-      const maps = await adapter.getAllMaps();
+      const maps = await getAllMindMaps();
       
       // データ整合性チェック
       const validMaps = maps.filter(map => map && map.id);
@@ -288,16 +287,14 @@ export const useMindMapMulti = (data, setData, updateData) => {
             removedTempNodes: (data.rootNode?.children?.length || 0) - (dataForSaving.rootNode?.children?.length || 0)
           });
           
-          const adapter = getCurrentAdapter();
-          await adapter.updateMap(data.id, dataForSaving);
+          await saveMindMap(dataForSaving.id, dataForSaving);
           console.log('✅ 現在のマップ保存完了:', data.title);
         } catch (saveError) {
           console.warn('⚠️ 現在のマップ保存失敗:', saveError);
         }
       }
       
-      const adapter = getCurrentAdapter();
-      const originalTargetMap = await adapter.getMap(mapId);
+      const originalTargetMap = await getMindMap(mapId);
       
       // 🔧 重要: マップデータを完全にディープクローンして参照共有を防止
       console.log('🛡️ マップデータを安全にクローン中...');

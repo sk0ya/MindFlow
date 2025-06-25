@@ -2,7 +2,7 @@
 import { safeGetItem, safeSetItem, getStorageInfo, checkStorageSpace } from './storageManager.js';
 
 // ローカルエンジンから機能をインポート
-import { localEngine } from './local/LocalEngine';
+import { localEngine } from './local/LocalEngine.js';
 
 // ローカルストレージからデータを取得（localStorage.jsに統一）
 export const loadFromStorage = safeGetItem;

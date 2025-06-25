@@ -1,7 +1,7 @@
 // オフライン対応とデータ同期管理
 
 import { STORAGE_KEYS } from '../../shared/types/dataTypes.js';
-import { storageManager } from '../../core/storage/StorageManager';
+import { storageManager } from '../../core/storage/StorageManager.js';
 
 class SyncManager {
   constructor() {
