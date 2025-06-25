@@ -25,13 +25,16 @@ export async function handleRequest(request, env) {
   const pathParts = url.pathname.split('/');
   const mindmapId = pathParts[3]; // /api/nodes/{mindmapId}
   const nodeId = pathParts[4];    // /api/nodes/{mindmapId}/{nodeId}
+  const operation = pathParts[5]; // /api/nodes/{mindmapId}/batch
 
   try {
     let response;
     
     switch (method) {
       case 'GET':
-        if (nodeId) {
+        if (nodeId === 'stats') {
+          response = await getBatchOperationStats(env.DB, userId, mindmapId);
+        } else if (nodeId) {
           response = await getNode(env.DB, userId, mindmapId, nodeId);
         } else {
           response = await getAllNodes(env.DB, userId, mindmapId);
@@ -39,8 +42,14 @@ export async function handleRequest(request, env) {
         break;
       
       case 'POST':
-        const createData = await request.json();
-        response = await createNode(env.DB, userId, mindmapId, createData);
+        // バッチ操作の処理
+        if (nodeId === 'batch') {
+          const batchData = await request.json();
+          response = await processBatchOperations(env.DB, userId, mindmapId, batchData);
+        } else {
+          const createData = await request.json();
+          response = await createNode(env.DB, userId, mindmapId, createData);
+        }
         break;
       
       case 'PUT':
@@ -568,5 +577,209 @@ function parseAttachmentData(attachment) {
 function parseLinkData(link) {
   return {
     ...link
+  };
+}
+
+/**
+ * バッチ操作処理 - 複数の操作を効率的に一括実行
+ * @param {Object} db - データベース接続
+ * @param {string} userId - ユーザーID
+ * @param {string} mindmapId - マインドマップID
+ * @param {Object} batchData - バッチ操作データ
+ */
+async function processBatchOperations(db, userId, mindmapId, batchData) {
+  console.log('🔄 Processing batch operations:', { 
+    mindmapId, 
+    operationCount: batchData.operations?.length || 0,
+    version: batchData.version 
+  });
+
+  // 入力検証
+  if (!batchData.operations || !Array.isArray(batchData.operations)) {
+    const error = new Error('Invalid batch data: operations array required');
+    error.status = 400;
+    throw error;
+  }
+
+  if (batchData.operations.length === 0) {
+    return { 
+      success: true, 
+      results: [], 
+      processed: 0,
+      errors: 0 
+    };
+  }
+
+  if (batchData.operations.length > 100) {
+    const error = new Error('Batch size limit exceeded (max 100 operations)');
+    error.status = 400;
+    throw error;
+  }
+
+  // マインドマップの所有権確認とバージョンチェック
+  const mindmap = await db.prepare(
+    'SELECT id, title, version, migrated_to_relational FROM mindmaps WHERE id = ? AND user_id = ?'
+  ).bind(mindmapId, userId).first();
+  
+  if (!mindmap) {
+    const error = new Error('Mindmap not found');
+    error.status = 404;
+    throw error;
+  }
+
+  if (!mindmap.migrated_to_relational) {
+    const error = new Error('This mindmap has not been migrated to relational structure');
+    error.status = 400;
+    throw error;
+  }
+
+  // 楽観的ロック: バージョンチェック
+  if (batchData.version && mindmap.version && batchData.version !== mindmap.version) {
+    const error = new Error(`Version conflict: expected ${batchData.version}, got ${mindmap.version}`);
+    error.status = 409;
+    throw error;
+  }
+
+  const results = [];
+  const errors = [];
+  let processedCount = 0;
+  
+  // トランザクション開始
+  const now = new Date().toISOString();
+  
+  try {
+    // SQLite D1はネストしたトランザクションをサポートしないため、
+    // バッチ操作では個別にエラーハンドリングを行う
+    
+    for (let i = 0; i < batchData.operations.length; i++) {
+      const operation = batchData.operations[i];
+      
+      try {
+        // 操作の検証
+        if (!operation.type || !['create', 'update', 'delete', 'move'].includes(operation.type)) {
+          throw new Error(`Invalid operation type: ${operation.type}`);
+        }
+
+        let result;
+        
+        switch (operation.type) {
+          case 'create':
+            if (!operation.data) {
+              throw new Error('Create operation requires data');
+            }
+            result = await createNode(db, userId, mindmapId, operation.data);
+            break;
+            
+          case 'update':
+            if (!operation.nodeId || !operation.data) {
+              throw new Error('Update operation requires nodeId and data');
+            }
+            result = await updateNode(db, userId, mindmapId, operation.nodeId, operation.data);
+            break;
+            
+          case 'delete':
+            if (!operation.nodeId) {
+              throw new Error('Delete operation requires nodeId');
+            }
+            result = await deleteNode(db, userId, mindmapId, operation.nodeId);
+            break;
+            
+          case 'move':
+            if (!operation.nodeId || (!operation.data || operation.data.parent_id === undefined)) {
+              throw new Error('Move operation requires nodeId and data with parent_id');
+            }
+            // moveは特殊なupdateとして処理
+            result = await updateNode(db, userId, mindmapId, operation.nodeId, {
+              parent_id: operation.data.parent_id,
+              position_x: operation.data.position_x,
+              position_y: operation.data.position_y
+            });
+            break;
+            
+          default:
+            throw new Error(`Unsupported operation type: ${operation.type}`);
+        }
+        
+        results.push({
+          index: i,
+          operation: operation.type,
+          nodeId: operation.nodeId || result.id,
+          success: true,
+          result: result
+        });
+        
+        processedCount++;
+        
+      } catch (operationError) {
+        console.error(`❌ Batch operation ${i} failed:`, operationError);
+        
+        errors.push({
+          index: i,
+          operation: operation.type,
+          nodeId: operation.nodeId,
+          error: operationError.message,
+          status: operationError.status || 500
+        });
+        
+        // 設定により、エラー時に処理を継続するか停止するかを決定
+        if (batchData.stopOnError) {
+          break;
+        }
+      }
+    }
+
+    // マインドマップのバージョンと更新日時を更新
+    const newVersion = (mindmap.version || 0) + 1;
+    await db.prepare(
+      'UPDATE mindmaps SET updated_at = ?, version = ? WHERE id = ?'
+    ).bind(now, newVersion, mindmapId).run();
+
+    const summary = {
+      success: errors.length === 0,
+      total: batchData.operations.length,
+      processed: processedCount,
+      errors: errors.length,
+      results: results,
+      errorDetails: errors.length > 0 ? errors : undefined,
+      newVersion: newVersion,
+      updatedAt: now
+    };
+
+    console.log('✅ Batch operations completed:', {
+      mindmapId,
+      processed: processedCount,
+      errors: errors.length,
+      newVersion
+    });
+
+    return summary;
+
+  } catch (error) {
+    console.error('❌ Batch operations failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * 高度なバッチ統計 - パフォーマンス監視用
+ * @param {Object} db - データベース接続
+ * @param {string} userId - ユーザーID
+ * @param {string} mindmapId - マインドマップID
+ */
+async function getBatchOperationStats(db, userId, mindmapId) {
+  // ノード数、接続数、添付ファイル数などの統計を効率的に取得
+  const stats = await Promise.all([
+    db.prepare('SELECT COUNT(*) as count FROM nodes WHERE mindmap_id = ?').bind(mindmapId).first(),
+    db.prepare('SELECT COUNT(*) as count FROM node_connections WHERE source_node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)').bind(mindmapId).first(),
+    db.prepare('SELECT COUNT(*) as count FROM attachments WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)').bind(mindmapId).first(),
+    db.prepare('SELECT COUNT(*) as count FROM node_links WHERE node_id IN (SELECT id FROM nodes WHERE mindmap_id = ?)').bind(mindmapId).first()
+  ]);
+
+  return {
+    nodeCount: stats[0].count,
+    connectionCount: stats[1].count,
+    attachmentCount: stats[2].count,
+    linkCount: stats[3].count,
+    timestamp: new Date().toISOString()
   };
 }

@@ -3,32 +3,72 @@ import { getCurrentMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled,
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
-// リアルタイム同期はクラウドエンジンに統合
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
+import { unifiedSyncService } from '../../core/sync/UnifiedSyncService.js';
 
-// データ管理専用のカスタムフック
+// データ管理専用のカスタムフック（統一同期サービス統合版）
 export const useMindMapData = (isAppReady = false) => {
   const [data, setData] = useState(null);
-  
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
-  
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
-  const isSavingRef = useRef(false); // 同時保存処理防止フラグ
-  // リアルタイム同期ブロック機能は削除（クラウドエンジンで処理）
+  const isSavingRef = useRef(false); // 下位互換のため保持
+  const syncServiceInitialized = useRef(false);
+
+  // 統一同期サービス初期化
+  useEffect(() => {
+    if (!syncServiceInitialized.current && isAppReady) {
+      syncServiceInitialized.current = true;
+      
+      const initializeSyncService = async () => {
+        try {
+          // 認証状態に基づいてモードを決定
+          const authState = unifiedAuthManager.getAuthState();
+          const mode = authState.isAuthenticated ? 'cloud' : 'local';
+          
+          await unifiedSyncService.initialize(mode, {
+            apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          });
+          
+          console.log(`🔄 統一同期サービス初期化完了: ${mode}モード`);
+        } catch (error) {
+          console.error('❌ 統一同期サービス初期化失敗:', error);
+        }
+      };
+      
+      initializeSyncService();
+    }
+  }, [isAppReady]);
+
+  // 認証状態変更の監視とモード切り替え
+  useEffect(() => {
+    const handleAuthChange = async (authState) => {
+      if (authState.isAuthenticated) {
+        console.log('🔑 認証成功: クラウドモードに切り替え');
+        await unifiedSyncService.switchToCloudMode({
+          apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+        });
+        await triggerCloudSync();
+      } else {
+        console.log('🔐 ログアウト: ローカルモードに切り替え');
+        await unifiedSyncService.switchToLocalMode();
+      }
+    };
+
+    return unifiedAuthManager.onAuthStateChange(handleAuthChange);
+  }, []);
   
-  // 即座保存機能（編集中の安全性を考慮）
+  // 統一同期サービスを使用した保存機能
   const saveImmediately = async (dataToSave = data, options = {}) => {
     if (!dataToSave || dataToSave.isPlaceholder) return;
 
-    // 🔧 データ整合性チェック
+    // データ整合性チェック
     const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(dataToSave);
     if (!integrityResult.isValid) {
       console.warn('⚠️ 保存前データ整合性チェック失敗');
       DataIntegrityChecker.logIntegrityReport(integrityResult, dataToSave);
       
-      // 重要な問題がある場合は修復を試行
       const criticalIssues = integrityResult.issues.filter(issue => issue.severity === 'critical');
       if (criticalIssues.length > 0) {
         console.warn('🔧 重要な問題を検出、自動修復を試行...');
@@ -43,62 +83,14 @@ export const useMindMapData = (isAppReady = false) => {
       }
     }
     
-    // 🔧 改善: 同時保存処理防止とキューイング
-    if (isSavingRef.current) {
-      console.log('⏸️ 保存スキップ: 既に保存処理実行中');
-      
-      // 保存待ちの最大時間（10秒）
-      const maxWaitTime = 10000;
-      const startTime = Date.now();
-      
-      // 保存完了まで待機（ポーリング）
-      while (isSavingRef.current && (Date.now() - startTime) < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      // タイムアウトの場合は強制継続
-      if (isSavingRef.current) {
-        console.warn('⚠️ 保存タイムアウト: 強制継続');
-        isSavingRef.current = false;
-      }
-    }
-    
+    // 統一同期サービスを使用（編集保護機能付き）
     try {
-      isSavingRef.current = true; // 保存開始フラグ
-      
-      // タイマーをクリア
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
-
-      // 🔧 修正: 編集中の場合は自動保存をスキップして編集を保護
-      const editingInput = document.querySelector('.node-input');
-      if (editingInput && document.activeElement === editingInput) {
-        console.log('✋ 自動保存スキップ: ノード編集中のため保護', { 
-          value: editingInput.value,
-          activeElement: document.activeElement.tagName,
-          isEditing: true
-        });
-        // 編集中は強制blurを行わず、保存もスキップして編集を保護
-        return;
-      }
-      
-      await saveMindMap(dataToSave);
-      console.log('💾 即座保存完了:', dataToSave.title);
-      
-      // 🔧 修正: 保存後にリアルタイム同期を一時的にブロック（無限ループ防止）
-      // リアルタイム同期ブロック機能は削除
-      
-      // 🔧 NEW: リアルタイム同期のスキップオプション
-      if (options.skipRealtimeSync) {
-        console.log('⏭️ リアルタイム同期スキップ: サーバーファースト更新のため');
-      }
-      
+      await unifiedSyncService.saveData(dataToSave, options);
+      console.log('💾 統一同期サービス保存完了:', dataToSave.title);
     } catch (error) {
-      console.warn('⚠️ 即座保存失敗:', error.message);
-    } finally {
-      isSavingRef.current = false; // 保存完了フラグリセット
+      console.warn('⚠️ 統一同期サービス保存失敗:', error.message);
+      // フォールバック: 直接保存
+      await saveMindMap(dataToSave);
     }
   };
 
