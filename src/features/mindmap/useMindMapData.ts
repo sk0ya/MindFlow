@@ -314,16 +314,17 @@ export const useMindMapData = (isAppReady = false) => {
         currentMapId: data.id,
         isMatch: event.data.id === data.id,
         originUserId: event.originUserId,
-        currentUserId: authManager.getAuthState()?.user?.id,
+        currentUserId: authManager.user?.id,
         timestamp: event.timestamp
       });
       
-      // 🔧 修正: 自分の更新を除外して無限ループを防止
-      const currentUser = authManager.getAuthState()?.user;
-      if (event.originUserId && currentUser?.id && event.originUserId === currentUser.id) {
+      // 🔧 修正: ポーリングベースの同期では originUserId が含まれないため、
+      // 一時ブロック機能で無限ループを防止
+      // TODO: 将来的にWebSocketベースの同期でoriginUserIdを実装
+      if (event.originUserId && authManager.user?.id && event.originUserId === authManager.user.id) {
         console.log('⏸️ リアルタイム同期スキップ: 自分の更新のため除外', {
           originUserId: event.originUserId,
-          currentUserId: currentUser.id
+          currentUserId: authManager.user.id
         });
         return;
       }
