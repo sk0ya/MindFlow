@@ -106,14 +106,22 @@ class RealtimeSync {
       const adapter = getCurrentAdapter();
       
       // クラウドアダプターでない場合はスキップ
-      const isCloudAdapter = adapter.constructor.name.includes('Cloud');
+      // constructor.nameは本番環境で圧縮されるため、nameプロパティで判定
+      const isCloudAdapter = adapter.name && adapter.name.includes('クラウド');
       if (!isCloudAdapter) {
         console.log('⏸️ 同期スキップ: ローカルストレージアダプターのため', {
           adapterType: adapter.constructor.name,
-          adapterName: adapter.name || 'unknown'
+          adapterName: adapter.name || 'unknown',
+          isCloudAdapter: false
         });
         return;
       }
+      
+      console.log('✅ クラウドアダプター検出: リアルタイム同期を実行', {
+        adapterType: adapter.constructor.name,
+        adapterName: adapter.name,
+        isCloudAdapter: true
+      });
 
       // 全マップを取得
       const maps = await adapter.getAllMaps();

@@ -792,7 +792,9 @@ export function reinitializeAdapter() {
 // 定期的なリトライ（クラウドモードのみ）
 setInterval(() => {
   const adapter = getCurrentAdapter();
-  if (adapter instanceof CloudStorageAdapter && navigator.onLine) {
+  // instanceof は本番環境で動作しないため、nameプロパティで判定
+  const isCloudAdapter = adapter.name && adapter.name.includes('クラウド');
+  if (isCloudAdapter && navigator.onLine && typeof adapter.retryPendingOperations === 'function') {
     adapter.retryPendingOperations();
   }
 }, 30000);
