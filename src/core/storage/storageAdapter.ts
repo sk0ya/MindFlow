@@ -748,17 +748,43 @@ class StorageAdapterFactory {
 
 // 現在のストレージアダプターを取得
 let currentAdapter = null;
+let lastStorageMode = null;
+let lastAuthState = null;
 
 export function getCurrentAdapter() {
-  if (!currentAdapter) {
+  const settings = getAppSettings();
+  const currentAuthState = authManager.isAuthenticated();
+  
+  // ストレージモードまたは認証状態が変わった場合はアダプターを再作成
+  const shouldRecreateAdapter = !currentAdapter || 
+    lastStorageMode !== settings.storageMode ||
+    (settings.storageMode === 'cloud' && lastAuthState !== currentAuthState);
+  
+  if (shouldRecreateAdapter) {
+    console.log('🔄 アダプター再作成:', {
+      reason: !currentAdapter ? 'initial' : 
+              lastStorageMode !== settings.storageMode ? 'storage-mode-changed' : 
+              'auth-state-changed',
+      oldMode: lastStorageMode,
+      newMode: settings.storageMode,
+      oldAuth: lastAuthState,
+      newAuth: currentAuthState
+    });
+    
     currentAdapter = StorageAdapterFactory.create();
+    lastStorageMode = settings.storageMode;
+    lastAuthState = currentAuthState;
   }
+  
   return currentAdapter;
 }
 
 // ストレージモード変更時の再初期化
 export function reinitializeAdapter() {
   console.log('🔄 ストレージアダプター再初期化');
+  currentAdapter = null;
+  lastStorageMode = null;
+  lastAuthState = null;
   currentAdapter = StorageAdapterFactory.create();
   return currentAdapter;
 }

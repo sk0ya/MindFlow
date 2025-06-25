@@ -106,8 +106,12 @@ class RealtimeSync {
       const adapter = getCurrentAdapter();
       
       // クラウドアダプターでない場合はスキップ
-      if (!adapter.constructor.name.includes('Cloud')) {
-        console.log('⏸️ 同期スキップ: ローカルストレージアダプターのため');
+      const isCloudAdapter = adapter.constructor.name.includes('Cloud');
+      if (!isCloudAdapter) {
+        console.log('⏸️ 同期スキップ: ローカルストレージアダプターのため', {
+          adapterType: adapter.constructor.name,
+          adapterName: adapter.name || 'unknown'
+        });
         return;
       }
 
