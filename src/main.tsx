@@ -27,6 +27,9 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   
   // リアルタイム同期修正テスト
   import('./test-realtime-sync-fix.js');
+  
+  // クラウド認証タイミングテスト
+  import('./test-cloud-auth-timing.js');
 }
 
 const rootElement = document.getElementById('root');

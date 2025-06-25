@@ -107,24 +107,23 @@ const MindMapApp: React.FC = () => {
   // クラウド認証状態管理
   const cloudAuth = useCloudAuth();
 
-  // ストレージモード選択とリニューアルを統合したハンドラー
+  // ストレージモード選択ハンドラー
   const handleStorageModeSelectWithReinit = async (mode) => {
     try {
       console.log('📝 ストレージモード選択 (統合版):', mode);
       
-      // 元のhandleStorageModeSelectを実行
+      // useAppInitializationのhandleStorageModeSelectを実行
       await initState.handleStorageModeSelect(mode);
       
-      // マップデータの再初期化
-      if (typeof reinitializeAfterModeSelection === 'function') {
-        console.log('🔄 マップデータ再初期化開始');
+      // ローカルモードの場合のみマップデータの再初期化
+      // （クラウドモードは認証成功後に実行）
+      if (mode === 'local' && typeof reinitializeAfterModeSelection === 'function') {
+        console.log('🔄 ローカルモード: マップデータ再初期化開始');
         await reinitializeAfterModeSelection();
-        console.log('✅ マップデータ再初期化完了');
-      } else {
-        console.warn('⚠️ reinitializeAfterModeSelection 関数が利用できません');
+        console.log('✅ ローカルモード: マップデータ再初期化完了');
       }
     } catch (error) {
-      console.error('❌ ストレージモード選択とリニューアルエラー:', error);
+      console.error('❌ ストレージモード選択エラー:', error);
     }
   };
 
@@ -133,10 +132,10 @@ const MindMapApp: React.FC = () => {
     try {
       console.log('✅ 認証成功 (統合版)');
       
-      // 元のhandleAuthSuccessを実行
+      // useAppInitializationのhandleAuthSuccessを実行（設定永続化とアダプター初期化を含む）
       await initState.handleAuthSuccess();
       
-      // マップデータの再初期化
+      // 認証成功後のマップデータ再初期化
       if (typeof reinitializeAfterModeSelection === 'function') {
         console.log('🔄 認証成功後のマップデータ再初期化開始');
         await reinitializeAfterModeSelection();
