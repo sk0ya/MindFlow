@@ -4,7 +4,7 @@ import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
 import { getCurrentAdapter } from '../../core/storage/storageAdapter.js';
 
 // ノード操作専用のカスタムフック
-export const useMindMapNodes = (data, updateData) => {
+export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -782,6 +782,11 @@ export const useMindMapNodes = (data, updateData) => {
       setEditingNodeId(null);
       setEditText('');
     }
+    
+    // 編集完了後、一時的にリアルタイム同期をブロック
+    if (blockRealtimeSyncTemporarily && !options.skipSyncBlock) {
+      blockRealtimeSyncTemporarily(3000); // 3秒間ブロック
+    }
   };
 
   // 折りたたみ状態をトグル
@@ -801,9 +806,10 @@ export const useMindMapNodes = (data, updateData) => {
       
       const updateNodeIdRecursive = (node) => {
         if (node.id === oldId) {
+          // すべてのプロパティを保持してIDのみ更新
           return { ...node, id: newId };
         }
-        if (node.children) {
+        if (node.children && node.children.length > 0) {
           return { 
             ...node, 
             children: node.children.map(updateNodeIdRecursive) 
@@ -812,8 +818,10 @@ export const useMindMapNodes = (data, updateData) => {
         return node;
       };
       
-      const newRootNode = updateNodeIdRecursive(data.rootNode);
-      const newData = { ...data, rootNode: newRootNode };
+      // 最新のデータを取得してID更新を実行
+      const currentData = dataRef.current;
+      const newRootNode = updateNodeIdRecursive(currentData.rootNode);
+      const newData = { ...currentData, rootNode: newRootNode };
       
       await updateData(newData, { 
         skipHistory: true, 

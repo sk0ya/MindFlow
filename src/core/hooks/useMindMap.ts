@@ -22,7 +22,7 @@ export const useMindMap = (isAppReady = false) => {
   }, [isAppReady, dataHook.data?.id, debugLogged]);
   
   // ノード操作（dataがある場合のみ）
-  const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData);
+  const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData, dataHook.blockRealtimeSyncTemporarily);
   
   // ナビゲーション（簡略化版）
   const [zoom, setZoom] = useState(1);

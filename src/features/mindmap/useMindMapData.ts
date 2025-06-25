@@ -15,6 +15,13 @@ export const useMindMapData = (isAppReady = false) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const autoSaveTimeoutRef = useRef(null);
   const isSavingRef = useRef(false); // 同時保存処理防止フラグ
+  const realtimeSyncBlockedUntilRef = useRef(0); // リアルタイム同期ブロック時刻
+  
+  // 編集完了後の一時的なリアルタイム同期ブロック
+  const blockRealtimeSyncTemporarily = (durationMs = 3000) => {
+    realtimeSyncBlockedUntilRef.current = Date.now() + durationMs;
+    console.log('🚫 リアルタイム同期を一時ブロック:', { durationMs, blockedUntil: new Date(realtimeSyncBlockedUntilRef.current).toISOString() });
+  };
   
   // 即座保存機能（編集中の安全性を考慮）
   const saveImmediately = async (dataToSave = data) => {
@@ -301,6 +308,16 @@ export const useMindMapData = (isAppReady = false) => {
       
       // 現在のマップIDと一致する場合のみ更新
       if (event.data.id === data.id) {
+        // 一時ブロックチェック
+        const now = Date.now();
+        if (realtimeSyncBlockedUntilRef.current > now) {
+          console.log('🚫 リアルタイム同期スキップ: 一時ブロック中', {
+            remainingMs: realtimeSyncBlockedUntilRef.current - now,
+            blockedUntil: new Date(realtimeSyncBlockedUntilRef.current).toISOString()
+          });
+          return;
+        }
+        
         // 編集状態を事前チェック
         const editingInput = document.querySelector('.node-input');
         const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
@@ -377,6 +394,7 @@ export const useMindMapData = (isAppReady = false) => {
     changeTheme,
     saveMindMap: async () => await saveMindMap(data),
     isLoadingFromCloud,
-    triggerCloudSync
+    triggerCloudSync,
+    blockRealtimeSyncTemporarily
   };
 };
