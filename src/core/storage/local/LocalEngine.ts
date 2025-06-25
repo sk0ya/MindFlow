@@ -2,7 +2,7 @@
 // 完全にローカル環境に特化、ネットワーク機能なし
 
 import { STORAGE_KEYS, createInitialData, generateId } from '../../../shared/types/dataTypes.js';
-import { safeGetItem, safeSetItem } from '../storageManager.js';
+// LocalStorage utilities inline
 import type { MindMapData, Node, StorageResult, SyncStatus } from '../types.js';
 
 export class LocalEngine {
@@ -15,27 +15,23 @@ export class LocalEngine {
 
   // ローカルストレージ操作
   private loadFromStorage<T>(key: string, defaultValue: T): T {
-    return safeGetItem(key, defaultValue);
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error('LocalEngine: データ読み込みエラー:', error);
+      return defaultValue;
+    }
   }
 
   private async saveToStorage<T>(key: string, data: T): Promise<boolean> {
     try {
-      const result = await safeSetItem(key, data);
-      
-      if (!result.success) {
-        console.error('🏠 ローカル保存失敗:', result.error);
-        this.notifyStorageError(key, result.error);
-        return false;
-      }
-      
-      if (result.warning) {
-        console.warn('🏠 ローカル警告:', result.warning);
-        this.notifyStorageWarning(result.warning);
-      }
-      
+      localStorage.setItem(key, JSON.stringify(data));
+      console.log('🏠 ローカル保存成功:', key);
       return true;
     } catch (error) {
-      console.error('🏠 ローカル保存エラー:', error);
+      console.error('🏠 ローカル保存失敗:', error);
+      this.notifyStorageError(key, error.message);
       return false;
     }
   }

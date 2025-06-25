@@ -1,14 +1,30 @@
 ﻿import { STORAGE_KEYS, createInitialData } from '../../shared/types/dataTypes.js';
-import { safeGetItem, safeSetItem, getStorageInfo, checkStorageSpace } from './storageManager.js';
+// LocalStorage utilities directly implemented
 
 // ローカルエンジンから機能をインポート
 import { localEngine } from './local/LocalEngine.js';
 
-// ローカルストレージからデータを取得（localStorage.jsに統一）
-export const loadFromStorage = safeGetItem;
+// ローカルストレージからデータを取得
+export const loadFromStorage = (key, defaultValue = null) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error('Storage load error:', error);
+    return defaultValue;
+  }
+};
 
-// ローカルストレージにデータを保存（localStorage.jsに統一）
-export const saveToStorage = safeSetItem;
+// ローカルストレージにデータを保存
+export const saveToStorage = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('Storage save error:', error);
+    return false;
+  }
+};
 
 
 

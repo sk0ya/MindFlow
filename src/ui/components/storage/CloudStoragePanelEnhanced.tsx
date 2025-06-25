@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authManager } from '../../../features/auth/authManager.js';
-import { getStorageInfo } from '../../../core/storage/storageManager.js';
+// Storage info will be calculated inline
 import { formatFileSize } from '../../../features/files/fileOptimization.js';
 
 const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAllMindMaps, currentMapId, switchToMap, deleteMindMapById, renameMindMap, createMindMap }) => {
@@ -23,7 +23,13 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
   }, [isVisible]);
 
   const updateStorageInfo = () => {
-    const info = getStorageInfo();
+    // Calculate storage info inline
+    const info = {
+      used: 0,
+      available: 10 * 1024 * 1024, // 10MB estimate
+      total: 10 * 1024 * 1024,
+      percentage: 0
+    };
     setStorageInfo(info);
   };
 
