@@ -3,12 +3,14 @@ import { getAppSettings } from './storageUtils.js';
 import { getAllMindMapsLocal, saveMindMapLocal, deleteMindMapLocal } from './localStorage.js';
 import { authManager } from '../../features/auth/authManager.js';
 import { generateId } from '../../shared/types/dataTypes.js';
+import type { StorageAdapter, LocalStorageAdapter, CloudStorageAdapter, MindMapData, Node, UpdateResult, AddNodeResult } from './types.js';
 
 // ストレージモード未選択時の待機アダプター
-class PendingStorageAdapter {
-  constructor() {
-    this.name = 'ストレージモード選択待ち';
-  }
+class PendingStorageAdapter implements StorageAdapter {
+  readonly name = 'ストレージモード選択待ち';
+  readonly storageMode = 'local' as const;
+
+  constructor() {}
 
   async getAllMaps() {
     console.log('⏳ ストレージモード選択待ち: マップ読み込みを保留');
@@ -58,10 +60,11 @@ class PendingStorageAdapter {
 }
 
 // ローカルストレージ専用の処理
-class LocalStorageAdapter {
-  constructor() {
-    this.name = 'ローカルストレージ';
-  }
+class LocalStorageAdapter implements LocalStorageAdapter {
+  readonly name = 'ローカルストレージ';
+  readonly storageMode = 'local' as const;
+
+  constructor() {}
 
   async getAllMaps() {
     const maps = getAllMindMapsLocal();
@@ -120,14 +123,17 @@ class LocalStorageAdapter {
 }
 
 // クラウドストレージ専用の処理（シンプル版）
-class CloudStorageAdapter {
+class CloudStorageAdapter implements CloudStorageAdapter {
+  readonly name = 'クラウドストレージ（シンプル版）';
+  readonly storageMode = 'cloud' as const;
+  baseUrl = '';
+  pendingOperations = new Map();
+  isInitialized = false;
+  initPromise: Promise<void>;
+  useSyncAdapter = false; // シンプルな直接API通信を使用
+
   constructor() {
-    this.name = 'クラウドストレージ（シンプル版）';
-    this.baseUrl = '';
-    this.pendingOperations = new Map();
-    this.isInitialized = false;
     this.initPromise = this.initialize();
-    this.useSyncAdapter = false; // シンプルな直接API通信を使用
   }
 
   // 認証状態の詳細チェック
@@ -762,7 +768,7 @@ let currentAdapter = null;
 let lastStorageMode = null;
 let lastAuthState = null;
 
-export function getCurrentAdapter() {
+export function getCurrentAdapter(): StorageAdapter {
   const settings = getAppSettings();
   const currentAuthState = authManager.isAuthenticated();
   

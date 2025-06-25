@@ -6,21 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useMapList } from '../../../features/mindmap/useMapList.js';
 import { useCurrentMap } from '../../../features/mindmap/useCurrentMap.js';
 import { apiClient, storageService } from '../../../core/storage/api.js';
-
-// Types
-interface NodeData {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  children?: NodeData[];
-  fontSize?: number;
-  fontWeight?: string;
-  collapsed?: boolean;
-  attachments?: any[];
-  mapLinks?: any[];
-  color?: string;
-}
+import type { Node as NodeData, FileAttachment, MapLink } from '../../../core/storage/types.js';
 
 interface MapData {
   id: string;

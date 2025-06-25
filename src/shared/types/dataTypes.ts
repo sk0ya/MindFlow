@@ -238,11 +238,24 @@ export const readFileAsDataURL = (file: File): Promise<string> => {
   });
 };
 
+// ファイルアップロード関連の型定義
+export interface UploadedFileInfo {
+  id?: string;
+  downloadUrl?: string;
+  storagePath?: string;
+  thumbnailUrl?: string;
+}
+
+export interface FileOptimizationInfo {
+  isR2Storage?: boolean;
+  nodeId?: string;
+}
+
 export const createFileAttachment = (
   file: File, 
   dataURL: string | null = null, 
-  uploadedFileInfo: any = null, 
-  optimizationInfo: any = null
+  uploadedFileInfo: UploadedFileInfo | null = null, 
+  optimizationInfo: FileOptimizationInfo | null = null
 ): FileAttachment => {
   return {
     id: uploadedFileInfo?.id || generateId(),

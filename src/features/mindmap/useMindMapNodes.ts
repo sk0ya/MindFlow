@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../shared/types/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
 import { getCurrentAdapter } from '../../core/storage/storageAdapter.js';
+import { getAppSettings } from '../../core/storage/storageUtils.js';
+import type { CloudStorageAdapter } from '../../core/storage/types.js';
 
 // ノード操作専用のカスタムフック
 export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) => {
@@ -697,11 +699,15 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
         
         // 🔧 NEW: クラウドモードではサーバーファースト更新
         const adapter = getCurrentAdapter();
-        if (adapter && adapter.type === 'cloud') {
+        // 型安全なクラウドアダプター判定
+        const isCloudAdapter = adapter.storageMode === 'cloud';
+        
+        if (isCloudAdapter) {
+          const cloudAdapter = adapter as CloudStorageAdapter;
           console.log('☁️ クラウドモード: サーバーファースト更新');
           try {
             // サーバーでノード更新
-            const updateResult = await adapter.updateNode(dataRef.current.id, nodeId, { 
+            const updateResult = await cloudAdapter.updateNode(dataRef.current.id, nodeId, { 
               text: textToSave.trim() 
             });
             
@@ -876,7 +882,7 @@ export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) 
     try {
       console.log('📥 サーバーから最新データ取得開始');
       const adapter = getCurrentAdapter();
-      const latestData = await adapter.getMindMap(dataRef.current.id);
+      const latestData = await adapter.getMap(dataRef.current.id);
       
       if (latestData) {
         console.log('✅ サーバーから最新データ取得完了');
