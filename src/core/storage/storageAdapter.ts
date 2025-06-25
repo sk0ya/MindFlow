@@ -527,26 +527,22 @@ class CloudStorageAdapter implements CloudStorageAdapter {
       }
       
       if (error.message.includes('Mindmap not found') || error.message.includes('404')) {
-        console.warn('🔄 Mindmap not found: マップを作成してからノード追加をリトライします', { mapId });
-        try {
-          // 現在のローカルマップデータを取得
-          const { getCurrentMindMap } = await import('../storage/storageRouter.js');
-          const currentMap = await getCurrentMindMap();
-          if (currentMap) {
-            console.log('📤 マップをサーバーに作成中...', currentMap.title);
-            // マップ全体をサーバーに保存
-            await this.saveMindMap(currentMap);
-            console.log('✅ マップ作成完了、ノード追加をリトライします');
-            
-            // 同じパラメータでリトライ
-            return await this.addNodeWithoutRootCheck(mapId, nodeData, parentId);
-          } else {
-            throw new Error('Local map data not found');
-          }
-        } catch (syncError) {
-          console.error('❌ マップ作成失敗:', syncError);
-          throw new Error(`Mindmap creation failed: ${syncError.message}`);
-        }
+        console.warn('⚠️ Mindmap not found: サーバーにマップが存在しません', { mapId });
+        console.warn('💡 この問題を解決するには、マップを再保存してください');
+        
+        // 🔧 一時的に自動作成を無効化（ルートノード消失の問題調査のため）
+        // TODO: ルートノード保護機能を実装してから再有効化
+        
+        // 失敗した操作をキューに追加して後で処理
+        this.pendingOperations.set(`add_${nodeData.id}`, {
+          type: 'add',
+          mapId,
+          nodeData,
+          parentId,
+          timestamp: Date.now()
+        });
+        
+        throw new Error(`Mindmap not found on server: ${mapId}. Please save the map first.`);
       }
       
       if (error.message === 'PARENT_NODE_NOT_FOUND') {

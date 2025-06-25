@@ -4,6 +4,7 @@ import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
 import { realtimeSync } from '../../core/sync/realtimeSync.js';
+import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
 
 // データ管理専用のカスタムフック
 export const useMindMapData = (isAppReady = false) => {
@@ -26,6 +27,27 @@ export const useMindMapData = (isAppReady = false) => {
   // 即座保存機能（編集中の安全性を考慮）
   const saveImmediately = async (dataToSave = data, options = {}) => {
     if (!dataToSave || dataToSave.isPlaceholder) return;
+
+    // 🔧 データ整合性チェック
+    const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(dataToSave);
+    if (!integrityResult.isValid) {
+      console.warn('⚠️ 保存前データ整合性チェック失敗');
+      DataIntegrityChecker.logIntegrityReport(integrityResult, dataToSave);
+      
+      // 重要な問題がある場合は修復を試行
+      const criticalIssues = integrityResult.issues.filter(issue => issue.severity === 'critical');
+      if (criticalIssues.length > 0) {
+        console.warn('🔧 重要な問題を検出、自動修復を試行...');
+        const { repaired, issues } = DataIntegrityChecker.repairMindMapData(dataToSave);
+        if (repaired) {
+          console.log('✅ データ修復完了', { repairedIssues: issues.length });
+          dataToSave = repaired;
+        } else {
+          console.error('❌ データ修復失敗、保存を中止');
+          return;
+        }
+      }
+    }
     
     // 🔧 同時保存処理の防止
     if (isSavingRef.current) {
