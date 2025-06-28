@@ -9,8 +9,8 @@ interface UseKeyboardShortcutsProps {
   finishEdit: (nodeId: string, text: string) => void;
   editText: string;
   updateNode: (nodeId: string, updates: any) => void;
-  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<void>;
-  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
   deleteNode: (nodeId: string) => void;
   undo: () => void;
   redo: () => void;

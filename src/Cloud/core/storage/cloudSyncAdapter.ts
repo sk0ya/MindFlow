@@ -505,8 +505,14 @@ export class CloudSyncAdapter {
   }
 
   private async getLocalData(mapId: string): Promise<any> {
-    // 実装: ローカルデータを取得
-    return cloudStorage.getMap(mapId);
+    // TODO: 実装: ローカルデータを取得 - localStorage またはローカルアダプターを使用
+    try {
+      const localStorageData = localStorage.getItem(`mindmap_${mapId}`);
+      return localStorageData ? JSON.parse(localStorageData) : null;
+    } catch (error) {
+      console.error('Failed to get local data:', error);
+      return null;
+    }
   }
 
   private removeFromQueue(operationId: string): void {

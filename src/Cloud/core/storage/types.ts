@@ -17,20 +17,25 @@ export interface FileAttachment {
   name: string;
   type: string;
   size: number;
-  dataURL?: string;
+  data: string; // Base64 encoded - required for compatibility with shared types
+  dataURL?: string; // For backward compatibility
   downloadUrl?: string;
   storagePath?: string;
   thumbnailUrl?: string;
+  thumbnail?: string;
   r2FileId?: string;
   isR2Storage?: boolean;
   nodeId?: string;
   isImage?: boolean;
+  optimized?: boolean;
+  originalSize?: number;
 }
 
 export interface MapLink {
   id: string;
   targetMapId: string;
-  title?: string;
+  title: string; // Required to match shared types
+  targetNodeId?: string; // Add optional field from shared types for compatibility
 }
 
 export interface Node {

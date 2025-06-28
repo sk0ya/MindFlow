@@ -3,8 +3,339 @@
  * Durable ObjectsのWebSocketと連携するフロントエンドクライアント
  */
 
-export class RealtimeClient {
-  constructor(apiBaseUrl, authManager) {
+// ===== TYPE DEFINITIONS =====
+
+// Authentication types
+interface AuthManager {
+  isAuthenticated(): boolean;
+  getAuthToken(): string | null;
+  getUserId?(): string | null;
+}
+
+// WebSocket Message Types
+interface BaseMessage {
+  type: string;
+  timestamp?: number;
+}
+
+interface InitialDataMessage extends BaseMessage {
+  type: 'initial_data';
+  sessionId: string;
+  version: number;
+  mindmapState: any;
+  connectedUsers: ConnectedUser[];
+}
+
+interface OperationMessage extends BaseMessage {
+  type: 'operation';
+  operation: Operation;
+}
+
+interface CursorUpdateMessage extends BaseMessage {
+  type: 'cursor_update';
+  userId: string;
+  userName: string;
+  userColor: string;
+  cursor: CursorPosition;
+}
+
+interface UserJoinedMessage extends BaseMessage {
+  type: 'user_joined';
+  user: ConnectedUser;
+}
+
+interface UserLeftMessage extends BaseMessage {
+  type: 'user_left';
+  user: ConnectedUser;
+}
+
+interface ErrorMessage extends BaseMessage {
+  type: 'error';
+  error: string;
+  details?: any;
+}
+
+interface HeartbeatMessage extends BaseMessage {
+  type: 'heartbeat';
+}
+
+interface HeartbeatResponseMessage extends BaseMessage {
+  type: 'heartbeat_response';
+}
+
+type WebSocketMessage = 
+  | InitialDataMessage 
+  | OperationMessage 
+  | CursorUpdateMessage 
+  | UserJoinedMessage 
+  | UserLeftMessage 
+  | ErrorMessage 
+  | HeartbeatMessage 
+  | HeartbeatResponseMessage;
+
+// Operation Types
+interface BaseOperation {
+  type: string;
+  clientId: string;
+  timestamp: number;
+  version?: number;
+}
+
+interface NodeUpdateOperation extends BaseOperation {
+  type: 'node_update';
+  data: {
+    nodeId: string;
+    updates: NodeUpdates;
+  };
+}
+
+interface NodeCreateOperation extends BaseOperation {
+  type: 'node_create';
+  data: {
+    nodeId: string;
+    parentId: string;
+    text: string;
+    position: Position;
+    style?: NodeStyle;
+  };
+}
+
+interface NodeDeleteOperation extends BaseOperation {
+  type: 'node_delete';
+  data: {
+    nodeId: string;
+    preserveChildren: boolean;
+  };
+}
+
+interface NodeMoveOperation extends BaseOperation {
+  type: 'node_move';
+  data: {
+    nodeId: string;
+    newPosition: Position;
+    newParentId?: string;
+  };
+}
+
+interface CursorUpdateOperation extends BaseOperation {
+  type: 'cursor_update';
+  data: {
+    nodeId: string;
+    position: CursorPosition;
+  };
+}
+
+interface ForceSyncOperation extends BaseOperation {
+  type: 'force_sync';
+}
+
+type Operation = 
+  | NodeUpdateOperation 
+  | NodeCreateOperation 
+  | NodeDeleteOperation 
+  | NodeMoveOperation 
+  | CursorUpdateOperation 
+  | ForceSyncOperation;
+
+// Data Types
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface CursorPosition {
+  nodeId?: string;
+  x?: number;
+  y?: number;
+  selectionStart?: number;
+  selectionEnd?: number;
+}
+
+interface NodeStyle {
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+}
+
+interface NodeUpdates {
+  text?: string;
+  position?: Position;
+  style?: Partial<NodeStyle>;
+  collapsed?: boolean;
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
+}
+
+interface NodeData {
+  id?: string;
+  text: string;
+  position: Position;
+  style?: NodeStyle;
+}
+
+interface ConnectedUser {
+  id: string;
+  name: string;
+  email?: string;
+  color: string;
+  avatar?: string;
+  joinedAt: number;
+}
+
+interface UserCursor {
+  userId: string;
+  userName: string;
+  userColor: string;
+  cursor: CursorPosition;
+  timestamp: number;
+}
+
+// Event Types
+interface ConnectionState {
+  isConnected: boolean;
+  mindmapId: string | null;
+  sessionId: string | null;
+  currentVersion: number;
+  connectedUsers: ConnectedUser[];
+  pendingOperations: number;
+  reconnectAttempts: number;
+}
+
+interface DisconnectedEventData {
+  code: number;
+  reason: string;
+  wasClean: boolean;
+}
+
+interface ConnectionErrorEventData {
+  error: string;
+}
+
+interface InitialDataEventData {
+  mindmapState: any;
+  version: number;
+  connectedUsers: ConnectedUser[];
+}
+
+interface OperationReceivedEventData {
+  operation: Operation;
+  version: number;
+}
+
+interface CursorUpdateEventData {
+  userId: string;
+  userName: string;
+  userColor: string;
+  cursor: CursorPosition;
+}
+
+interface UserJoinedEventData {
+  user: ConnectedUser;
+  connectedUsers: ConnectedUser[];
+}
+
+interface UserLeftEventData {
+  user: ConnectedUser;
+  connectedUsers: ConnectedUser[];
+}
+
+interface ServerErrorEventData {
+  error: string;
+  details?: any;
+}
+
+interface ErrorEventData {
+  error: Error;
+}
+
+// Event Handler Types
+type EventHandler<T = any> = (data: T) => void;
+
+interface EventHandlerMap {
+  'connected': EventHandler<void>;
+  'disconnected': EventHandler<DisconnectedEventData>;
+  'connection_error': EventHandler<ConnectionErrorEventData>;
+  'initial_data': EventHandler<InitialDataEventData>;
+  'operation_received': EventHandler<OperationReceivedEventData>;
+  'cursor_update': EventHandler<CursorUpdateEventData>;
+  'user_joined': EventHandler<UserJoinedEventData>;
+  'user_left': EventHandler<UserLeftEventData>;
+  'server_error': EventHandler<ServerErrorEventData>;
+  'error': EventHandler<ErrorEventData>;
+  'reconnect_failed': EventHandler<void>;
+}
+
+type EventName = keyof EventHandlerMap;
+
+// Removed unused RealtimeClientConfig interface
+
+// Class Property Types
+interface RealtimeClientState {
+  websocket: WebSocket | null;
+  isConnected: boolean;
+  reconnectAttempts: number;
+  maxReconnectAttempts: number;
+  reconnectDelay: number;
+  sessionId: string | null;
+  mindmapId: string | null;
+  userId: string | null;
+  currentVersion: number;
+  pendingOperations: Operation[];
+  operationHistory: Operation[];
+  maxHistorySize: number;
+  eventHandlers: Map<string, EventHandler[]>;
+  connectedUsers: Map<string, ConnectedUser>;
+  cursors: Map<string, UserCursor>;
+  heartbeatInterval: NodeJS.Timeout | null;
+  heartbeatTimeout: number;
+  autoReconnect: boolean;
+  reconnectTimer: NodeJS.Timeout | null;
+}
+
+// ===== CLASS IMPLEMENTATION =====
+
+export class RealtimeClient implements RealtimeClientState {
+  // Core properties
+  public readonly apiBaseUrl: string;
+  public readonly authManager: AuthManager;
+  
+  // WebSocket connection management
+  public websocket: WebSocket | null;
+  public isConnected: boolean;
+  public reconnectAttempts: number;
+  public maxReconnectAttempts: number;
+  public reconnectDelay: number;
+  
+  // Session management
+  public sessionId: string | null;
+  public mindmapId: string | null;
+  public userId: string | null;
+  public currentVersion: number;
+  
+  // Operation management
+  public pendingOperations: Operation[];
+  public operationHistory: Operation[];
+  public maxHistorySize: number;
+  
+  // Event handling
+  public eventHandlers: Map<string, EventHandler[]>;
+  
+  // State management
+  public connectedUsers: Map<string, ConnectedUser>;
+  public cursors: Map<string, UserCursor>;
+  
+  // Heartbeat management
+  public heartbeatInterval: NodeJS.Timeout | null;
+  public heartbeatTimeout: number;
+  
+  // Auto-reconnection
+  public autoReconnect: boolean;
+  public reconnectTimer: NodeJS.Timeout | null;
+
+  constructor(apiBaseUrl: string, authManager: AuthManager) {
     this.apiBaseUrl = apiBaseUrl;
     this.authManager = authManager;
     
@@ -44,10 +375,10 @@ export class RealtimeClient {
 
   /**
    * WebSocket接続を開始
-   * @param {string} mindmapId - マインドマップID
-   * @returns {Promise<boolean>} 接続成功可否
+   * @param mindmapId - マインドマップID
+   * @returns 接続成功可否
    */
-  async connect(mindmapId) {
+  async connect(mindmapId: string): Promise<boolean> {
     if (this.isConnected && this.mindmapId === mindmapId) {
       return true;
     }
@@ -74,7 +405,7 @@ export class RealtimeClient {
       
     } catch (error) {
       console.error('WebSocket connection failed:', error);
-      this.emit('connection_error', { error: error.message });
+      this.emit('connection_error', { error: (error as Error).message });
       
       // 自動再接続を試行
       if (this.autoReconnect) {
@@ -88,7 +419,7 @@ export class RealtimeClient {
   /**
    * WebSocket URL構築
    */
-  buildWebSocketUrl(mindmapId) {
+  buildWebSocketUrl(mindmapId: string): string {
     const protocol = this.apiBaseUrl.startsWith('https') ? 'wss' : 'ws';
     const baseUrl = this.apiBaseUrl.replace(/^https?/, protocol);
     
@@ -108,7 +439,7 @@ export class RealtimeClient {
   /**
    * WebSocketイベントハンドラー設定
    */
-  setupWebSocketHandlers() {
+  setupWebSocketHandlers(): void {
     this.websocket.onopen = () => {
       console.log('WebSocket connected');
       this.isConnected = true;
@@ -119,16 +450,16 @@ export class RealtimeClient {
       this.emit('connected');
     };
 
-    this.websocket.onmessage = (event) => {
+    this.websocket.onmessage = (event: MessageEvent) => {
       try {
-        const message = JSON.parse(event.data);
+        const message = JSON.parse(event.data) as WebSocketMessage;
         this.handleMessage(message);
       } catch (error) {
         console.error('Failed to parse WebSocket message:', error);
       }
     };
 
-    this.websocket.onclose = (event) => {
+    this.websocket.onclose = (event: CloseEvent) => {
       console.log('WebSocket disconnected:', event.code, event.reason);
       this.isConnected = false;
       this.stopHeartbeat();
@@ -145,16 +476,16 @@ export class RealtimeClient {
       }
     };
 
-    this.websocket.onerror = (error) => {
+    this.websocket.onerror = (error: Event) => {
       console.error('WebSocket error:', error);
-      this.emit('error', { error });
+      this.emit('error', { error: new Error('WebSocket error') });
     };
   }
 
   /**
    * メッセージハンドラー
    */
-  handleMessage(message) {
+  handleMessage(message: WebSocketMessage): void {
     const { type, ...data } = message;
 
     switch (type) {
@@ -194,13 +525,13 @@ export class RealtimeClient {
   /**
    * 初期データ処理
    */
-  handleInitialData(data) {
+  handleInitialData(data: Omit<InitialDataMessage, 'type'>): void {
     this.sessionId = data.sessionId;
     this.currentVersion = data.version;
     
     // 接続済みユーザー情報を更新
     this.connectedUsers.clear();
-    (data.connectedUsers || []).forEach(user => {
+    (data.connectedUsers || []).forEach((user: ConnectedUser) => {
       this.connectedUsers.set(user.id, user);
     });
 
@@ -217,16 +548,16 @@ export class RealtimeClient {
   /**
    * 操作処理
    */
-  handleOperation(data) {
+  handleOperation(data: Omit<OperationMessage, 'type'>): void {
     const { operation } = data;
     
     // バージョンチェック
-    if (operation.version <= this.currentVersion) {
+    if (operation.version && operation.version <= this.currentVersion) {
       console.warn('Received old operation, ignoring');
       return;
     }
 
-    this.currentVersion = operation.version;
+    this.currentVersion = operation.version || this.currentVersion + 1;
     this.addToHistory(operation);
 
     this.emit('operation_received', {
@@ -238,7 +569,7 @@ export class RealtimeClient {
   /**
    * カーソル更新処理
    */
-  handleCursorUpdate(data) {
+  handleCursorUpdate(data: Omit<CursorUpdateMessage, 'type'>): void {
     const { userId, userName, userColor, cursor } = data;
     
     this.cursors.set(userId, {
@@ -260,7 +591,7 @@ export class RealtimeClient {
   /**
    * ユーザー参加処理
    */
-  handleUserJoined(data) {
+  handleUserJoined(data: Omit<UserJoinedMessage, 'type'>): void {
     const { user } = data;
     this.connectedUsers.set(user.id, user);
 
@@ -273,7 +604,7 @@ export class RealtimeClient {
   /**
    * ユーザー退出処理
    */
-  handleUserLeft(data) {
+  handleUserLeft(data: Omit<UserLeftMessage, 'type'>): void {
     const { user } = data;
     this.connectedUsers.delete(user.id);
     this.cursors.delete(user.id);
@@ -287,26 +618,26 @@ export class RealtimeClient {
   /**
    * エラー処理
    */
-  handleError(data) {
+  handleError(data: Omit<ErrorMessage, 'type'>): void {
     console.error('Server error:', data.error);
     this.emit('server_error', data);
   }
 
   /**
    * 操作送信
-   * @param {string} type - 操作タイプ
-   * @param {Object} data - 操作データ
-   * @param {string} clientId - クライアント操作ID
+   * @param type - 操作タイプ
+   * @param data - 操作データ
+   * @param clientId - クライアント操作ID
    */
-  sendOperation(type, data, clientId = null) {
-    const operation = {
-      type: type,
+  sendOperation(type: string, data: any, clientId: string | null = null): string {
+    const operation: Operation = {
+      type: type as any,
       data: data,
       clientId: clientId || this.generateClientId(),
       timestamp: Date.now()
     };
 
-    if (this.isConnected) {
+    if (this.isConnected && this.websocket) {
       this.websocket.send(JSON.stringify(operation));
     } else {
       // 未接続時は保留
@@ -324,7 +655,7 @@ export class RealtimeClient {
   /**
    * ノード更新送信
    */
-  updateNode(nodeId, updates, clientId = null) {
+  updateNode(nodeId: string, updates: NodeUpdates, clientId: string | null = null): string {
     return this.sendOperation('node_update', {
       nodeId: nodeId,
       updates: updates
@@ -334,7 +665,7 @@ export class RealtimeClient {
   /**
    * ノード作成送信
    */
-  createNode(parentId, nodeData, clientId = null) {
+  createNode(parentId: string, nodeData: NodeData, clientId: string | null = null): string {
     return this.sendOperation('node_create', {
       nodeId: nodeData.id || this.generateNodeId(),
       parentId: parentId,
@@ -347,7 +678,7 @@ export class RealtimeClient {
   /**
    * ノード削除送信
    */
-  deleteNode(nodeId, preserveChildren = false, clientId = null) {
+  deleteNode(nodeId: string, preserveChildren: boolean = false, clientId: string | null = null): string {
     return this.sendOperation('node_delete', {
       nodeId: nodeId,
       preserveChildren: preserveChildren
@@ -357,7 +688,7 @@ export class RealtimeClient {
   /**
    * ノード移動送信
    */
-  moveNode(nodeId, newPosition, newParentId = null, clientId = null) {
+  moveNode(nodeId: string, newPosition: Position, newParentId: string | null = null, clientId: string | null = null): string {
     return this.sendOperation('node_move', {
       nodeId: nodeId,
       newPosition: newPosition,
@@ -368,8 +699,8 @@ export class RealtimeClient {
   /**
    * カーソル位置更新送信
    */
-  updateCursor(nodeId, position) {
-    if (this.isConnected) {
+  updateCursor(nodeId: string, position: CursorPosition): void {
+    if (this.isConnected && this.websocket) {
       this.websocket.send(JSON.stringify({
         type: 'cursor_update',
         data: {
@@ -383,8 +714,8 @@ export class RealtimeClient {
   /**
    * 強制同期実行
    */
-  forceSync() {
-    if (this.isConnected) {
+  forceSync(): void {
+    if (this.isConnected && this.websocket) {
       this.websocket.send(JSON.stringify({
         type: 'force_sync'
       }));
@@ -394,25 +725,25 @@ export class RealtimeClient {
   /**
    * 接続待機
    */
-  waitForConnection(timeout = 10000) {
+  waitForConnection(timeout: number = 10000): Promise<boolean> {
     return new Promise((resolve, reject) => {
       if (this.isConnected) {
         resolve(true);
         return;
       }
 
-      const timeoutId = setTimeout(() => {
+      const timeoutId: NodeJS.Timeout = setTimeout(() => {
         reject(new Error('Connection timeout'));
       }, timeout);
 
-      const onConnected = () => {
+      const onConnected = (): void => {
         clearTimeout(timeoutId);
         this.off('connected', onConnected);
         this.off('connection_error', onError);
         resolve(true);
       };
 
-      const onError = (data) => {
+      const onError = (data: ConnectionErrorEventData): void => {
         clearTimeout(timeoutId);
         this.off('connected', onConnected);
         this.off('connection_error', onError);
@@ -427,13 +758,13 @@ export class RealtimeClient {
   /**
    * 保留中操作の処理
    */
-  processPendingOperations() {
+  processPendingOperations(): void {
     if (this.pendingOperations.length === 0) return;
 
     console.log(`Processing ${this.pendingOperations.length} pending operations`);
     
     for (const operation of this.pendingOperations) {
-      if (this.isConnected) {
+      if (this.isConnected && this.websocket) {
         this.websocket.send(JSON.stringify(operation));
       } else {
         break; // 接続が切れた場合は中断
@@ -446,7 +777,7 @@ export class RealtimeClient {
   /**
    * ハートビート開始
    */
-  startHeartbeat() {
+  startHeartbeat(): void {
     this.stopHeartbeat(); // 既存のタイマーをクリア
 
     this.heartbeatInterval = setInterval(() => {
@@ -462,7 +793,7 @@ export class RealtimeClient {
   /**
    * ハートビート停止
    */
-  stopHeartbeat() {
+  stopHeartbeat(): void {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
@@ -472,7 +803,7 @@ export class RealtimeClient {
   /**
    * 再接続スケジュール
    */
-  scheduleReconnect() {
+  scheduleReconnect(): void {
     if (!this.autoReconnect || this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log('Max reconnection attempts reached');
       this.emit('reconnect_failed');
@@ -503,7 +834,7 @@ export class RealtimeClient {
   /**
    * 接続切断
    */
-  disconnect() {
+  disconnect(): void {
     this.autoReconnect = false;
     
     if (this.reconnectTimer) {
@@ -527,14 +858,14 @@ export class RealtimeClient {
   /**
    * イベントハンドラー管理
    */
-  on(event, handler) {
+  on<T extends EventName>(event: T, handler: EventHandlerMap[T]): void {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, []);
     }
     this.eventHandlers.get(event).push(handler);
   }
 
-  off(event, handler) {
+  off<T extends EventName>(event: T, handler: EventHandlerMap[T]): void {
     if (this.eventHandlers.has(event)) {
       const handlers = this.eventHandlers.get(event);
       const index = handlers.indexOf(handler);
@@ -544,9 +875,9 @@ export class RealtimeClient {
     }
   }
 
-  emit(event, data = null) {
+  emit<T extends EventName>(event: T, data: Parameters<EventHandlerMap[T]>[0] = undefined as any): void {
     if (this.eventHandlers.has(event)) {
-      this.eventHandlers.get(event).forEach(handler => {
+      this.eventHandlers.get(event)!.forEach((handler: EventHandler) => {
         try {
           handler(data);
         } catch (error) {
@@ -560,15 +891,15 @@ export class RealtimeClient {
    * ユーティリティメソッド
    */
   
-  generateClientId() {
+  generateClientId(): string {
     return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  generateNodeId() {
+  generateNodeId(): string {
     return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  addToHistory(operation) {
+  addToHistory(operation: Operation): void {
     this.operationHistory.push(operation);
     
     if (this.operationHistory.length > this.maxHistorySize) {
@@ -580,7 +911,7 @@ export class RealtimeClient {
    * 状態取得メソッド
    */
   
-  getConnectionState() {
+  getConnectionState(): ConnectionState {
     return {
       isConnected: this.isConnected,
       mindmapId: this.mindmapId,
@@ -592,23 +923,23 @@ export class RealtimeClient {
     };
   }
 
-  getConnectedUsers() {
+  getConnectedUsers(): ConnectedUser[] {
     return Array.from(this.connectedUsers.values());
   }
 
-  getUserCursors() {
+  getUserCursors(): UserCursor[] {
     return Array.from(this.cursors.values());
   }
 
-  getOperationHistory() {
+  getOperationHistory(): Operation[] {
     return [...this.operationHistory];
   }
 }
 
 // グローバルインスタンス管理
-let realtimeClientInstance = null;
+let realtimeClientInstance: RealtimeClient | null = null;
 
-export const getRealtimeClient = (apiBaseUrl, authManager) => {
+export const getRealtimeClient = (apiBaseUrl: string, authManager: AuthManager): RealtimeClient => {
   if (!realtimeClientInstance) {
     realtimeClientInstance = new RealtimeClient(apiBaseUrl, authManager);
   }

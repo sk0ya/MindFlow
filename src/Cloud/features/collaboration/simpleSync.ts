@@ -3,7 +3,7 @@
 const API_BASE = 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
 // 基本的なAPI呼び出し
-async function apiRequest(endpoint, options = {}) {
+async function apiRequest(endpoint: string, options: any = {}) {
   const url = `${API_BASE}/api${endpoint}`;
   const userId = getUserId();
   const config = {
@@ -39,13 +39,13 @@ function getUserId() {
 }
 
 // Cloud-only data operations (no localStorage)
-function getCloudOnlyData() {
+function _getCloudOnlyData() {
   // Cloud mode: data comes from cloud API only
   console.log('📡 Cloud mode: data retrieved from cloud API only');
   return [];
 }
 
-function saveCloudOnlyData(mindmaps) {
+function _saveCloudOnlyData(_mindmaps: any) {
   // Cloud mode: data saved to cloud API only
   console.log('☁️ Cloud mode: data saved to cloud API only');
   return true;
@@ -57,10 +57,10 @@ async function getCloudMindMaps() {
   return result.mindmaps || [];
 }
 
-async function uploadMindMap(mindmap) {
-  return await apiRequest(`/mindmaps/${mindmap.id}`, {
+async function _uploadMindMap(_mindmap: any) {
+  return await apiRequest(`/mindmaps/${_mindmap.id}`, {
     method: 'PUT',
-    body: JSON.stringify(mindmap)
+    body: JSON.stringify(_mindmap)
   });
 }
 
@@ -94,8 +94,8 @@ export async function performSync() {
     console.error('=== 同期失敗 ===', error);
     return {
       success: false,
-      error: error.message,
-      message: `同期失敗: ${error.message}`
+      error: (error as Error).message,
+      message: `同期失敗: ${(error as Error).message}`
     };
   }
 }

@@ -106,7 +106,7 @@ class AuthManager {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
       
-      const payload = JSON.parse(atob(parts[1]));
+      const payload = JSON.parse(atob(parts[1] || ''));
       return payload;
     } catch (error) {
       return null;
@@ -195,7 +195,7 @@ class AuthManager {
         console.warn('⚠️ ログイン成功時マップ一覧同期失敗:', syncError);
       }
 
-      return { success: true, user: this.user };
+      return { success: true, user: this.user! };
     } catch (error) {
       console.error('Token verification error:', error);
       throw error;
@@ -245,7 +245,7 @@ class AuthManager {
       this.user = data.user;
       this.saveAuthData();
 
-      return { success: true, user: this.user };
+      return { success: true, user: this.user! };
     } catch (error) {
       console.error('Auth callback error:', error);
       throw error;

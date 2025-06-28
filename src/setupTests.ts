@@ -13,10 +13,10 @@ import './types/jest.d.ts';
 // Create properly typed storage mock
 const createStorageMock = (): MockStorage => ({
   length: 0,
-  key: jest.fn((index: number) => null),
-  getItem: jest.fn((key: string) => null),
-  setItem: jest.fn((key: string, value: string) => {}),
-  removeItem: jest.fn((key: string) => {}),
+  key: jest.fn((_index: number) => null),
+  getItem: jest.fn((_key: string) => null),
+  setItem: jest.fn((_key: string, _value: string) => {}),
+  removeItem: jest.fn((_key: string) => {}),
   clear: jest.fn(() => {})
 });
 

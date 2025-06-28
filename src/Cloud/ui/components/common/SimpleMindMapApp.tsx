@@ -5,8 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMapList } from '../../../features/mindmap/useMapList.js';
 import { useCurrentMap } from '../../../features/mindmap/useCurrentMap.js';
-import { apiClient, storageService } from '../../../core/storage/api.js';
-import type { Node as NodeData, FileAttachment, MapLink } from '../../../core/storage/types.js';
+import { storageService } from '../../../core/storage/api.js';
+import type { Node as NodeData } from '../../../core/storage/types.js';
 
 interface MapData {
   id: string;
@@ -20,25 +20,26 @@ interface MapData {
 
 export const SimpleMindMapApp: React.FC = () => {
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
-  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [editText, setEditText] = useState<string>('');
+  // Removed unused state variables: selectedNodeId, editingNodeId, editText
   
-  const { maps, loadMaps, deleteMap } = useMapList();
-  const { mapData, updateMap, createNewMap, saving } = useCurrentMap(currentMapId);
+  const { maps, loadMaps } = useMapList();
+  const { mapData, createNewMap } = useCurrentMap(currentMapId);
+  
+  // Type assertion to fix TypeScript errors
+  const typedMapData = mapData as MapData | null;
   // ノード操作のシンプルな実装
   const nodeOps = {
     addChild: (parentId: string, text?: string) => console.log('addChild:', parentId, text),
     addSibling: (nodeId: string, text?: string) => console.log('addSibling:', nodeId, text),
     update: (nodeId: string, updates: Partial<NodeData>) => console.log('update:', nodeId, updates),
     remove: (nodeId: string) => console.log('remove:', nodeId),
-    find: (nodeId: string): NodeData | undefined => mapData?.rootNode
+    find: (nodeId: string): NodeData | undefined => typedMapData?.rootNode
   };
 
   // 初期マップの設定
   useEffect(() => {
     if (maps.length > 0 && !currentMapId) {
-      setCurrentMapId(maps[0].id);
+      setCurrentMapId((maps as any[])[0]?.id);
     }
   }, [maps, currentMapId]);
 
@@ -121,7 +122,7 @@ export const SimpleMindMapApp: React.FC = () => {
   // ストレージモード切り替え
   const toggleStorageMode = () => {
     const settings = storageService.getSettings();
-    const newMode = settings.storageMode === 'local' ? 'cloud' : 'local';
+    const newMode: 'local' | 'cloud' = settings.storageMode === 'local' ? 'cloud' : 'local';
     storageService.setSettings({ storageMode: newMode });
     loadMaps();
   };
@@ -155,7 +156,7 @@ export const SimpleMindMapApp: React.FC = () => {
         {/* マップ一覧 */}
         <div>
           <h3>マップ一覧</h3>
-          {maps.map(map => (
+          {(maps as any[]).map((map: any) => (
             <div 
               key={map.id}
               style={{
@@ -315,7 +316,7 @@ const SimpleCanvas: React.FC<SimpleCanvasProps> = ({
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {renderNode(mapData.rootNode)}
+      {typedMapData?.rootNode && renderNode(typedMapData.rootNode)}
     </div>
   );
 };

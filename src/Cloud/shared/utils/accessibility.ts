@@ -1,17 +1,97 @@
 // アクセシビリティ関連のユーティリティ
 
+// Type definitions
+export type NodeType = 'root' | 'child' | 'leaf';
+export type AriaRole = 'main' | 'treeitem' | 'button' | 'dialog' | 'region';
+export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+export type ContrastLevel = 'AA' | 'AAA' | 'Fail';
+
+// ARIA属性インターフェース
+export interface AriaAttributes {
+  role: AriaRole;
+  'aria-level': number;
+  'aria-expanded'?: boolean;
+  'aria-selected': boolean;
+  'aria-label': string;
+  'aria-owns'?: string;
+  'aria-busy'?: boolean;
+  'aria-live'?: 'polite' | 'assertive' | 'off';
+  'aria-describedby'?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+// ノードデータインターフェース
+export interface NodeData {
+  id: string;
+  text?: string;
+  level?: number;
+  children?: Array<{ id: string; [key: string]: unknown }>;
+  collapsed?: boolean;
+  attachments?: Array<{ [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+// コンテキストインターフェース
+export interface AccessibilityContext {
+  isSelected?: boolean;
+  isEditing?: boolean;
+  announcement?: string;
+  [key: string]: unknown;
+}
+
+// フォーカスオプション
+export interface FocusOptions {
+  announcement?: string;
+  preventScroll?: boolean;
+}
+
+// キーボードナビゲーションオプション
+export interface KeyboardNavigationOptions {
+  enableArrowKeys?: boolean;
+  enableTabNavigation?: boolean;
+  enableHomeEnd?: boolean;
+  enableTypeAhead?: boolean;
+}
+
+// カラーコントラスト結果
+export interface ColorContrastResult {
+  ratio: number;
+  meetsAA: boolean;
+  meetsAAA: boolean;
+  level: ContrastLevel;
+}
+
+// アクセシビリティ問題
+export interface AccessibilityIssue {
+  type: string;
+  severity: SeverityLevel;
+  count: number;
+  message: string;
+}
+
+// アクセシビリティチェック結果
+export interface AccessibilityCheckResult {
+  totalIssues: number;
+  issues: AccessibilityIssue[];
+  passed: boolean;
+}
+
 // ARIA属性の生成
-export const generateAriaAttributes = (nodeType, nodeData, context = {}) => {
-  const baseAttributes = {
+export const generateAriaAttributes = (
+  nodeType: NodeType,
+  nodeData: NodeData,
+  context: AccessibilityContext = {}
+): AriaAttributes => {
+  const baseAttributes: AriaAttributes = {
     role: nodeType === 'root' ? 'main' : 'treeitem',
     'aria-level': nodeData.level || 1,
-    'aria-expanded': nodeData.children?.length > 0 ? !nodeData.collapsed : undefined,
+    'aria-expanded': nodeData.children?.length ? !nodeData.collapsed : undefined,
     'aria-selected': context.isSelected || false,
     'aria-label': nodeData.text || 'マインドマップノード'
   };
 
   // 子ノードがある場合
-  if (nodeData.children?.length > 0) {
+  if (nodeData.children && nodeData.children.length > 0) {
     baseAttributes['aria-owns'] = nodeData.children.map(child => child.id).join(' ');
   }
 
@@ -22,7 +102,7 @@ export const generateAriaAttributes = (nodeType, nodeData, context = {}) => {
   }
 
   // ファイル添付がある場合
-  if (nodeData.attachments?.length > 0) {
+  if (nodeData.attachments && nodeData.attachments.length > 0) {
     baseAttributes['aria-describedby'] = `${nodeData.id}-attachments`;
   }
 
@@ -31,13 +111,11 @@ export const generateAriaAttributes = (nodeType, nodeData, context = {}) => {
 
 // フォーカス管理
 export class FocusManager {
-  constructor() {
-    this.focusHistory = [];
-    this.maxHistory = 10;
-  }
+  private focusHistory: string[] = [];
+  private readonly maxHistory: number = 10;
 
   // フォーカスを設定（履歴に追加）
-  setFocus(elementId, options = {}) {
+  public setFocus(elementId: string, options: FocusOptions = {}): boolean {
     const element = document.getElementById(elementId);
     if (!element) return false;
 
@@ -54,7 +132,7 @@ export class FocusManager {
   }
 
   // フォーカス履歴に追加
-  addToHistory(elementId) {
+  private addToHistory(elementId: string): void {
     // 同じ要素が連続の場合は追加しない
     if (this.focusHistory[this.focusHistory.length - 1] === elementId) return;
 
@@ -67,7 +145,7 @@ export class FocusManager {
   }
 
   // 前のフォーカスに戻る
-  restorePreviousFocus() {
+  public restorePreviousFocus(): boolean {
     if (this.focusHistory.length < 2) return false;
 
     // 現在のフォーカスを除いて前のフォーカスを取得
@@ -78,7 +156,7 @@ export class FocusManager {
   }
 
   // スクリーンリーダーへの音声通知
-  announceToScreenReader(element, customMessage) {
+  public announceToScreenReader(element: Element, customMessage?: string): void {
     const message = customMessage || this.generateAnnouncementMessage(element);
     
     // ARIA live regionを使用して通知
@@ -100,12 +178,12 @@ export class FocusManager {
   }
 
   // 音声通知メッセージの生成
-  generateAnnouncementMessage(element) {
+  private generateAnnouncementMessage(element: Element): string {
     const role = element.getAttribute('role');
     const level = element.getAttribute('aria-level');
     const expanded = element.getAttribute('aria-expanded');
     const selected = element.getAttribute('aria-selected');
-    const label = element.getAttribute('aria-label') || element.textContent;
+    const label = element.getAttribute('aria-label') || element.textContent || '';
 
     let message = label;
 
@@ -129,7 +207,12 @@ export class FocusManager {
 
 // キーボードナビゲーションのヘルパー
 export class KeyboardNavigationHelper {
-  constructor(rootElement, options = {}) {
+  private rootElement: Element;
+  private options: KeyboardNavigationOptions;
+  private typeAheadBuffer: string = '';
+  private typeAheadTimeout: number | null = null;
+
+  constructor(rootElement: Element, options: KeyboardNavigationOptions = {}) {
     this.rootElement = rootElement;
     this.options = {
       enableArrowKeys: true,
@@ -139,13 +222,10 @@ export class KeyboardNavigationHelper {
       ...options
     };
     
-    this.typeAheadBuffer = '';
-    this.typeAheadTimeout = null;
-    
     this.init();
   }
 
-  init() {
+  public init(): void {
     if (this.options.enableArrowKeys) {
       this.setupArrowKeyNavigation();
     }
@@ -159,12 +239,13 @@ export class KeyboardNavigationHelper {
     }
   }
 
-  setupArrowKeyNavigation() {
-    this.rootElement.addEventListener('keydown', (event) => {
-      const currentElement = event.target;
+  private setupArrowKeyNavigation(): void {
+    this.rootElement.addEventListener('keydown', (event: Event) => {
+      const keyEvent = event as KeyboardEvent;
+      const currentElement = keyEvent.target as Element;
       let targetElement = null;
 
-      switch (event.key) {
+      switch (keyEvent.key) {
         case 'ArrowUp':
           targetElement = this.findPreviousElement(currentElement);
           break;
@@ -180,36 +261,38 @@ export class KeyboardNavigationHelper {
       }
 
       if (targetElement) {
-        event.preventDefault();
-        targetElement.focus();
+        keyEvent.preventDefault();
+        (targetElement as HTMLElement).focus();
       }
     });
   }
 
-  setupHomeEndNavigation() {
-    this.rootElement.addEventListener('keydown', (event) => {
-      if (event.key === 'Home') {
-        event.preventDefault();
+  private setupHomeEndNavigation(): void {
+    this.rootElement.addEventListener('keydown', (event: Event) => {
+      const keyEvent = event as KeyboardEvent;
+      if (keyEvent.key === 'Home') {
+        keyEvent.preventDefault();
         const firstElement = this.findFirstElement();
-        if (firstElement) firstElement.focus();
-      } else if (event.key === 'End') {
-        event.preventDefault();
+        if (firstElement) (firstElement as HTMLElement).focus();
+      } else if (keyEvent.key === 'End') {
+        keyEvent.preventDefault();
         const lastElement = this.findLastElement();
-        if (lastElement) lastElement.focus();
+        if (lastElement) (lastElement as HTMLElement).focus();
       }
     });
   }
 
-  setupTypeAheadNavigation() {
-    this.rootElement.addEventListener('keydown', (event) => {
+  private setupTypeAheadNavigation(): void {
+    this.rootElement.addEventListener('keydown', (event: Event) => {
+      const keyEvent = event as KeyboardEvent;
       // 文字キーの場合
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-        this.handleTypeAhead(event.key);
+      if (keyEvent.key.length === 1 && !keyEvent.ctrlKey && !keyEvent.metaKey) {
+        this.handleTypeAhead(keyEvent.key);
       }
     });
   }
 
-  handleTypeAhead(char) {
+  private handleTypeAhead(char: string): void {
     // バッファに文字を追加
     this.typeAheadBuffer += char.toLowerCase();
     
@@ -221,42 +304,42 @@ export class KeyboardNavigationHelper {
     // マッチする要素を検索
     const matchingElement = this.findElementByText(this.typeAheadBuffer);
     if (matchingElement) {
-      matchingElement.focus();
+      (matchingElement as HTMLElement).focus();
     }
     
     // バッファをリセット（1秒後）
-    this.typeAheadTimeout = setTimeout(() => {
+    this.typeAheadTimeout = window.setTimeout(() => {
       this.typeAheadBuffer = '';
     }, 1000);
   }
 
-  findElementByText(searchText) {
+  private findElementByText(searchText: string): Element | undefined {
     const elements = this.getAllFocusableElements();
     return elements.find(element => {
-      const text = element.textContent.toLowerCase();
+      const text = (element as HTMLElement).textContent?.toLowerCase() || '';
       return text.startsWith(searchText);
     });
   }
 
-  findPreviousElement(currentElement) {
+  private findPreviousElement(currentElement: Element): Element | null {
     const elements = this.getAllFocusableElements();
     const currentIndex = elements.indexOf(currentElement);
     return currentIndex > 0 ? elements[currentIndex - 1] : null;
   }
 
-  findNextElement(currentElement) {
+  private findNextElement(currentElement: Element): Element | null {
     const elements = this.getAllFocusableElements();
     const currentIndex = elements.indexOf(currentElement);
     return currentIndex < elements.length - 1 ? elements[currentIndex + 1] : null;
   }
 
-  findParentElement(currentElement) {
+  private findParentElement(currentElement: Element): Element | null {
     // ARIA関係から親要素を特定
     const parentId = currentElement.getAttribute('aria-parent');
     return parentId ? document.getElementById(parentId) : null;
   }
 
-  findFirstChildElement(currentElement) {
+  private findFirstChildElement(currentElement: Element): Element | null {
     // ARIA関係から最初の子要素を特定
     const owns = currentElement.getAttribute('aria-owns');
     if (owns) {
@@ -266,28 +349,28 @@ export class KeyboardNavigationHelper {
     return null;
   }
 
-  findFirstElement() {
+  private findFirstElement(): Element | null {
     const elements = this.getAllFocusableElements();
     return elements[0] || null;
   }
 
-  findLastElement() {
+  private findLastElement(): Element | null {
     const elements = this.getAllFocusableElements();
     return elements[elements.length - 1] || null;
   }
 
-  getAllFocusableElements() {
+  private getAllFocusableElements(): Element[] {
     // フォーカス可能な要素を取得
     const selector = '[tabindex], [role="treeitem"], button, input, select, textarea, a[href]';
     return Array.from(this.rootElement.querySelectorAll(selector))
-      .filter(element => !element.disabled && !element.hidden);
+      .filter(element => !(element as any).disabled && !(element as any).hidden);
   }
 }
 
 // カラーコントラスト計算
-export const calculateColorContrast = (color1, color2) => {
+export const calculateColorContrast = (color1: string, color2: string): ColorContrastResult => {
   // RGB値を正規化された値に変換
-  const getRGBValues = (color) => {
+  const getRGBValues = (color: string): [number, number, number] => {
     // 16進数カラーを想定
     const hex = color.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16) / 255;
@@ -297,7 +380,7 @@ export const calculateColorContrast = (color1, color2) => {
   };
 
   // 相対輝度を計算
-  const getRelativeLuminance = (rgb) => {
+  const getRelativeLuminance = (rgb: [number, number, number]): number => {
     const [r, g, b] = rgb.map(c => {
       return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     });
@@ -324,8 +407,8 @@ export const calculateColorContrast = (color1, color2) => {
 };
 
 // アクセシビリティチェッカー
-export const runAccessibilityCheck = (rootElement) => {
-  const issues = [];
+export const runAccessibilityCheck = (rootElement: Element): AccessibilityCheckResult => {
+  const issues: AccessibilityIssue[] = [];
 
   // 基本的なアクセシビリティチェック
   const elementsWithoutLabels = rootElement.querySelectorAll('button:not([aria-label]):not([aria-labelledby]), input:not([aria-label]):not([aria-labelledby]):not([id])');
@@ -356,26 +439,37 @@ export const runAccessibilityCheck = (rootElement) => {
   };
 };
 
+// アクセシビリティマネージャーインターフェース
+export interface AccessibilityManager {
+  focusManager: FocusManager;
+  isScreenReaderActive: boolean;
+  isHighContrastMode: boolean;
+  init(): void;
+  detectScreenReader(): void;
+  detectHighContrastMode(): void;
+  setupGlobalKeyboardHandlers(): void;
+}
+
 // グローバルアクセシビリティマネージャー
-export const accessibilityManager = {
+export const accessibilityManager: AccessibilityManager = {
   focusManager: new FocusManager(),
   isScreenReaderActive: false,
   isHighContrastMode: false,
   
-  init() {
+  init(): void {
     this.detectScreenReader();
     this.detectHighContrastMode();
     this.setupGlobalKeyboardHandlers();
   },
   
-  detectScreenReader() {
+  detectScreenReader(): void {
     // スクリーンリーダーの検出（簡易的な方法）
     this.isScreenReaderActive = window.navigator.userAgent.includes('NVDA') || 
                                window.navigator.userAgent.includes('JAWS') || 
                                window.speechSynthesis !== undefined;
   },
   
-  detectHighContrastMode() {
+  detectHighContrastMode(): void {
     // ハイコントラストモードの検出
     const testElement = document.createElement('div');
     testElement.style.border = '1px solid';
@@ -388,7 +482,7 @@ export const accessibilityManager = {
     document.body.removeChild(testElement);
   },
   
-  setupGlobalKeyboardHandlers() {
+  setupGlobalKeyboardHandlers(): void {
     // Escapeキーでフォーカストラップから抜ける
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {

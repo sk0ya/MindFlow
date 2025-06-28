@@ -8,7 +8,7 @@ export const ERROR_TYPES = {
   VALIDATION_ERROR: 'validation_error',
   AUTHENTICATION_ERROR: 'auth_error',
   UNKNOWN_ERROR: 'unknown_error'
-};
+} as const;
 
 // エラーの重要度
 export const ERROR_SEVERITY = {
@@ -16,11 +16,85 @@ export const ERROR_SEVERITY = {
   MEDIUM: 'medium',
   HIGH: 'high',
   CRITICAL: 'critical'
-};
+} as const;
+
+// Type definitions
+export type ErrorType = typeof ERROR_TYPES[keyof typeof ERROR_TYPES];
+export type ErrorSeverity = typeof ERROR_SEVERITY[keyof typeof ERROR_SEVERITY];
+
+// エラーコンテキスト
+export interface ErrorContext {
+  [key: string]: unknown;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
+  reason?: unknown;
+  maxRetries?: number;
+  attempts?: number;
+  recoveryFailed?: boolean;
+}
+
+// エラーエントリ
+export interface ErrorEntry {
+  id: string;
+  message: string;
+  type: ErrorType;
+  severity: ErrorSeverity;
+  stack?: string;
+  context: ErrorContext;
+  timestamp: string;
+  userAgent: string;
+  url: string;
+}
+
+// エラーフィルター
+export interface ErrorFilter {
+  type?: ErrorType;
+  severity?: ErrorSeverity;
+  since?: string | Date;
+}
+
+// エラー統計
+export interface ErrorStats {
+  total: number;
+  byType: Record<ErrorType, number>;
+  bySeverity: Record<ErrorSeverity, number>;
+}
+
+// エラーハンドリングオプション
+export interface ErrorHandlingOptions {
+  type?: ErrorType;
+  severity?: ErrorSeverity;
+  notify?: boolean;
+}
+
+// エラー回復オプション
+export interface ErrorRecoveryOptions {
+  maxRetries?: number;
+  delay?: number;
+  onRetry?: (error: Error, attempt: number) => void;
+}
+
+// フォーカスオプション
+export interface FocusOptions {
+  announcement?: string;
+  preventScroll?: boolean;
+}
 
 // カスタムエラークラス
 export class MindFlowError extends Error {
-  constructor(message, type = ERROR_TYPES.UNKNOWN_ERROR, severity = ERROR_SEVERITY.MEDIUM, context = {}) {
+  public readonly type: ErrorType;
+  public readonly severity: ErrorSeverity;
+  public readonly context: ErrorContext;
+  public readonly timestamp: string;
+  public readonly errorId: string;
+
+  constructor(
+    message: string,
+    type: ErrorType = ERROR_TYPES.UNKNOWN_ERROR,
+    severity: ErrorSeverity = ERROR_SEVERITY.MEDIUM,
+    context: ErrorContext = {}
+  ) {
     super(message);
     this.name = 'MindFlowError';
     this.type = type;
@@ -33,21 +107,19 @@ export class MindFlowError extends Error {
 
 // エラーログ管理
 class ErrorLogger {
-  constructor() {
-    this.errors = [];
-    this.maxErrors = 100;
-    this.listeners = [];
-  }
+  private errors: ErrorEntry[] = [];
+  private readonly maxErrors: number = 100;
+  private listeners: Array<(errorEntry: ErrorEntry) => void> = [];
 
-  log(error, context = {}) {
-    const errorEntry = {
-      id: error.errorId || `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  log(error: Error | MindFlowError, context: ErrorContext = {}): ErrorEntry {
+    const errorEntry: ErrorEntry = {
+      id: (error as MindFlowError).errorId || `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       message: error.message,
-      type: error.type || ERROR_TYPES.UNKNOWN_ERROR,
-      severity: error.severity || ERROR_SEVERITY.MEDIUM,
+      type: (error as MindFlowError).type || ERROR_TYPES.UNKNOWN_ERROR,
+      severity: (error as MindFlowError).severity || ERROR_SEVERITY.MEDIUM,
       stack: error.stack,
-      context: { ...error.context, ...context },
-      timestamp: error.timestamp || new Date().toISOString(),
+      context: { ...(error as MindFlowError).context, ...context },
+      timestamp: (error as MindFlowError).timestamp || new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: window.location.href
     };
@@ -76,7 +148,7 @@ class ErrorLogger {
     return errorEntry;
   }
 
-  logToConsole(errorEntry) {
+  private logToConsole(errorEntry: ErrorEntry): void {
     const style = this.getConsoleStyle(errorEntry.severity);
     
     console.group(`%c🚨 MindFlow Error [${errorEntry.severity.toUpperCase()}]`, style);
@@ -90,7 +162,7 @@ class ErrorLogger {
     console.groupEnd();
   }
 
-  getConsoleStyle(severity) {
+  private getConsoleStyle(severity: ErrorSeverity): string {
     const styles = {
       [ERROR_SEVERITY.LOW]: 'color: #f39c12; font-weight: bold;',
       [ERROR_SEVERITY.MEDIUM]: 'color: #e67e22; font-weight: bold;',
@@ -100,25 +172,25 @@ class ErrorLogger {
     return styles[severity] || styles[ERROR_SEVERITY.MEDIUM];
   }
 
-  saveToStorage() {
+  private saveToStorage(): void {
     // Cloud mode: no localStorage for error storage
     console.log('☁️ Cloud mode: errors not saved to localStorage');
   }
 
-  loadFromStorage() {
+  public loadFromStorage(): void {
     // Cloud mode: no localStorage for error storage
     console.log('☁️ Cloud mode: errors not loaded from localStorage');
   }
 
-  addListener(listener) {
+  public addListener(listener: (errorEntry: ErrorEntry) => void): void {
     this.listeners.push(listener);
   }
 
-  removeListener(listener) {
+  public removeListener(listener: (errorEntry: ErrorEntry) => void): void {
     this.listeners = this.listeners.filter(l => l !== listener);
   }
 
-  getErrors(filter = {}) {
+  public getErrors(filter: ErrorFilter = {}): ErrorEntry[] {
     let filtered = this.errors;
 
     if (filter.type) {
@@ -134,18 +206,18 @@ class ErrorLogger {
       filtered = filtered.filter(error => new Date(error.timestamp) >= since);
     }
 
-    return filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
-  clear() {
+  public clear(): void {
     this.errors = [];
     this.saveToStorage();
   }
 
-  getStats() {
+  public getStats(): ErrorStats {
     const total = this.errors.length;
-    const byType = {};
-    const bySeverity = {};
+    const byType = {} as Record<ErrorType, number>;
+    const bySeverity = {} as Record<ErrorSeverity, number>;
     
     this.errors.forEach(error => {
       byType[error.type] = (byType[error.type] || 0) + 1;
@@ -163,8 +235,8 @@ export const errorLogger = new ErrorLogger();
 errorLogger.loadFromStorage();
 
 // ユーザーフレンドリーなエラーメッセージの生成
-export const getUserFriendlyMessage = (error) => {
-  const messages = {
+export const getUserFriendlyMessage = (error: MindFlowError | Error): string => {
+  const messages: Record<ErrorType, string> = {
     [ERROR_TYPES.STORAGE_ERROR]: 'データの保存中にエラーが発生しました。ブラウザの容量を確認してください。',
     [ERROR_TYPES.NETWORK_ERROR]: 'ネットワーク接続に問題があります。インターネット接続を確認してください。',
     [ERROR_TYPES.FILE_ERROR]: 'ファイルの処理中にエラーが発生しました。ファイル形式やサイズを確認してください。',
@@ -173,11 +245,16 @@ export const getUserFriendlyMessage = (error) => {
     [ERROR_TYPES.UNKNOWN_ERROR]: '予期しないエラーが発生しました。ページを再読み込みしてお試しください。'
   };
 
-  return messages[error.type] || messages[ERROR_TYPES.UNKNOWN_ERROR];
+  const errorType = (error as MindFlowError).type || ERROR_TYPES.UNKNOWN_ERROR;
+  return messages[errorType] || messages[ERROR_TYPES.UNKNOWN_ERROR];
 };
 
 // エラーハンドリングのヘルパー関数
-export const handleError = (error, context = {}, options = {}) => {
+export const handleError = (
+  error: Error | MindFlowError,
+  context: ErrorContext = {},
+  options: ErrorHandlingOptions = {}
+): ErrorEntry => {
   // MindFlowErrorでない場合は変換
   let mindFlowError;
   if (error instanceof MindFlowError) {
@@ -208,7 +285,7 @@ export const handleError = (error, context = {}, options = {}) => {
 };
 
 // エラー通知の表示
-const showErrorNotification = (error) => {
+const showErrorNotification = (error: MindFlowError): void => {
   const message = getUserFriendlyMessage(error);
   
   // ブラウザのnotification APIが利用可能な場合
@@ -240,20 +317,24 @@ export const setupGlobalErrorHandling = () => {
   });
 
   // Unhandled Promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
+  window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+    const reason = event.reason;
+    const message = (reason instanceof Error) ? reason.message : 'Unhandled promise rejection';
     handleError(new MindFlowError(
-      event.reason?.message || 'Unhandled promise rejection',
+      message,
       ERROR_TYPES.UNKNOWN_ERROR,
       ERROR_SEVERITY.HIGH,
       {
-        reason: event.reason
+        reason: reason
       }
     ));
   });
 
   // Storage quota exceeded
-  window.addEventListener('storage', (event) => {
-    if (event.error) {
+  window.addEventListener('storage', (event: StorageEvent) => {
+    // Note: StorageEvent doesn't have an error property in standard API
+    // This is a conceptual event handler for storage-related errors
+    if ('error' in event && (event as any).error) {
       handleError(new MindFlowError(
         'Storage error occurred',
         ERROR_TYPES.STORAGE_ERROR,
@@ -264,7 +345,10 @@ export const setupGlobalErrorHandling = () => {
 };
 
 // エラー回復のヘルパー
-export const withErrorRecovery = async (fn, options = {}) => {
+export const withErrorRecovery = async <T>(
+  fn: () => Promise<T>,
+  options: ErrorRecoveryOptions = {}
+): Promise<T> => {
   const { maxRetries = 3, delay = 1000, onRetry } = options;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -272,7 +356,7 @@ export const withErrorRecovery = async (fn, options = {}) => {
       return await fn();
     } catch (error) {
       if (attempt === maxRetries) {
-        handleError(error, { 
+        handleError(error as Error, { 
           maxRetries, 
           attempts: attempt,
           recoveryFailed: true 
@@ -281,10 +365,13 @@ export const withErrorRecovery = async (fn, options = {}) => {
       }
 
       if (onRetry) {
-        onRetry(error, attempt);
+        onRetry(error as Error, attempt);
       }
 
       await new Promise(resolve => setTimeout(resolve, delay * attempt));
     }
   }
+  
+  // This line should never be reached, but TypeScript requires it
+  throw new Error('withErrorRecovery: Unexpected error');
 };

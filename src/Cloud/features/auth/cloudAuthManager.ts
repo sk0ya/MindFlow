@@ -28,8 +28,8 @@ class CloudAuthManager {
     const originalLogout = authManager.logout;
 
     // ログイン成功時の処理を拡張
-    authManager.login = async (...args: any[]) => {
-      const result = await originalLogin.apply(authManager, args);
+    authManager.login = async (email: string) => {
+      const result = await originalLogin.call(authManager, email);
       this.notifyAuthEvent('login_success', authManager.getCurrentUser());
       return result;
     };
@@ -105,7 +105,7 @@ class CloudAuthManager {
     // GitHub OAuth URLを構築
     const authUrl = new URL('https://github.com/login/oauth/authorize');
     authUrl.searchParams.set('client_id', this.GITHUB_CLIENT_ID);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('redirect_uri', redirectUri || window.location.origin);
     authUrl.searchParams.set('scope', scope);
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('allow_signup', 'true');
@@ -290,7 +290,7 @@ class CloudAuthManager {
       if (parts.length !== 3) return null;
       
       const payload = parts[1];
-      const decoded = atob(payload);
+      const decoded = atob(payload || '');
       return JSON.parse(decoded);
     } catch (error) {
       return null;

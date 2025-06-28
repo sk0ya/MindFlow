@@ -104,7 +104,7 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       return result;
     } catch (error) {
       const authError = error instanceof AuthError ? error : 
-        new AuthError(error.message || 'Login failed', 'UNKNOWN_ERROR');
+        new AuthError((error as Error).message || 'Login failed', 'UNKNOWN_ERROR');
       
       this.setState({ error: authError.message });
       this.emit('error', { error: authError, method });
@@ -123,13 +123,17 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       const result = await legacyAuthManager.handleAuthCallback(token);
       
       if (result.success && result.user) {
-        await this.setAuthData(result.user, token);
-        this.emit('login', { user: result.user, method: 'token_verification' });
+        const userWithProvider = { ...result.user, provider: 'email' as const };
+        await this.setAuthData(userWithProvider, token);
+        this.emit('login', { user: userWithProvider, method: 'token_verification' });
       }
 
-      return result;
+      return {
+        ...result,
+        user: result.user ? { ...result.user, provider: 'email' as const } : undefined
+      };
     } catch (error) {
-      const authError = new AuthError(error.message || 'Token verification failed', 'INVALID_TOKEN');
+      const authError = new AuthError((error as Error).message || 'Token verification failed', 'INVALID_TOKEN');
       this.setState({ error: authError.message });
       this.emit('error', { error: authError });
       
@@ -145,13 +149,17 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       const result = await legacyAuthManager.verifyMagicLink(token);
       
       if (result.success && result.user) {
-        await this.setAuthData(result.user, result.token || token);
-        this.emit('login', { user: result.user, method: 'magic_link' });
+        const userWithProvider = { ...result.user, provider: 'email' as const };
+        await this.setAuthData(userWithProvider, result.token || token);
+        this.emit('login', { user: userWithProvider, method: 'magic_link' });
       }
 
-      return result;
+      return {
+        ...result,
+        user: result.user ? { ...result.user, provider: 'email' as const } : undefined
+      };
     } catch (error) {
-      const authError = new AuthError(error.message || 'Magic link verification failed', 'INVALID_TOKEN');
+      const authError = new AuthError((error as Error).message || 'Magic link verification failed', 'INVALID_TOKEN');
       this.setState({ error: authError.message });
       return { success: false, error: authError.message };
     }
@@ -297,7 +305,7 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       // 簡単なヘルスチェック
       const response = await fetch(`${this.config.api.baseUrl}/api/health`, {
         method: 'GET',
-        timeout: 5000
+        signal: AbortSignal.timeout(5000)
       });
       
       return response.ok;
@@ -353,17 +361,17 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     return await legacyAuthManager.sendMagicLink(options.email);
   }
 
-  private async loginWithGoogle(options?: GoogleOAuthOptions): Promise<AuthResult> {
+  private async loginWithGoogle(_options?: GoogleOAuthOptions): Promise<AuthResult> {
     // レガシーマネージャーを使用
     return await legacyAuthManager.loginWithGoogle();
   }
 
-  private async loginWithGitHub(options?: GitHubOAuthOptions): Promise<AuthResult> {
+  private async loginWithGitHub(_options?: GitHubOAuthOptions): Promise<AuthResult> {
     // CloudAuthManagerの機能が必要な場合は別途実装
     throw new AuthError('GitHub login not yet implemented in unified manager', 'NOT_IMPLEMENTED');
   }
 
-  private async setAuthData(user: User, token: string): Promise<void> {
+  private async setAuthData(user: import('./types/authTypes').User, token: string): Promise<void> {
     // JWTからexpを取得（簡易実装）
     let expiresAt: number | null = null;
     try {
@@ -383,7 +391,13 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     });
 
     // レガシーマネージャーにも設定
-    await legacyAuthManager.setAuthData(token, user);
+    const legacyUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name || undefined,
+      avatar: user.avatar
+    };
+    await legacyAuthManager.setAuthData(token, legacyUser);
     
     // ログインイベントを発火
     this.emit('login', { user, token });

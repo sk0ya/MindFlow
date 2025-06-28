@@ -8,7 +8,7 @@
  * - 競合解決
  */
 
-import { EditProtectionManager, EditMode, UpdateOptions, EditEventData } from './EditProtectionManager.js';
+import { EditProtectionManager, UpdateOptions, EditEventData } from './EditProtectionManager.js';
 import { getCurrentMindMap, updateMindMap, getAllMindMaps } from '../storage/StorageManager.js';
 import { unifiedAuthManager } from '../../features/auth/UnifiedAuthManager.js';
 import type { MindMapData, Node } from '../storage/types.js';
@@ -31,7 +31,7 @@ export interface SyncEventData {
   data?: MindMapData;
   options?: SyncOptions;
   timestamp?: number;
-  error?: Error;
+  error?: Error | undefined;
   mode?: SyncMode;
   editingNodes?: string[];
   source?: string;
@@ -72,13 +72,13 @@ export interface BatchResult {
   processed: number;
   errors: number;
   results: BatchOperationResult[];
-  errorDetails?: BatchError[];
+  errorDetails: BatchError[];
 }
 
 export interface BatchOperationResult {
   index: number;
   operation: string;
-  nodeId?: string;
+  nodeId: string;
   success: boolean;
   result: any;
 }
@@ -86,7 +86,7 @@ export interface BatchOperationResult {
 export interface BatchError {
   index: number;
   operation: string;
-  nodeId?: string;
+  nodeId: string;
   error: string;
 }
 
@@ -141,7 +141,7 @@ export class UnifiedSyncService {
     console.log(`🚀 UnifiedSyncService初期化: ${mode}モード`);
     
     this.mode = mode;
-    this.editProtection.mode = mode;
+    // Note: EditProtectionManager mode is set during construction, not modifiable after
     
     if (mode === 'cloud') {
       await this.initializeCloudMode(config);
@@ -155,7 +155,7 @@ export class UnifiedSyncService {
   /**
    * ローカルモード初期化
    */
-  private async initializeLocalMode(config: SyncConfiguration): Promise<void> {
+  private async initializeLocalMode(_config: SyncConfiguration): Promise<void> {
     console.log('📱 ローカルモード初期化');
     // ローカルストレージの整合性チェック
     // 必要に応じて追加設定
@@ -168,9 +168,13 @@ export class UnifiedSyncService {
     console.log('☁️ クラウドモード初期化');
     
     // API クライアント設定
+    const authToken = await this.getAuthToken();
+    if (!authToken) {
+      throw new Error('認証トークンが取得できません。ログインが必要です。');
+    }
     this.apiClient = new CloudAPIClient(
       config.apiBaseUrl || 'https://mindflow-api-production.shigekazukoya.workers.dev',
-      await this.getAuthToken()
+      authToken
     );
     
     // 認証状態の監視
@@ -201,7 +205,7 @@ export class UnifiedSyncService {
     }
     
     this.mode = 'local';
-    this.editProtection.mode = 'local';
+    // Note: EditProtectionManager mode is set during construction, not modifiable after
     this.apiClient = null;
     
     this.emit('mode_changed', { mode: 'local', editingNodes });
@@ -294,7 +298,7 @@ export class UnifiedSyncService {
       if (this.mode === 'cloud' && this.apiClient) {
         await this.apiClient.saveMindMap(data);
       } else {
-        await updateMindMap(data);
+        await updateMindMap(data.id, data);
       }
 
       this.lastSyncTime = Date.now();
@@ -304,12 +308,16 @@ export class UnifiedSyncService {
 
     } catch (error) {
       console.error('❌ 保存失敗:', error);
-      this.emit('sync_error', { error, data, options });
+      this.emit('sync_error', { 
+        error: error instanceof Error ? error : new Error('Unknown sync error'), 
+        data, 
+        options 
+      });
       
       // クラウドモードで失敗した場合、ローカルに保存
       if (this.mode === 'cloud') {
         console.log('🔄 ローカルバックアップ保存');
-        await updateMindMap(data);
+        await updateMindMap(data.id, data);
       }
       
       throw error;
@@ -436,7 +444,7 @@ export class UnifiedSyncService {
         try {
           switch (operation.type) {
             case 'create':
-              const newNode = this.createNodeInData(updatedData, operation.data);
+              const newNode = this.createNodeInData(updatedData, operation.data || {});
               results.push({
                 index: i,
                 operation: 'create',
@@ -447,7 +455,10 @@ export class UnifiedSyncService {
               break;
               
             case 'update':
-              this.updateNodeInData(updatedData, operation.nodeId, operation.data);
+              if (!operation.nodeId) {
+                throw new Error('NodeId is required for update operation');
+              }
+              this.updateNodeInData(updatedData, operation.nodeId, operation.data || {});
               results.push({
                 index: i,
                 operation: 'update',
@@ -458,6 +469,9 @@ export class UnifiedSyncService {
               break;
               
             case 'delete':
+              if (!operation.nodeId) {
+                throw new Error('NodeId is required for delete operation');
+              }
               this.deleteNodeInData(updatedData, operation.nodeId);
               results.push({
                 index: i,
@@ -469,10 +483,14 @@ export class UnifiedSyncService {
               break;
               
             case 'move':
+              if (!operation.nodeId || !operation.data) {
+                throw new Error('NodeId and data are required for move operation');
+              }
+              const moveData = operation.data as { x: number; y: number; parentId?: string };
               this.updateNodeInData(updatedData, operation.nodeId, {
-                x: operation.data.x,
-                y: operation.data.y,
-                parentId: operation.data.parentId
+                x: moveData.x,
+                y: moveData.y,
+                parentId: moveData.parentId
               });
               results.push({
                 index: i,
@@ -490,14 +508,15 @@ export class UnifiedSyncService {
           processedCount++;
           
         } catch (operationError) {
+          const errorMessage = operationError instanceof Error ? operationError.message : String(operationError);
           errors.push({
             index: i,
             operation: operation.type,
-            nodeId: operation.nodeId,
-            error: operationError.message
+            nodeId: operation.nodeId || 'unknown',
+            error: errorMessage
           });
           
-          if (options.stopOnError) {
+          if (options?.stopOnError) {
             break;
           }
         }
@@ -517,7 +536,7 @@ export class UnifiedSyncService {
         processed: processedCount,
         errors: errors.length,
         results: results,
-        errorDetails: errors.length > 0 ? errors : undefined
+        errorDetails: errors
       };
 
     } catch (error) {
@@ -536,7 +555,7 @@ export class UnifiedSyncService {
         throw new Error('No current mindmap data');
       }
 
-      const response = await this.apiClient.executeBatch(currentData.id, {
+      const response = await this.apiClient!.executeBatch(currentData.id, {
         operations: operations,
         version: (currentData as any).version || 1,
         stopOnError: options.stopOnError || false
@@ -756,7 +775,7 @@ export class UnifiedSyncService {
       
       // 統合データを保存
       for (const mindmap of mergedData) {
-        await updateMindMap(mindmap);
+        await updateMindMap(mindmap.id, mindmap);
       }
 
       this.lastSyncTime = Date.now();
@@ -766,7 +785,7 @@ export class UnifiedSyncService {
 
     } catch (error) {
       console.error('❌ 完全同期エラー:', error);
-      this.emit('full_sync_error', { error });
+      this.emit('full_sync_error', { error: error instanceof Error ? error : new Error('Unknown sync error') });
       throw error;
     } finally {
       this.isSyncing = false;
@@ -1005,11 +1024,11 @@ class CloudAPIClient {
     return changes.length > 0;
   }
 
-  async notifyEditStart(nodeId: string, userId: string): Promise<void> {
+  async notifyEditStart(_nodeId: string, _userId: string): Promise<void> {
     // WebSocket実装時に追加
   }
 
-  async notifyEditEnd(nodeId: string, userId: string): Promise<void> {
+  async notifyEditEnd(_nodeId: string, _userId: string): Promise<void> {
     // WebSocket実装時に追加
   }
 

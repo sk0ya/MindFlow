@@ -38,7 +38,7 @@ import { useAppActions } from './hooks/useAppActions.js';
 import { useRealtimeHandlers } from './hooks/useRealtimeHandlers.js';
 
 // Types
-import type { MindMapNode, MindMapData, User } from '../../../shared/types';
+import type { MindMapNode, MindMapData } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
   // アプリ初期化
@@ -131,17 +131,7 @@ const MindMapApp: React.FC = () => {
     refreshAllMindMaps,
     changeMapCategory,
     getAvailableCategories,
-    addNodeMapLink,
-    removeNodeMapLink,
     reinitializeAfterModeSelection,
-    // リアルタイム機能
-    realtimeClient,
-    isRealtimeConnected,
-    realtimeStatus,
-    connectedUsers,
-    userCursors,
-    initializeRealtime,
-    updateCursorPosition,
     triggerCloudSync
   } = useMindMap(initState.isReady);
   
@@ -228,7 +218,6 @@ const MindMapApp: React.FC = () => {
     selectedNodeId,
     editingNodeId,
     setEditingNodeId,
-    setEditText,
     startEdit,
     finishEdit,
     editText,

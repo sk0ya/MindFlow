@@ -32,7 +32,7 @@ export const useAuth = () => {
   }, []);
 
   // 認証状態の更新
-  const updateAuthState = (newState) => {
+  const updateAuthState = (newState: Partial<AuthState>) => {
     setAuthState(prev => ({ ...prev, ...newState }));
   };
 

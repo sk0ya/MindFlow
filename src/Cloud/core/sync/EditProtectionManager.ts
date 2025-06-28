@@ -112,15 +112,24 @@ export class EditProtectionManager {
   private updateQueue: QueuedUpdate[];
   private eventListeners: Map<string, EventListener[]>;
   private cleanupInterval: NodeJS.Timeout | null;
+  private defaultUserId: string;
 
-  constructor(mode: EditMode = 'local') {
+  constructor(mode: EditMode = 'local', defaultUserId: string = 'local') {
     this.mode = mode; // 'local' or 'cloud'
     this.activeEdits = new Map(); // nodeId -> EditSession
     this.updateQueue = []; // QueuedUpdate[]
     this.eventListeners = new Map();
     this.cleanupInterval = null;
+    this.defaultUserId = defaultUserId;
     
     this.startCleanupTimer();
+  }
+
+  /**
+   * 現在のモードを取得
+   */
+  getMode(): EditMode {
+    return this.mode;
   }
 
   /**
@@ -268,7 +277,7 @@ export class EditProtectionManager {
     const update = new QueuedUpdate(nodeId, data, options);
     this.updateQueue.push(update);
     
-    this.emit('update_queued', { nodeId, data, options, queueSize: this.updateQueue.length });
+    this.emit('update_queued', { nodeId, userId: this.defaultUserId, data, options, queueSize: this.updateQueue.length });
     
     console.log(`📋 更新キュー追加: ${nodeId}`, { 
       queueSize: this.updateQueue.length,
@@ -305,6 +314,7 @@ export class EditProtectionManager {
       
       this.emit('queued_updates_processed', { 
         nodeId, 
+        userId: this.defaultUserId,
         processedCount: queuedUpdates.length,
         remainingQueue: this.updateQueue.length 
       });
@@ -329,7 +339,7 @@ export class EditProtectionManager {
    */
   protected applyUpdate(nodeId: string, data: any, options: UpdateOptions): void {
     // 継承先でオーバーライド
-    this.emit('update_applied', { nodeId, data, options });
+    this.emit('update_applied', { nodeId, userId: this.defaultUserId, data, options });
   }
 
   /**
@@ -337,7 +347,7 @@ export class EditProtectionManager {
    */
   protected commitEdit(nodeId: string, finalValue: string, options: UpdateOptions): void {
     // 継承先でオーバーライド
-    this.emit('edit_committed', { nodeId, finalValue, options });
+    this.emit('edit_committed', { nodeId, userId: this.defaultUserId, finalValue, options });
   }
 
   // ===== 協調編集通知 =====
@@ -369,7 +379,7 @@ export class EditProtectionManager {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
-    this.eventListeners.get(event).push(listener);
+    this.eventListeners.get(event)!.push(listener);
     
     // 削除関数を返す
     return () => this.off(event, listener);

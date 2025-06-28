@@ -4,6 +4,10 @@ import { STORAGE_KEYS } from '../../shared/types/dataTypes.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
 
 class SyncManager {
+  isOnline: boolean;
+  syncQueue: any[];
+  lastSyncTime: number | null;
+  
   constructor() {
     this.isOnline = navigator.onLine;
     this.syncQueue = this.loadSyncQueue();
@@ -34,7 +38,7 @@ class SyncManager {
     console.log('💾 Sync queue saved to memory (cloud mode)');
   }
 
-  addToSyncQueue(operation) {
+  addToSyncQueue(operation: any) {
     const queueItem = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -75,11 +79,11 @@ class SyncManager {
     this.updateLastSyncTime();
   }
 
-  removeSyncQueueItem(itemId) {
+  removeSyncQueueItem(itemId: string) {
     this.syncQueue = this.syncQueue.filter(item => item.id !== itemId);
   }
 
-  async executeOperation(operation) {
+  async executeOperation(operation: any) {
     
     switch (operation.type) {
       case 'save':
@@ -133,13 +137,14 @@ class SyncManager {
       const cloudMaps = await storageManager.getAllMindMaps();
 
       // 4. コンフリクト解決
-      const resolvedMaps = this.resolveConflicts(localMaps, cloudMaps.mindmaps || []);
+      const cloudMapsArray = (cloudMaps as any)?.mindmaps || [];
+      const resolvedMaps = this.resolveConflicts(localMaps, cloudMapsArray);
 
       // 5. ローカルストレージを更新
       this.saveToStorageLocal(STORAGE_KEYS.MINDMAPS, resolvedMaps);
       
       this.updateLastSyncTime();
-      const conflicts = this.getConflictCount(localMaps, cloudMaps.mindmaps || []);
+      const conflicts = this.getConflictCount(localMaps, cloudMapsArray);
       
       return { 
         success: true, 

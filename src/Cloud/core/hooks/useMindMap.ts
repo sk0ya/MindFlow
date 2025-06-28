@@ -21,8 +21,8 @@ interface UseMindMapResult {
   
   // ノード操作
   updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
-  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<void>;
-  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
   deleteNode: (nodeId: string) => void;
   dragNode: (nodeId: string, x: number, y: number) => void;
   changeParent: (nodeId: string, newParentId: string) => void;
