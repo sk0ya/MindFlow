@@ -40,7 +40,7 @@ export const useUIState = () => {
   };
 
   // パネル表示の切り替え関数
-  const togglePanel = (panelName) => {
+  const togglePanel = (panelName: keyof typeof setters): void => {
     const setters = {
       nodeCustomization: setShowNodeCustomization,
       layoutPanel: setShowLayoutPanel,
@@ -57,7 +57,7 @@ export const useUIState = () => {
 
     const setter = setters[panelName];
     if (setter) {
-      setter(prev => !prev);
+      setter((prev: boolean) => !prev);
     }
   };
 

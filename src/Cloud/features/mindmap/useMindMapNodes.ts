@@ -3,15 +3,42 @@ import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../s
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
+import type { MindMapData, MindMapNode } from '../../shared/types/index.js';
+
+interface UseMindMapNodesResult {
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  editText: string;
+  setSelectedNodeId: (id: string | null) => void;
+  setEditingNodeId: (id: string | null) => void;
+  setEditText: (text: string) => void;
+  flattenNodes: (rootNode?: MindMapNode) => MindMapNode[];
+  findNode: (nodeId: string, rootNode?: MindMapNode) => MindMapNode | null;
+  findParentNode: (nodeId: string, rootNode?: MindMapNode, parent?: MindMapNode) => MindMapNode | null;
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  deleteNode: (nodeId: string) => void;
+  dragNode: (nodeId: string, x: number, y: number) => void;
+  changeParent: (nodeId: string, newParentId: string) => void;
+  startEdit: (nodeId: string) => void;
+  finishEdit: (nodeId: string, text: string) => void;
+  toggleCollapse: (nodeId: string) => void;
+  applyAutoLayout: (algorithm?: string) => void;
+}
 
 // ノード操作専用のカスタムフック
-export const useMindMapNodes = (data, updateData, blockRealtimeSyncTemporarily) => {
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [editingNodeId, setEditingNodeId] = useState(null);
-  const [editText, setEditText] = useState('');
+export const useMindMapNodes = (
+  data: MindMapData | null, 
+  updateData: (updatedData: MindMapData, options?: { allowDuringEdit?: boolean; reason?: string }) => void,
+  blockRealtimeSyncTemporarily: () => void
+): UseMindMapNodesResult => {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
   
   // 最新のdataを参照するためのref
-  const dataRef = useRef(data);
+  const dataRef = useRef<MindMapData | null>(data);
   useEffect(() => {
     dataRef.current = data;
   }, [data]);

@@ -60,16 +60,17 @@ export const useKeyboardShortcuts = ({
       if (e.key === 'Enter' || e.key === 'Tab' || (e.ctrlKey && ['s', 'z', 'y'].includes(e.key.toLowerCase()))) {
         console.log('🎹 重要キーイベント:', {
           key: e.key,
-          target: e.target.tagName,
+          target: e.target && 'tagName' in e.target ? (e.target as Element).tagName : 'unknown',
           editingNodeId: !!editingNodeId,
           selectedNodeId: !!selectedNodeId
         });
       }
       
       // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
-      const isInputFocused = document.activeElement?.tagName === 'INPUT' || 
-                           document.activeElement?.tagName === 'TEXTAREA' || 
-                           document.activeElement?.contentEditable === 'true';
+      const activeElement = document.activeElement as HTMLElement | null;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || 
+                           activeElement?.tagName === 'TEXTAREA' || 
+                           activeElement?.contentEditable === 'true';
 
       // エスケープキーの処理（最優先）
       if (e.key === 'Escape') {

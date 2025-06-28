@@ -4,9 +4,37 @@ import { getAppSettings } from '../storage/storageUtils.js';
 import { authManager } from '../../features/auth/authManager.js';
 import { reinitializeStorage } from '../storage/StorageManager.js';
 
+type StorageMode = 'cloud' | 'local';
+
+interface InitState {
+  isInitializing: boolean;
+  showStorageModeSelector: boolean;
+  showAuthModal: boolean;
+  showOnboarding: boolean;
+  storageMode: StorageMode | null;
+  pendingStorageMode: StorageMode | null;
+  hasExistingLocalData: boolean;
+  isReady: boolean;
+}
+
+interface UseAppInitializationResult {
+  isInitializing: boolean;
+  showStorageModeSelector: boolean;
+  showAuthModal: boolean;
+  showOnboarding: boolean;
+  storageMode: StorageMode | null;
+  pendingStorageMode: StorageMode | null;
+  hasExistingLocalData: boolean;
+  isReady: boolean;
+  handleStorageModeSelect: (mode: StorageMode) => Promise<void>;
+  handleAuthSuccess: () => Promise<void>;
+  handleAuthClose: () => void;
+  handleOnboardingComplete: () => void;
+}
+
 // アプリ初期化専用フック - シーケンスを一本化
-export const useAppInitialization = () => {
-  const [initState, setInitState] = useState({
+export const useAppInitialization = (): UseAppInitializationResult => {
+  const [initState, setInitState] = useState<InitState>({
     isInitializing: true,
     showStorageModeSelector: false,
     showAuthModal: false,
@@ -118,7 +146,7 @@ export const useAppInitialization = () => {
   }, []);
 
   // ストレージモード選択処理（クラウド専用）
-  const handleStorageModeSelect = async (mode) => {
+  const handleStorageModeSelect = async (mode: StorageMode): Promise<void> => {
     try {
       console.log('📝 ストレージモード選択:', mode);
       

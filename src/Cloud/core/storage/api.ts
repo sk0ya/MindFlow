@@ -3,7 +3,24 @@
  * ローカルとクラウドの統一インターフェースとして機能
  */
 
-const getAPIBase = () => {
+interface RequestOptions {
+  method?: string;
+  body?: string;
+  headers?: Record<string, string>;
+}
+
+interface ApiResponse<T = any> {
+  data?: T;
+  error?: string;
+  success: boolean;
+}
+
+interface AppSettings {
+  storageMode: 'cloud';
+  autoSave: boolean;
+}
+
+const getAPIBase = (): string => {
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     return 'http://localhost:8787/api';
   }
@@ -12,28 +29,29 @@ const getAPIBase = () => {
 
 const API_BASE = getAPIBase();
 
-const STORAGE_KEY = 'mindflow_maps';
-const SETTINGS_KEY = 'mindflow_settings';
-
 // デフォルト設定（クラウド専用）
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: AppSettings = {
   storageMode: 'cloud', // クラウド専用
   autoSave: true,
 };
 
 class ApiClient {
+  private token: string | null;
+  private email: string | null;
+  private settings: AppSettings;
+
   constructor() {
     this.token = null;
     this.email = null;
     this.settings = this.getSettings();
   }
 
-  setAuth(token, email) {
+  setAuth(token: string, email: string): void {
     this.token = token;
     this.email = email;
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint: string, options: RequestOptions = {}): Promise<Response> {
     const url = `${API_BASE}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -58,18 +76,23 @@ class ApiClient {
     return response.json();
   }
 
+  // 設定取得
+  getSettings(): AppSettings {
+    return { ...DEFAULT_SETTINGS };
+  }
+
   // マップ一覧取得
-  async getMaps() {
+  async getMaps(): Promise<any> {
     return this.request('/maps');
   }
 
   // 特定マップ取得
-  async getMap(mapId) {
+  async getMap(mapId: string): Promise<any> {
     return this.request(`/maps/${mapId}`);
   }
 
   // マップ作成
-  async createMap(mapData) {
+  async createMap(mapData: any): Promise<any> {
     return this.request('/maps', {
       method: 'POST',
       body: JSON.stringify(mapData),
@@ -77,7 +100,7 @@ class ApiClient {
   }
 
   // マップ更新
-  async updateMap(mapId, mapData) {
+  async updateMap(mapId: string, mapData: any): Promise<any> {
     return this.request(`/maps/${mapId}`, {
       method: 'PUT',
       body: JSON.stringify(mapData),

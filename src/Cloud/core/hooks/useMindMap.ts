@@ -3,7 +3,7 @@ import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles.js';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti.js';
-import type { MindMapData, MindMapNode, User } from '../../shared/types/index.js';
+import type { MindMapData, MindMapNode } from '../../shared/types/index.js';
 
 type NavigationDirection = 'up' | 'down' | 'left' | 'right';
 
@@ -168,14 +168,14 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
         case 'down':
           // 下方向: 最初の子ノードを選択
           targetNode = currentNode.children && currentNode.children.length > 0 
-            ? currentNode.children[0] : null;
+            ? currentNode.children[0] || null : null;
           break;
         case 'left':
           // 左方向: 前の兄弟ノードを選択
           const leftParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
           if (leftParent && leftParent.children) {
             const currentIndex = leftParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
-            targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
+            targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] || null : null;
           }
           break;
         case 'right':
@@ -184,7 +184,7 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
           if (rightParent && rightParent.children) {
             const currentIndex = rightParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
             targetNode = currentIndex < rightParent.children.length - 1 
-              ? rightParent.children[currentIndex + 1] : null;
+              ? rightParent.children[currentIndex + 1] || null : null;
           }
           break;
       }

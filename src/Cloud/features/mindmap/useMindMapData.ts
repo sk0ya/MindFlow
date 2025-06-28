@@ -5,16 +5,43 @@ import { deepClone, assignColorsToExistingNodes, createInitialData } from '../..
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
 import { unifiedSyncService } from '../../core/sync/UnifiedSyncService.js';
+import type { MindMapData, AuthState } from '../../shared/types/index.js';
+
+interface SaveOptions {
+  force?: boolean;
+  reason?: string;
+}
+
+interface UseMindMapDataResult {
+  data: MindMapData | null;
+  isLoadingFromCloud: boolean;
+  history: MindMapData[];
+  historyIndex: number;
+  setData: (data: MindMapData | null) => void;
+  setHistory: (history: MindMapData[]) => void;
+  setHistoryIndex: (index: number) => void;
+  updateData: (updatedData: MindMapData, options?: { allowDuringEdit?: boolean; reason?: string }) => void;
+  updateTitle: (title: string) => void;
+  changeTheme: (theme: string) => void;
+  updateSettings: (settings: any) => void;
+  saveMindMap: () => Promise<void>;
+  triggerCloudSync: () => void;
+  blockRealtimeSyncTemporarily: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
 
 // データ管理専用のカスタムフック（統一同期サービス統合版）
-export const useMindMapData = (isAppReady = false) => {
-  const [data, setData] = useState(null);
-  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const autoSaveTimeoutRef = useRef(null);
-  const isSavingRef = useRef(false); // 下位互換のため保持
-  const syncServiceInitialized = useRef(false);
+export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResult => {
+  const [data, setData] = useState<MindMapData | null>(null);
+  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState<boolean>(false);
+  const [history, setHistory] = useState<MindMapData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSavingRef = useRef<boolean>(false); // 下位互換のため保持
+  const syncServiceInitialized = useRef<boolean>(false);
 
   // 統一同期サービス初期化
   useEffect(() => {
@@ -60,7 +87,7 @@ export const useMindMapData = (isAppReady = false) => {
 
   // 認証状態変更の監視とモード切り替え
   useEffect(() => {
-    const handleAuthChange = async (authState) => {
+    const handleAuthChange = async (authState: AuthState): Promise<void> => {
       try {
         if (authState.isAuthenticated) {
           console.log('🔑 認証成功: クラウドモードに切り替え');
@@ -87,7 +114,7 @@ export const useMindMapData = (isAppReady = false) => {
   }, []);
   
   // 統一同期サービスを使用した保存機能
-  const saveImmediately = async (dataToSave = data, options = {}) => {
+  const saveImmediately = async (dataToSave: MindMapData | null = data, options: SaveOptions = {}): Promise<void> => {
     if (!dataToSave || dataToSave.isPlaceholder) return;
 
     // データ整合性チェック
