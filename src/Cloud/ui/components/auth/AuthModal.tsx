@@ -39,7 +39,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       // モーダルを閉じる
       onClose();
     }
-  }, [auth.state.isAuthenticated, auth.state.user, onSuccess, onAuthSuccess, onClose]);
+  }, [auth.state.isAuthenticated, auth.state.user, onSuccess, onClose]);
   
   // 状態を統一システムから取得
   const isLoading = auth.isLoading;
