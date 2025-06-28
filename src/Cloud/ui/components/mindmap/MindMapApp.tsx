@@ -85,20 +85,18 @@ const MindMapApp: React.FC = () => {
     return () => clearInterval(interval);
   }, [authToken]);
   
-  if (settings.storageMode === 'cloud' && !isAuthenticated) {
-    console.log('🔐 クラウドモード未認証: 認証画面を表示');
-    return (
-      <div className="auth-required-screen">
-        <div className="auth-message">
-          <h2>認証が必要です</h2>
-          <p>クラウドモードを使用するには認証が必要です。</p>
-          <button onClick={() => authManager.authenticate()}>
-            認証する
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // 認証状態の管理
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+  
+  // クラウドモードで未認証の場合は認証モーダルを表示
+  React.useEffect(() => {
+    if (settings.storageMode === 'cloud' && !isAuthenticated) {
+      console.log('🔐 クラウドモード未認証: 認証モーダルを表示');
+      setShowAuthModal(true);
+    } else {
+      setShowAuthModal(false);
+    }
+  }, [settings.storageMode, isAuthenticated]);
   
   const {
     data,
@@ -605,6 +603,18 @@ const MindMapApp: React.FC = () => {
         <StorageModeSelector
           onModeSelect={handleStorageModeSelectWithReinit}
           hasLocalData={initState.hasExistingLocalData}
+        />
+      )}
+
+      {/* 認証モーダル */}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => {
+            setShowAuthModal(false);
+            setIsAuthenticated(true);
+          }}
         />
       )}
     </div>
