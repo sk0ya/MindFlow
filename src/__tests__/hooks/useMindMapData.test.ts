@@ -1,5 +1,12 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
+import type { 
+  TestMindMapData, 
+  MockStorageRouter, 
+  MockStorageUtils, 
+  MockDataTypes, 
+  MockAuthManager 
+} from '../../types/test-utils.js';
 
 // モックの設定
 jest.mock('../../core/storage/storageRouter.ts', () => ({
@@ -52,15 +59,15 @@ const createMockInput = (nodeId, value = '') => {
 };
 
 describe('useMindMapData - Cloud Sync Tests', () => {
-  let mockStorageRouter;
-  let mockStorage;
-  let mockDataTypes;
+  let mockStorageRouter: MockStorageRouter;
+  let mockStorage: MockStorageUtils;
+  let mockDataTypes: MockDataTypes;
 
   beforeEach(() => {
     // モジュールを再インポートしてフレッシュなモックを取得
-    mockStorageRouter = require('../../core/storage/storageRouter.js');
-    mockStorage = require('../../core/storage/storageUtils.js');
-    mockDataTypes = require('../../shared/types/dataTypes.js');
+    mockStorageRouter = require('../../core/storage/storageRouter.js') as MockStorageRouter;
+    mockStorage = require('../../core/storage/storageUtils.js') as MockStorageUtils;
+    mockDataTypes = require('../../shared/types/dataTypes.js') as MockDataTypes;
 
     // デフォルトのモック実装
     mockStorageRouter.isCloudStorageEnabled.mockReturnValue(true);

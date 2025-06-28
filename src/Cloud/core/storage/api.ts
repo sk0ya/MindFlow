@@ -123,7 +123,7 @@ class ApiClient {
     return [];
   }
 
-  setLocalMaps(maps: any[]): void {
+  setLocalMaps(_maps: any[]): void {
     // Cloud mode: no local maps storage
     console.log('☁️ Cloud mode: local maps not saved');
   }

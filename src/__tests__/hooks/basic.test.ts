@@ -16,7 +16,8 @@ describe('Basic Tests', () => {
   test('DOM操作が動作する', () => {
     document.body.innerHTML = '<div id="test">Hello</div>';
     const element = document.getElementById('test');
-    expect(element.textContent).toBe('Hello');
+    expect(element).not.toBeNull();
+    expect(element!.textContent).toBe('Hello');
   });
 
   test('モックが動作する', () => {

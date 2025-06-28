@@ -5,13 +5,13 @@
 import {
   generateId,
   createInitialMapData,
-  createNode,
+  // createNode,
   findNode,
-  findParent,
+  // findParent,
   addChildNode,
   updateNode,
   deleteNode,
-} from '../../shared/utils/mapUtils.js';
+} from '../../Local/shared/utils/mapUtils.js';
 
 describe('mapUtils', () => {
   test('generateId should create unique IDs', () => {

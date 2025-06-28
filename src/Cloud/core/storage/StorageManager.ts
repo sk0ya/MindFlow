@@ -60,7 +60,7 @@ export class StorageManager {
     return this.currentEngine;
   }
 
-  private createEngine(storageMode: string, isAuthenticated: boolean): void {
+  private createEngine(_storageMode: string, isAuthenticated: boolean): void {
     try {
       console.log('☁️ クラウド専用エンジン作成（認証状態:', isAuthenticated, '）');
       this.currentEngine = createCloudEngine();

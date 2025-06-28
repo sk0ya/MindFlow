@@ -102,25 +102,34 @@ export class CloudEngine {
         
         return await this.handleResponse<T>(response, method);
         
-      } catch (error) {
+      } catch (error: unknown) {
         clearTimeout(timeoutId);
         
-        if (error.name === 'AbortError') {
-          console.warn(`⏱️ API呼び出しタイムアウト (${timeout}ms): 試行 ${attempt}/${maxRetries}`);
-          error = new Error(`Request timeout after ${timeout}ms`);
+        let processedError: Error;
+        if (error instanceof Error) {
+          processedError = error;
+          if (error.name === 'AbortError') {
+            console.warn(`⏱️ API呼び出しタイムアウト (${timeout}ms): 試行 ${attempt}/${maxRetries}`);
+            processedError = new Error(`Request timeout after ${timeout}ms`);
+          }
+        } else {
+          processedError = new Error(`Unknown error: ${String(error)}`);
         }
         
-        if (this.isRetryableError(error) && attempt < maxRetries) {
+        if (this.isRetryableError(processedError) && attempt < maxRetries) {
           const delay = this.calculateBackoffDelay(attempt);
-          console.warn(`🔄 リトライ ${attempt}/${maxRetries} - ${delay}ms後に再試行:`, error.message);
+          console.warn(`🔄 リトライ ${attempt}/${maxRetries} - ${delay}ms後に再試行:`, processedError.message);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
         
-        console.error(`❌ API呼び出し最終失敗 (${attempt}/${maxRetries} 試行):`, error.message);
-        throw error;
+        console.error(`❌ API呼び出し最終失敗 (${attempt}/${maxRetries} 試行):`, processedError.message);
+        throw processedError;
       }
     }
+    
+    // This should never be reached, but TypeScript requires a return
+    throw new Error(`Max retries (${maxRetries}) exceeded without successful response`);
   }
 
   private async handleResponse<T>(response: Response, method: string): Promise<T> {
@@ -163,8 +172,8 @@ export class CloudEngine {
           throw error;
         }
         
-      } catch (e) {
-        if (e.message === 'UNIQUE_CONSTRAINT_VIOLATION' || e.message === 'PARENT_NODE_NOT_FOUND') {
+      } catch (e: unknown) {
+        if (e instanceof Error && (e.message === 'UNIQUE_CONSTRAINT_VIOLATION' || e.message === 'PARENT_NODE_NOT_FOUND')) {
           throw e;
         }
       }
@@ -181,7 +190,7 @@ export class CloudEngine {
     return result;
   }
 
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: Error): boolean {
     const retryableMessages = [
       'Request timeout',
       'Network error',
@@ -193,7 +202,7 @@ export class CloudEngine {
     
     return (
       retryableMessages.some(msg => error.message.includes(msg)) ||
-      retryableStatuses.includes(error.status) ||
+      retryableStatuses.includes((error as any).status) ||
       error.name === 'TypeError'
     );
   }
@@ -236,9 +245,10 @@ export class CloudEngine {
         console.log('📦 rootNodeをJSONパース中...');
         map.rootNode = JSON.parse(map.rootNode);
         console.log('✅ rootNodeパース成功');
-      } catch (parseError) {
+      } catch (parseError: unknown) {
+        const parseErrorMessage = parseError instanceof Error ? parseError.message : String(parseError);
         console.error('❌ rootNodeパース失敗:', parseError);
-        throw new Error(`rootNodeのパースに失敗しました: ${parseError.message}`);
+        throw new Error(`rootNodeのパースに失敗しました: ${parseErrorMessage}`);
       }
     }
     
@@ -272,9 +282,10 @@ export class CloudEngine {
       console.log('☁️ クラウド: マップ作成完了', result.title);
       
       return { success: true, data: result };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('☁️ クラウド: マップ作成失敗:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -292,9 +303,10 @@ export class CloudEngine {
       
       this.lastSyncTime = new Date().toISOString();
       return { success: true, data: result };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('☁️ クラウド: マップ更新失敗:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -306,9 +318,10 @@ export class CloudEngine {
       console.log('☁️ クラウド: マップ削除完了');
       
       return { success: true, data: true };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('☁️ クラウド: マップ削除失敗:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -346,8 +359,9 @@ export class CloudEngine {
         try {
           await this.ensureRootNodeExists(mapId);
           console.log('✅ ルートノード存在確認完了');
-        } catch (rootError) {
-          console.warn('⚠️ ルートノード確認失敗、通常の処理を継続:', rootError.message);
+        } catch (rootError: unknown) {
+          const rootErrorMessage = rootError instanceof Error ? rootError.message : String(rootError);
+          console.warn('⚠️ ルートノード確認失敗、通常の処理を継続:', rootErrorMessage);
         }
       }
       
@@ -376,13 +390,14 @@ export class CloudEngine {
     }
   }
 
-  private async handleNodeError(error: any, operation: string, params: any): Promise<StorageResult<any>> {
-    if (error.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
+  private async handleNodeError(error: unknown, operation: string, params: any): Promise<StorageResult<any>> {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    if (errorObj.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
       console.warn('🔄 UNIQUE制約違反: ノードIDを再生成してリトライします', params.nodeData?.id);
       return await this.retryWithNewId(params.mapId, params.nodeData, params.parentId);
     }
     
-    if (error.message === 'PARENT_NODE_NOT_FOUND') {
+    if (errorObj.message === 'PARENT_NODE_NOT_FOUND') {
       console.warn('🔄 Parent node not found: ルートノード同期後リトライします', { mapId: params.mapId, parentId: params.parentId });
       try {
         await this.forceMapSync(params.mapId);
@@ -399,14 +414,37 @@ export class CloudEngine {
             };
             const result = await this.apiCall(`/nodes/${params.mapId}`, 'POST', requestBody);
             return { success: true, data: { ...params.nodeData, ...result } };
+          case 'update':
+            const updateResult = await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}`, 'PUT', {
+              mapId: params.mapId,
+              updates: params.updates,
+              operation: 'update'
+            });
+            return { success: true, data: { id: params.nodeId, ...params.updates, ...updateResult } };
+          case 'delete':
+            await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}`, 'DELETE', {
+              mapId: params.mapId,
+              operation: 'delete'
+            });
+            return { success: true, data: true };
+          case 'move':
+            await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}/move`, 'PUT', {
+              mapId: params.mapId,
+              newParentId: params.newParentId,
+              operation: 'move'
+            });
+            return { success: true, data: true };
+          default:
+            return { success: false, error: `Unknown operation: ${operation}` };
         }
-      } catch (syncError) {
+      } catch (syncError: unknown) {
+        const syncErrorMessage = syncError instanceof Error ? syncError.message : String(syncError);
         console.error('❌ マップ同期失敗:', syncError);
-        return { success: false, error: `Parent node not found (マップ同期も失敗): ${syncError.message}` };
+        return { success: false, error: `Parent node not found (マップ同期も失敗): ${syncErrorMessage}` };
       }
     }
 
-    console.error('☁️ クラウド: ノード操作失敗:', error);
+    console.error('☁️ クラウド: ノード操作失敗:', errorObj);
     
     // 失敗した操作をキューに追加
     const operationKey = `${operation}_${params.nodeData?.id || params.nodeId || Date.now()}`;
@@ -416,7 +454,7 @@ export class CloudEngine {
       timestamp: Date.now()
     });
     
-    return { success: false, error: error.message };
+    return { success: false, error: errorObj.message };
   }
 
   private async ensureRootNodeExists(mapId: string): Promise<boolean> {
@@ -436,9 +474,9 @@ export class CloudEngine {
       }
 
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ ルートノード存在確認エラー:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -456,9 +494,9 @@ export class CloudEngine {
 
       console.log('✅ マップ強制更新でルートノード同期完了');
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ マップ同期エラー:', error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -490,19 +528,20 @@ export class CloudEngine {
           const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
           console.log('✅ ID再生成リトライ成功:', newId);
           return { success: true, data: { ...newNodeData, ...result }, newId };
-        } catch (error) {
-          console.warn(`❌ リトライ ${attempt} 失敗:`, error.message);
+        } catch (error: unknown) {
+          const errorObj = error instanceof Error ? error : new Error(String(error));
+          console.warn(`❌ リトライ ${attempt} 失敗:`, errorObj.message);
           
-          if (error.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
+          if (errorObj.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
             continue;
           } else {
-            throw error;
+            throw errorObj;
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`❌ リトライ ${attempt} でエラー:`, error);
         if (attempt === maxRetries) {
-          throw error;
+          throw error instanceof Error ? error : new Error(String(error));
         }
       }
     }
@@ -600,10 +639,11 @@ export class CloudEngine {
           
           const result = await this.createMap(importedMap);
           resolve(result);
-        } catch (error) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           resolve({ 
             success: false, 
-            error: `マインドマップファイルの解析に失敗しました: ${error.message}` 
+            error: `マインドマップファイルの解析に失敗しました: ${errorMessage}` 
           });
         }
       };
@@ -622,7 +662,7 @@ export class CloudEngine {
     try {
       await this.getAllMaps();
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('☁️ クラウド接続テスト失敗:', error);
       return false;
     }
@@ -643,7 +683,7 @@ export class CloudEngine {
 
     console.log('☁️ クラウド: 失敗操作のリトライ開始', this.pendingOperations.size, '件');
 
-    for (const [key, operation] of this.pendingOperations.entries()) {
+    for (const [key, operation] of Array.from(this.pendingOperations.entries())) {
       try {
         // 古い操作（5分以上前）は破棄
         if (Date.now() - operation.timestamp > 5 * 60 * 1000) {
@@ -652,7 +692,7 @@ export class CloudEngine {
           continue;
         }
 
-        let result: StorageResult<any>;
+        let result: StorageResult<any> | undefined;
         switch (operation.type) {
           case 'add':
             result = await this.addNode(operation.mapId, operation.nodeData, operation.parentId);
@@ -666,6 +706,10 @@ export class CloudEngine {
           case 'move':
             result = await this.moveNode(operation.mapId, operation.nodeId, operation.newParentId);
             break;
+          default:
+            console.warn('Unknown operation type:', operation.type);
+            this.pendingOperations.delete(key);
+            continue;
         }
 
         if (result?.success) {
@@ -673,8 +717,9 @@ export class CloudEngine {
           this.pendingOperations.delete(key);
         }
 
-      } catch (error) {
-        console.warn('❌ リトライ失敗:', key, error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn('❌ リトライ失敗:', key, errorMessage);
       }
     }
   }
@@ -684,7 +729,12 @@ export class CloudEngine {
     return false; // クラウドモードではローカルデータは管理しない
   }
 
-  async cleanupCorruptedData() {
+  async cleanupCorruptedData(): Promise<{
+    before: number;
+    after: number;
+    removed: number;
+    corruptedMaps: any[];
+  }> {
     console.log('☁️ クラウドモード: ローカルデータクリーンアップは不要');
     return {
       before: 0,
@@ -768,14 +818,15 @@ export class CloudEngine {
       // スナップショットを更新
       this.updateSnapshot(maps);
       
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
       console.error('❌ クラウドリアルタイム同期エラー:', error);
       
       this.emitEvent({
         type: 'sync_error',
         data: { 
-          error: error.message,
-          type: error.name || 'Unknown',
+          error: errorObj.message,
+          type: errorObj.name || 'Unknown',
           timestamp: new Date().toISOString()
         },
         timestamp: new Date().toISOString()
@@ -830,7 +881,7 @@ export class CloudEngine {
   private updateSnapshot(maps: MindMapData[]): void {
     this.lastMapsSnapshot.clear();
     maps.forEach(map => {
-      this.lastMapsSnapshot.set(map.id, map.updatedAt);
+      this.lastMapsSnapshot.set(map.id, map.updatedAt || new Date().toISOString());
     });
   }
 
@@ -856,7 +907,7 @@ export class CloudEngine {
       listeners.forEach(listener => {
         try {
           listener(event);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`イベントリスナーエラー (${event.type}):`, error);
         }
       });
@@ -868,14 +919,19 @@ export class CloudEngine {
       allListeners.forEach(listener => {
         try {
           listener(event);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('全イベントリスナーエラー:', error);
         }
       });
     }
   }
 
-  getRealtimeSyncStatus(): any {
+  getRealtimeSyncStatus(): {
+    isEnabled: boolean;
+    lastSyncTime: string | null;
+    syncFrequency: number;
+    mapsInSnapshot: number;
+  } {
     return {
       isEnabled: this.isRealtimeSyncEnabled,
       lastSyncTime: this.lastSyncTime,

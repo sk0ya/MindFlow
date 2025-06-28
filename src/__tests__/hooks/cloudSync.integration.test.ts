@@ -3,11 +3,9 @@
  * 実際のユーザー操作をシミュレートして、データ保護機能が正しく動作することを確認
  */
 
-import { CloudStorageAdapter } from '../../core/storage/storageAdapter.js';
-
 describe('Cloud Sync Integration Tests', () => {
-  let originalFetch;
-  let mockLocalStorage;
+  let originalFetch: typeof global.fetch;
+  let mockLocalStorage: any;
 
   beforeEach(() => {
     // Fetch APIのモック

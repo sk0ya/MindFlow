@@ -1,8 +1,25 @@
 import { renderHook, act } from '@testing-library/react';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 
+// Types for test data
+interface TestNode {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  children: TestNode[];
+  attachments: any[];
+  mapLinks: any[];
+}
+
+interface TestData {
+  id: string;
+  title: string;
+  rootNode: TestNode;
+}
+
 // テスト用のサンプルデータ
-const createTestData = () => ({
+const createTestData = (): TestData => ({
   id: 'test-map',
   title: 'Test Map',
   rootNode: {
@@ -36,7 +53,7 @@ const createTestData = () => ({
 });
 
 describe('useMindMapNodes - Cloud Sync Tests', () => {
-  let mockUpdateData;
+  let mockUpdateData: jest.MockedFunction<(data: TestData, options?: any) => Promise<void>>;
 
   beforeEach(() => {
     mockUpdateData = jest.fn();
@@ -78,7 +95,7 @@ describe('useMindMapNodes - Cloud Sync Tests', () => {
               })
             ])
           })
-        }),
+        }) as TestData,
         expect.objectContaining({
           allowDuringEdit: true,
           source: 'finishEdit-save'
@@ -107,7 +124,7 @@ describe('useMindMapNodes - Cloud Sync Tests', () => {
       expect(result.current.findNode('node1')).toBeTruthy();
       
       // deleteNode が呼ばれていないことを確認
-      const updatedData = mockUpdateData.mock.calls[0]?.[0];
+      const updatedData = mockUpdateData.mock.calls[0]?.[0] as TestData;
       if (updatedData) {
         const node1 = updatedData.rootNode.children.find(child => child.id === 'node1');
         expect(node1).toBeTruthy();
@@ -123,7 +140,7 @@ describe('useMindMapNodes - Cloud Sync Tests', () => {
         result.current.addChildNode('root', '');
       });
 
-      const newNodeId = mockUpdateData.mock.calls[0][0].rootNode.children[2].id;
+      const newNodeId = (mockUpdateData.mock.calls[0][0] as TestData).rootNode.children[2].id;
 
       await act(async () => {
         result.current.startEdit(newNodeId);

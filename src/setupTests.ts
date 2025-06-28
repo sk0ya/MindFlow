@@ -1,44 +1,47 @@
 import '@testing-library/jest-dom';
 
+// Import type definitions
+import './types/jest.d.ts';
+
 // モックしたい外部依存関係をここで設定
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
+(global as any).ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }));
 
+// Create properly typed storage mock
+const createStorageMock = (): MockStorage => ({
+  length: 0,
+  key: jest.fn((index: number) => null),
+  getItem: jest.fn((key: string) => null),
+  setItem: jest.fn((key: string, value: string) => {}),
+  removeItem: jest.fn((key: string) => {}),
+  clear: jest.fn(() => {})
+});
+
 // localStorage のモック
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-global.localStorage = localStorageMock;
+(global as any).localStorage = createStorageMock();
 
 // sessionStorage のモック
-const sessionStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-global.sessionStorage = sessionStorageMock;
+(global as any).sessionStorage = createStorageMock();
 
 // window.location のモック
-delete window.location;
-window.location = {
-  href: 'http://localhost:3000',
-  pathname: '/',
-  search: '',
-  hash: '',
-  assign: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-};
+Object.defineProperty(window, 'location', {
+  value: {
+    href: 'http://localhost:3000',
+    pathname: '/',
+    search: '',
+    hash: '',
+    assign: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+  },
+  writable: true
+});
 
 // fetch のモック
-global.fetch = jest.fn();
+(global as any).fetch = jest.fn();
 
 // コンソールエラーを抑制（テスト中の意図的なエラーテスト用）
 const originalError = console.error;

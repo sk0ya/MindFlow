@@ -1,4 +1,3 @@
-import { STORAGE_KEYS, createInitialData } from '../../shared/types/dataTypes.js';
 // Cloud-only storage utilities - localStorage dependencies removed
 
 // In-memory settings storage for cloud-only mode
@@ -17,7 +16,7 @@ export const getAppSettings = () => {
   return { ...cloudSettings };
 };
 
-export const saveAppSettings = (settings) => {
+export const saveAppSettings = (settings: Partial<typeof cloudSettings>) => {
   cloudSettings = { ...cloudSettings, ...settings };
   console.log('⚙️ Cloud settings updated:', cloudSettings);
   return true;

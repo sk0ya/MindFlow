@@ -4,7 +4,6 @@
  */
 
 import { cloudAuthManager } from '../../features/auth/cloudAuthManager.js';
-import { cloudStorage } from './cloudStorage.js';
 
 interface SyncOperation {
   id: string;
@@ -415,7 +414,7 @@ export class CloudSyncAdapter {
     return localIsGreater && remoteIsGreater; // 並行性を検出
   }
 
-  private async resolveConflict(localData: any, remoteData: any): Promise<{ strategy: string, mergedData: any }> {
+  private async resolveConflict(localData: any, remoteData: any): Promise<{ strategy: 'local_wins' | 'remote_wins' | 'merge' | 'manual', mergedData: any }> {
     // 簡単な競合解決ロジック（実際の実装ではより詳細な解決が必要）
     const localTimestamp = new Date(localData.lastModified || 0).getTime();
     const remoteTimestamp = new Date(remoteData.lastModified || 0).getTime();

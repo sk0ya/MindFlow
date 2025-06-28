@@ -4,6 +4,16 @@
 
 import { apiClient } from '../api.js';
 
+// Type definitions for mocked API client
+interface MockApiClient {
+  getMaps: jest.MockedFunction<() => Promise<any>>;
+  getMap: jest.MockedFunction<(id: string) => Promise<any>>;
+  createMap: jest.MockedFunction<(mapData: any) => Promise<any>>;
+  updateMap: jest.MockedFunction<(id: string, mapData: any) => Promise<any>>;
+  deleteMap: jest.MockedFunction<(id: string) => Promise<any>>;
+  setAuth: jest.MockedFunction<(token: string) => void>;
+}
+
 // モック設定
 jest.mock('../api.js', () => ({
   apiClient: {
@@ -16,19 +26,12 @@ jest.mock('../api.js', () => ({
   }
 }));
 
-// localStorage のモック
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-global.localStorage = localStorageMock;
+// Cast apiClient to mocked version for type safety
+const mockApiClient = apiClient as unknown as MockApiClient;
 
 describe('API Client Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localStorageMock.getItem.mockReturnValue(null);
   });
 
   test('apiClient should be available', () => {
@@ -43,20 +46,20 @@ describe('API Client Tests', () => {
 
   test('getMaps should call the mocked function', async () => {
     const mockMaps = [{ id: '1', title: 'Test Map' }];
-    apiClient.getMaps.mockResolvedValue(mockMaps);
+    mockApiClient.getMaps.mockResolvedValue(mockMaps);
     
     const result = await apiClient.getMaps();
     expect(result).toEqual(mockMaps);
-    expect(apiClient.getMaps).toHaveBeenCalledTimes(1);
+    expect(mockApiClient.getMaps).toHaveBeenCalledTimes(1);
   });
 
   test('createMap should call the mocked function', async () => {
     const mapData = { id: '1', title: 'Test Map', rootNode: {} };
     const mockResponse = { success: true, map: mapData };
-    apiClient.createMap.mockResolvedValue(mockResponse);
+    mockApiClient.createMap.mockResolvedValue(mockResponse);
     
     const result = await apiClient.createMap(mapData);
     expect(result).toEqual(mockResponse);
-    expect(apiClient.createMap).toHaveBeenCalledWith(mapData);
+    expect(mockApiClient.createMap).toHaveBeenCalledWith(mapData);
   });
 });

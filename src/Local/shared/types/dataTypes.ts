@@ -244,11 +244,17 @@ export interface UploadedFileInfo {
   downloadUrl?: string;
   storagePath?: string;
   thumbnailUrl?: string;
+  uploadedAt?: string;
 }
 
 export interface FileOptimizationInfo {
   isR2Storage?: boolean;
   nodeId?: string;
+  isOptimized?: boolean;
+  originalSize?: number;
+  optimizedSize?: number;
+  compressionRatio?: string;
+  optimizedType?: string;
 }
 
 export const createFileAttachment = (
