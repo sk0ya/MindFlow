@@ -19,20 +19,17 @@ import CollaborativeFeatures from '../common/CollaborativeFeatures';
 import PerformanceDashboard from '../common/PerformanceDashboard';
 import { storageManager } from '../../../core/storage/StorageManager.ts';
 import { getAppSettings } from '../../../core/storage/storageUtils';
-import { authManager } from '../../../features/auth/authManager.js';
 import './MindMapApp.css';
 
-import AuthVerification from '../auth/AuthVerification.jsx';
 import AuthModal from '../auth/AuthModal.jsx';
 import TutorialOverlay from '../common/TutorialOverlay.jsx';
 import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper.jsx';
 import StorageModeSelector from '../storage/StorageModeSelector.jsx';
 import { useAppInitialization } from '../../../core/hooks/useAppInitialization.js';
 import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts.js';
-import { useCloudAuth } from '../../../features/auth/cloudAuthManager.js';
+import { useUnifiedAuth, useMagicLinkVerification } from '../../../features/auth/useUnifiedAuth.js';
 
-// カスタムフックのインポート
-import { useAuthHandlers } from './hooks/useAuthHandlers.js';
+// 認証関連のカスタムフックは統一システムで置き換え
 import { useFileHandlers } from './hooks/useFileHandlers.js';
 import { useMapHandlers } from './hooks/useMapHandlers.js';
 import { useUIState } from './hooks/useUIState.js';
@@ -44,63 +41,52 @@ import { useRealtimeHandlers } from './hooks/useRealtimeHandlers.js';
 import type { MindMapNode, MindMapData, User } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
-  // アプリ初期化（統一フロー）
+  // アプリ初期化
   const initState = useAppInitialization();
   const settings = getAppSettings();
   
-  // URL認証トークンの処理（シンプル化）
-  const urlParams = new URLSearchParams(window.location.search);
-  const authToken = urlParams.get('token') || urlParams.get('auth_token') || urlParams.get('magic_token');
+  // 統一認証システムを使用
+  const auth = useUnifiedAuth();
+  const magicLinkVerification = useMagicLinkVerification();
   
-  // 認証処理状態管理
-  const [authProcessing, setAuthProcessing] = React.useState(false);
-  
-  // URL認証処理（一度だけ実行）
-  React.useEffect(() => {
-    if (authToken && !authProcessing) {
-      setAuthProcessing(true);
-      console.log('🔑 URL認証処理開始');
-      
-      authManager.verifyMagicLink(authToken)
-        .then(() => {
-          console.log('✅ 認証成功 - URLクリア');
-          // URLをクリアしてリロード
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.location.reload();
-        })
-        .catch(error => {
-          console.error('❌ 認証失敗:', error);
-          window.history.replaceState({}, document.title, window.location.pathname);
-          setAuthProcessing(false);
-        });
-    }
-  }, [authToken, authProcessing]);
-  
-  // 認証処理中の表示
-  if (authToken && authProcessing) {
+  // Magic Link検証中の表示
+  if (magicLinkVerification.isVerifying) {
     return (
       <div className="mindmap-app loading-screen">
         <div className="loading-content">
           <div className="loading-spinner"></div>
           <h2>認証処理中...</h2>
-          <p>しばらくお待ちください</p>
+          <p>Magic Linkを検証しています...</p>
         </div>
       </div>
     );
   }
   
-  // 認証状態チェック
-  const isAuthenticated = authManager.isAuthenticated();
+  // Magic Link検証エラーの表示
+  if (magicLinkVerification.verificationError) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <h2>認証エラー</h2>
+          <p>{magicLinkVerification.verificationError}</p>
+          <button onClick={() => {
+            magicLinkVerification.clearVerificationError();
+            window.location.href = window.location.pathname;
+          }}>トップページに戻る</button>
+        </div>
+      </div>
+    );
+  }
   
   // クラウドモードで未認証の場合は認証モーダル表示
-  if (settings.storageMode === 'cloud' && !isAuthenticated && !authToken) {
+  if (settings.storageMode === 'cloud' && !auth.state.isAuthenticated) {
     return (
       <AuthModal
         isOpen={true}
         onClose={() => {}}
         onSuccess={() => {
-          console.log('🎉 認証モーダル成功');
-          window.location.reload();
+          console.log('🎉 認証成功');
+          // モーダルは自動的に閉じられる
         }}
       />
     );
@@ -159,8 +145,7 @@ const MindMapApp: React.FC = () => {
     triggerCloudSync
   } = useMindMap(initState.isReady);
   
-  // クラウド認証状態管理
-  const cloudAuth = useCloudAuth();
+  // 認証状態は統一システムで管理済み
 
   // ストレージモード選択ハンドラー
   const handleStorageModeSelectWithReinit = async (mode) => {
@@ -201,8 +186,7 @@ const MindMapApp: React.FC = () => {
     }
   };
 
-  // カスタムフックで機能を分離
-  const authHandlers = useAuthHandlers(initState, refreshAllMindMaps, triggerCloudSync);
+  // 認証ハンドラーは統一システムで置き換え済み
   
   const fileHandlers = useFileHandlers(
     attachFileToNode,
@@ -275,17 +259,16 @@ const MindMapApp: React.FC = () => {
     }
   }, [initState.isReady]);
 
-  // クラウドモード時の認証状態チェック
+  // 認証状態の監視とログ出力
   useEffect(() => {
-    const settings = getAppSettings();
-    if (settings.storageMode === 'cloud' && !cloudAuth.isAuthenticated) {
-      console.log('🔐 クラウドモードですが未認証のため、認証が必要です');
-      // 認証モーダルを表示するか、または認証プロセスを開始
-      if (cloudAuth.error) {
-        console.error('認証エラー:', cloudAuth.error);
-      }
-    }
-  }, [cloudAuth.isAuthenticated, cloudAuth.error]);
+    console.log('🔍 認証状態:', {
+      isAuthenticated: auth.state.isAuthenticated,
+      user: auth.state.user?.email,
+      storageMode: settings.storageMode,
+      isLoading: auth.isLoading,
+      error: auth.error
+    });
+  }, [auth.state.isAuthenticated, auth.state.user, auth.isLoading, auth.error, settings.storageMode]);
 
   // ファイルアクションメニューのハンドラーを拡張
   const handleCloseAllPanels = () => {
@@ -323,7 +306,7 @@ const MindMapApp: React.FC = () => {
     }
   };
 
-  // 上記の認証処理で全てカバー済み - このセクションは削除
+  // 認証フローは統一システムで処理済み
 
   // 初期化中の場合の処理
   if (initState.isInitializing) {
@@ -423,14 +406,14 @@ const MindMapApp: React.FC = () => {
               <>
                 <UserPresence
                   connectedUsers={connectedUsers}
-                  currentUserId={authHandlers.authState.user?.id}
+                  currentUserId={auth.state.user?.id}
                   realtimeStatus={realtimeStatus}
                   onUserClick={realtimeHandlers.handleUserClick}
                 />
                 
                 <UserCursors
                   userCursors={userCursors}
-                  currentUserId={authHandlers.authState.user?.id}
+                  currentUserId={auth.state.user?.id}
                   zoom={uiState.zoom}
                   pan={uiState.pan}
                   findNode={findNode}
@@ -464,7 +447,7 @@ const MindMapApp: React.FC = () => {
               onClose={() => uiState.setShowCollaborativeFeatures(false)}
               selectedNodeId={selectedNodeId}
               findNode={findNode}
-              currentUserId={authHandlers.authState.user?.id}
+              currentUserId={auth.state.user?.id}
               connectedUsers={connectedUsers}
               realtimeClient={realtimeClient}
             />

@@ -1,84 +1,89 @@
-import React, { useState } from 'react';
-import { authManager } from '../../../features/auth/authManager.js';
+import React, { useState, useEffect } from 'react';
+import { useUnifiedAuth } from '../../../features/auth/useUnifiedAuth.js';
 import MagicLinkNotification from '../common/MagicLinkNotification.jsx';
 import type { User } from '../../../shared/types/index.js';
 
 interface AuthModalProps {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
-  onAuthSuccess: (user: User) => void;
+  onSuccess?: (user?: User) => void;
 }
 
 type AuthMode = 'email' | 'oauth';
 type AuthStep = 'email' | 'sent';
 
-const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose, onAuthSuccess }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess
+}) => {
+  // 統一認証システムを使用
+  const auth = useUnifiedAuth();
+  
   const [email, setEmail] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
   const [authMode, setAuthMode] = useState<AuthMode>('email');
   const [step, setStep] = useState<AuthStep>('email');
   const [magicLink, setMagicLink] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  
+  // 認証成功の監視
+  useEffect(() => {
+    if (auth.state.isAuthenticated && auth.state.user) {
+      console.log('🎉 認証成功検知:', auth.state.user);
+      
+      // コールバック実行
+      if (onSuccess) {
+        onSuccess(auth.state.user);
+      }
+      
+      // モーダルを閉じる
+      onClose();
+    }
+  }, [auth.state.isAuthenticated, auth.state.user, onSuccess, onAuthSuccess, onClose]);
+  
+  // 状態を統一システムから取得
+  const isLoading = auth.isLoading;
+  const error = auth.error || '';
 
   const handleSendMagicLink = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
-      setError('有効なメールアドレスを入力してください');
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-    setSuccess('');
-
     try {
-      const result = await authManager.sendMagicLink(email);
-      console.log('AuthModal received result:', result); // デバッグログ
-      setSuccess(result.message);
+      // 統一認証システムでMagic Link送信
+      await auth.loginWithEmail(email);
+      
+      // 成功時の処理はメール送信完了を意味する
+      setSuccess('メールを送信しました。メールボックスを確認してください。');
       setStep('sent');
       
-      // Magic Linkがレスポンスに含まれている場合は保存（テスト環境のみ）
-      if (result.magicLink && !result.emailSent) {
-        console.log('Setting magic link (test environment):', result.magicLink);
-        setMagicLink(result.magicLink);
-      } else {
-        console.log('Email sent successfully, no magic link displayed');
-        setMagicLink('');
-      }
+      // テスト環境の処理は統一システム内で実装されていることを想定
+      setMagicLink('');
     } catch (error) {
-      // エラーメッセージを表示
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMessage.includes('登録されていません')) {
-        setError('このメールアドレスは登録されていません。\nアクセスには事前の承認が必要です。');
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
+      console.error('Magic link sending error:', error);
+      // エラーは統一システムが管理
     }
   };
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    setError('');
-
     try {
-      await authManager.loginWithGoogle();
+      // 統一認証システムでGoogleログイン
+      await auth.loginWithGoogle();
       // リダイレクトが発生するため、ここでは何もしない
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Google login failed';
-      setError(errorMessage);
-      setIsLoading(false);
+      console.error('Google login error:', error);
+      // エラーは統一システムが管理
     }
   };
 
   const resetModal = () => {
     setStep('email');
-    setError('');
     setSuccess('');
     setEmail('');
     setMagicLink('');
+    auth.clearError(); // 統一システムのエラーをクリア
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +138,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose, onAuthSuccess
     }
   };
 
-  if (!isVisible) return null;
+  if (!isOpen) return null;
 
   return (
     <div style={{
