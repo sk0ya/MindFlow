@@ -2,7 +2,8 @@ import React from 'react';
 import { useAppInitialization } from './StorageSelection/core/hooks/useAppInitialization';
 import { StorageModeSelector } from './StorageSelection/ui/components/storage/StorageModeSelector';
 
-// Dynamic import for Local MindMapApp only
+// Dynamic imports for Cloud and Local MindMapApp
+const CloudMindMapApp = React.lazy(() => import('./Cloud/ui/components/mindmap/MindMapApp'));
 const LocalMindMapApp = React.lazy(() => import('./Local/ui/components/mindmap/MindMapApp'));
 
 const App: React.FC = () => {
@@ -22,10 +23,10 @@ const App: React.FC = () => {
     );
   }
 
-  // Only support local storage mode now
+  // Support both cloud and local storage modes
   return (
     <React.Suspense fallback={<div>Loading...</div>}>
-      <LocalMindMapApp />
+      {storageMode === 'cloud' ? <CloudMindMapApp /> : <LocalMindMapApp />}
     </React.Suspense>
   );
 };
