@@ -8,8 +8,53 @@
  * - 協調編集での競合回避
  */
 
+export type EditMode = 'local' | 'cloud';
+
+export interface UpdateOptions {
+  priority?: 'high' | 'normal' | 'low';
+  reason?: string;
+  source?: string;
+}
+
+export interface EditEventData {
+  nodeId: string;
+  userId: string;
+  session?: EditSession;
+  data?: any;
+  finalValue?: string;
+  originalValue?: string;
+  hasChanges?: boolean;
+  duration?: number;
+  options?: UpdateOptions;
+  queueSize?: number;
+  processedCount?: number;
+  remainingQueue?: number;
+}
+
+export interface EditStats {
+  activeEdits: number;
+  queuedUpdates: number;
+  mode: EditMode;
+  editingSessions: Array<{
+    nodeId: string;
+    userId: string;
+    duration: number;
+    hasChanges: boolean;
+  }>;
+}
+
+export type EventListener = (data: EditEventData) => void;
+export type EventUnsubscriber = () => void;
+
 export class EditSession {
-  constructor(nodeId, userId = 'local') {
+  public nodeId: string;
+  public userId: string;
+  public startTime: number;
+  public originalValue: string;
+  public currentValue: string;
+  public isActive: boolean;
+
+  constructor(nodeId: string, userId: string = 'local') {
     this.nodeId = nodeId;
     this.userId = userId;
     this.startTime = Date.now();
@@ -18,21 +63,28 @@ export class EditSession {
     this.isActive = true;
   }
 
-  updateValue(value) {
+  updateValue(value: string): void {
     this.currentValue = value;
   }
 
-  hasChanges() {
+  hasChanges(): boolean {
     return this.originalValue !== this.currentValue;
   }
 
-  getDuration() {
+  getDuration(): number {
     return Date.now() - this.startTime;
   }
 }
 
 export class QueuedUpdate {
-  constructor(nodeId, data, options = {}) {
+  public nodeId: string;
+  public data: any;
+  public options: UpdateOptions;
+  public timestamp: number;
+  public attempts: number;
+  public maxAttempts: number;
+
+  constructor(nodeId: string, data: any, options: UpdateOptions = {}) {
     this.nodeId = nodeId;
     this.data = data;
     this.options = options;
@@ -41,21 +93,27 @@ export class QueuedUpdate {
     this.maxAttempts = 3;
   }
 
-  canRetry() {
+  canRetry(): boolean {
     return this.attempts < this.maxAttempts;
   }
 
-  incrementAttempts() {
+  incrementAttempts(): void {
     this.attempts++;
   }
 
-  isExpired(maxAge = 30000) { // 30秒でタイムアウト
+  isExpired(maxAge: number = 30000): boolean { // 30秒でタイムアウト
     return Date.now() - this.timestamp > maxAge;
   }
 }
 
 export class EditProtectionManager {
-  constructor(mode = 'local') {
+  private mode: EditMode;
+  private activeEdits: Map<string, EditSession>;
+  private updateQueue: QueuedUpdate[];
+  private eventListeners: Map<string, EventListener[]>;
+  private cleanupInterval: NodeJS.Timeout | null;
+
+  constructor(mode: EditMode = 'local') {
     this.mode = mode; // 'local' or 'cloud'
     this.activeEdits = new Map(); // nodeId -> EditSession
     this.updateQueue = []; // QueuedUpdate[]
@@ -67,12 +125,8 @@ export class EditProtectionManager {
 
   /**
    * 編集セッション開始
-   * @param {string} nodeId - ノードID
-   * @param {string} originalValue - 元のテキスト
-   * @param {string} userId - ユーザーID（協調編集用）
-   * @returns {EditSession} - 編集セッション
    */
-  startEdit(nodeId, originalValue = '', userId = 'local') {
+  startEdit(nodeId: string, originalValue: string = '', userId: string = 'local'): EditSession {
     // 既存の編集セッションを終了
     if (this.activeEdits.has(nodeId)) {
       console.log(`⚠️ ノード ${nodeId} の既存編集セッションを終了`);
@@ -103,10 +157,8 @@ export class EditProtectionManager {
 
   /**
    * 編集セッション更新
-   * @param {string} nodeId - ノードID
-   * @param {string} currentValue - 現在のテキスト
    */
-  updateEdit(nodeId, currentValue) {
+  updateEdit(nodeId: string, currentValue: string): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) {
       console.warn(`⚠️ 編集セッションが見つかりません: ${nodeId}`);
@@ -114,16 +166,13 @@ export class EditProtectionManager {
     }
 
     session.updateValue(currentValue);
-    this.emit('edit_updated', { nodeId, currentValue, session });
+    this.emit('edit_updated', { nodeId, userId: session.userId, data: { currentValue }, session });
   }
 
   /**
    * 編集セッション終了
-   * @param {string} nodeId - ノードID
-   * @param {string} finalValue - 最終テキスト
-   * @param {Object} options - オプション
    */
-  finishEdit(nodeId, finalValue, options = {}) {
+  finishEdit(nodeId: string, finalValue: string, options: UpdateOptions = {}): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) {
       console.warn(`⚠️ 編集セッション終了: セッションが見つかりません ${nodeId}`);
@@ -145,13 +194,14 @@ export class EditProtectionManager {
     }
     
     this.emit('edit_finished', { 
-      nodeId, 
+      nodeId,
+      userId: session.userId,
       finalValue, 
       originalValue: session.originalValue,
       hasChanges: session.hasChanges(),
       duration: session.getDuration(),
       options 
-    });
+    } as EditEventData);
     
     console.log(`✅ 編集終了: ${nodeId}`, { 
       finalValue, 
@@ -162,22 +212,19 @@ export class EditProtectionManager {
 
   /**
    * 強制編集終了（エラー処理用）
-   * @param {string} nodeId - ノードID
    */
-  forceFinishEdit(nodeId) {
+  forceFinishEdit(nodeId: string): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) return;
 
     console.warn(`🚨 強制編集終了: ${nodeId}`);
-    this.finishEdit(nodeId, session.currentValue, { forced: true });
+    this.finishEdit(nodeId, session.currentValue, { reason: 'forced' });
   }
 
   /**
    * 編集中かどうかをチェック
-   * @param {string} nodeId - ノードID（省略時は全体チェック）
-   * @returns {boolean} - 編集中フラグ
    */
-  isEditing(nodeId = null) {
+  isEditing(nodeId?: string | null): boolean {
     if (nodeId) {
       return this.activeEdits.has(nodeId);
     }
@@ -186,29 +233,22 @@ export class EditProtectionManager {
 
   /**
    * 現在の編集中ノードを取得
-   * @returns {string[]} - 編集中ノードIDの配列
    */
-  getEditingNodes() {
+  getEditingNodes(): string[] {
     return Array.from(this.activeEdits.keys());
   }
 
   /**
    * 編集セッション情報を取得
-   * @param {string} nodeId - ノードID
-   * @returns {EditSession|null} - セッション情報
    */
-  getEditSession(nodeId) {
+  getEditSession(nodeId: string): EditSession | null {
     return this.activeEdits.get(nodeId) || null;
   }
 
   /**
    * データ更新を編集中チェック付きで処理
-   * @param {string} nodeId - ノードID
-   * @param {Object} data - 更新データ
-   * @param {Object} options - 更新オプション
-   * @returns {boolean} - 更新実行可否
    */
-  safeUpdate(nodeId, data, options = {}) {
+  safeUpdate(nodeId: string, data: any, options: UpdateOptions & { forceUpdate?: boolean } = {}): boolean {
     // 編集中の場合はキューに追加
     if (this.isEditing(nodeId) && !options.forceUpdate) {
       console.log(`📝 更新をキューに追加: ${nodeId}`, { data, reason: '編集中' });
@@ -223,11 +263,8 @@ export class EditProtectionManager {
 
   /**
    * 更新をキューに追加
-   * @param {string} nodeId - ノードID
-   * @param {Object} data - 更新データ
-   * @param {Object} options - オプション
    */
-  queueUpdate(nodeId, data, options = {}) {
+  queueUpdate(nodeId: string, data: any, options: UpdateOptions = {}): void {
     const update = new QueuedUpdate(nodeId, data, options);
     this.updateQueue.push(update);
     
@@ -241,9 +278,8 @@ export class EditProtectionManager {
 
   /**
    * キューされた更新を処理
-   * @param {string} nodeId - 対象ノードID
    */
-  processQueuedUpdates(nodeId) {
+  processQueuedUpdates(nodeId: string): void {
     const queuedUpdates = this.updateQueue.filter(update => 
       update.nodeId === nodeId && !update.isExpired()
     );
@@ -290,22 +326,16 @@ export class EditProtectionManager {
 
   /**
    * 実際の更新適用（継承先で実装）
-   * @param {string} nodeId - ノードID
-   * @param {Object} data - 更新データ
-   * @param {Object} options - オプション
    */
-  applyUpdate(nodeId, data, options) {
+  protected applyUpdate(nodeId: string, data: any, options: UpdateOptions): void {
     // 継承先でオーバーライド
     this.emit('update_applied', { nodeId, data, options });
   }
 
   /**
    * 編集確定処理（継承先で実装）
-   * @param {string} nodeId - ノードID
-   * @param {string} finalValue - 最終値
-   * @param {Object} options - オプション
    */
-  commitEdit(nodeId, finalValue, options) {
+  protected commitEdit(nodeId: string, finalValue: string, options: UpdateOptions): void {
     // 継承先でオーバーライド
     this.emit('edit_committed', { nodeId, finalValue, options });
   }
@@ -314,10 +344,8 @@ export class EditProtectionManager {
 
   /**
    * 編集開始通知（クラウドモード用）
-   * @param {string} nodeId - ノードID
-   * @param {string} userId - ユーザーID
    */
-  notifyEditStart(nodeId, userId) {
+  private notifyEditStart(nodeId: string, userId: string): void {
     if (this.mode !== 'cloud') return;
     // WebSocket等でリアルタイム通知
     this.emit('notify_edit_start', { nodeId, userId });
@@ -325,10 +353,8 @@ export class EditProtectionManager {
 
   /**
    * 編集終了通知（クラウドモード用）
-   * @param {string} nodeId - ノードID
-   * @param {string} userId - ユーザーID
    */
-  notifyEditEnd(nodeId, userId) {
+  private notifyEditEnd(nodeId: string, userId: string): void {
     if (this.mode !== 'cloud') return;
     // WebSocket等でリアルタイム通知
     this.emit('notify_edit_end', { nodeId, userId });
@@ -338,11 +364,8 @@ export class EditProtectionManager {
 
   /**
    * イベントリスナー追加
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
-   * @returns {Function} - 削除関数
    */
-  on(event, listener) {
+  on(event: string, listener: EventListener): EventUnsubscriber {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
@@ -354,10 +377,8 @@ export class EditProtectionManager {
 
   /**
    * イベントリスナー削除
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
    */
-  off(event, listener) {
+  off(event: string, listener: EventListener): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -369,10 +390,8 @@ export class EditProtectionManager {
 
   /**
    * イベント発火
-   * @param {string} event - イベント名
-   * @param {Object} data - イベントデータ
    */
-  emit(event, data) {
+  private emit(event: string, data: EditEventData): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {
@@ -390,7 +409,7 @@ export class EditProtectionManager {
   /**
    * 定期クリーンアップ開始
    */
-  startCleanupTimer() {
+  private startCleanupTimer(): void {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, 30000); // 30秒間隔
@@ -399,7 +418,7 @@ export class EditProtectionManager {
   /**
    * 期限切れデータのクリーンアップ
    */
-  cleanup() {
+  private cleanup(): void {
     const beforeSize = this.updateQueue.length;
     
     // 期限切れの更新を削除
@@ -422,7 +441,7 @@ export class EditProtectionManager {
   /**
    * すべてのリソースをクリーンアップ
    */
-  destroy() {
+  destroy(): void {
     // タイマーを停止
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
@@ -447,9 +466,8 @@ export class EditProtectionManager {
 
   /**
    * 統計情報を取得
-   * @returns {Object} - 統計情報
    */
-  getStats() {
+  getStats(): EditStats {
     return {
       activeEdits: this.activeEdits.size,
       queuedUpdates: this.updateQueue.length,

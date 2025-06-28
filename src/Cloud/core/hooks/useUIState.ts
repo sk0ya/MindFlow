@@ -40,21 +40,21 @@ export const useUIState = () => {
   };
 
   // パネル表示の切り替え関数
-  const togglePanel = (panelName: keyof typeof setters): void => {
-    const setters = {
-      nodeCustomization: setShowNodeCustomization,
-      layoutPanel: setShowLayoutPanel,
-      imageModal: setShowImageModal,
-      fileActionMenu: setShowFileActionMenu,
-      mapList: setShowMapList,
-      nodeMapLinks: setShowNodeMapLinks,
-      cloudStorage: setShowCloudStorage,
-      authModal: setShowAuthModal,
-      tutorial: setShowTutorial,
-      keyboardHelper: setShowKeyboardHelper,
-      performanceDashboard: setShowPerformanceDashboard
-    };
+  const setters = {
+    nodeCustomization: setShowNodeCustomization,
+    layoutPanel: setShowLayoutPanel,
+    imageModal: setShowImageModal,
+    fileActionMenu: setShowFileActionMenu,
+    mapList: setShowMapList,
+    nodeMapLinks: setShowNodeMapLinks,
+    cloudStorage: setShowCloudStorage,
+    authModal: setShowAuthModal,
+    tutorial: setShowTutorial,
+    keyboardHelper: setShowKeyboardHelper,
+    performanceDashboard: setShowPerformanceDashboard
+  };
 
+  const togglePanel = (panelName: keyof typeof setters): void => {
     const setter = setters[panelName];
     if (setter) {
       setter((prev: boolean) => !prev);

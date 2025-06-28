@@ -47,11 +47,11 @@ interface UseMindMapResult {
   resetView: () => void;
   
   // ファイル添付
-  attachFileToNode: (nodeId: string, file: File) => Promise<void>;
+  attachFileToNode: (nodeId: string, file: File) => Promise<string>;
   removeFileFromNode: (nodeId: string, fileId: string) => void;
   renameFileInNode: (nodeId: string, fileId: string, newName: string) => void;
   downloadFile: (file: File) => void;
-  isAppInitializing: boolean;
+  isAppInitializing: () => boolean;
   
   // 履歴
   undo: () => void;
@@ -69,9 +69,9 @@ interface UseMindMapResult {
   // マルチマップ管理
   allMindMaps: any[];
   currentMapId: string | null;
-  createMindMap: (title?: string) => Promise<void>;
+  createMindMap: (title?: string, category?: string) => Promise<string>;
   renameMindMap: (mapId: string, newTitle: string) => Promise<void>;
-  deleteMindMapById: (mapId: string) => Promise<void>;
+  deleteMindMapById: (mapId: string) => Promise<boolean>;
   switchToMap: (mapId: string, selectRoot?: boolean) => Promise<void>;
   refreshAllMindMaps: () => Promise<void>;
   

@@ -197,7 +197,16 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ切り替え（完全分離版）
-  const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null, finishEdit = null) => {
+  const switchToMap = async (
+    mapId: string, 
+    selectRoot: boolean = false, 
+    setSelectedNodeId: ((id: string | null) => void) | null = null, 
+    setEditingNodeId: ((id: string | null) => void) | null = null, 
+    setEditText: ((text: string) => void) | null = null, 
+    setHistory: ((history: any[]) => void) | null = null, 
+    setHistoryIndex: ((index: number) => void) | null = null, 
+    finishEdit: ((nodeId: string, text: string) => void) | null = null
+  ): Promise<void> => {
     console.log('📖 マップ切り替え開始:', mapId);
     
     try {

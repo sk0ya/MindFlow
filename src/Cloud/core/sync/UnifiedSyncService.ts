@@ -8,13 +8,118 @@
  * - 競合解決
  */
 
-import { EditProtectionManager } from './EditProtectionManager.js';
-import { getCurrentMindMap, updateMindMap, getAllMindMaps } from '../storage/StorageManager.ts';
-import { unifiedAuthManager } from '../../features/auth/UnifiedAuthManager.ts';
+import { EditProtectionManager, EditMode, UpdateOptions, EditEventData } from './EditProtectionManager.js';
+import { getCurrentMindMap, updateMindMap, getAllMindMaps } from '../storage/StorageManager.js';
+import { unifiedAuthManager } from '../../features/auth/UnifiedAuthManager.js';
+import type { MindMapData, Node } from '../storage/types.js';
+import type { AuthState } from '../../features/auth/types/authTypes.js';
+
+// ===== Type Definitions =====
+
+export type SyncMode = 'local' | 'cloud';
+
+export interface SyncConfiguration {
+  apiBaseUrl?: string;
+  syncInterval?: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  enableBatchOperations?: boolean;
+  enableRealTimeSync?: boolean;
+}
+
+export interface SyncEventData {
+  data?: MindMapData;
+  options?: SyncOptions;
+  timestamp?: number;
+  error?: Error;
+  mode?: SyncMode;
+  editingNodes?: string[];
+  source?: string;
+  nodeId?: string;
+  queueSize?: number;
+  processedCount?: number;
+  remainingQueue?: number;
+}
+
+export interface SyncOptions {
+  force?: boolean;
+  forceUpdate?: boolean;
+  source?: string;
+  nodeId?: string;
+  priority?: 'high' | 'normal' | 'low';
+  reason?: string;
+}
+
+export interface QueuedSave {
+  data: MindMapData;
+  options: SyncOptions;
+  timestamp: number;
+}
+
+export interface BatchOperation {
+  type: 'create' | 'update' | 'delete' | 'move';
+  nodeId?: string;
+  data?: Partial<Node> | { x: number; y: number; parentId?: string };
+}
+
+export interface BatchOptions {
+  stopOnError?: boolean;
+}
+
+export interface BatchResult {
+  success: boolean;
+  total: number;
+  processed: number;
+  errors: number;
+  results: BatchOperationResult[];
+  errorDetails?: BatchError[];
+}
+
+export interface BatchOperationResult {
+  index: number;
+  operation: string;
+  nodeId?: string;
+  success: boolean;
+  result: any;
+}
+
+export interface BatchError {
+  index: number;
+  operation: string;
+  nodeId?: string;
+  error: string;
+}
+
+export interface CloudAPIBatchData {
+  operations: BatchOperation[];
+  version: number;
+  stopOnError: boolean;
+}
+
+export interface SyncStats {
+  mode: SyncMode;
+  isSyncing: boolean;
+  lastSyncTime: number | null;
+  queuedSaves: number;
+  editProtection: any;
+}
+
+export type SyncEventType = 'sync_start' | 'sync_success' | 'sync_error' | 'mode_changed' | 'full_sync_start' | 'full_sync_success' | 'full_sync_error';
+export type SyncEventListener = (data: SyncEventData) => void;
+export type SyncEventUnsubscriber = () => void;
 
 export class UnifiedSyncService {
+  private mode: SyncMode;
+  private editProtection: EditProtectionManager;
+  private isSyncing: boolean;
+  private syncQueue: QueuedSave[];
+  private lastSyncTime: number | null;
+  private eventListeners: Map<SyncEventType, SyncEventListener[]>;
+  private syncInterval: NodeJS.Timeout | null;
+  private apiClient: CloudAPIClient | null;
+
   constructor() {
-    this.mode = 'local'; // 'local' | 'cloud'
+    this.mode = 'local';
     this.editProtection = new EditProtectionManager(this.mode);
     this.isSyncing = false;
     this.syncQueue = [];
@@ -31,10 +136,8 @@ export class UnifiedSyncService {
 
   /**
    * サービス初期化
-   * @param {string} mode - 'local' | 'cloud'
-   * @param {Object} config - 設定
    */
-  async initialize(mode = 'local', config = {}) {
+  async initialize(mode: SyncMode = 'local', config: SyncConfiguration = {}): Promise<void> {
     console.log(`🚀 UnifiedSyncService初期化: ${mode}モード`);
     
     this.mode = mode;
@@ -51,9 +154,8 @@ export class UnifiedSyncService {
 
   /**
    * ローカルモード初期化
-   * @param {Object} config - 設定
    */
-  async initializeLocalMode(config) {
+  private async initializeLocalMode(config: SyncConfiguration): Promise<void> {
     console.log('📱 ローカルモード初期化');
     // ローカルストレージの整合性チェック
     // 必要に応じて追加設定
@@ -61,9 +163,8 @@ export class UnifiedSyncService {
 
   /**
    * クラウドモード初期化
-   * @param {Object} config - 設定
    */
-  async initializeCloudMode(config) {
+  private async initializeCloudMode(config: SyncConfiguration): Promise<void> {
     console.log('☁️ クラウドモード初期化');
     
     // API クライアント設定
@@ -73,8 +174,8 @@ export class UnifiedSyncService {
     );
     
     // 認証状態の監視
-    unifiedAuthManager.onAuthStateChange((authState) => {
-      if (authState.isAuthenticated) {
+    unifiedAuthManager.onAuthStateChange((authState: AuthState) => {
+      if (authState.isAuthenticated && this.apiClient && authState.token) {
         this.apiClient.updateToken(authState.token);
       } else {
         this.switchToLocalMode();
@@ -90,7 +191,7 @@ export class UnifiedSyncService {
   /**
    * ローカルモードに切り替え
    */
-  async switchToLocalMode() {
+  async switchToLocalMode(): Promise<void> {
     console.log('📱 ローカルモードに切り替え');
     
     // 編集中のセッションを保護
@@ -108,9 +209,8 @@ export class UnifiedSyncService {
 
   /**
    * クラウドモードに切り替え
-   * @param {Object} config - 設定
    */
-  async switchToCloudMode(config = {}) {
+  async switchToCloudMode(config: SyncConfiguration = {}): Promise<void> {
     console.log('☁️ クラウドモードに切り替え');
     
     try {
@@ -128,27 +228,31 @@ export class UnifiedSyncService {
   /**
    * 編集保護システムとの統合設定
    */
-  setupEditProtectionIntegration() {
+  private setupEditProtectionIntegration(): void {
     // 編集確定時の保存処理
-    this.editProtection.on('edit_committed', async ({ nodeId, finalValue, options }) => {
-      await this.saveNodeEdit(nodeId, finalValue, options);
-    });
-
-    // 更新適用処理
-    this.editProtection.on('update_applied', async ({ nodeId, data, options }) => {
-      await this.applyNodeUpdate(nodeId, data, options);
-    });
-
-    // 編集開始/終了の通知（クラウドモード用）
-    this.editProtection.on('notify_edit_start', ({ nodeId, userId }) => {
-      if (this.mode === 'cloud' && this.apiClient) {
-        this.apiClient.notifyEditStart(nodeId, userId);
+    this.editProtection.on('edit_committed', async (eventData: EditEventData) => {
+      if (eventData.nodeId && eventData.finalValue !== undefined) {
+        await this.saveNodeEdit(eventData.nodeId, eventData.finalValue, eventData.options);
       }
     });
 
-    this.editProtection.on('notify_edit_end', ({ nodeId, userId }) => {
-      if (this.mode === 'cloud' && this.apiClient) {
-        this.apiClient.notifyEditEnd(nodeId, userId);
+    // 更新適用処理
+    this.editProtection.on('update_applied', async (eventData: EditEventData) => {
+      if (eventData.nodeId && eventData.data) {
+        await this.applyNodeUpdate(eventData.nodeId, eventData.data, eventData.options);
+      }
+    });
+
+    // 編集開始/終了の通知（クラウドモード用）
+    this.editProtection.on('notify_edit_start', (eventData: EditEventData) => {
+      if (this.mode === 'cloud' && this.apiClient && eventData.nodeId && eventData.userId) {
+        this.apiClient.notifyEditStart(eventData.nodeId, eventData.userId);
+      }
+    });
+
+    this.editProtection.on('notify_edit_end', (eventData: EditEventData) => {
+      if (this.mode === 'cloud' && this.apiClient && eventData.nodeId && eventData.userId) {
+        this.apiClient.notifyEditEnd(eventData.nodeId, eventData.userId);
       }
     });
   }
@@ -157,11 +261,9 @@ export class UnifiedSyncService {
 
   /**
    * データ保存（編集保護付き）
-   * @param {Object} data - マインドマップデータ
-   * @param {Object} options - 保存オプション
    */
-  async saveData(data, options = {}) {
-    if (!data || data.isPlaceholder) {
+  async saveData(data: MindMapData, options: SyncOptions = {}): Promise<void> {
+    if (!data || (data as any).isPlaceholder) {
       console.log('⏭️ プレースホルダーデータのため保存をスキップ');
       return;
     }
@@ -173,15 +275,13 @@ export class UnifiedSyncService {
       return;
     }
 
-    return await this.performSave(data, options);
+    await this.performSave(data, options);
   }
 
   /**
    * 実際の保存処理
-   * @param {Object} data - マインドマップデータ
-   * @param {Object} options - 保存オプション
    */
-  async performSave(data, options = {}) {
+  private async performSave(data: MindMapData, options: SyncOptions = {}): Promise<void> {
     if (this.isSyncing && !options.force) {
       console.log('⏸️ 同期中のため保存をスキップ');
       return;
@@ -220,10 +320,8 @@ export class UnifiedSyncService {
 
   /**
    * 保存をキューに追加
-   * @param {Object} data - マインドマップデータ
-   * @param {Object} options - 保存オプション
    */
-  queueSave(data, options) {
+  private queueSave(data: MindMapData, options: SyncOptions): void {
     this.syncQueue.push({ data, options, timestamp: Date.now() });
     console.log(`📋 保存キュー追加: ${data.title}`);
   }
@@ -231,7 +329,7 @@ export class UnifiedSyncService {
   /**
    * キューされた保存を処理
    */
-  async processQueuedSaves() {
+  private async processQueuedSaves(): Promise<void> {
     if (this.syncQueue.length === 0 || this.editProtection.isEditing()) {
       return;
     }
@@ -253,11 +351,8 @@ export class UnifiedSyncService {
 
   /**
    * ノード編集保存
-   * @param {string} nodeId - ノードID
-   * @param {string} finalValue - 編集後テキスト
-   * @param {Object} options - オプション
    */
-  async saveNodeEdit(nodeId, finalValue, options) {
+  private async saveNodeEdit(nodeId: string, finalValue: string, options?: UpdateOptions): Promise<void> {
     try {
       // 現在のデータを取得
       const currentData = await getCurrentMindMap();
@@ -268,7 +363,7 @@ export class UnifiedSyncService {
       
       // 保存実行
       await this.performSave(updatedData, { 
-        ...options, 
+        ...(options || {}), 
         source: 'node_edit',
         nodeId 
       });
@@ -281,11 +376,8 @@ export class UnifiedSyncService {
 
   /**
    * ノード更新適用
-   * @param {string} nodeId - ノードID
-   * @param {Object} updateData - 更新データ
-   * @param {Object} options - オプション
    */
-  async applyNodeUpdate(nodeId, updateData, options) {
+  private async applyNodeUpdate(nodeId: string, updateData: any, options?: UpdateOptions): Promise<void> {
     try {
       // 現在のデータを取得
       const currentData = await getCurrentMindMap();
@@ -296,7 +388,7 @@ export class UnifiedSyncService {
       
       // 保存実行
       await this.performSave(updatedData, { 
-        ...options, 
+        ...(options || {}), 
         source: 'node_update',
         nodeId 
       });
@@ -311,10 +403,8 @@ export class UnifiedSyncService {
 
   /**
    * バッチ操作実行
-   * @param {Array} operations - 操作配列
-   * @param {Object} options - オプション
    */
-  async executeBatchOperations(operations, options = {}) {
+  private async executeBatchOperations(operations: BatchOperation[], options: BatchOptions = {}): Promise<BatchResult> {
     if (!this.apiClient) {
       // ローカルモードではバッチ処理をシミュレート
       return await this.executeBatchOperationsLocal(operations, options);
@@ -326,12 +416,10 @@ export class UnifiedSyncService {
 
   /**
    * ローカルモードでのバッチ操作シミュレート
-   * @param {Array} operations - 操作配列
-   * @param {Object} options - オプション
    */
-  async executeBatchOperationsLocal(operations, options) {
-    const results = [];
-    const errors = [];
+  private async executeBatchOperationsLocal(operations: BatchOperation[], options: BatchOptions): Promise<BatchResult> {
+    const results: BatchOperationResult[] = [];
+    const errors: BatchError[] = [];
     let processedCount = 0;
 
     try {
@@ -440,10 +528,8 @@ export class UnifiedSyncService {
 
   /**
    * クラウドモードでのバッチAPI実行
-   * @param {Array} operations - 操作配列
-   * @param {Object} options - オプション
    */
-  async executeBatchOperationsCloud(operations, options) {
+  private async executeBatchOperationsCloud(operations: BatchOperation[], options: BatchOptions): Promise<BatchResult> {
     try {
       const currentData = await getCurrentMindMap();
       if (!currentData) {
@@ -452,7 +538,7 @@ export class UnifiedSyncService {
 
       const response = await this.apiClient.executeBatch(currentData.id, {
         operations: operations,
-        version: currentData.version || 1,
+        version: (currentData as any).version || 1,
         stopOnError: options.stopOnError || false
       });
 
@@ -477,12 +563,9 @@ export class UnifiedSyncService {
 
   /**
    * データ内にノードを作成
-   * @param {Object} data - マインドマップデータ
-   * @param {Object} nodeData - ノードデータ
-   * @returns {Object} - 作成されたノード
    */
-  createNodeInData(data, nodeData) {
-    const newNode = {
+  private createNodeInData(data: MindMapData, nodeData: Partial<Node> & { parentId?: string }): Node {
+    const newNode: Node = {
       id: nodeData.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       text: nodeData.text || 'New Node',
       x: nodeData.x || 0,
@@ -509,11 +592,9 @@ export class UnifiedSyncService {
 
   /**
    * データ内のノードを削除
-   * @param {Object} data - マインドマップデータ
-   * @param {string} nodeId - ノードID
    */
-  deleteNodeInData(data, nodeId) {
-    const deleteNodeRecursive = (node, parent = null) => {
+  private deleteNodeInData(data: MindMapData, nodeId: string): void {
+    const deleteNodeRecursive = (node: Node, parent: Node | null = null): boolean => {
       if (node.id === nodeId) {
         if (parent && parent.children) {
           const index = parent.children.indexOf(node);
@@ -545,12 +626,9 @@ export class UnifiedSyncService {
 
   /**
    * データ内のノードを検索
-   * @param {Object} data - マインドマップデータ
-   * @param {string} nodeId - ノードID
-   * @returns {Object|null} - 見つかったノード
    */
-  findNodeInData(data, nodeId) {
-    const findNodeRecursive = (node) => {
+  private findNodeInData(data: MindMapData, nodeId: string): Node | null {
+    const findNodeRecursive = (node: Node): Node | null => {
       if (node.id === nodeId) {
         return node;
       }
@@ -574,15 +652,11 @@ export class UnifiedSyncService {
 
   /**
    * データ内のノードを更新
-   * @param {Object} data - マインドマップデータ
-   * @param {string} nodeId - ノードID
-   * @param {Object} updates - 更新内容
-   * @returns {Object} - 更新されたデータ
    */
-  updateNodeInData(data, nodeId, updates) {
+  private updateNodeInData(data: MindMapData, nodeId: string, updates: Partial<Node>): MindMapData {
     const clonedData = JSON.parse(JSON.stringify(data));
     
-    const updateNodeRecursive = (node) => {
+    const updateNodeRecursive = (node: Node): boolean => {
       if (node.id === nodeId) {
         Object.assign(node, updates);
         return true;
@@ -605,9 +679,8 @@ export class UnifiedSyncService {
 
   /**
    * 認証トークンを取得
-   * @returns {string|null} - 認証トークン
    */
-  async getAuthToken() {
+  private async getAuthToken(): Promise<string | null> {
     const authState = unifiedAuthManager.getAuthState();
     return authState.isAuthenticated ? authState.token : null;
   }
@@ -617,13 +690,13 @@ export class UnifiedSyncService {
   /**
    * 同期スケジューラー開始
    */
-  startSyncScheduler() {
+  private startSyncScheduler(): void {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
     }
 
     // インテリジェント同期間隔
-    let baseInterval = this.mode === 'cloud' ? 30000 : 60000; // 30秒 or 60秒
+    const baseInterval = this.mode === 'cloud' ? 30000 : 60000; // 30秒 or 60秒
     
     this.syncInterval = setInterval(async () => {
       try {
@@ -646,14 +719,14 @@ export class UnifiedSyncService {
   /**
    * 増分同期実行
    */
-  async performIncrementalSync() {
+  private async performIncrementalSync(): Promise<void> {
     if (this.isSyncing || this.editProtection.isEditing()) {
       return;
     }
 
     try {
       // サーバーから最新の変更をチェック
-      if (this.apiClient) {
+      if (this.apiClient && this.lastSyncTime !== null) {
         const hasRemoteChanges = await this.apiClient.checkForUpdates(this.lastSyncTime);
         if (hasRemoteChanges) {
           console.log('🔄 リモート変更を検出、増分同期実行');
@@ -668,7 +741,7 @@ export class UnifiedSyncService {
   /**
    * 完全同期実行
    */
-  async performFullSync() {
+  private async performFullSync(): Promise<void> {
     if (!this.apiClient) return;
 
     try {
@@ -702,11 +775,8 @@ export class UnifiedSyncService {
 
   /**
    * 競合解決
-   * @param {Array} serverData - サーバーデータ
-   * @param {Array} localData - ローカルデータ
-   * @returns {Array} - 統合データ
    */
-  async resolveConflicts(serverData, localData) {
+  private async resolveConflicts(serverData: MindMapData[], localData: MindMapData[]): Promise<MindMapData[]> {
     // シンプルなタイムスタンプベース競合解決
     const merged = new Map();
     
@@ -724,8 +794,8 @@ export class UnifiedSyncService {
         merged.set(serverItem.id, serverItem);
       } else {
         // タイムスタンプで判定（新しい方を採用）
-        const serverTime = new Date(serverItem.updatedAt || 0).getTime();
-        const localTime = new Date(localItem.updatedAt || 0).getTime();
+        const serverTime = new Date(serverItem.updatedAt || '1970-01-01').getTime();
+        const localTime = new Date(localItem.updatedAt || '1970-01-01').getTime();
         
         if (serverTime > localTime) {
           merged.set(serverItem.id, serverItem);
@@ -743,25 +813,20 @@ export class UnifiedSyncService {
 
   /**
    * イベントリスナー追加
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
-   * @returns {Function} - 削除関数
    */
-  on(event, listener) {
+  on(event: SyncEventType, listener: SyncEventListener): SyncEventUnsubscriber {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
-    this.eventListeners.get(event).push(listener);
+    this.eventListeners.get(event)!.push(listener);
     
     return () => this.off(event, listener);
   }
 
   /**
    * イベントリスナー削除
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
    */
-  off(event, listener) {
+  off(event: SyncEventType, listener: SyncEventListener): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -773,15 +838,13 @@ export class UnifiedSyncService {
 
   /**
    * イベント発火
-   * @param {string} event - イベント名
-   * @param {Object} data - イベントデータ
    */
-  emit(event, data) {
+  private emit(event: SyncEventType, data?: SyncEventData): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {
         try {
-          listener(data);
+          listener(data || {});
         } catch (error) {
           console.error(`同期イベントエラー [${event}]:`, error);
         }
@@ -793,45 +856,36 @@ export class UnifiedSyncService {
 
   /**
    * 編集開始
-   * @param {string} nodeId - ノードID
-   * @param {string} originalValue - 元の値
-   * @returns {Object} - 編集セッション
    */
-  startEdit(nodeId, originalValue = '') {
+  startEdit(nodeId: string, originalValue: string = ''): any {
     return this.editProtection.startEdit(nodeId, originalValue);
   }
 
   /**
    * 編集更新
-   * @param {string} nodeId - ノードID
-   * @param {string} currentValue - 現在の値
    */
-  updateEdit(nodeId, currentValue) {
+  updateEdit(nodeId: string, currentValue: string): void {
     this.editProtection.updateEdit(nodeId, currentValue);
   }
 
   /**
    * 編集終了
-   * @param {string} nodeId - ノードID
-   * @param {string} finalValue - 最終値
    */
-  finishEdit(nodeId, finalValue) {
+  finishEdit(nodeId: string, finalValue: string): void {
     this.editProtection.finishEdit(nodeId, finalValue);
   }
 
   /**
    * 編集中チェック
-   * @param {string} nodeId - ノードID
-   * @returns {boolean} - 編集中フラグ
    */
-  isEditing(nodeId) {
+  isEditing(nodeId?: string): boolean {
     return this.editProtection.isEditing(nodeId);
   }
 
   /**
    * 強制同期
    */
-  async forceSync() {
+  async forceSync(): Promise<void> {
     if (this.mode === 'cloud') {
       await this.performFullSync();
     }
@@ -839,9 +893,8 @@ export class UnifiedSyncService {
 
   /**
    * 統計情報取得
-   * @returns {Object} - 統計情報
    */
-  getStats() {
+  getStats(): SyncStats {
     return {
       mode: this.mode,
       isSyncing: this.isSyncing,
@@ -853,17 +906,15 @@ export class UnifiedSyncService {
 
   /**
    * バッチ操作実行（公開API）
-   * @param {Array} operations - 操作配列
-   * @param {Object} options - オプション
    */
-  async batchExecute(operations, options = {}) {
+  async batchExecute(operations: BatchOperation[], options: BatchOptions = {}): Promise<BatchResult> {
     return await this.executeBatchOperations(operations, options);
   }
 
   /**
    * サーバー統計取得（公開API）
    */
-  async getServerStats() {
+  async getServerStats(): Promise<any> {
     if (this.mode === 'cloud' && this.apiClient) {
       const currentData = await getCurrentMindMap();
       if (currentData) {
@@ -878,7 +929,7 @@ export class UnifiedSyncService {
   /**
    * サービス停止
    */
-  destroy() {
+  destroy(): void {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
@@ -896,16 +947,19 @@ export class UnifiedSyncService {
  * CloudAPIClient - クラウドAPI通信
  */
 class CloudAPIClient {
-  constructor(baseUrl, authToken) {
+  private baseUrl: string;
+  private authToken: string;
+
+  constructor(baseUrl: string, authToken: string) {
     this.baseUrl = baseUrl;
     this.authToken = authToken;
   }
 
-  updateToken(token) {
+  updateToken(token: string): void {
     this.authToken = token;
   }
 
-  async saveMindMap(data) {
+  async saveMindMap(data: MindMapData): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/mindmaps/${data.id}`, {
       method: 'PUT',
       headers: {
@@ -922,7 +976,7 @@ class CloudAPIClient {
     return await response.json();
   }
 
-  async getAllMindMaps() {
+  async getAllMindMaps(): Promise<MindMapData[]> {
     const response = await fetch(`${this.baseUrl}/api/mindmaps`, {
       headers: {
         'Authorization': `Bearer ${this.authToken}`
@@ -936,7 +990,7 @@ class CloudAPIClient {
     return await response.json();
   }
 
-  async checkForUpdates(lastSync) {
+  async checkForUpdates(lastSync: number): Promise<boolean> {
     const response = await fetch(`${this.baseUrl}/api/mindmaps/changes?since=${lastSync}`, {
       headers: {
         'Authorization': `Bearer ${this.authToken}`
@@ -951,15 +1005,15 @@ class CloudAPIClient {
     return changes.length > 0;
   }
 
-  async notifyEditStart(nodeId, userId) {
+  async notifyEditStart(nodeId: string, userId: string): Promise<void> {
     // WebSocket実装時に追加
   }
 
-  async notifyEditEnd(nodeId, userId) {
+  async notifyEditEnd(nodeId: string, userId: string): Promise<void> {
     // WebSocket実装時に追加
   }
 
-  async executeBatch(mindmapId, batchData) {
+  async executeBatch(mindmapId: string, batchData: CloudAPIBatchData): Promise<BatchResult> {
     const response = await fetch(`${this.baseUrl}/api/nodes/${mindmapId}/batch`, {
       method: 'POST',
       headers: {
@@ -976,7 +1030,7 @@ class CloudAPIClient {
     return await response.json();
   }
 
-  async getStats(mindmapId) {
+  async getStats(mindmapId: string): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/nodes/${mindmapId}/stats`, {
       headers: {
         'Authorization': `Bearer ${this.authToken}`

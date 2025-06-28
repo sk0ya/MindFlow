@@ -9,11 +9,6 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-interface ApiResponse<T = any> {
-  data?: T;
-  error?: string;
-  success: boolean;
-}
 
 interface AppSettings {
   storageMode: 'cloud';
@@ -53,7 +48,7 @@ class ApiClient {
 
   async request(endpoint: string, options: RequestOptions = {}): Promise<Response> {
     const url = `${API_BASE}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
@@ -76,10 +71,6 @@ class ApiClient {
     return response.json();
   }
 
-  // 設定取得
-  getSettings(): AppSettings {
-    return { ...DEFAULT_SETTINGS };
-  }
 
   // マップ一覧取得
   async getMaps(): Promise<any> {
@@ -108,57 +99,57 @@ class ApiClient {
   }
 
   // マップ削除
-  async deleteMap(mapId) {
+  async deleteMap(mapId: string): Promise<any> {
     return this.request(`/maps/${mapId}`, {
       method: 'DELETE',
     });
   }
 
   // 設定管理（クラウド専用）
-  getSettings() {
+  getSettings(): AppSettings {
     // Cloud mode: settings stored in memory only
     return { ...DEFAULT_SETTINGS };
   }
 
-  setSettings(newSettings) {
+  setSettings(newSettings: Partial<AppSettings>): void {
     this.settings = { ...this.settings, ...newSettings };
     console.log('☁️ Cloud mode: settings updated in memory only');
   }
 
   // クラウド専用操作（ローカルストレージなし）
-  getLocalMaps() {
+  getLocalMaps(): any[] {
     // Cloud mode: no local maps storage
     console.log('☁️ Cloud mode: no local maps available');
     return [];
   }
 
-  setLocalMaps(maps) {
+  setLocalMaps(maps: any[]): void {
     // Cloud mode: no local maps storage
     console.log('☁️ Cloud mode: local maps not saved');
   }
 
   // クラウド専用インターフェース
-  async getAllMaps() {
+  async getAllMaps(): Promise<any> {
     // Cloud mode: always use cloud storage
     try {
       return await this.getMaps();
-    } catch (error) {
-      console.error('☁️ Cloud storage failed:', error.message);
+    } catch (error: unknown) {
+      console.error('☁️ Cloud storage failed:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
 
-  async getSingleMap(mapId) {
+  async getSingleMap(mapId: string): Promise<any> {
     // Cloud mode: always use cloud storage
     try {
       return await this.getMap(mapId);
-    } catch (error) {
-      console.error('☁️ Cloud storage failed:', error.message);
+    } catch (error: unknown) {
+      console.error('☁️ Cloud storage failed:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
 
-  async saveMapData(mapData) {
+  async saveMapData(mapData: any): Promise<any> {
     // Cloud mode: save to cloud only
     try {
       const existingMap = await this.getMap(mapData.id).catch(() => null);
@@ -168,19 +159,19 @@ class ApiClient {
       } else {
         return await this.createMap(mapData);
       }
-    } catch (error) {
-      console.error('☁️ Cloud save failed:', error.message);
+    } catch (error: unknown) {
+      console.error('☁️ Cloud save failed:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
 
-  async deleteMapData(mapId) {
+  async deleteMapData(mapId: string): Promise<any> {
     // Cloud mode: delete from cloud only
     try {
       await this.deleteMap(mapId);
       return true;
-    } catch (error) {
-      console.error('☁️ Cloud delete failed:', error.message);
+    } catch (error: unknown) {
+      console.error('☁️ Cloud delete failed:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
