@@ -44,13 +44,19 @@ import { useRealtimeHandlers } from './hooks/useRealtimeHandlers.js';
 import type { MindMapNode, MindMapData, User } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
-  // URL パラメータで認証トークンをチェック
+  // URL パラメータで認証トークンをチェック（複数のパラメータ名を試す）
   const urlParams = new URLSearchParams(window.location.search);
-  const authToken = urlParams.get('token');
+  const authToken = urlParams.get('token') || 
+                   urlParams.get('auth_token') || 
+                   urlParams.get('magic_token') ||
+                   urlParams.get('verification_token');
   const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
   
   console.log('🔍 URL認証チェック:', { 
+    url: window.location.href,
+    search: window.location.search,
     hasToken: !!authToken, 
+    token: authToken?.substring(0, 20) + '...', // 最初の20文字のみ表示
     tokenLength: authToken?.length, 
     isAuthVerification 
   });
@@ -68,10 +74,26 @@ const MindMapApp: React.FC = () => {
       // URLにトークンがある場合のみ認証処理を実行
       if (authToken && authToken.length > 10 && !authManager.isAuthenticated()) {
         try {
-          console.log('🔑 URL認証トークン検出: 認証処理開始');
-          await authManager.handleAuthCallback(authToken);
+          console.log('🔑 URL認証トークン検出: 認証処理開始', {
+            tokenLength: authToken.length,
+            tokenPreview: authToken.substring(0, 10) + '...'
+          });
+          const result = await authManager.verifyMagicLink(authToken);
+          console.log('✅ URL認証成功:', result);
+          
+          // 認証成功後はURLからトークンを削除
+          if (result.success) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
         } catch (error) {
-          console.error('❌ URL認証処理エラー:', error);
+          console.error('❌ URL認証処理エラー:', {
+            error: error.message,
+            status: error.status,
+            tokenLength: authToken.length
+          });
+          
+          // 認証エラーの場合もURLからトークンを削除（無限ループ防止）
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
       
