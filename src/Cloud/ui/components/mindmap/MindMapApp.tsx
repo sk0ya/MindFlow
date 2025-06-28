@@ -365,9 +365,13 @@ const MindMapApp: React.FC = () => {
               zoom={uiState.zoom}
               onZoomReset={uiState.handleZoomReset}
               onShowCloudStoragePanel={() => uiState.setShowCloudStoragePanel(true)}
-              authState={authHandlers.authState}
-              onShowAuthModal={authHandlers.handleShowAuthModal}
-              onLogout={authHandlers.handleLogout}
+              authState={{
+                isAuthenticated: auth.state.isAuthenticated,
+                user: auth.state.user,
+                isLoading: auth.isLoading
+              }}
+              onShowAuthModal={auth.openModal}
+              onLogout={auth.logout}
               onShowShortcutHelper={() => uiState.setShowShortcutHelper(true)}
             />
 
@@ -402,7 +406,7 @@ const MindMapApp: React.FC = () => {
             </ErrorBoundary>
 
             {/* リアルタイム機能UI */}
-            {authHandlers.authState.isAuthenticated && (
+            {auth.state.isAuthenticated && (
               <>
                 <UserPresence
                   connectedUsers={connectedUsers}

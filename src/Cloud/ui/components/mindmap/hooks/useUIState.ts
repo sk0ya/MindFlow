@@ -125,9 +125,13 @@ export const useUIState = () => {
     pan,
     setPan,
     showCustomizationPanel,
+    setShowCustomizationPanel,
     customizationPosition,
+    setCustomizationPosition,
     showContextMenu,
+    setShowContextMenu,
     contextMenuPosition,
+    setContextMenuPosition,
     clipboard,
     setClipboard,
     

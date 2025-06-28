@@ -3,9 +3,88 @@ import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles.js';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti.js';
+import type { MindMapData, MindMapNode, User } from '../../shared/types/index.js';
+
+type NavigationDirection = 'up' | 'down' | 'left' | 'right';
+
+interface UseMindMapResult {
+  // データ
+  data: MindMapData | null;
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  editText: string;
+  
+  // 状態更新
+  setSelectedNodeId: (id: string | null) => void;
+  setEditingNodeId: (id: string | null) => void;
+  setEditText: (text: string) => void;
+  
+  // ノード操作
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  deleteNode: (nodeId: string) => void;
+  dragNode: (nodeId: string, x: number, y: number) => void;
+  changeParent: (nodeId: string, newParentId: string) => void;
+  findNode: (nodeId: string) => MindMapNode | null;
+  findParentNode: (nodeId: string) => MindMapNode | null;
+  flattenNodes: (rootNode: MindMapNode) => MindMapNode[];
+  applyAutoLayout: (algorithm?: string) => void;
+  navigateToDirection: (direction: NavigationDirection) => void;
+  
+  // 編集
+  startEdit: (nodeId: string) => void;
+  finishEdit: (nodeId: string, text: string) => void;
+  
+  // 折りたたみ
+  toggleCollapse: (nodeId: string) => void;
+  
+  // ナビゲーション
+  zoom: number;
+  setZoom: (zoom: number) => void;
+  pan: { x: number; y: number };
+  setPan: (pan: { x: number; y: number }) => void;
+  resetView: () => void;
+  
+  // ファイル添付
+  attachFileToNode: (nodeId: string, file: File) => Promise<void>;
+  removeFileFromNode: (nodeId: string, fileId: string) => void;
+  renameFileInNode: (nodeId: string, fileId: string, newName: string) => void;
+  downloadFile: (file: File) => void;
+  isAppInitializing: boolean;
+  
+  // 履歴
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  
+  // その他
+  updateTitle: (title: string) => void;
+  changeTheme: (theme: string) => void;
+  updateSettings: (settings: any) => void;
+  saveMindMap: () => Promise<void>;
+  triggerCloudSync: () => void;
+  
+  // マルチマップ管理
+  allMindMaps: any[];
+  currentMapId: string | null;
+  createMindMap: (title?: string) => Promise<void>;
+  renameMindMap: (mapId: string, newTitle: string) => Promise<void>;
+  deleteMindMapById: (mapId: string) => Promise<void>;
+  switchToMap: (mapId: string, selectRoot?: boolean) => Promise<void>;
+  refreshAllMindMaps: () => Promise<void>;
+  
+  // カテゴリー管理
+  changeMapCategory: (mapId: string, category: string) => Promise<void>;
+  getAvailableCategories: () => string[];
+  
+  // 初期化管理
+  reinitializeAfterModeSelection: () => Promise<void>;
+}
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
-export const useMindMap = (isAppReady = false) => {
+export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
   // デバッグログを制限（初回のみ）
   const [debugLogged, setDebugLogged] = useState(false);
   
@@ -28,7 +107,7 @@ export const useMindMap = (isAppReady = false) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   
-  const navigateToDirection = useCallback((direction) => {
+  const navigateToDirection = useCallback((direction: NavigationDirection): void => {
     console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
     
     if (!nodeHook.selectedNodeId || !dataHook.data?.rootNode) {
@@ -43,7 +122,7 @@ export const useMindMap = (isAppReady = false) => {
       return;
     }
     
-    let targetNode = null;
+    let targetNode: MindMapNode | null = null;
     let minDistance = Infinity;
     
     // 座標ベースで方向にあるノードを探す

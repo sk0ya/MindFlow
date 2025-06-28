@@ -27,8 +27,8 @@ export const useUIState = () => {
   // サイドバー状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
-  // クラウドストレージパネル状態
-  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
+  // ローカルストレージパネル状態
+  const [showLocalStoragePanel, setShowLocalStoragePanel] = useState(false);
   
   // 競合通知状態
   const [conflicts, setConflicts] = useState([]);
@@ -125,9 +125,13 @@ export const useUIState = () => {
     pan,
     setPan,
     showCustomizationPanel,
+    setShowCustomizationPanel,
     customizationPosition,
+    setCustomizationPosition,
     showContextMenu,
+    setShowContextMenu,
     contextMenuPosition,
+    setContextMenuPosition,
     clipboard,
     setClipboard,
     
@@ -140,8 +144,8 @@ export const useUIState = () => {
     nodeMapLinksPanelPosition,
     selectedNodeForLinks,
     sidebarCollapsed,
-    showCloudStoragePanel,
-    setShowCloudStoragePanel,
+    showLocalStoragePanel,
+    setShowLocalStoragePanel,
     conflicts,
     showCollaborativeFeatures,
     setShowCollaborativeFeatures,

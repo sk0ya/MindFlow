@@ -45,7 +45,8 @@ export const useAppInitialization = () => {
               showStorageModeSelector: false,
               showAuthModal: false,
               showOnboarding: false,
-              storageMode: 'cloud',
+              storageMode: 'cloud' as StorageMode,
+              pendingStorageMode: null,
               hasExistingLocalData: false,
               isReady: true
             });
@@ -56,7 +57,8 @@ export const useAppInitialization = () => {
               showStorageModeSelector: false,
               showAuthModal: true,
               showOnboarding: false,
-              storageMode: 'cloud',
+              storageMode: 'cloud' as StorageMode,
+              pendingStorageMode: null,
               hasExistingLocalData: false,
               isReady: false
             });
@@ -74,7 +76,8 @@ export const useAppInitialization = () => {
               showStorageModeSelector: false,
               showAuthModal: false,
               showOnboarding: false,
-              storageMode: 'cloud',
+              storageMode: 'cloud' as StorageMode,
+              pendingStorageMode: null,
               hasExistingLocalData: false,
               isReady: true
             });
@@ -87,7 +90,8 @@ export const useAppInitialization = () => {
               showStorageModeSelector: false,
               showAuthModal: true,
               showOnboarding: false,
-              storageMode: 'cloud',
+              storageMode: 'cloud' as StorageMode,
+              pendingStorageMode: null,
               hasExistingLocalData: false,
               isReady: false
             });
@@ -102,7 +106,8 @@ export const useAppInitialization = () => {
           showStorageModeSelector: false,
           showAuthModal: true,
           showOnboarding: false,
-          storageMode: 'cloud',
+          storageMode: 'cloud' as StorageMode,
+          pendingStorageMode: null,
           hasExistingLocalData: false,
           isReady: false
         });
@@ -140,7 +145,7 @@ export const useAppInitialization = () => {
   };
 
   // 認証成功処理
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = async (): Promise<void> => {
     console.log('✅ 認証成功 → クラウドストレージ初期化');
     
     try {
@@ -155,7 +160,7 @@ export const useAppInitialization = () => {
       setInitState(prev => ({
         ...prev,
         showAuthModal: false,
-        storageMode: 'cloud',
+        storageMode: 'cloud' as StorageMode,
         pendingStorageMode: null,
         isReady: true
       }));
@@ -172,7 +177,7 @@ export const useAppInitialization = () => {
   };
 
   // 認証モーダルクローズ処理
-  const handleAuthClose = () => {
+  const handleAuthClose = (): void => {
     console.log('❌ 認証キャンセル → ストレージ選択に戻る');
     setInitState(prev => ({
       ...prev,
@@ -184,7 +189,7 @@ export const useAppInitialization = () => {
   };
 
   // オンボーディング完了処理
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (): void => {
     console.log('✅ オンボーディング完了 → ローカルモード開始');
     setInitState(prev => ({
       ...prev,
