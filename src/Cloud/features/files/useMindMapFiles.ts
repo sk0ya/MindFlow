@@ -1,5 +1,99 @@
 // ファイル添付機能専用のカスタムフック
 import { createFileAttachment } from '../../shared/types/dataTypes.js';
+
+// ===== Type Definitions =====
+
+/**
+ * File operation types
+ */
+export interface FileValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * File optimization result
+ */
+export interface FileOptimizationResult {
+  file: File;
+  compressionRatio: number;
+  originalSize: number;
+  optimizedSize: number;
+}
+
+/**
+ * File attachment metadata
+ */
+export interface FileAttachmentMetadata {
+  isR2Storage?: boolean;
+  nodeId?: string;
+  storagePath?: string;
+  thumbnailPath?: string;
+  downloadUrl?: string;
+  securityValidated?: boolean;
+  validationTimestamp?: string;
+  warnings?: string[];
+  optimization?: FileOptimizationResult;
+}
+
+/**
+ * File attachment with R2 storage info
+ */
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataURL?: string;
+  downloadUrl?: string;
+  isR2Storage?: boolean;
+  r2FileId?: string;
+  nodeId?: string;
+  metadata?: FileAttachmentMetadata;
+}
+
+/**
+ * R2 upload result
+ */
+export interface R2UploadResult {
+  id: string;
+  downloadUrl: string;
+  storagePath: string;
+  thumbnailPath?: string;
+}
+
+/**
+ * Node with attachments
+ */
+export interface NodeWithAttachments {
+  id: string;
+  text: string;
+  attachments?: FileAttachment[];
+  [key: string]: any;
+}
+
+/**
+ * File management utilities
+ */
+export interface FileManagementUtils {
+  attachFileToNode: (nodeId: string, file: File) => Promise<string>;
+  removeFileFromNode: (nodeId: string, fileId: string) => Promise<void>;
+  renameFileInNode: (nodeId: string, fileId: string, newName: string) => void;
+  downloadFile: (file: FileAttachment, nodeId?: string) => Promise<void>;
+  reattachFile: (nodeId: string, fileId: string) => Promise<string | false>;
+  isAppInitializing: () => boolean;
+}
+
+/**
+ * Find node function type
+ */
+export type FindNodeFn = (nodeId: string) => NodeWithAttachments | null;
+
+/**
+ * Update node function type
+ */
+export type UpdateNodeFn = (nodeId: string, updates: Partial<NodeWithAttachments>) => Promise<void>;
 import { optimizeFile, formatFileSize } from './fileOptimization.js';
 import { validateFile } from './fileValidation.js';
 import { logger } from '../../shared/utils/logger.js';
@@ -8,7 +102,11 @@ import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { authManager } from '../auth/authManager.js';
 // cloudStorageは新しいStorageManagerで統合
 
-export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
+export const useMindMapFiles = (
+  findNode: FindNodeFn, 
+  updateNode: UpdateNodeFn, 
+  currentMapId: string | null = null
+): FileManagementUtils => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
     const initializing = !currentMapId;
@@ -24,7 +122,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル添付機能（R2ストレージ対応）
-  const attachFileToNode = async (nodeId, file) => {
+  const attachFileToNode = async (nodeId: string, file: File): Promise<string> => {
     // アプリ初期化中はファイルアップロードを無効化（ユーザー向けメッセージを改善）
     if (isAppInitializing()) {
       throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
@@ -38,7 +136,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       });
       
       // 1. セキュリティ検証
-      const validationResult = await validateFile(file);
+      const validationResult: FileValidationResult = await validateFile(file);
       
       if (!validationResult.isValid) {
         const errorMessage = `ファイル検証エラー: ${validationResult.errors.join(', ')}`;
@@ -163,7 +261,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
           throw new Error(`R2アップロードに失敗しました: ${errorDetail}`);
         }
 
-        const uploadResult = await uploadResponse.json();
+        const uploadResult: R2UploadResult = await uploadResponse.json();
         
         logger.info(`☁️ R2アップロード完了: ${file.name}`, {
           nodeId,
@@ -204,10 +302,10 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         console.log('🏠 ローカルモード: Base64でローカル保存');
         
         // ファイルをBase64に変換
-        const optimizedFile = await optimizeFile(file);
-        const dataURL = await new Promise((resolve, reject) => {
+        const optimizedFile: FileOptimizationResult = await optimizeFile(file);
+        const dataURL = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
+          reader.onload = () => resolve(reader.result as string);
           reader.onerror = reject;
           reader.readAsDataURL(optimizedFile.file);
         });
@@ -255,7 +353,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
     }
   };
   
-  const removeFileFromNode = async (nodeId, fileId) => {
+  const removeFileFromNode = async (nodeId: string, fileId: string): Promise<void> => {
     const node = findNode(nodeId);
     if (node && node.attachments) {
       const fileToRemove = node.attachments.find(file => file.id === fileId);
@@ -305,7 +403,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル名を変更
-  const renameFileInNode = (nodeId, fileId, newName) => {
+  const renameFileInNode = (nodeId: string, fileId: string, newName: string): void => {
     const node = findNode(nodeId);
     if (node && node.attachments) {
       const updatedAttachments = node.attachments.map(file => 
@@ -316,7 +414,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイルをダウンロード（R2ストレージ対応）
-  const downloadFile = async (file, nodeId = null) => {
+  const downloadFile = async (file: FileAttachment, nodeId: string | null = null): Promise<void> => {
     // アプリ初期化中はファイルダウンロードを無効化（ユーザー向けメッセージを改善）
     if (isAppInitializing()) {
       throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
@@ -525,7 +623,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイルの再添付（dataURLが欠損している場合の修復用）
-  const reattachFile = async (nodeId, fileId) => {
+  const reattachFile = async (nodeId: string, fileId: string): Promise<string | false> => {
     try {
       const node = findNode(nodeId);
       if (!node || !node.attachments) return false;
@@ -538,9 +636,10 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       input.type = 'file';
       input.accept = file.type ? `${file.type}` : '*/*';
       
-      return new Promise((resolve) => {
-        input.onchange = async (e) => {
-          const newFile = e.target.files[0];
+      return new Promise<string | false>((resolve) => {
+        input.onchange = async (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          const newFile = target.files?.[0];
           if (newFile && newFile.name === file.name) {
             try {
               // 既存ファイルを削除して新しいファイルを添付

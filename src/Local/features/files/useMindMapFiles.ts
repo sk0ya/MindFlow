@@ -6,7 +6,88 @@ import { logger } from '../../shared/utils/logger';
 import { getCurrentMindMap } from '../../core/storage/LocalEngine';
 import { getAppSettings } from '../../core/storage/LocalEngine';
 
-export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
+// ===== Type Definitions =====
+
+/**
+ * File operation types (Local Mode)
+ */
+export interface FileValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * File optimization result
+ */
+export interface FileOptimizationResult {
+  file: File;
+  compressionRatio: number;
+  originalSize: number;
+  optimizedSize: number;
+}
+
+/**
+ * File attachment metadata
+ */
+export interface FileAttachmentMetadata {
+  isR2Storage?: boolean;
+  securityValidated?: boolean;
+  validationTimestamp?: string;
+  warnings?: string[];
+  optimization?: FileOptimizationResult;
+}
+
+/**
+ * File attachment with local storage info
+ */
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataURL?: string;
+  isR2Storage?: boolean;
+  metadata?: FileAttachmentMetadata;
+}
+
+/**
+ * Node with attachments
+ */
+export interface NodeWithAttachments {
+  id: string;
+  text: string;
+  attachments?: FileAttachment[];
+  [key: string]: any;
+}
+
+/**
+ * File management utilities (Local Mode)
+ */
+export interface FileManagementUtils {
+  attachFileToNode: (nodeId: string, file: File) => Promise<string>;
+  removeFileFromNode: (nodeId: string, fileId: string) => Promise<void>;
+  renameFileInNode: (nodeId: string, fileId: string, newName: string) => void;
+  downloadFile: (file: FileAttachment) => Promise<void>;
+  reattachFile: (nodeId: string, fileId: string) => Promise<string | false>;
+  isAppInitializing: () => boolean;
+}
+
+/**
+ * Find node function type
+ */
+export type FindNodeFn = (nodeId: string) => NodeWithAttachments | null;
+
+/**
+ * Update node function type
+ */
+export type UpdateNodeFn = (nodeId: string, updates: Partial<NodeWithAttachments>) => Promise<void>;
+
+export const useMindMapFiles = (
+  findNode: FindNodeFn, 
+  updateNode: UpdateNodeFn, 
+  currentMapId: string | null = null
+): FileManagementUtils => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
     const initializing = !currentMapId;
@@ -22,7 +103,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル添付機能（ローカルストレージ専用）
-  const attachFileToNode = async (nodeId, file) => {
+  const attachFileToNode = async (nodeId: string, file: File): Promise<string> => {
     // アプリ初期化中はファイルアップロードを無効化
     if (isAppInitializing()) {
       throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
@@ -37,7 +118,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       });
       
       // 1. セキュリティ検証
-      const validationResult = await validateFile(file);
+      const validationResult: FileValidationResult = await validateFile(file);
       
       if (!validationResult.isValid) {
         const errorMessage = `ファイル検証エラー: ${validationResult.errors.join(', ')}`;
@@ -58,12 +139,12 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       console.log('💾 ローカルモード: Base64エンコードで保存');
       
       // ファイル最適化
-      const optimizationResult = await optimizeFile(file);
+      const optimizationResult: FileOptimizationResult = await optimizeFile(file);
       
       // Base64エンコード
       const reader = new FileReader();
-      const base64Data = await new Promise((resolve, reject) => {
-        reader.onload = e => resolve(e.target.result);
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        reader.onload = (e) => resolve(e.target?.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(optimizationResult.file);
       });
@@ -98,7 +179,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
         optimized: optimizationResult.optimizationApplied
       });
       
-      return fileAttachment;
+      return fileAttachment.id;
       
     } catch (error) {
       logger.error(`❌ ファイル添付失敗: ${error.message}`, {
@@ -111,7 +192,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル削除
-  const removeFileFromNode = async (nodeId, fileId) => {
+  const removeFileFromNode = async (nodeId: string, fileId: string): Promise<void> => {
     const node = findNode(nodeId);
     if (!node) return;
     
@@ -127,29 +208,150 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
     });
   };
 
+  // ファイル名を変更
+  const renameFileInNode = (nodeId: string, fileId: string, newName: string): void => {
+    const node = findNode(nodeId);
+    if (node && node.attachments) {
+      const updatedAttachments = node.attachments.map(file => 
+        file.id === fileId ? { ...file, name: newName } : file
+      );
+      updateNode(nodeId, { attachments: updatedAttachments });
+    }
+  };
+
+  // ファイルをダウンロード（ローカルストレージ専用）
+  const downloadFile = async (file: FileAttachment): Promise<void> => {
+    try {
+      // 従来のdataURL方式
+      if (!file.dataURL) {
+        console.warn('ファイルのダウンロードデータが見つかりません', file);
+        alert(`ファイル「${file.name}」のダウンロードデータが見つかりません。\nこのファイルは古いバージョンで添付されたため、ダウンロードできない可能性があります。\n再度ファイルを添付し直してください。`);
+        return;
+      }
+
+      // File System Access APIが利用可能かチェック
+      if (window.showSaveFilePicker) {
+        try {
+          // ファイル拡張子を取得
+          const extension = file.name.split('.').pop();
+          const mimeType = file.type || 'application/octet-stream';
+
+          // ファイル保存ダイアログを表示
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: file.name,
+            types: [{
+              description: `${extension?.toUpperCase()} files`,
+              accept: { [mimeType]: [`.${extension}`] }
+            }]
+          });
+
+          // Base64データをBlobに変換
+          const response = await fetch(file.dataURL);
+          const blob = await response.blob();
+
+          // ファイルに書き込み
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+
+          return;
+        } catch (saveError: any) {
+          // ユーザーがキャンセルした場合やエラーが発生した場合
+          if (saveError.name === 'AbortError') {
+            return;
+          }
+          console.warn('File System Access API でのダウンロードに失敗:', saveError);
+          // フォールバックに進む
+        }
+      }
+
+      // フォールバック: 従来の方法（保存場所選択なし）
+      const link = document.createElement('a');
+      link.href = file.dataURL;
+      link.download = file.name;
+      
+      // より確実にダウンロードを実行
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // ダウンロード実行
+      link.click();
+      
+      // クリーンアップ
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }, 100);
+
+    } catch (error) {
+      console.error('ファイルダウンロードエラー:', error);
+      throw error;
+    }
+  };
+
+  // ファイルの再添付（dataURLが欠損している場合の修復用）
+  const reattachFile = async (nodeId: string, fileId: string): Promise<string | false> => {
+    try {
+      const node = findNode(nodeId);
+      if (!node || !node.attachments) return false;
+      
+      const file = node.attachments.find(f => f.id === fileId);
+      if (!file) return false;
+      
+      // ファイル再選択ダイアログを表示
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = file.type ? `${file.type}` : '*/*';
+      
+      return new Promise<string | false>((resolve) => {
+        input.onchange = async (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          const newFile = target.files?.[0];
+          if (newFile && newFile.name === file.name) {
+            try {
+              // 既存ファイルを削除して新しいファイルを添付
+              await removeFileFromNode(nodeId, fileId);
+              const newFileId = await attachFileToNode(nodeId, newFile);
+              resolve(newFileId);
+            } catch (error) {
+              console.error('ファイル再添付エラー:', error);
+              resolve(false);
+            }
+          } else {
+            resolve(false);
+          }
+        };
+        input.click();
+      });
+    } catch (error) {
+      console.error('ファイル再添付処理エラー:', error);
+      return false;
+    }
+  };
+
   // 画像プレビュー取得（ローカルモード）
-  const getImagePreview = (attachment) => {
+  const getImagePreview = (attachment: FileAttachment): string | null => {
     if (!attachment || !attachment.type?.startsWith('image/')) {
       return null;
     }
     
     // Base64データがある場合はそのまま返す
-    if (attachment.data) {
-      return attachment.data;
+    if (attachment.dataURL) {
+      return attachment.dataURL;
     }
     
     return null;
   };
 
   // ストレージ使用量計算
-  const calculateStorageUsage = () => {
+  const calculateStorageUsage = (): { used: number; percentage: number } => {
     const mindMap = getCurrentMindMap();
     if (!mindMap) return { used: 0, percentage: 0 };
     
     let totalSize = 0;
-    const countFiles = (node) => {
+    const countFiles = (node: any): void => {
       if (node.attachments) {
-        node.attachments.forEach(attachment => {
+        node.attachments.forEach((attachment: any) => {
           totalSize += attachment.size || 0;
         });
       }
@@ -172,6 +374,10 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   return {
     attachFileToNode,
     removeFileFromNode,
+    renameFileInNode,
+    downloadFile,
+    reattachFile,
+    isAppInitializing,
     getImagePreview,
     calculateStorageUsage
   };

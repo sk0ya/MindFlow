@@ -1,14 +1,193 @@
 import { useCallback, useRef, useMemo } from 'react';
 
+// ===== Type Definitions =====
+
+/**
+ * Performance metric types
+ */
+export interface PerformanceMetrics {
+  renderCount: number;
+  averageRenderTime: number;
+  lastRenderTime: number;
+  wsMessageCount: number;
+  wsMessageRate: number;
+  memoryUsage: number;
+  lastMessageTime?: number;
+}
+
+/**
+ * Optimization strategy types
+ */
+export type OptimizationStrategy = 'aggressive' | 'balanced' | 'conservative';
+
+/**
+ * WebSocket message types
+ */
+export interface WebSocketMessage {
+  type: string;
+  data?: any;
+  priority?: 'high' | 'normal' | 'low';
+  timestamp?: number;
+}
+
+/**
+ * Batched WebSocket message
+ */
+export interface BatchedWebSocketMessage {
+  type: 'batch';
+  messages: WebSocketMessage[];
+}
+
+/**
+ * Update operation with priority
+ */
+export interface UpdateOperation {
+  updateFn: () => void;
+  timestamp: number;
+  priority: 'high' | 'normal' | 'low';
+}
+
+/**
+ * Cursor data for optimization
+ */
+export interface CursorData {
+  x: number;
+  y: number;
+  nodeId?: string;
+  userId: string;
+  timestamp: number;
+}
+
+/**
+ * User presence data
+ */
+export interface UserPresence {
+  id: string;
+  name: string;
+  color: string;
+  lastActivity?: number;
+  isActive?: boolean;
+  lastSeen?: number;
+}
+
+/**
+ * Optimized user presence data
+ */
+export interface OptimizedUserPresence {
+  id: string;
+  name: string;
+  color: string;
+  isActive: boolean;
+  lastSeen?: number;
+}
+
+/**
+ * Operation history entry
+ */
+export interface OperationHistoryEntry {
+  id: string;
+  type: string;
+  nodeId?: string;
+  data: any;
+  timestamp: number;
+  userId: string;
+}
+
+/**
+ * Cursor optimization function return type
+ */
+export type CursorOptimizationFn = (userId: string, cursorData: CursorData) => boolean;
+
+/**
+ * Presence optimization function return type
+ */
+export type PresenceOptimizationFn = (users: UserPresence[]) => OptimizedUserPresence[];
+
+/**
+ * WebSocket message optimization utilities
+ */
+export interface WebSocketOptimizationUtils {
+  queueMessage: (message: WebSocketMessage, websocket: WebSocket) => void;
+  flush: (websocket: WebSocket) => void;
+}
+
+/**
+ * Operation history optimization utilities
+ */
+export interface OperationHistoryUtils {
+  addOperation: (history: OperationHistoryEntry[], operation: OperationHistoryEntry) => OperationHistoryEntry[];
+  compressHistory: (history: OperationHistoryEntry[]) => OperationHistoryEntry[];
+}
+
+/**
+ * Node comparison data for rendering optimization
+ */
+export interface NodeComparisonData {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color?: string;
+}
+
+/**
+ * User comparison data for rendering optimization
+ */
+export interface UserComparisonData {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/**
+ * Cursor map for comparison
+ */
+export type CursorMap = Map<string, {
+  nodeId: string;
+  timestamp: number;
+}>;
+
+/**
+ * Render optimization utilities
+ */
+export interface RenderOptimizationUtils {
+  shallowCompareNodes: (prev: NodeComparisonData[], current: NodeComparisonData[]) => boolean;
+  compareCursors: (prev: CursorMap, current: CursorMap) => boolean;
+  compareUsers: (prev: UserComparisonData[], current: UserComparisonData[]) => boolean;
+}
+
+/**
+ * Performance monitoring utilities
+ */
+export interface PerformanceMonitorUtils {
+  startRenderMeasure: () => number;
+  endRenderMeasure: (startTime: number) => void;
+  recordWebSocketMessage: () => void;
+  getMetrics: () => PerformanceMetrics;
+  logPerformanceSummary: () => void;
+}
+
+/**
+ * Real-time optimization utilities
+ */
+export interface RealtimeOptimizationUtils {
+  batchUpdates: (updateFn: () => void, priority?: 'high' | 'normal' | 'low') => void;
+  optimizeCursorUpdates: CursorOptimizationFn;
+  optimizePresenceUpdates: PresenceOptimizationFn;
+  optimizeWebSocketMessages: WebSocketOptimizationUtils;
+  optimizeOperationHistory: OperationHistoryUtils;
+  cleanup: () => void;
+}
+
 /**
  * リアルタイム機能のパフォーマンス最適化フック
  * レンダリング最適化、バッチ処理、メモ化を提供
  */
-export const useRealtimeOptimization = () => {
+export const useRealtimeOptimization = (): RealtimeOptimizationUtils => {
   // バッチ処理用の参照
-  const batchTimerRef = useRef(null);
-  const pendingUpdatesRef = useRef([]);
-  const lastUpdateTimeRef = useRef(0);
+  const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingUpdatesRef = useRef<UpdateOperation[]>([]);
+  const lastUpdateTimeRef = useRef<number>(0);
 
   // バッチ処理設定
   const BATCH_DELAY = 16; // 60fps相当
@@ -18,7 +197,7 @@ export const useRealtimeOptimization = () => {
   /**
    * 複数の更新をバッチ処理
    */
-  const batchUpdates = useCallback((updateFn, priority = 'normal') => {
+  const batchUpdates = useCallback((updateFn: () => void, priority: 'high' | 'normal' | 'low' = 'normal') => {
     const now = Date.now();
     
     // 高優先度の更新は即座に実行
@@ -78,7 +257,7 @@ export const useRealtimeOptimization = () => {
 
     // 優先度順にソート
     updates.sort((a, b) => {
-      const priorityOrder = { high: 0, normal: 1, low: 2 };
+      const priorityOrder: Record<'high' | 'normal' | 'low', number> = { high: 0, normal: 1, low: 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     });
 
@@ -97,11 +276,11 @@ export const useRealtimeOptimization = () => {
   /**
    * カーソル位置の最適化
    */
-  const optimizeCursorUpdates = useCallback(() => {
-    const cursorUpdateCache = new Map();
+  const optimizeCursorUpdates = useCallback((): CursorOptimizationFn => {
+    const cursorUpdateCache = new Map<string, number>();
     const CURSOR_UPDATE_THROTTLE = 100; // 100ms間隔
 
-    return (userId, cursorData) => {
+    return (userId: string, _cursorData: CursorData): boolean => {
       const now = Date.now();
       const lastUpdate = cursorUpdateCache.get(userId);
 
@@ -117,21 +296,21 @@ export const useRealtimeOptimization = () => {
   /**
    * ユーザープレゼンス更新の最適化
    */
-  const optimizePresenceUpdates = useCallback(() => {
-    const presenceCache = new Map();
+  const optimizePresenceUpdates = useCallback((): PresenceOptimizationFn => {
+    const presenceCache = new Map<string, OptimizedUserPresence[]>();
     
-    return (users) => {
+    return (users: UserPresence[]): OptimizedUserPresence[] => {
       const cacheKey = users.map(u => `${u.id}:${u.lastActivity}`).join(',');
       
       if (presenceCache.has(cacheKey)) {
-        return presenceCache.get(cacheKey);
+        return presenceCache.get(cacheKey)!;
       }
 
-      const optimizedUsers = users.map(user => ({
+      const optimizedUsers: OptimizedUserPresence[] = users.map(user => ({
         id: user.id,
         name: user.name,
         color: user.color,
-        isActive: user.lastActivity && (Date.now() - user.lastActivity < 300000), // 5分
+        isActive: user.lastActivity ? (Date.now() - user.lastActivity < 300000) : false, // 5分
         lastSeen: user.lastActivity
       }));
 
@@ -150,13 +329,13 @@ export const useRealtimeOptimization = () => {
   /**
    * WebSocket メッセージの最適化
    */
-  const optimizeWebSocketMessages = useCallback(() => {
-    const messageQueue = [];
+  const optimizeWebSocketMessages = useCallback((): WebSocketOptimizationUtils => {
+    const messageQueue: WebSocketMessage[] = [];
     const MESSAGE_BATCH_SIZE = 5;
     const MESSAGE_BATCH_DELAY = 50;
-    let messageTimer = null;
+    let messageTimer: NodeJS.Timeout | null = null;
 
-    const sendBatch = (websocket) => {
+    const sendBatch = (websocket: WebSocket): void => {
       if (messageQueue.length === 0) return;
 
       const batch = messageQueue.splice(0, MESSAGE_BATCH_SIZE);
@@ -166,15 +345,16 @@ export const useRealtimeOptimization = () => {
         websocket.send(JSON.stringify(batch[0]));
       } else {
         // 複数メッセージはバッチとして送信
-        websocket.send(JSON.stringify({
+        const batchMessage: BatchedWebSocketMessage = {
           type: 'batch',
           messages: batch
-        }));
+        };
+        websocket.send(JSON.stringify(batchMessage));
       }
     };
 
     return {
-      queueMessage: (message, websocket) => {
+      queueMessage: (message: WebSocketMessage, websocket: WebSocket): void => {
         messageQueue.push(message);
 
         // 高優先度メッセージは即座に送信
@@ -196,7 +376,7 @@ export const useRealtimeOptimization = () => {
         }
       },
       
-      flush: (websocket) => {
+      flush: (websocket: WebSocket): void => {
         if (messageTimer) {
           clearTimeout(messageTimer);
           messageTimer = null;
@@ -209,12 +389,12 @@ export const useRealtimeOptimization = () => {
   /**
    * 操作履歴の最適化
    */
-  const optimizeOperationHistory = useCallback(() => {
+  const optimizeOperationHistory = useCallback((): OperationHistoryUtils => {
     const MAX_HISTORY_SIZE = 100;
     const COMPRESSION_THRESHOLD = 200;
 
     return {
-      addOperation: (history, operation) => {
+      addOperation: (history: OperationHistoryEntry[], operation: OperationHistoryEntry): OperationHistoryEntry[] => {
         const newHistory = [...history, operation];
         
         // 履歴サイズ制限
@@ -224,18 +404,18 @@ export const useRealtimeOptimization = () => {
         
         // 圧縮が必要な場合
         if (newHistory.length > COMPRESSION_THRESHOLD) {
-          return compressHistory(newHistory);
+          return this.compressHistory(newHistory);
         }
         
         return newHistory;
       },
       
-      compressHistory: (history) => {
+      compressHistory: (history: OperationHistoryEntry[]): OperationHistoryEntry[] => {
         // 同じノードに対する連続的な更新をマージ
-        const compressed = [];
-        let lastOperation = null;
+        const compressed: OperationHistoryEntry[] = [];
+        let lastOperation: OperationHistoryEntry | null = null;
         
-        history.forEach(op => {
+        history.forEach((op: OperationHistoryEntry) => {
           if (lastOperation &&
               lastOperation.type === op.type &&
               lastOperation.nodeId === op.nodeId &&
@@ -266,7 +446,7 @@ export const useRealtimeOptimization = () => {
   }, []);
 
   // メモ化された最適化ユーティリティ
-  const optimizationUtils = useMemo(() => ({
+  const optimizationUtils = useMemo((): RealtimeOptimizationUtils => ({
     batchUpdates,
     optimizeCursorUpdates: optimizeCursorUpdates(),
     optimizePresenceUpdates: optimizePresenceUpdates(),
@@ -288,16 +468,17 @@ export const useRealtimeOptimization = () => {
 /**
  * レンダリング最適化のためのメモ化ヘルパー
  */
-export const useRenderOptimization = () => {
+export const useRenderOptimization = (): RenderOptimizationUtils => {
   // ノードの深い比較を避けるための浅い比較関数
-  const shallowCompareNodes = useCallback((prev, current) => {
+  const shallowCompareNodes = useCallback((prev: NodeComparisonData[], current: NodeComparisonData[]): boolean => {
     if (prev.length !== current.length) return false;
     
     for (let i = 0; i < prev.length; i++) {
       const prevNode = prev[i];
       const currentNode = current[i];
       
-      if (prevNode.id !== currentNode.id ||
+      if (!prevNode || !currentNode ||
+          prevNode.id !== currentNode.id ||
           prevNode.x !== currentNode.x ||
           prevNode.y !== currentNode.y ||
           prevNode.text !== currentNode.text ||
@@ -310,7 +491,7 @@ export const useRenderOptimization = () => {
   }, []);
 
   // ユーザーカーソルの最適化された比較
-  const compareCursors = useCallback((prev, current) => {
+  const compareCursors = useCallback((prev: CursorMap, current: CursorMap): boolean => {
     if (prev.size !== current.size) return false;
     
     for (const [userId, cursor] of current) {
@@ -326,12 +507,13 @@ export const useRenderOptimization = () => {
   }, []);
 
   // 接続ユーザーの最適化された比較
-  const compareUsers = useCallback((prev, current) => {
+  const compareUsers = useCallback((prev: UserComparisonData[], current: UserComparisonData[]): boolean => {
     if (prev.length !== current.length) return false;
     
     return prev.every((prevUser, index) => {
       const currentUser = current[index];
-      return prevUser.id === currentUser.id &&
+      return currentUser &&
+             prevUser.id === currentUser.id &&
              prevUser.name === currentUser.name &&
              prevUser.color === currentUser.color;
     });
@@ -347,8 +529,8 @@ export const useRenderOptimization = () => {
 /**
  * パフォーマンス測定用フック
  */
-export const usePerformanceMonitor = () => {
-  const metricsRef = useRef({
+export const usePerformanceMonitor = (): PerformanceMonitorUtils => {
+  const metricsRef = useRef<PerformanceMetrics>({
     renderCount: 0,
     averageRenderTime: 0,
     lastRenderTime: 0,
@@ -357,11 +539,11 @@ export const usePerformanceMonitor = () => {
     memoryUsage: 0
   });
 
-  const startRenderMeasure = useCallback(() => {
+  const startRenderMeasure = useCallback((): number => {
     return performance.now();
   }, []);
 
-  const endRenderMeasure = useCallback((startTime) => {
+  const endRenderMeasure = useCallback((startTime: number): void => {
     const renderTime = performance.now() - startTime;
     const metrics = metricsRef.current;
     
@@ -375,7 +557,7 @@ export const usePerformanceMonitor = () => {
     }
   }, []);
 
-  const recordWebSocketMessage = useCallback(() => {
+  const recordWebSocketMessage = useCallback((): void => {
     const metrics = metricsRef.current;
     metrics.wsMessageCount++;
     
@@ -390,18 +572,18 @@ export const usePerformanceMonitor = () => {
     }
   }, []);
 
-  const getMetrics = useCallback(() => {
+  const getMetrics = useCallback((): PerformanceMetrics => {
     const metrics = { ...metricsRef.current };
     
     // メモリ使用量（概算）
-    if (performance.memory) {
-      metrics.memoryUsage = performance.memory.usedJSHeapSize / 1024 / 1024; // MB
+    if ((performance as any).memory) {
+      metrics.memoryUsage = (performance as any).memory.usedJSHeapSize / 1024 / 1024; // MB
     }
     
     return metrics;
   }, []);
 
-  const logPerformanceSummary = useCallback(() => {
+  const logPerformanceSummary = useCallback((): void => {
     const metrics = getMetrics();
     console.group('🔍 Real-time Performance Metrics');
     console.log(`Renders: ${metrics.renderCount}`);

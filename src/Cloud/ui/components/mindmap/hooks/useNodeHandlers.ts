@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { NodeHandlerParams, NodeHandlers } from './handlerTypes';
+import { MindMapNode } from '../../../../shared/types/dataTypes';
 
 /**
  * ノード操作関連のハンドラーを管理するカスタムフック
  */
-export const useNodeHandlers = (
+export const useNodeHandlers = ({
   setSelectedNodeId,
   setContextMenuPosition,
   setShowContextMenu,
@@ -14,12 +16,12 @@ export const useNodeHandlers = (
   addNodeMapLink,
   removeNodeMapLink,
   updateCursorPosition
-) => {
-  const handleAddChild = (parentId) => {
+}: NodeHandlerParams): NodeHandlers => {
+  const handleAddChild = (parentId: string): void => {
     addChildNode(parentId, '', true); // startEditing = true で即座に編集開始
   };
 
-  const handleRightClick = (e, nodeId) => {
+  const handleRightClick = (e: React.MouseEvent<HTMLElement>, nodeId: string): void => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -31,13 +33,13 @@ export const useNodeHandlers = (
     }
   };
 
-  const handleAddSibling = (nodeId) => {
+  const handleAddSibling = (nodeId: string): void => {
     addSiblingNode(nodeId, '', true); // startEditing = true で即座に編集開始
   };
 
-  const handleCopyNode = (node) => {
-    const nodeCopy = JSON.parse(JSON.stringify(node));
-    const removeIds = (n) => {
+  const handleCopyNode = (node: MindMapNode): Partial<MindMapNode> => {
+    const nodeCopy = JSON.parse(JSON.stringify(node)) as MindMapNode;
+    const removeIds = (n: MindMapNode): void => {
       delete n.id;
       if (n.children) n.children.forEach(removeIds);
     };
@@ -45,7 +47,7 @@ export const useNodeHandlers = (
     return nodeCopy;
   };
 
-  const handlePasteNode = (parentId, clipboard) => {
+  const handlePasteNode = (parentId: string, clipboard: Partial<MindMapNode> | null): void => {
     if (!clipboard) return;
     
     const newNodeId = addChildNode(parentId);
@@ -61,18 +63,18 @@ export const useNodeHandlers = (
   };
 
   // カーソル更新（ノード選択時）
-  const handleNodeSelect = (nodeId) => {
+  const handleNodeSelect = (nodeId: string): void => {
     setSelectedNodeId(nodeId);
     if (updateCursorPosition && nodeId) {
       updateCursorPosition(nodeId);
     }
   };
 
-  const handleAddNodeMapLink = (nodeId, targetMapId, targetMapTitle, description) => {
+  const handleAddNodeMapLink = (nodeId: string, targetMapId: string, targetMapTitle: string, description: string): void => {
     addNodeMapLink(nodeId, targetMapId, targetMapTitle, description);
   };
 
-  const handleRemoveNodeMapLink = (nodeId, linkId) => {
+  const handleRemoveNodeMapLink = (nodeId: string, linkId: string): void => {
     removeNodeMapLink(nodeId, linkId);
   };
 

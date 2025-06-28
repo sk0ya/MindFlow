@@ -3,12 +3,83 @@ import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMin
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes';
 // ローカルモード専用：リアルタイム同期不要
 
+// ===== Type Definitions =====
+
+/**
+ * Multi-map state types
+ */
+export interface MindMapMetadata {
+  id: string;
+  title: string;
+  category?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+/**
+ * Mind map data structure
+ */
+export interface MindMapData {
+  id: string;
+  title: string;
+  category?: string;
+  rootNode: any;
+  settings?: any;
+  updatedAt?: string;
+  createdAt?: string;
+  [key: string]: any;
+}
+
+/**
+ * Function types for state setters
+ */
+export type SetDataFn = (data: MindMapData | ((prev: MindMapData) => MindMapData)) => void;
+export type UpdateDataFn = (data: Partial<MindMapData>, options?: any) => Promise<void>;
+export type SetSelectedNodeIdFn = (id: string | null) => void;
+export type SetEditingNodeIdFn = (id: string | null) => void;
+export type SetEditTextFn = (text: string) => void;
+export type SetHistoryFn = (history: any[]) => void;
+export type SetHistoryIndexFn = (index: number) => void;
+export type FinishEditFn = (nodeId: string, text: string, options?: any) => Promise<void>;
+
+/**
+ * Multi-map management utilities
+ */
+export interface MultiMapUtils {
+  allMindMaps: MindMapMetadata[];
+  currentMapId: string | null;
+  setCurrentMapId: (id: string | null) => void;
+  refreshAllMindMaps: () => Promise<void>;
+  createMindMap: (title?: string, category?: string) => Promise<string>;
+  renameMindMap: (mapId: string, newTitle: string) => Promise<void>;
+  deleteMindMapById: (mapId: string) => Promise<boolean>;
+  changeMapCategory: (mapId: string, newCategory: string) => Promise<void>;
+  getAvailableCategories: () => string[];
+  switchToMap: (
+    mapId: string,
+    selectRoot?: boolean,
+    setSelectedNodeId?: SetSelectedNodeIdFn | null,
+    setEditingNodeId?: SetEditingNodeIdFn | null,
+    setEditText?: SetEditTextFn | null,
+    setHistory?: SetHistoryFn | null,
+    setHistoryIndex?: SetHistoryIndexFn | null,
+    finishEdit?: FinishEditFn | null
+  ) => Promise<void>;
+  removeTemporaryNodes: (mapData: MindMapData) => MindMapData;
+  reinitializeAfterModeSelection: () => Promise<void>;
+}
+
 // マルチマップ管理専用のカスタムフック（ローカルモード専用）
-export const useMindMapMulti = (data, setData, updateData) => {
+export const useMindMapMulti = (
+  data: MindMapData | null,
+  setData: SetDataFn,
+  updateData: UpdateDataFn
+): MultiMapUtils => {
   // マルチマップ管理用の状態
-  const [allMindMaps, setAllMindMaps] = useState([]);
+  const [allMindMaps, setAllMindMaps] = useState<MindMapMetadata[]>([]);
   
-  const [currentMapId, setCurrentMapId] = useState(() => {
+  const [currentMapId, setCurrentMapId] = useState<string | null>(() => {
     return data?.id || null;
   });
 
@@ -31,7 +102,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // 新規マップ作成（完全分離版）
-  const createMindMap = async (title = '新しいマインドマップ', category = '未分類') => {
+  const createMindMap = async (title: string = '新しいマインドマップ', category: string = '未分類'): Promise<string> => {
     try {
       
       const newMap = createInitialData();
@@ -70,7 +141,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ名変更（ローカルストレージ）
-  const renameMindMap = async (mapId, newTitle) => {
+  const renameMindMap = async (mapId: string, newTitle: string): Promise<void> => {
     try {
       console.log('✏️ マップ名変更:', mapId, '->', newTitle);
       
@@ -107,7 +178,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ削除（ローカルストレージ）
-  const deleteMindMapById = async (mapId) => {
+  const deleteMindMapById = async (mapId: string): Promise<boolean> => {
     if (allMindMaps.length <= 1) {
       console.warn('最後のマインドマップは削除できません');
       return false;
@@ -143,7 +214,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // カテゴリー変更
-  const changeMapCategory = async (mapId, newCategory) => {
+  const changeMapCategory = async (mapId: string, newCategory: string): Promise<void> => {
     const allMaps = await getAllMindMaps();
     const mapIndex = allMaps.findIndex(map => map.id === mapId);
     
@@ -163,7 +234,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // 利用可能なカテゴリー取得
-  const getAvailableCategories = () => {
+  const getAvailableCategories = (): string[] => {
     const categories = new Set(['未分類']);
     allMindMaps.forEach(map => {
       if (map.category && map.category.trim()) {
@@ -174,12 +245,21 @@ export const useMindMapMulti = (data, setData, updateData) => {
   };
 
   // マップ切り替え（完全分離版）
-  const switchToMap = async (mapId, selectRoot = false, setSelectedNodeId = null, setEditingNodeId = null, setEditText = null, setHistory = null, setHistoryIndex = null, finishEdit = null) => {
+  const switchToMap = async (
+    mapId: string,
+    selectRoot: boolean = false,
+    setSelectedNodeId: SetSelectedNodeIdFn | null = null,
+    setEditingNodeId: SetEditingNodeIdFn | null = null,
+    setEditText: SetEditTextFn | null = null,
+    setHistory: SetHistoryFn | null = null,
+    setHistoryIndex: SetHistoryIndexFn | null = null,
+    finishEdit: FinishEditFn | null = null
+  ): Promise<void> => {
     console.log('📖 マップ切り替え開始:', mapId);
     
     try {
       // 🔧 マップ切り替え前に編集中のノードを適切に保存
-      const editingInput = document.querySelector('.node-input');
+      const editingInput = document.querySelector('.node-input') as HTMLInputElement | null;
       const currentEditingNodeId = editingInput ? editingInput.dataset.nodeId : null;
       const currentEditText = editingInput ? editingInput.value : '';
       
@@ -211,7 +291,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
           console.log('✅ マップ切り替え前の編集保存完了');
           
           // 編集状態をクリア（DOM要素の重複を防ぐ）
-          const currentEditingInput = document.querySelector('.node-input');
+          const currentEditingInput = document.querySelector('.node-input') as HTMLInputElement | null;
           if (currentEditingInput) {
             currentEditingInput.blur();
             currentEditingInput.remove();
@@ -398,12 +478,12 @@ export const useMindMapMulti = (data, setData, updateData) => {
   }, [data?.id, currentMapId]);
 
   // 一時ノードを除外したデータを作成
-  const removeTemporaryNodes = (mapData) => {
+  const removeTemporaryNodes = (mapData: MindMapData): MindMapData => {
     if (!mapData || !mapData.rootNode) return mapData;
     
     const clonedData = deepClone(mapData);
     
-    function filterTemporaryNodes(node) {
+    function filterTemporaryNodes(node: any): any {
       if (!node) return node;
       
       // 一時ノードでない子ノードのみをフィルタリング

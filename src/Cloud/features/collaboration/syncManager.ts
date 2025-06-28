@@ -1,12 +1,44 @@
 // オフライン対応とデータ同期管理
 
-import { STORAGE_KEYS } from '../../shared/types/dataTypes.js';
+import { STORAGE_KEYS, MindMapData } from '../../shared/types/dataTypes.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
+
+// 型定義
+export interface SyncQueueItem {
+  id: string;
+  timestamp: string;
+  operation: SyncOperation;
+  retryCount: number;
+}
+
+export interface SyncOperation {
+  type: 'save' | 'delete' | 'create';
+  mindmapId: string;
+  data?: MindMapData;
+}
+
+export interface SyncStatus {
+  isOnline: boolean;
+  queueLength: number;
+  lastSyncTime: string | number | null;
+  needsSync: boolean;
+}
+
+export interface SyncResult {
+  success: boolean;
+  conflicts: number;
+  localCount: number;
+  cloudCount: number;
+}
+
+export interface CloudMapsResponse {
+  mindmaps?: MindMapData[];
+}
 
 class SyncManager {
   isOnline: boolean;
-  syncQueue: any[];
-  lastSyncTime: number | null;
+  syncQueue: SyncQueueItem[];
+  lastSyncTime: string | number | null;
   
   constructor() {
     this.isOnline = navigator.onLine;
@@ -38,7 +70,7 @@ class SyncManager {
     console.log('💾 Sync queue saved to memory (cloud mode)');
   }
 
-  addToSyncQueue(operation: any) {
+  addToSyncQueue(operation: SyncOperation): void {
     const queueItem = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -55,7 +87,7 @@ class SyncManager {
   }
 
   // 同期キューの処理
-  async processSyncQueue() {
+  async processSyncQueue(): Promise<void> {
     if (!this.isOnline || this.syncQueue.length === 0) return;
 
     const itemsToProcess = [...this.syncQueue];
@@ -79,11 +111,11 @@ class SyncManager {
     this.updateLastSyncTime();
   }
 
-  removeSyncQueueItem(itemId: string) {
+  removeSyncQueueItem(itemId: string): void {
     this.syncQueue = this.syncQueue.filter(item => item.id !== itemId);
   }
 
-  async executeOperation(operation: any) {
+  async executeOperation(operation: SyncOperation): Promise<void> {
     
     switch (operation.type) {
       case 'save':
@@ -101,7 +133,7 @@ class SyncManager {
   }
 
   // 双方向同期（コンフリクト解決付き）
-  async syncWithCloud() {
+  async syncWithCloud(): Promise<SyncResult> {
     if (!this.isOnline) {
       throw new Error('オフライン中は同期できません');
     }
@@ -112,7 +144,7 @@ class SyncManager {
       await this.processSyncQueue();
 
       // 2. ローカルのすべてのマインドマップをクラウドに送信
-      const localMaps = this.getAllMindMapsLocal();
+      const localMaps: MindMapData[] = this.getAllMindMapsLocal();
       
       for (const map of localMaps) {
         // 無効なデータをスキップ
@@ -125,7 +157,7 @@ class SyncManager {
         } catch (updateError) {
           // 更新に失敗した場合は新規作成を試行
           try {
-            const createResult = await storageManager.createMindMap(map);
+            await storageManager.createMindMap(map);
           } catch (createError) {
             console.error('手動同期: マップ作成失敗', map.id, createError.message);
             throw createError; // エラーを再スロー
@@ -134,23 +166,23 @@ class SyncManager {
       }
 
       // 3. クラウドから最新データを取得
-      const cloudMaps = await storageManager.getAllMindMaps();
+      const cloudMaps: CloudMapsResponse = await storageManager.getAllMindMaps();
 
       // 4. コンフリクト解決
-      const cloudMapsArray = (cloudMaps as any)?.mindmaps || [];
-      const resolvedMaps = this.resolveConflicts(localMaps, cloudMapsArray);
+      const cloudMapsArray: MindMapData[] = cloudMaps?.mindmaps || [];
+      const resolvedMaps: MindMapData[] = this.resolveConflicts(localMaps, cloudMapsArray);
 
       // 5. ローカルストレージを更新
       this.saveToStorageLocal(STORAGE_KEYS.MINDMAPS, resolvedMaps);
       
       this.updateLastSyncTime();
-      const conflicts = this.getConflictCount(localMaps, cloudMapsArray);
+      const conflicts: number = this.getConflictCount(localMaps, cloudMapsArray);
       
       return { 
         success: true, 
         conflicts: conflicts,
         localCount: localMaps.length,
-        cloudCount: cloudMaps.mindmaps ? cloudMaps.mindmaps.length : 0
+        cloudCount: cloudMapsArray.length
       };
       
     } catch (error) {
@@ -160,16 +192,16 @@ class SyncManager {
   }
 
   // コンフリクト解決（最新の更新時刻を優先）
-  resolveConflicts(localMaps, cloudMaps) {
-    const mapById = new Map();
+  resolveConflicts(localMaps: MindMapData[], cloudMaps: MindMapData[]): MindMapData[] {
+    const mapById = new Map<string, MindMapData & { source: 'local' | 'cloud' }>();
     
     // ローカルマップを追加
-    localMaps.forEach(map => {
+    localMaps.forEach((map: MindMapData) => {
       mapById.set(map.id, { ...map, source: 'local' });
     });
     
     // クラウドマップとの比較・更新
-    cloudMaps.forEach(cloudMap => {
+    cloudMaps.forEach((cloudMap: MindMapData) => {
       const localMap = mapById.get(cloudMap.id);
       
       if (!localMap) {
@@ -190,16 +222,16 @@ class SyncManager {
     return Array.from(mapById.values());
   }
 
-  getConflictCount(localMaps, cloudMaps) {
+  getConflictCount(localMaps: MindMapData[], cloudMaps: MindMapData[]): number {
     let conflicts = 0;
-    const cloudMapIds = new Set(cloudMaps.map(m => m.id));
+    const cloudMapIds = new Set(cloudMaps.map((m: MindMapData) => m.id));
     
-    localMaps.forEach(localMap => {
-      const cloudMap = cloudMaps.find(m => m.id === localMap.id);
+    localMaps.forEach((localMap: MindMapData) => {
+      const cloudMap = cloudMaps.find((m: MindMapData) => m.id === localMap.id);
       if (cloudMap) {
         const localTime = new Date(localMap.updatedAt);
         const cloudTime = new Date(cloudMap.updatedAt); // 統一済みなのでupdatedAtを使用
-        if (Math.abs(localTime - cloudTime) > 1000) { // 1秒以上の差があれば競合とみなす
+        if (Math.abs(localTime.getTime() - cloudTime.getTime()) > 1000) { // 1秒以上の差があれば競合とみなす
           conflicts++;
         }
       }
@@ -209,32 +241,32 @@ class SyncManager {
   }
 
   // クラウド専用操作のヘルパーメソッド
-  getAllMindMapsLocal() {
+  getAllMindMapsLocal(): MindMapData[] {
     // Cloud mode: no local storage, return empty array
     console.log('☁️ Cloud mode: no local mindmaps storage');
     return [];
   }
 
-  saveToStorageLocal(key, data) {
+  saveToStorageLocal(key: string, data: any): void {
     // Cloud mode: no local storage operations
     console.log('☁️ Cloud mode: data not saved locally');
   }
 
   // 最終同期時刻の管理（クラウド専用）
-  getLastSyncTime() {
+  getLastSyncTime(): string | number | null {
     // Cloud mode: sync time stored in memory only
     console.log('🕒 Cloud mode: sync time from memory');
     return null;
   }
 
-  updateLastSyncTime() {
+  updateLastSyncTime(): void {
     const now = new Date().toISOString();
     console.log('🕒 Last sync time updated:', now);
     this.lastSyncTime = now;
   }
 
   // 同期状態の取得
-  getSyncStatus() {
+  getSyncStatus(): SyncStatus {
     return {
       isOnline: this.isOnline,
       queueLength: this.syncQueue.length,
@@ -244,12 +276,12 @@ class SyncManager {
   }
 
   // 手動同期トリガー
-  async forcSync() {
+  async forcSync(): Promise<SyncResult> {
     return await this.syncWithCloud();
   }
 
   // オフライン操作の記録
-  recordOfflineOperation(type, mindmapId, data = null) {
+  recordOfflineOperation(type: 'save' | 'delete' | 'create', mindmapId: string, data: MindMapData | null = null): void {
     this.addToSyncQueue({
       type,
       mindmapId,

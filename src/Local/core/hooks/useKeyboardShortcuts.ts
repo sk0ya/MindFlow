@@ -1,5 +1,34 @@
 import { useEffect } from 'react';
 
+// キーボードショートカットのパラメータ型定義
+export interface KeyboardShortcutsParams {
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  setEditingNodeId: (nodeId: string | null) => void;
+  setEditText: (text: string) => void;
+  startEdit: (nodeId: string, clearText?: boolean) => void;
+  finishEdit: (nodeId: string, newText?: string, options?: any) => Promise<void>;
+  editText: string;
+  updateNode: (nodeId: string, updates: any, options?: any) => Promise<void>;
+  addChildNode: (parentId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (nodeId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
+  deleteNode: (nodeId: string) => Promise<boolean>;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  saveMindMap: () => void;
+  showMapList: boolean;
+  setShowMapList: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showLocalStorage: boolean;
+  setShowLocalStorage: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showTutorial: boolean;
+  setShowTutorial: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showKeyboardHelper: boolean;
+  setShowKeyboardHelper: (show: boolean | ((prev: boolean) => boolean)) => void;
+}
+
 // キーボードショートカット管理専用のカスタムフック
 export const useKeyboardShortcuts = ({
   selectedNodeId,
@@ -27,14 +56,14 @@ export const useKeyboardShortcuts = ({
   setShowTutorial,
   showKeyboardHelper,
   setShowKeyboardHelper
-}) => {
+}: KeyboardShortcutsParams): void => {
   
   useEffect(() => {
-    const handleKeyDown = async (e) => {
+    const handleKeyDown = async (e: KeyboardEvent): Promise<void> => {
       // デバッグ用：キーイベントをログ出力
       console.log('🎹 キーイベント:', {
         key: e.key,
-        target: e.target.tagName,
+        target: (e.target as HTMLElement)?.tagName || 'UNKNOWN',
         editingNodeId,
         selectedNodeId,
         ctrlKey: e.ctrlKey,
@@ -43,9 +72,10 @@ export const useKeyboardShortcuts = ({
       });
       
       // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
-      const isInputFocused = document.activeElement?.tagName === 'INPUT' || 
-                           document.activeElement?.tagName === 'TEXTAREA' || 
-                           document.activeElement?.contentEditable === 'true';
+      const activeElement = document.activeElement as HTMLElement | null;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || 
+                           activeElement?.tagName === 'TEXTAREA' || 
+                           activeElement?.contentEditable === 'true';
 
       // エスケープキーの処理（最優先）
       if (e.key === 'Escape') {
@@ -176,12 +206,12 @@ export const useKeyboardShortcuts = ({
           
           case 'm':
             e.preventDefault();
-            setShowMapList(prev => !prev);
+            setShowMapList((prev: boolean) => !prev);
             break;
           
           case 'k':
             e.preventDefault();
-            setShowLocalStorage(prev => !prev);
+            setShowLocalStorage((prev: boolean) => !prev);
             break;
         }
         return;
@@ -191,13 +221,13 @@ export const useKeyboardShortcuts = ({
       switch (e.key) {
         case 'F1':
           e.preventDefault();
-          setShowTutorial(prev => !prev);
+          setShowTutorial((prev: boolean) => !prev);
           break;
         
         case '?':
           if (e.shiftKey) {
             e.preventDefault();
-            setShowKeyboardHelper(prev => !prev);
+            setShowKeyboardHelper((prev: boolean) => !prev);
           }
           break;
       }

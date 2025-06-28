@@ -2,15 +2,27 @@
  * マップデータ操作のユーティリティ関数（ノード操作統合版）
  */
 
-import { generateId as dataTypesGenerateId, generateMapId, createNewNode, deepClone } from '../types/dataTypes.js';
+import { generateId as dataTypesGenerateId, generateMapId, createNewNode, deepClone, MindMapData, MindMapNode } from '../types/dataTypes.js';
 import { LAYOUT } from '../constants/index.js';
+
+// 型定義
+export interface NodeSearchResult {
+  node: MindMapNode | null;
+  found: boolean;
+}
+
+export interface MapUpdateResult {
+  success: boolean;
+  data: MindMapData;
+  updatedAt: string;
+}
 
 // ID生成はdataTypes.jsに統一（後方互換性のためのエイリアス）
 export const generateId = dataTypesGenerateId;
 
 // 初期マップデータを作成（dataTypes.jsに統一、ここはエイリアス）
 import { createInitialData } from '../types/dataTypes.js';
-export const createInitialMapData = (id = generateMapId(), title = '新しいマインドマップ') => {
+export const createInitialMapData = (id: string = generateMapId(), title: string = '新しいマインドマップ'): MindMapData => {
   const data = createInitialData();
   if (id !== data.id) data.id = id;
   if (title !== data.title) data.title = title;
@@ -18,7 +30,7 @@ export const createInitialMapData = (id = generateMapId(), title = '新しいマ
 };
 
 // ノード作成はdataTypes.jsに統一（ここはエイリアス）
-export const createNode = (text = '', parentNode = null) => {
+export const createNode = (text: string = '', parentNode: MindMapNode | null = null): MindMapNode => {
   const node = createNewNode(text, parentNode);
   
   // 位置計算の調整（既存ロジックを維持）
@@ -32,7 +44,7 @@ export const createNode = (text = '', parentNode = null) => {
 };
 
 // ノードを検索（再帰的）
-export function findNode(rootNode, nodeId) {
+export function findNode(rootNode: MindMapNode, nodeId: string): MindMapNode | null {
   if (rootNode.id === nodeId) {
     return rootNode;
   }
@@ -48,7 +60,7 @@ export function findNode(rootNode, nodeId) {
 }
 
 // 親ノードを検索
-export function findParent(rootNode, nodeId) {
+export function findParent(rootNode: MindMapNode, nodeId: string): MindMapNode | null {
   if (rootNode.children) {
     for (const child of rootNode.children) {
       if (child.id === nodeId) {
@@ -64,7 +76,7 @@ export function findParent(rootNode, nodeId) {
 }
 
 // ノードを追加
-export function addChildNode(mapData, parentId, nodeText = '') {
+export function addChildNode(mapData: MindMapData, parentId: string, nodeText: string = ''): MindMapData {
   const parentNode = findNode(mapData.rootNode, parentId);
   if (!parentNode) {
     throw new Error(`Parent node not found: ${parentId}`);
@@ -85,7 +97,7 @@ export function addChildNode(mapData, parentId, nodeText = '') {
 }
 
 // ノードを更新
-export function updateNode(mapData, nodeId, updates) {
+export function updateNode(mapData: MindMapData, nodeId: string, updates: Partial<MindMapNode>): MindMapData {
   const node = findNode(mapData.rootNode, nodeId);
   if (!node) {
     throw new Error(`Node not found: ${nodeId}`);
@@ -100,7 +112,7 @@ export function updateNode(mapData, nodeId, updates) {
 }
 
 // ノードを削除
-export function deleteNode(mapData, nodeId) {
+export function deleteNode(mapData: MindMapData, nodeId: string): MindMapData {
   // ルートノードは削除できない
   if (nodeId === 'root') {
     throw new Error('Cannot delete root node');
@@ -120,4 +132,4 @@ export function deleteNode(mapData, nodeId) {
 }
 
 // データクローンはdataTypes.jsに統一（ここはエイリアス）
-export const cloneMapData = (mapData) => deepClone(mapData);
+export const cloneMapData = (mapData: MindMapData): MindMapData => deepClone(mapData);

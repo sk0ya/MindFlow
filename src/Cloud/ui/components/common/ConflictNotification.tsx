@@ -1,17 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
+// 型定義
+export interface ConflictUser {
+  id: string;
+  name: string;
+  color?: string;
+}
+
+export interface ConflictMetadata {
+  discardedOperations?: number;
+  mergedFields?: string[];
+  adjustedBy?: number;
+  operationCount?: number;
+  dataLoss?: boolean;
+}
+
+export interface Conflict {
+  id: string;
+  type: 'concurrent_update' | 'concurrent_creation' | 'position_adjustment' | 'merge_conflict' | 'deletion_conflict';
+  resolutionType?: 'last_writer_wins' | 'field_merge' | 'position_adjustment' | 'first_delete_wins' | 'preserve_children' | 'averaged_position';
+  metadata?: ConflictMetadata;
+  affectedNodes?: string[];
+  involvedUsers?: ConflictUser[];
+  timestamp?: number;
+  dismissed?: boolean;
+}
+
+export interface ConflictNotificationProps {
+  conflicts?: Conflict[];
+  onDismiss?: (conflictId: string) => void;
+  position?: 'top-center' | 'top-right' | 'bottom-right' | 'bottom-center';
+  autoHideDelay?: number;
+}
+
+export interface ConflictItemProps {
+  conflict: Conflict;
+  onDismiss: (conflictId: string) => void;
+}
+
 /**
  * 競合解決の視覚的フィードバックコンポーネント
  * リアルタイム編集での競合と解決状況を表示
  */
-const ConflictNotification = ({
+const ConflictNotification: React.FC<ConflictNotificationProps> = ({
   conflicts = [],
   onDismiss,
   position = 'top-center',
   autoHideDelay = 8000
 }) => {
-  const [visibleConflicts, setVisibleConflicts] = useState([]);
+  const [visibleConflicts, setVisibleConflicts] = useState<(Conflict & { timestamp: number; dismissed: boolean })[]>([]);
 
   useEffect(() => {
     // 新しい競合を表示リストに追加
@@ -52,7 +90,7 @@ const ConflictNotification = ({
     };
   }, [visibleConflicts, autoHideDelay]);
 
-  const handleDismiss = (conflictId) => {
+  const handleDismiss = (conflictId: string): void => {
     setVisibleConflicts(prev =>
       prev.map(c => 
         c.id === conflictId ? { ...c, dismissed: true } : c
@@ -71,7 +109,7 @@ const ConflictNotification = ({
     }, 300);
   };
 
-  const getConflictIcon = (type) => {
+  const getConflictIcon = (type: string): string => {
     switch (type) {
       case 'concurrent_update':
         return '⚡';
@@ -88,7 +126,7 @@ const ConflictNotification = ({
     }
   };
 
-  const getConflictTitle = (type) => {
+  const getConflictTitle = (type: string): string => {
     switch (type) {
       case 'concurrent_update':
         return '同時編集の競合';
@@ -105,7 +143,7 @@ const ConflictNotification = ({
     }
   };
 
-  const getResolutionMessage = (conflict) => {
+  const getResolutionMessage = (conflict: Conflict): string => {
     const { resolutionType, metadata = {} } = conflict;
     
     switch (resolutionType) {
@@ -126,7 +164,7 @@ const ConflictNotification = ({
     }
   };
 
-  const getSeverityColor = (conflict) => {
+  const getSeverityColor = (conflict: Conflict): string => {
     const { type, metadata = {} } = conflict;
     
     if (metadata.dataLoss) return '#dc3545'; // 赤 - データ損失あり
@@ -198,7 +236,7 @@ const ConflictNotification = ({
 /**
  * 個別競合通知アイテム
  */
-const ConflictItem = ({ conflict, onDismiss }) => {
+const ConflictItem: React.FC<ConflictItemProps> = ({ conflict, onDismiss }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -207,7 +245,7 @@ const ConflictItem = ({ conflict, onDismiss }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleDismissClick = () => {
+  const handleDismissClick = (): void => {
     setIsVisible(false);
     setTimeout(() => onDismiss(conflict.id), 300);
   };
@@ -261,7 +299,7 @@ const ConflictItem = ({ conflict, onDismiss }) => {
           <div className="involved-users">
             <span className="users-label">関係ユーザー:</span>
             <div className="user-avatars">
-              {conflict.involvedUsers.map(user => (
+              {conflict.involvedUsers.map((user: ConflictUser) => (
                 <div
                   key={user.id}
                   className="user-avatar"

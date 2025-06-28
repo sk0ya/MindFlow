@@ -90,7 +90,7 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // データ更新の共通処理（編集中保護強化）
-  const updateData = async (newData, options = {}) => {
+  const updateData = async (newData: MindMapData, options: UpdateDataOptions = {}): Promise<void> => {
     // ローカルモードでは常にデータ更新を処理
     if (!newData) return;
     
@@ -100,7 +100,7 @@ export const useMindMapData = (isAppReady = false) => {
     
     if (isCurrentlyEditing && !options.allowDuringEdit) {
       console.log('✋ データ更新スキップ: ノード編集中のため保護', {
-        editingValue: editingInput.value,
+        editingValue: editingInput?.value || '',
         updateSource: options.source || 'unknown',
         isExternal: options.skipHistory || false
       });

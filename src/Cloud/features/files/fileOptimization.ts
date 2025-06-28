@@ -1,5 +1,7 @@
 // ファイル最適化とBase64圧縮ユーティリティ
 
+// 型定義はすでに定義済み（先頭でexportされている）
+
 // 画像圧縮用の設定
 const COMPRESSION_SETTINGS = {
   // 画像の最大サイズ（幅・高さ）
@@ -15,8 +17,8 @@ const COMPRESSION_SETTINGS = {
 };
 
 // Canvasを使った画像リサイズ
-const resizeImage = (file, maxDimension = COMPRESSION_SETTINGS.MAX_IMAGE_DIMENSION, quality = COMPRESSION_SETTINGS.JPEG_QUALITY) => {
-  return new Promise((resolve, reject) => {
+const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX_IMAGE_DIMENSION, quality: number = COMPRESSION_SETTINGS.JPEG_QUALITY): Promise<CompressionResult> => {
+  return new Promise<CompressionResult>((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
@@ -71,7 +73,7 @@ const resizeImage = (file, maxDimension = COMPRESSION_SETTINGS.MAX_IMAGE_DIMENSI
       
       // 圧縮結果をBlobとして取得
       canvas.toBlob(
-        (blob) => {
+        (blob: Blob | null) => {
           if (blob) {
             resolve({
               dataURL,
@@ -97,7 +99,7 @@ const resizeImage = (file, maxDimension = COMPRESSION_SETTINGS.MAX_IMAGE_DIMENSI
 };
 
 // Base64文字列の圧縮（gzip風の簡易圧縮）
-const compressBase64 = (base64String) => {
+const compressBase64 = (base64String: string): Base64CompressionResult => {
   try {
     // データ部分のみを抽出（data:image/jpeg;base64, の部分を除く）
     const commaIndex = base64String.indexOf(',');
@@ -163,7 +165,7 @@ const decompressBase64 = (compressedBase64) => {
 };
 
 // ファイルの最適化処理
-export const optimizeFile = async (file) => {
+export const optimizeFile = async (file: File): Promise<OptimizationResult> => {
   try {
     // ファイルサイズチェック
     if (file.size > COMPRESSION_SETTINGS.MAX_FILE_SIZE) {
@@ -175,10 +177,10 @@ export const optimizeFile = async (file) => {
       // 小さい画像はそのまま
       if (file.size <= COMPRESSION_SETTINGS.COMPRESSION_THRESHOLD) {
         const reader = new FileReader();
-        return new Promise((resolve, reject) => {
-          reader.onload = (e) => {
+        return new Promise<OptimizationResult>((resolve, reject) => {
+          reader.onload = (e: ProgressEvent<FileReader>) => {
             resolve({
-              dataURL: e.target.result,
+              dataURL: e.target?.result as string,
               originalSize: file.size,
               optimizedSize: file.size,
               compressionRatio: '0',
@@ -192,7 +194,7 @@ export const optimizeFile = async (file) => {
       }
       
       // 大きい画像は圧縮
-      const compressed = await resizeImage(file);
+      const compressed: CompressionResult = await resizeImage(file);
       
       return {
         dataURL: compressed.dataURL,
@@ -207,12 +209,12 @@ export const optimizeFile = async (file) => {
     
     // 画像以外のファイル
     const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onload = (e) => {
-        const dataURL = e.target.result;
+    return new Promise<OptimizationResult>((resolve, reject) => {
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        const dataURL = e.target?.result as string;
         
         // Base64圧縮を試行
-        const base64Compression = compressBase64(dataURL);
+        const base64Compression: Base64CompressionResult = compressBase64(dataURL);
         
         resolve({
           dataURL: base64Compression.compressed,
@@ -234,7 +236,7 @@ export const optimizeFile = async (file) => {
 };
 
 // 最適化されたファイルの復元
-export const restoreOptimizedFile = (optimizedData) => {
+export const restoreOptimizedFile = (optimizedData: OptimizationResult): OptimizationResult => {
   if (optimizedData.isCompressed && !optimizedData.type.startsWith('image/')) {
     // Base64圧縮の場合は展開
     return {
@@ -248,7 +250,7 @@ export const restoreOptimizedFile = (optimizedData) => {
 };
 
 // ファイルサイズの人間readable表示
-export const formatFileSize = (bytes) => {
+export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B';
   
   const k = 1024;
@@ -259,9 +261,16 @@ export const formatFileSize = (bytes) => {
 };
 
 // 圧縮統計の計算
-export const calculateCompressionStats = (files) => {
-  const totalOriginal = files.reduce((sum, file) => sum + (file.originalSize || 0), 0);
-  const totalOptimized = files.reduce((sum, file) => sum + (file.optimizedSize || file.originalSize || 0), 0);
+export const calculateCompressionStats = (files: OptimizationResult[]): {
+  totalOriginal: number;
+  totalOptimized: number;
+  totalSaved: number;
+  totalSavedPercentage: string;
+  fileCount: number;
+  compressedCount: number;
+} => {
+  const totalOriginal = files.reduce((sum: number, file: OptimizationResult) => sum + (file.originalSize || 0), 0);
+  const totalOptimized = files.reduce((sum: number, file: OptimizationResult) => sum + (file.optimizedSize || file.originalSize || 0), 0);
   const totalSaved = totalOriginal - totalOptimized;
   
   return {
@@ -270,6 +279,6 @@ export const calculateCompressionStats = (files) => {
     totalSaved,
     totalSavedPercentage: totalOriginal > 0 ? ((totalSaved / totalOriginal) * 100).toFixed(1) : '0',
     fileCount: files.length,
-    compressedCount: files.filter(f => f.isCompressed).length
+    compressedCount: files.filter((f: OptimizationResult) => f.isCompressed).length
   };
 };

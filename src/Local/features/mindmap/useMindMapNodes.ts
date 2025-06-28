@@ -1,24 +1,107 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../shared/types/dataTypes';
+import { createNewNode, calculateNodePosition, COLORS, deepClone, MindMapData, MindMapNode } from '../../shared/types/dataTypes';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout';
 
+// ======================================
+// 型定義
+// ======================================
+
+// 基本的な型定義
+export interface Position {
+  x: number;
+  y: number;
+}
+
+// ノード更新オプション
+export interface UpdateNodeOptions {
+  source?: string;
+  allowDuringEdit?: boolean;
+  skipHistory?: boolean;
+  immediate?: boolean;
+}
+
+// データ更新オプション
+export interface UpdateDataOptions {
+  skipHistory?: boolean;
+  source?: string;
+  allowDuringEdit?: boolean;
+  immediate?: boolean;
+  operationType?: string;
+  operationData?: Record<string, any>;
+}
+
+// 編集終了オプション
+export interface FinishEditOptions {
+  skipMapSwitchDelete?: boolean;
+  forceDelete?: boolean;
+  onlyResetIfCurrent?: boolean;
+  preserveCurrentEdit?: string | null;
+  onlyUpdateText?: boolean;
+  skipEditStateReset?: boolean;
+}
+
+// レイアウトオプション
+export interface LayoutOptions {
+  centerX: number;
+  centerY: number;
+  baseRadius: number;
+  levelSpacing: number;
+  minVerticalSpacing: number;
+  maxVerticalSpacing: number;
+}
+
+// ホック戻り値の型定義
+export interface UseMindMapNodesReturn {
+  // 状態
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  editText: string;
+  
+  // 状態更新関数
+  setSelectedNodeId: (nodeId: string | null) => void;
+  setEditingNodeId: (nodeId: string | null) => void;
+  setEditText: (text: string) => void;
+  
+  // ノード操作関数
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>, options?: UpdateNodeOptions) => Promise<void>;
+  addChildNode: (parentId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (nodeId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
+  deleteNode: (nodeId: string) => Promise<boolean>;
+  dragNode: (nodeId: string, x: number, y: number) => void;
+  changeParent: (nodeId: string, newParentId: string) => Promise<boolean>;
+  
+  // 検索・ユーティリティ関数
+  findNode: (nodeId: string, rootNode?: MindMapNode) => MindMapNode | null;
+  findParentNode: (nodeId: string, rootNode?: MindMapNode, parent?: MindMapNode | null) => MindMapNode | null;
+  flattenNodes: (rootNode?: MindMapNode) => MindMapNode[];
+  applyAutoLayout: (rootNode: MindMapNode) => MindMapNode;
+  
+  // 編集関数
+  startEdit: (nodeId: string, clearText?: boolean) => void;
+  finishEdit: (nodeId: string, newText?: string, options?: FinishEditOptions) => Promise<void>;
+  toggleCollapse: (nodeId: string) => void;
+}
+
 // ノード操作専用のカスタムフック（Local版）
-export const useMindMapNodes = (data, updateData) => {
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [editingNodeId, setEditingNodeId] = useState(null);
-  const [editText, setEditText] = useState('');
+export const useMindMapNodes = (
+  data: MindMapData,
+  updateData: (newData: MindMapData, options?: UpdateDataOptions) => Promise<void>
+): UseMindMapNodesReturn => {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
   
   // 最新のdataを参照するためのref
-  const dataRef = useRef(data);
+  const dataRef = useRef<MindMapData>(data);
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
 
   // 全ノードを平坦化（メモ化）
-  const flattenNodes = useCallback((rootNode = data?.rootNode) => {
+  const flattenNodes = useCallback((rootNode: MindMapNode | undefined = data?.rootNode): MindMapNode[] => {
     if (!rootNode) return [];
     
-    const flatten = (node, result = []) => {
+    const flatten = (node: MindMapNode, result: MindMapNode[] = []): MindMapNode[] => {
       result.push(node);
       node.children?.forEach(child => flatten(child, result));
       return result;
@@ -28,7 +111,7 @@ export const useMindMapNodes = (data, updateData) => {
   }, [data?.rootNode]);
 
   // ノードを検索（メモ化）
-  const findNode = useCallback((nodeId, rootNode = data?.rootNode) => {
+  const findNode = useCallback((nodeId: string, rootNode: MindMapNode | undefined = data?.rootNode): MindMapNode | null => {
     if (!rootNode || !nodeId) return null;
     if (rootNode.id === nodeId) return rootNode;
     
@@ -40,7 +123,11 @@ export const useMindMapNodes = (data, updateData) => {
   }, [data?.rootNode]);
 
   // ノードの親を検索（メモ化）
-  const findParentNode = useCallback((nodeId, rootNode = data.rootNode, parent = null) => {
+  const findParentNode = useCallback((
+    nodeId: string, 
+    rootNode: MindMapNode | undefined = data?.rootNode, 
+    parent: MindMapNode | null = null
+  ): MindMapNode | null => {
     if (!rootNode || !nodeId) return null;
     if (rootNode.id === nodeId) return parent;
     
@@ -52,10 +139,10 @@ export const useMindMapNodes = (data, updateData) => {
   }, [data?.rootNode]);
 
   // オートレイアウトを適用
-  const applyAutoLayout = (rootNode) => {
-    const svg = document.querySelector('.mindmap-canvas-container svg');
-    const centerX = rootNode.x || (svg?.clientWidth / 2) || 400;
-    const centerY = rootNode.y || (svg?.clientHeight / 2) || 300;
+  const applyAutoLayout = (rootNode: MindMapNode): MindMapNode => {
+    const svg = document.querySelector('.mindmap-canvas-container svg') as SVGSVGElement | null;
+    const centerX = rootNode.x || (svg?.clientWidth ? svg.clientWidth / 2 : 400);
+    const centerY = rootNode.y || (svg?.clientHeight ? svg.clientHeight / 2 : 300);
     
     return mindMapLayoutPreserveRoot(rootNode, {
       centerX, centerY, baseRadius: 180, levelSpacing: 200,
@@ -64,7 +151,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノードの色を取得する（親から継承または新規割り当て）
-  const getNodeColor = (parentNode, childIndex) => {
+  const getNodeColor = (parentNode: MindMapNode, childIndex: number): string => {
     if (parentNode.id === 'root') {
       return COLORS[childIndex % COLORS.length];
     } else {
@@ -73,13 +160,17 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノード更新（Local版）
-  const updateNode = async (nodeId, updates, options = {}) => {
+  const updateNode = async (
+    nodeId: string, 
+    updates: Partial<MindMapNode>, 
+    options: UpdateNodeOptions = {}
+  ): Promise<void> => {
     console.log('📝 updateNode開始:', { nodeId, updates });
     
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    const updateNodeRecursive = (node) => {
+    const updateNodeRecursive = (node: MindMapNode): MindMapNode => {
       if (node.id === nodeId) {
         Object.assign(node, updates);
         return node;
@@ -92,7 +183,7 @@ export const useMindMapNodes = (data, updateData) => {
     
     updateNodeRecursive(clonedData.rootNode);
     
-    const updateOptions = {
+    const updateOptions: UpdateDataOptions = {
       skipHistory: false,
       source: options.source || 'updateNode',
       allowDuringEdit: options.allowDuringEdit || false,
@@ -105,7 +196,11 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 子ノード追加（Local版）
-  const addChildNode = async (parentId, nodeText = '', startEditing = false) => {
+  const addChildNode = async (
+    parentId: string, 
+    nodeText: string = '', 
+    startEditing: boolean = false
+  ): Promise<string | null> => {
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
@@ -125,7 +220,7 @@ export const useMindMapNodes = (data, updateData) => {
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    const addChildRecursive = (node) => {
+    const addChildRecursive = (node: MindMapNode): MindMapNode => {
       if (node.id === parentId) {
         if (!node.children) {
           node.children = [];
@@ -162,7 +257,11 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 兄弟ノードを追加（Local版）
-  const addSiblingNode = async (nodeId, nodeText = '', startEditing = false) => {
+  const addSiblingNode = async (
+    nodeId: string, 
+    nodeText: string = '', 
+    startEditing: boolean = false
+  ): Promise<string | null> => {
     if (nodeId === 'root') return addChildNode('root', nodeText, startEditing);
     
     const parentNode = findParentNode(nodeId);
@@ -192,7 +291,7 @@ export const useMindMapNodes = (data, updateData) => {
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    const addSiblingRecursive = (node) => {
+    const addSiblingRecursive = (node: MindMapNode): MindMapNode => {
       if (node.id === parentNode.id) {
         const currentIndex = node.children?.findIndex(child => child.id === nodeId) ?? -1;
         if (currentIndex === -1) return node;
@@ -225,13 +324,13 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノードを削除（Local版）
-  const deleteNode = async (nodeId) => {
+  const deleteNode = async (nodeId: string): Promise<boolean> => {
     if (nodeId === 'root') return false;
     
     console.log('🗑️ deleteNode実行開始:', { nodeId, timestamp: Date.now() });
     
     // 削除後に選択するノードを決定
-    let nodeToSelect = null;
+    let nodeToSelect: string | null = null;
     const parentNode = findParentNode(nodeId);
     
     if (parentNode && parentNode.children) {
@@ -258,7 +357,7 @@ export const useMindMapNodes = (data, updateData) => {
     const currentData = dataRef.current;
     const clonedData = deepClone(currentData);
     
-    const deleteNodeRecursive = (node) => {
+    const deleteNodeRecursive = (node: MindMapNode): MindMapNode => {
       if (node.children) {
         node.children = node.children.filter(child => child.id !== nodeId);
         node.children.forEach(deleteNodeRecursive);
@@ -288,16 +387,16 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // ノードをドラッグで移動（Local版）
-  const dragNode = (nodeId, x, y) => {
+  const dragNode = (nodeId: string, x: number, y: number): void => {
     updateNode(nodeId, { x, y });
   };
 
   // ノードの親を変更（Local版）
-  const changeParent = async (nodeId, newParentId) => {
+  const changeParent = async (nodeId: string, newParentId: string): Promise<boolean> => {
     if (nodeId === 'root' || nodeId === newParentId) return false;
     
     // 循環参照防止
-    const isDescendant = (parentId, childId) => {
+    const isDescendant = (parentId: string, childId: string): boolean => {
       const parent = findNode(parentId);
       if (!parent || !parent.children) return false;
       
@@ -324,7 +423,7 @@ export const useMindMapNodes = (data, updateData) => {
     const clonedData = deepClone(currentData);
     
     // 現在の親から削除
-    const removeFromParent = (node) => {
+    const removeFromParent = (node: MindMapNode): MindMapNode => {
       return {
         ...node,
         children: (node.children || [])
@@ -334,7 +433,7 @@ export const useMindMapNodes = (data, updateData) => {
     };
     
     // 新しい親に追加
-    const addToNewParent = (node) => {
+    const addToNewParent = (node: MindMapNode): MindMapNode => {
       if (node.id === newParentId) {
         const childrenCount = node.children?.length || 0;
         const updatedNode = {
@@ -377,7 +476,7 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 編集開始
-  const startEdit = (nodeId, clearText = false) => {
+  const startEdit = (nodeId: string, clearText: boolean = false): void => {
     const node = findNode(nodeId);
     if (node) {
       setEditingNodeId(nodeId);
@@ -387,7 +486,11 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 編集終了（Local版）
-  const finishEdit = async (nodeId, newText, options = {}) => {
+  const finishEdit = async (
+    nodeId: string,
+    newText?: string,
+    options: FinishEditOptions = {}
+  ): Promise<void> => {
     // newTextがundefinedの場合は現在のeditTextを使用
     const textToSave = newText !== undefined ? newText : editText;
     const currentNode = findNode(nodeId);
@@ -524,13 +627,13 @@ export const useMindMapNodes = (data, updateData) => {
   };
 
   // 折りたたみ状態をトグル
-  const toggleCollapse = (nodeId) => {
-    const toggleNodeRecursive = (node) => {
+  const toggleCollapse = (nodeId: string): void => {
+    const toggleNodeRecursive = (node: MindMapNode): MindMapNode => {
       if (node.id === nodeId) return { ...node, collapsed: !node.collapsed };
       return { ...node, children: node.children?.map(toggleNodeRecursive) || [] };
     };
     
-    updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
+    updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) }, { skipHistory: false });
   };
 
 

@@ -1,16 +1,32 @@
-import { useAppInitialization } from './useAppInitialization.js';
-import { useMindMap } from './useMindMap.js';
+import { useAppInitialization } from './useAppInitialization';
+import { useMindMap } from './useMindMap';
+
+// レンダータイプの型定義
+export type RenderType = 
+  | { type: 'AUTH_VERIFICATION'; props: { token: string } }
+  | { type: 'LOADING'; props: { message: string } }
+  | { type: 'STORAGE_SELECTOR'; props: { onModeSelect: (mode: 'local' | 'cloud') => void } }
+  | { type: 'AUTH_MODAL'; props: { onClose: () => void; onAuthSuccess: () => void } }
+  | { type: 'ONBOARDING'; props: { onComplete: () => void; onSkip: () => void } }
+  | { type: 'MAIN_APP'; props: Record<string, never> };
+
+// フックの戻り値の型定義
+export interface AppRenderReturn {
+  renderType: RenderType;
+  mindMap: ReturnType<typeof useMindMap>;
+  initState: ReturnType<typeof useAppInitialization>;
+}
 
 /**
  * アプリのレンダリング状態を管理するシンプルなフック
  * 初回起動と2回目以降の起動を統一して処理
  */
-export const useAppRender = () => {
+export const useAppRender = (): AppRenderReturn => {
   const initState = useAppInitialization();
   const mindMap = useMindMap(initState.isReady);
 
   // レンダリングタイプを決定（シーケンシャル）
-  const getRenderType = () => {
+  const getRenderType = (): RenderType => {
     // 1. URL認証検証中
     const urlParams = new URLSearchParams(window.location.search);
     const authToken = urlParams.get('token');

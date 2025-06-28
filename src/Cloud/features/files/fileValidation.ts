@@ -1,7 +1,63 @@
 // ファイルアップロードのセキュリティ強化
 
+// 型定義
+export interface FileTypeConfig {
+  extensions: string[];
+  maxSize: number;
+}
+
+export interface FileTypesConfig {
+  images: Record<string, FileTypeConfig>;
+  documents: Record<string, FileTypeConfig>;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface FileInfo {
+  name: string;
+  type: string;
+  size: number;
+  sizeFormatted?: string;
+  lastModified?: string;
+}
+
+export interface ValidationFullResult extends ValidationResult {
+  warnings: string[];
+  fileInfo: FileInfo;
+}
+
+export interface MultipleFilesValidationResult {
+  results: ValidationFullResult[];
+  summary: {
+    totalFiles: number;
+    validFiles: number;
+    invalidFiles: number;
+    totalSize: number;
+    totalSizeFormatted: string;
+    totalSizeExceeded: boolean;
+  };
+}
+
+export interface SecurityReport {
+  timestamp: string;
+  totalFiles: number;
+  securityIssues: Array<{
+    fileIndex: number;
+    fileName: string;
+    issues: string[];
+  }>;
+  recommendations: Array<{
+    fileIndex: number;
+    fileName: string;
+    warnings: string[];
+  }>;
+}
+
 // 許可されたファイルタイプの詳細定義
-export const ALLOWED_FILE_TYPES = {
+export const ALLOWED_FILE_TYPES: FileTypesConfig = {
   images: {
     'image/jpeg': { extensions: ['.jpg', '.jpeg'], maxSize: 10 * 1024 * 1024 }, // 10MB
     'image/png': { extensions: ['.png'], maxSize: 10 * 1024 * 1024 },
@@ -46,7 +102,7 @@ export const FILE_SIZE_LIMITS = {
 };
 
 // ファイル名の検証
-export const validateFileName = (fileName) => {
+export const validateFileName = (fileName: string): ValidationResult => {
   const errors = [];
   
   // 基本的な文字チェック
@@ -84,7 +140,7 @@ export const validateFileName = (fileName) => {
 };
 
 // MIMEタイプの検証
-export const validateMimeType = (file) => {
+export const validateMimeType = (file: File): ValidationResult => {
   const errors = [];
   
   // 危険なMIMEタイプチェック
@@ -109,7 +165,7 @@ export const validateMimeType = (file) => {
 };
 
 // ファイル拡張子とMIMEタイプの整合性チェック
-export const validateFileConsistency = (file) => {
+export const validateFileConsistency = (file: File): ValidationResult => {
   const errors = [];
   
   const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
@@ -141,7 +197,7 @@ export const validateFileConsistency = (file) => {
 };
 
 // ファイルサイズの検証
-export const validateFileSize = (file) => {
+export const validateFileSize = (file: File): ValidationResult => {
   const errors = [];
   
   // 単一ファイルサイズチェック
@@ -164,8 +220,8 @@ export const validateFileSize = (file) => {
 };
 
 // ファイル内容の基本チェック（マジックナンバー）
-export const validateFileContent = async (file) => {
-  return new Promise((resolve) => {
+export const validateFileContent = async (file: File): Promise<ValidationResult> => {
+  return new Promise<ValidationResult>((resolve) => {
     const errors = [];
     
     // ファイルサイズが0の場合
@@ -177,12 +233,12 @@ export const validateFileContent = async (file) => {
     
     // ファイルの最初の数バイトを読み取ってマジックナンバーをチェック
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const arrayBuffer = e.target.result;
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const arrayBuffer = e.target?.result as ArrayBuffer;
       const uint8Array = new Uint8Array(arrayBuffer);
       
       // 基本的なマジックナンバーチェック
-      const magicNumbers = {
+      const magicNumbers: Record<string, number[]> = {
         'image/jpeg': [0xFF, 0xD8, 0xFF],
         'image/png': [0x89, 0x50, 0x4E, 0x47],
         'image/gif': [0x47, 0x49, 0x46],
@@ -217,7 +273,7 @@ export const validateFileContent = async (file) => {
 };
 
 // 総合的なファイル検証
-export const validateFile = async (file) => {
+export const validateFile = async (file: File): Promise<ValidationFullResult> => {
   const allErrors = [];
   const warnings = [];
   
@@ -261,7 +317,7 @@ export const validateFile = async (file) => {
       warnings.push('SVGファイルには悪意のあるスクリプトが含まれる可能性があります。信頼できるソースからのファイルのみをアップロードしてください。');
     }
     
-    const result = {
+    const result: ValidationFullResult = {
       isValid: allErrors.length === 0,
       errors: allErrors,
       warnings,
@@ -302,8 +358,8 @@ export const validateFile = async (file) => {
 };
 
 // 複数ファイルの検証
-export const validateMultipleFiles = async (files) => {
-  const results = [];
+export const validateMultipleFiles = async (files: File[]): Promise<MultipleFilesValidationResult> => {
+  const results: ValidationFullResult[] = [];
   let totalSize = 0;
   
   for (const file of files) {
@@ -315,7 +371,7 @@ export const validateMultipleFiles = async (files) => {
   // 合計サイズチェック
   const totalSizeExceeded = totalSize > FILE_SIZE_LIMITS.total;
   if (totalSizeExceeded) {
-    results.forEach(result => {
+    results.forEach((result: ValidationFullResult) => {
       result.errors.push(`合計ファイルサイズが制限を超えています: ${(totalSize / 1024 / 1024).toFixed(1)}MB > ${FILE_SIZE_LIMITS.total / 1024 / 1024}MB`);
       result.isValid = false;
     });
@@ -335,15 +391,15 @@ export const validateMultipleFiles = async (files) => {
 };
 
 // セキュリティレポートの生成
-export const generateSecurityReport = (validationResults) => {
-  const report = {
+export const generateSecurityReport = (validationResults: ValidationFullResult[]): SecurityReport => {
+  const report: SecurityReport = {
     timestamp: new Date().toISOString(),
     totalFiles: validationResults.length,
     securityIssues: [],
     recommendations: []
   };
   
-  validationResults.forEach((result, index) => {
+  validationResults.forEach((result: ValidationFullResult, index: number) => {
     if (!result.isValid) {
       report.securityIssues.push({
         fileIndex: index,
