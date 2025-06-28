@@ -45,6 +45,7 @@ import type { MindMapNode, MindMapData, User } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
   // URL パラメータで認証トークンをチェック（複数のパラメータ名を試す）
+  const [currentUrl, setCurrentUrl] = React.useState(window.location.href);
   const urlParams = new URLSearchParams(window.location.search);
   const authToken = urlParams.get('token') || 
                    urlParams.get('auth_token') || 
@@ -68,9 +69,9 @@ const MindMapApp: React.FC = () => {
   const settings = getAppSettings();
   const [isAuthenticated, setIsAuthenticated] = React.useState(authManager.isAuthenticated());
   
-  // 認証状態の変化を監視
+  // URL認証処理（一度だけ実行）
   React.useEffect(() => {
-    const checkAuthStatus = async () => {
+    const handleUrlAuth = async () => {
       // URLにトークンがある場合のみ認証処理を実行
       if (authToken && authToken.length > 10 && !authManager.isAuthenticated()) {
         try {
@@ -84,7 +85,10 @@ const MindMapApp: React.FC = () => {
           // 認証成功後はURLからトークンを削除し、状態を即座に更新
           if (result.success) {
             setIsAuthenticated(true);
+            console.log('🧹 URLからトークンを削除中...');
             window.history.replaceState({}, document.title, window.location.pathname);
+            setCurrentUrl(window.location.href); // URL状態を更新して再レンダリング
+            console.log('✅ URL更新完了:', window.location.href);
           }
         } catch (error) {
           console.error('❌ URL認証処理エラー:', {
@@ -94,28 +98,28 @@ const MindMapApp: React.FC = () => {
           });
           
           // 認証エラーの場合もURLからトークンを削除（無限ループ防止）
+          console.log('🧹 エラー後URLクリーンアップ...');
           window.history.replaceState({}, document.title, window.location.pathname);
+          setCurrentUrl(window.location.href); // URL状態を更新
         }
       }
-      
-      const authStatus = authManager.isAuthenticated();
-      setIsAuthenticated(authStatus);
     };
     
-    // 初回チェック
-    checkAuthStatus();
-    
-    // 認証状態の変化を監視
+    handleUrlAuth();
+  }, []); // 空の依存配列で一度だけ実行
+
+  // 認証状態の監視（別のuseEffect）
+  React.useEffect(() => {
     const interval = setInterval(() => {
       const authStatus = authManager.isAuthenticated();
       if (authStatus !== isAuthenticated) {
         console.log('🔄 認証状態変化検出:', { previous: isAuthenticated, current: authStatus });
         setIsAuthenticated(authStatus);
       }
-    }, 500); // 500msに変更して認証後の反応を早く
+    }, 1000); // 1秒間隔で監視
     
     return () => clearInterval(interval);
-  }, [authToken, isAuthenticated]);
+  }, [isAuthenticated]);
   
   // 認証状態の管理
   const [showAuthModal, setShowAuthModal] = React.useState(false);
