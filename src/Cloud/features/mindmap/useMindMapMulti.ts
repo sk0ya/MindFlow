@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
+import { authManager } from '../../features/auth/authManager.js';
 // リアルタイム同期はクラウドエンジンに統合
 
 // マルチマップ管理専用のカスタムフック
@@ -396,6 +397,12 @@ export const useMindMapMulti = (data, setData, updateData) => {
         // ストレージモード未選択の場合は待機
         if (settings.storageMode === null || settings.storageMode === undefined) {
           console.log('⏳ ストレージモード選択待ち: マップ読み込みを保留');
+          return;
+        }
+        
+        // クラウドモードで未認証の場合は待機
+        if (settings.storageMode === 'cloud' && !authManager.isAuthenticated()) {
+          console.log('🔐 クラウドモード: 認証待ち - マップ読み込みを保留');
           return;
         }
         

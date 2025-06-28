@@ -3,6 +3,7 @@
 
 import { createCloudEngine } from './cloud/CloudEngine.js';
 import { authManager } from '../../features/auth/authManager.js';
+import { getAppSettings } from './storageUtils.js';
 import type { CloudEngine } from './cloud/CloudEngine.js';
 import type { MindMapData, Node, StorageResult, SyncStatus } from './types.js';
 

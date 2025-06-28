@@ -19,6 +19,7 @@ import CollaborativeFeatures from '../common/CollaborativeFeatures';
 import PerformanceDashboard from '../common/PerformanceDashboard';
 import { storageManager } from '../../../core/storage/StorageManager.ts';
 import { getAppSettings } from '../../../core/storage/storageUtils';
+import { authManager } from '../../../features/auth/authManager.js';
 import './MindMapApp.css';
 
 import AuthVerification from '../auth/AuthVerification.jsx';
@@ -50,6 +51,25 @@ const MindMapApp: React.FC = () => {
   
   // アプリ初期化（統一フロー）- まず初期化状態を取得
   const initState = useAppInitialization();
+  
+  // クラウドモードで未認証の場合は早期リターン
+  const settings = getAppSettings();
+  const isAuthenticated = authManager.isAuthenticated();
+  
+  if (settings.storageMode === 'cloud' && !isAuthenticated) {
+    console.log('🔐 クラウドモード未認証: 認証画面を表示');
+    return (
+      <div className="auth-required-screen">
+        <div className="auth-message">
+          <h2>認証が必要です</h2>
+          <p>クラウドモードを使用するには認証が必要です。</p>
+          <button onClick={() => authManager.authenticate()}>
+            認証する
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   const {
     data,
