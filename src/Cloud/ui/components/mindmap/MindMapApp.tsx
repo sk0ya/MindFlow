@@ -81,8 +81,9 @@ const MindMapApp: React.FC = () => {
           const result = await authManager.verifyMagicLink(authToken);
           console.log('✅ URL認証成功:', result);
           
-          // 認証成功後はURLからトークンを削除
+          // 認証成功後はURLからトークンを削除し、状態を即座に更新
           if (result.success) {
+            setIsAuthenticated(true);
             window.history.replaceState({}, document.title, window.location.pathname);
           }
         } catch (error) {
@@ -104,13 +105,14 @@ const MindMapApp: React.FC = () => {
     // 初回チェック
     checkAuthStatus();
     
-    // 認証状態の変化を監視（頻度を下げる）
+    // 認証状態の変化を監視
     const interval = setInterval(() => {
       const authStatus = authManager.isAuthenticated();
       if (authStatus !== isAuthenticated) {
+        console.log('🔄 認証状態変化検出:', { previous: isAuthenticated, current: authStatus });
         setIsAuthenticated(authStatus);
       }
-    }, 2000); // 2秒に1回に変更
+    }, 500); // 500msに変更して認証後の反応を早く
     
     return () => clearInterval(interval);
   }, [authToken, isAuthenticated]);
@@ -641,9 +643,10 @@ const MindMapApp: React.FC = () => {
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          onSuccess={() => {
-            setShowAuthModal(false);
+          onSuccess={(result) => {
+            console.log('🎉 認証モーダル成功:', result);
             setIsAuthenticated(true);
+            setShowAuthModal(false);
           }}
         />
       )}
