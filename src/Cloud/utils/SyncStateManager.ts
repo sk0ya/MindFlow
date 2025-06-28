@@ -1,10 +1,151 @@
-import { VectorClock } from './VectorClock.js';
+import { VectorClock, VectorClockData } from './VectorClock';
+
+// ===== Type Definitions =====
+
+/** Connection quality levels */
+export type ConnectionQuality = 'unknown' | 'excellent' | 'good' | 'poor' | 'bad';
+
+/** User presence status */
+export type PresenceStatus = 'active' | 'idle' | 'away' | 'offline';
+
+/** Operation status */
+export type OperationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+/** Cursor position information */
+export interface CursorPosition {
+  x: number;
+  y: number;
+  nodeId?: string;
+  timestamp: string;
+}
+
+/** User session information */
+export interface UserSession {
+  id: string;
+  name?: string;
+  avatar?: string;
+  joinedAt: string;
+  lastActivity: string;
+  [key: string]: unknown;
+}
+
+/** User presence information */
+export interface UserPresence {
+  status: PresenceStatus;
+  timestamp: string;
+  userAgent?: string;
+  viewport?: {
+    width: number;
+    height: number;
+  };
+  [key: string]: unknown;
+}
+
+/** Operation data structure */
+export interface Operation {
+  id: string;
+  type: string;
+  userId: string;
+  timestamp: string;
+  data: unknown;
+  vectorClock?: VectorClockData;
+  queuedAt?: string;
+  retryCount?: number;
+  status?: OperationStatus;
+  completedAt?: string;
+  [key: string]: unknown;
+}
+
+/** Error record */
+export interface ErrorRecord {
+  id: string;
+  message: string;
+  context: string;
+  timestamp: string;
+  stack?: string;
+}
+
+/** Sync state structure */
+export interface SyncState {
+  // Connection state
+  isOnline: boolean;
+  isConnected: boolean;
+  isSyncing: boolean;
+  connectionQuality: ConnectionQuality;
+  lastSyncTime: string | null;
+  lastPingTime: string | null;
+  pingLatency: number | null;
+  
+  // Operation management
+  pendingOperations: Operation[];
+  vectorClock: VectorClockData;
+  operationHistory: Operation[];
+  conflictQueue: Operation[];
+  
+  // Active users
+  activeUsers: Map<string, UserSession>;
+  userPresences: Map<string, UserPresence>;
+  
+  // Edit state
+  editingUsers: Map<string, Set<string>>; // nodeId -> Set<userId>
+  cursorPositions: Map<string, CursorPosition>; // userId -> CursorPosition
+  
+  // Error management
+  connectionRetryCount: number;
+  lastError: ErrorRecord | null;
+  errors: ErrorRecord[];
+  
+  // Performance
+  messageCount: number;
+  messageRate: number;
+  bandwidthUsage: number;
+  
+  // Settings
+  autoSyncInterval: number;
+  maxRetryAttempts: number;
+  operationHistoryLimit: number;
+}
+
+/** Sync state manager event */
+export interface SyncStateEvent {
+  event: string;
+  data?: unknown;
+}
+
+/** Sync state listener function */
+export type SyncStateListener = (event: SyncStateEvent) => void;
+
+/** State update data */
+export interface StateUpdateData {
+  oldState: SyncState;
+  newState: SyncState;
+  updates: Partial<SyncState>;
+}
+
+/** Statistics data */
+export interface SyncStats {
+  activeUserCount: number;
+  pendingOperationCount: number;
+  operationHistoryCount: number;
+  errorCount: number;
+  editingNodeCount: number;
+  connectionQuality: ConnectionQuality;
+  messageRate: number;
+  pingLatency: number | null;
+}
+
+// ===== Main Class =====
 
 /**
  * SyncStateManager - 同期状態の一元管理
  * ネットワーク状態、ユーザープレゼンス、操作キュー等を管理
  */
 export class SyncStateManager {
+  public state: SyncState;
+  private listeners: Set<SyncStateListener>;
+  private vectorClock: VectorClock;
+  private performanceTrackingInterval?: number;
+
   constructor() {
     this.state = {
       // 接続状態
@@ -46,7 +187,7 @@ export class SyncStateManager {
       operationHistoryLimit: 100
     };
 
-    this.listeners = new Set();
+    this.listeners = new Set<SyncStateListener>();
     this.vectorClock = new VectorClock();
     
     this.setupNetworkListeners();
@@ -56,7 +197,7 @@ export class SyncStateManager {
   /**
    * ネットワーク状態の監視を開始
    */
-  setupNetworkListeners() {
+  private setupNetworkListeners(): void {
     window.addEventListener('online', () => {
       this.updateState({ 
         isOnline: true,
@@ -78,8 +219,8 @@ export class SyncStateManager {
   /**
    * パフォーマンス追跡を開始
    */
-  startPerformanceTracking() {
-    setInterval(() => {
+  private startPerformanceTracking(): void {
+    this.performanceTrackingInterval = window.setInterval(() => {
       this.calculateMessageRate();
       this.calculateConnectionQuality();
     }, 5000);
@@ -87,9 +228,9 @@ export class SyncStateManager {
 
   /**
    * 状態更新
-   * @param {Object} updates - 更新する状態
+   * @param updates - 更新する状態
    */
-  updateState(updates) {
+  updateState(updates: Partial<SyncState>): void {
     const oldState = { ...this.state };
     this.state = { ...this.state, ...updates };
     
@@ -102,20 +243,20 @@ export class SyncStateManager {
 
   /**
    * リスナー登録
-   * @param {Function} listener - 状態変更リスナー
-   * @returns {Function} - リスナー解除関数
+   * @param listener - 状態変更リスナー
+   * @returns リスナー解除関数
    */
-  subscribe(listener) {
+  subscribe(listener: SyncStateListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
   /**
    * リスナーに通知
-   * @param {string} event - イベント名
-   * @param {*} data - イベントデータ
+   * @param event - イベント名
+   * @param data - イベントデータ
    */
-  notifyListeners(event, data) {
+  private notifyListeners(event: string, data?: unknown): void {
     this.listeners.forEach(listener => {
       try {
         listener({ event, data });
@@ -129,9 +270,9 @@ export class SyncStateManager {
 
   /**
    * ベクタークロックを進める
-   * @param {string} userId - ユーザーID
+   * @param userId - ユーザーID
    */
-  incrementVectorClock(userId) {
+  incrementVectorClock(userId: string): void {
     this.vectorClock.increment(userId);
     this.updateState({
       vectorClock: this.vectorClock.toJSON()
@@ -140,9 +281,9 @@ export class SyncStateManager {
 
   /**
    * ベクタークロックを統合
-   * @param {Object} remoteVectorClock - リモートのベクタークロック
+   * @param remoteVectorClock - リモートのベクタークロック
    */
-  mergeVectorClock(remoteVectorClock) {
+  mergeVectorClock(remoteVectorClock: VectorClockData): void {
     this.vectorClock.update(remoteVectorClock);
     this.updateState({
       vectorClock: this.vectorClock.toJSON()
@@ -153,10 +294,10 @@ export class SyncStateManager {
 
   /**
    * ユーザーセッションを追加
-   * @param {string} userId - ユーザーID
-   * @param {Object} sessionInfo - セッション情報
+   * @param userId - ユーザーID
+   * @param sessionInfo - セッション情報
    */
-  addUserSession(userId, sessionInfo) {
+  addUserSession(userId: string, sessionInfo: Partial<UserSession>): void {
     this.state.activeUsers.set(userId, {
       ...sessionInfo,
       joinedAt: new Date().toISOString(),
@@ -172,9 +313,9 @@ export class SyncStateManager {
 
   /**
    * ユーザーセッションを削除
-   * @param {string} userId - ユーザーID
+   * @param userId - ユーザーID
    */
-  removeUserSession(userId) {
+  removeUserSession(userId: string): void {
     this.state.activeUsers.delete(userId);
     this.state.userPresences.delete(userId);
     this.state.cursorPositions.delete(userId);
@@ -199,10 +340,10 @@ export class SyncStateManager {
 
   /**
    * ユーザープレゼンス更新
-   * @param {string} userId - ユーザーID
-   * @param {Object} presence - プレゼンス情報
+   * @param userId - ユーザーID
+   * @param presence - プレゼンス情報
    */
-  updateUserPresence(userId, presence) {
+  updateUserPresence(userId: string, presence: Partial<UserPresence>): void {
     this.state.userPresences.set(userId, {
       ...presence,
       timestamp: new Date().toISOString()
@@ -224,10 +365,10 @@ export class SyncStateManager {
 
   /**
    * ノード編集開始
-   * @param {string} nodeId - ノードID
-   * @param {string} userId - ユーザーID
+   * @param nodeId - ノードID
+   * @param userId - ユーザーID
    */
-  startEditing(nodeId, userId) {
+  startEditing(nodeId: string, userId: string): void {
     if (!this.state.editingUsers.has(nodeId)) {
       this.state.editingUsers.set(nodeId, new Set());
     }
@@ -242,10 +383,10 @@ export class SyncStateManager {
 
   /**
    * ノード編集終了
-   * @param {string} nodeId - ノードID
-   * @param {string} userId - ユーザーID
+   * @param nodeId - ノードID
+   * @param userId - ユーザーID
    */
-  endEditing(nodeId, userId) {
+  endEditing(nodeId: string, userId: string): void {
     const editingUsers = this.state.editingUsers.get(nodeId);
     if (editingUsers) {
       editingUsers.delete(userId);
@@ -263,10 +404,10 @@ export class SyncStateManager {
 
   /**
    * カーソル位置更新
-   * @param {string} userId - ユーザーID
-   * @param {Object} position - カーソル位置 {x, y, nodeId}
+   * @param userId - ユーザーID
+   * @param position - カーソル位置 {x, y, nodeId}
    */
-  updateCursorPosition(userId, position) {
+  updateCursorPosition(userId: string, position: Omit<CursorPosition, 'timestamp'>): void {
     this.state.cursorPositions.set(userId, {
       ...position,
       timestamp: new Date().toISOString()
@@ -281,9 +422,9 @@ export class SyncStateManager {
 
   /**
    * 操作をキューに追加
-   * @param {Object} operation - 操作データ
+   * @param operation - 操作データ
    */
-  addPendingOperation(operation) {
+  addPendingOperation(operation: Operation): void {
     this.state.pendingOperations.push({
       ...operation,
       queuedAt: new Date().toISOString(),
@@ -297,9 +438,9 @@ export class SyncStateManager {
 
   /**
    * 操作をキューから削除
-   * @param {string} operationId - 操作ID
+   * @param operationId - 操作ID
    */
-  removePendingOperation(operationId) {
+  removePendingOperation(operationId: string): void {
     this.state.pendingOperations = this.state.pendingOperations.filter(
       op => op.id !== operationId
     );
@@ -311,9 +452,9 @@ export class SyncStateManager {
 
   /**
    * 操作を履歴に追加
-   * @param {Object} operation - 操作データ
+   * @param operation - 操作データ
    */
-  addToOperationHistory(operation) {
+  addToOperationHistory(operation: Operation): void {
     this.state.operationHistory.push({
       ...operation,
       processedAt: new Date().toISOString()
@@ -333,10 +474,10 @@ export class SyncStateManager {
 
   /**
    * エラーを記録
-   * @param {Error|string} error - エラー
-   * @param {string} context - エラーのコンテキスト
+   * @param error - エラー
+   * @param context - エラーのコンテキスト
    */
-  addError(error, context = 'unknown') {
+  addError(error: Error | string, context: string = 'unknown'): void {
     const errorRecord = {
       id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       message: error instanceof Error ? error.message : error,
@@ -363,7 +504,7 @@ export class SyncStateManager {
   /**
    * エラーをクリア
    */
-  clearErrors() {
+  clearErrors(): void {
     this.updateState({
       errors: [],
       lastError: null
@@ -375,7 +516,7 @@ export class SyncStateManager {
   /**
    * メッセージレートを計算
    */
-  calculateMessageRate() {
+  private calculateMessageRate(): void {
     const now = Date.now();
     const oneMinuteAgo = now - 60000;
     
@@ -389,12 +530,12 @@ export class SyncStateManager {
   /**
    * 接続品質を計算
    */
-  calculateConnectionQuality() {
+  private calculateConnectionQuality(): void {
     const latency = this.state.pingLatency;
     const errorCount = this.state.errors.length;
     const isConnected = this.state.isConnected;
 
-    let quality = 'unknown';
+    let quality: ConnectionQuality = 'unknown';
 
     if (!isConnected) {
       quality = 'bad';
@@ -418,9 +559,9 @@ export class SyncStateManager {
 
   /**
    * 統計情報を取得
-   * @returns {Object} - 統計データ
+   * @returns 統計データ
    */
-  getStats() {
+  getStats(): SyncStats {
     return {
       activeUserCount: this.state.activeUsers.size,
       pendingOperationCount: this.state.pendingOperations.length,
@@ -436,9 +577,15 @@ export class SyncStateManager {
   /**
    * クリーンアップ
    */
-  cleanup() {
+  cleanup(): void {
     this.listeners.clear();
-    window.removeEventListener('online', this.setupNetworkListeners);
-    window.removeEventListener('offline', this.setupNetworkListeners);
+    
+    if (this.performanceTrackingInterval) {
+      window.clearInterval(this.performanceTrackingInterval);
+      this.performanceTrackingInterval = undefined;
+    }
+    
+    // Note: Network listeners are anonymous functions, so they can't be removed directly
+    // In a real implementation, we would store references to the listeners
   }
 }

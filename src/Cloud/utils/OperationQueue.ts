@@ -1,16 +1,96 @@
-import { VectorClock } from './VectorClock.js';
+import { VectorClock, VectorClockData } from './VectorClock';
+import { SyncStateManager, Operation } from './SyncStateManager';
+
+// ===== Type Definitions =====
+
+/** API client interface for operation sending */
+export interface ApiClient {
+  post(url: string, data: unknown): Promise<Response>;
+}
+
+/** Enhanced operation with queue-specific properties */
+export interface QueuedOperation extends Operation {
+  _resolve?: (value: unknown) => void;
+  _reject?: (reason?: unknown) => void;
+}
+
+/** Operation statistics by type */
+export interface OperationStatsByType {
+  [operationType: string]: number;
+}
+
+/** Operation statistics by status */
+export interface OperationStatsByStatus {
+  [status: string]: number;
+}
+
+/** Queue statistics */
+export interface QueueStats {
+  total: number;
+  byType: OperationStatsByType;
+  byStatus: OperationStatsByStatus;
+  avgRetryCount: number;
+  oldestOperation: QueuedOperation | null;
+}
+
+/** Queue state information */
+export interface QueueState {
+  queueLength: number;
+  processing: boolean;
+  pendingRequests: number;
+  stats: QueueStats;
+}
+
+/** Auth manager interface */
+export interface AuthManager {
+  getCurrentUser(): { id?: string } | null;
+}
+
+/** Extended sync state manager with auth */
+export interface ExtendedSyncStateManager extends SyncStateManager {
+  authManager?: AuthManager;
+}
+
+/** API response for operations */
+export interface OperationResponse {
+  vector_clock?: VectorClockData;
+  [key: string]: unknown;
+}
+
+/** Sync state event */
+export interface SyncStateEvent {
+  event: string;
+  data?: {
+    newState?: {
+      isConnected?: boolean;
+    };
+    [key: string]: unknown;
+  };
+}
+
+// ===== Main Class =====
 
 /**
  * OperationQueue - 操作キューイングとバッチ処理
  * オフライン時の操作蓄積と、オンライン復帰時の同期処理を管理
  */
 export class OperationQueue {
-  constructor(syncStateManager, apiClient) {
+  private syncStateManager: ExtendedSyncStateManager;
+  private apiClient: ApiClient;
+  private queue: QueuedOperation[];
+  private processing: boolean;
+  private pendingRequests: Map<string, Promise<unknown>>;
+  private batchSize: number;
+  private batchTimeout: number;
+  private maxRetries: number;
+  private retryDelay: number;
+
+  constructor(syncStateManager: ExtendedSyncStateManager, apiClient: ApiClient) {
     this.syncStateManager = syncStateManager;
     this.apiClient = apiClient;
     this.queue = [];
     this.processing = false;
-    this.pendingRequests = new Map(); // operationId -> Promise
+    this.pendingRequests = new Map<string, Promise<unknown>>();
     this.batchSize = 10;
     this.batchTimeout = 1000; // 1秒
     this.maxRetries = 3;
@@ -22,11 +102,11 @@ export class OperationQueue {
   /**
    * イベントリスナーを設定
    */
-  setupEventListeners() {
+  private setupEventListeners(): void {
     // ネットワーク復帰時に自動処理開始
-    this.syncStateManager.subscribe(({ event, data }) => {
-      if (event === 'network_online' || event === 'state_changed') {
-        if (data?.newState?.isConnected && this.queue.length > 0) {
+    this.syncStateManager.subscribe((event: SyncStateEvent) => {
+      if (event.event === 'network_online' || event.event === 'state_changed') {
+        if (event.data?.newState?.isConnected && this.queue.length > 0) {
           this.processQueue();
         }
       }
@@ -35,33 +115,35 @@ export class OperationQueue {
 
   /**
    * 操作をキューに追加
-   * @param {Object} operation - 操作データ
-   * @returns {Promise} - 操作完了Promise
+   * @param operation - 操作データ
+   * @returns 操作完了Promise
    */
-  async addOperation(operation) {
+  async addOperation(operation: Partial<Operation>): Promise<unknown> {
     const userId = this.getCurrentUserId();
     
     // ベクタークロックを更新
     this.syncStateManager.incrementVectorClock(userId);
     const vectorClock = this.syncStateManager.state.vectorClock;
 
-    const enhancedOperation = {
+    const enhancedOperation: QueuedOperation = {
       ...operation,
       id: this.generateOperationId(),
+      type: operation.type || 'unknown',
       userId,
       timestamp: new Date().toISOString(),
-      vector_clock: vectorClock,
+      data: operation.data || {},
+      vectorClock,
       status: 'pending',
       retryCount: 0,
       queuedAt: new Date().toISOString()
-    };
+    } as QueuedOperation;
 
     // キューに追加
     this.queue.push(enhancedOperation);
     this.syncStateManager.addPendingOperation(enhancedOperation);
 
     // Promise作成（外部から完了を待機できるように）
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<unknown>((resolve, reject) => {
       enhancedOperation._resolve = resolve;
       enhancedOperation._reject = reject;
     });
@@ -79,7 +161,7 @@ export class OperationQueue {
   /**
    * キューを処理
    */
-  async processQueue() {
+  async processQueue(): Promise<void> {
     if (this.processing || this.queue.length === 0) {
       return;
     }
@@ -116,9 +198,9 @@ export class OperationQueue {
 
   /**
    * 操作バッチを処理
-   * @param {Array} batch - 操作のバッチ
+   * @param batch - 操作のバッチ
    */
-  async processBatch(batch) {
+  private async processBatch(batch: QueuedOperation[]): Promise<void> {
     const promises = batch.map(operation => this.processOperation(operation));
     
     try {
@@ -130,9 +212,9 @@ export class OperationQueue {
 
   /**
    * 単一操作を処理
-   * @param {Object} operation - 操作データ
+   * @param operation - 操作データ
    */
-  async processOperation(operation) {
+  private async processOperation(operation: QueuedOperation): Promise<void> {
     try {
       operation.status = 'processing';
       
@@ -143,8 +225,9 @@ export class OperationQueue {
       operation.completedAt = new Date().toISOString();
       
       // ベクタークロック更新
-      if (result.vector_clock) {
-        this.syncStateManager.mergeVectorClock(result.vector_clock);
+      const operationResult = result as OperationResponse;
+      if (operationResult.vector_clock) {
+        this.syncStateManager.mergeVectorClock(operationResult.vector_clock);
       }
 
       // 履歴に追加
@@ -165,10 +248,10 @@ export class OperationQueue {
 
   /**
    * 操作送信
-   * @param {Object} operation - 操作データ
-   * @returns {Promise} - API応答
+   * @param operation - 操作データ
+   * @returns API応答
    */
-  async sendOperation(operation) {
+  private async sendOperation(operation: QueuedOperation): Promise<OperationResponse> {
     const response = await this.apiClient.post('/api/sync/operation', operation);
 
     if (!response.ok) {
@@ -176,27 +259,27 @@ export class OperationQueue {
       throw new Error(errorData.message || 'Sync operation failed');
     }
 
-    return await response.json();
+    return await response.json() as OperationResponse;
   }
 
   /**
    * 操作エラーハンドリング
-   * @param {Object} operation - 操作データ
-   * @param {Error} error - エラー
+   * @param operation - 操作データ
+   * @param error - エラー
    */
-  async handleOperationError(operation, error) {
-    operation.retryCount++;
-    operation.lastError = error.message;
+  private async handleOperationError(operation: QueuedOperation, error: Error): Promise<void> {
+    operation.retryCount = (operation.retryCount || 0) + 1;
+    (operation as QueuedOperation & { lastError: string }).lastError = error.message;
     operation.status = 'failed';
 
     console.error(`Operation ${operation.id} failed (attempt ${operation.retryCount}):`, error);
 
-    if (operation.retryCount < this.maxRetries) {
+    if ((operation.retryCount || 0) < this.maxRetries) {
       // リトライ
       operation.status = 'pending';
       
       // 指数バックオフで遅延
-      const delay = this.retryDelay * Math.pow(2, operation.retryCount - 1);
+      const delay = this.retryDelay * Math.pow(2, (operation.retryCount || 1) - 1);
       await new Promise(resolve => setTimeout(resolve, delay));
       
       // キューの先頭に再挿入
@@ -225,9 +308,9 @@ export class OperationQueue {
 
   /**
    * 特定の操作をキャンセル
-   * @param {string} operationId - 操作ID
+   * @param operationId - 操作ID
    */
-  cancelOperation(operationId) {
+  cancelOperation(operationId: string): void {
     // キューから削除
     const index = this.queue.findIndex(op => op.id === operationId);
     if (index !== -1) {
@@ -247,7 +330,7 @@ export class OperationQueue {
   /**
    * キューをクリア
    */
-  clearQueue() {
+  clearQueue(): void {
     // 全てのPromiseを拒否
     this.queue.forEach(operation => {
       if (operation._reject) {
@@ -265,25 +348,29 @@ export class OperationQueue {
 
   /**
    * 操作の優先度を設定
-   * @param {string} operationId - 操作ID
-   * @param {number} priority - 優先度（数値が小さいほど高優先度）
+   * @param operationId - 操作ID
+   * @param priority - 優先度（数値が小さいほど高優先度）
    */
-  setPriority(operationId, priority) {
+  setPriority(operationId: string, priority: number): void {
     const operation = this.queue.find(op => op.id === operationId);
     if (operation) {
-      operation.priority = priority;
+      (operation as QueuedOperation & { priority: number }).priority = priority;
       
       // 優先度でソート
-      this.queue.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+      this.queue.sort((a, b) => {
+        const aPriority = (a as QueuedOperation & { priority?: number }).priority || 0;
+        const bPriority = (b as QueuedOperation & { priority?: number }).priority || 0;
+        return aPriority - bPriority;
+      });
     }
   }
 
   /**
    * 操作タイプ別の統計を取得
-   * @returns {Object} - 統計データ
+   * @returns 統計データ
    */
-  getStats() {
-    const stats = {
+  getStats(): QueueStats {
+    const stats: QueueStats = {
       total: this.queue.length,
       byType: {},
       byStatus: {},
@@ -296,12 +383,12 @@ export class OperationQueue {
 
     this.queue.forEach(operation => {
       // タイプ別カウント
-      stats.byType[operation.operation_type] = 
-        (stats.byType[operation.operation_type] || 0) + 1;
+      const operationType = operation.type || 'unknown';
+      stats.byType[operationType] = (stats.byType[operationType] || 0) + 1;
 
       // ステータス別カウント
-      stats.byStatus[operation.status] = 
-        (stats.byStatus[operation.status] || 0) + 1;
+      const status = operation.status || 'unknown';
+      stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
 
       // リトライ回数の合計
       totalRetries += operation.retryCount || 0;
@@ -320,9 +407,9 @@ export class OperationQueue {
 
   /**
    * ユーザーID取得（クラウド専用）
-   * @returns {string} - 現在のユーザーID
+   * @returns 現在のユーザーID
    */
-  getCurrentUserId() {
+  private getCurrentUserId(): string {
     // Cloud mode: get user ID from auth manager or session
     const authManager = this.syncStateManager?.authManager;
     if (authManager && authManager.getCurrentUser()) {
@@ -333,17 +420,17 @@ export class OperationQueue {
 
   /**
    * 操作ID生成
-   * @returns {string} - ユニークな操作ID
+   * @returns ユニークな操作ID
    */
-  generateOperationId() {
+  private generateOperationId(): string {
     return `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
    * キューの状態を取得
-   * @returns {Object} - キューの状態
+   * @returns キューの状態
    */
-  getState() {
+  getState(): QueueState {
     return {
       queueLength: this.queue.length,
       processing: this.processing,
@@ -355,7 +442,7 @@ export class OperationQueue {
   /**
    * クリーンアップ
    */
-  cleanup() {
+  cleanup(): void {
     this.clearQueue();
     this.processing = false;
   }

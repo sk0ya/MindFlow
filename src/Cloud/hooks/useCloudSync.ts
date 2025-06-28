@@ -4,11 +4,288 @@ import { OperationQueue } from '../utils/OperationQueue.js';
 import { RealtimeCommunication } from '../utils/RealtimeCommunication.js';
 import { ConflictResolver } from '../utils/ConflictResolver.js';
 
+// ===== TYPE DEFINITIONS =====
+
+/**
+ * Vector Clock type for conflict resolution
+ */
+export interface VectorClock {
+  [userId: string]: number;
+}
+
+/**
+ * Node position data
+ */
+export interface NodePosition {
+  x: number;
+  y: number;
+  parent_id?: string;
+}
+
+/**
+ * Node data structure
+ */
+export interface NodeData {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  parent_id?: string;
+  children?: NodeData[];
+  fontSize?: number;
+  fontWeight?: string;
+  collapsed?: boolean;
+  attachments?: any[];
+  mapLinks?: any[];
+  color?: string;
+}
+
+/**
+ * Operation types for cloud sync
+ */
+export type OperationType = 'create' | 'update' | 'delete' | 'move';
+export type TargetType = 'node' | 'mindmap' | 'edge';
+
+/**
+ * Sync operation structure
+ */
+export interface SyncOperation {
+  id?: string;
+  operation_type: OperationType;
+  target_type: TargetType;
+  target_id: string;
+  mindmap_id: string;
+  data: any;
+  user_id?: string;
+  timestamp?: string;
+  vector_clock?: VectorClock;
+  retry_count?: number;
+}
+
+/**
+ * Cursor position data for real-time collaboration
+ */
+export interface CursorData {
+  nodeId?: string;
+  x: number;
+  y: number;
+  userId: string;
+  timestamp: string;
+}
+
+/**
+ * User presence information
+ */
+export interface PresenceData {
+  userId: string;
+  name?: string;
+  avatar?: string;
+  status: 'online' | 'away' | 'offline';
+  lastSeen: string;
+  currentNode?: string;
+}
+
+/**
+ * Connection quality levels
+ */
+export type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'bad' | 'unknown';
+
+/**
+ * Sync state interface
+ */
+export interface SyncState {
+  // Connection status
+  isOnline: boolean;
+  isConnected: boolean;
+  isSyncing: boolean;
+  connectionQuality: ConnectionQuality;
+  lastSyncTime: string | null;
+  lastPingTime: string | null;
+  pingLatency: number | null;
+  
+  // Operation management
+  pendingOperations: SyncOperation[];
+  vectorClock: VectorClock;
+  operationHistory: SyncOperation[];
+  conflictQueue: any[];
+  
+  // Active users
+  activeUsers: Map<string, PresenceData>;
+  userPresences: Map<string, PresenceData>;
+  
+  // Editing state
+  editingUsers: Map<string, Set<string>>; // nodeId -> Set<userId>
+  cursorPositions: Map<string, CursorData>; // userId -> CursorPosition
+  
+  // Error management
+  connectionRetryCount: number;
+  lastError: Error | null;
+  errors: Error[];
+  
+  // Performance metrics
+  messageCount: number;
+  messageRate: number;
+  bandwidthUsage: number;
+  
+  // Configuration
+  autoSyncInterval: number;
+  maxRetryAttempts: number;
+  operationHistoryLimit: number;
+}
+
+/**
+ * Configuration for CloudSyncService initialization
+ */
+export interface CloudSyncConfig {
+  apiBaseUrl?: string;
+  authToken?: string;
+  websocketUrl?: string;
+  autoSyncInterval?: number;
+  maxRetryAttempts?: number;
+  batchSize?: number;
+  batchTimeout?: number;
+}
+
+/**
+ * Event data for state changes
+ */
+export interface StateChangeEvent {
+  event: string;
+  data: {
+    newState?: SyncState;
+    oldState?: SyncState;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Event data for conflict resolution
+ */
+export interface ConflictResolutionEvent {
+  operation: SyncOperation;
+  resolution: 'auto' | 'manual' | 'merge';
+  timestamp: string;
+}
+
+/**
+ * Event data for operation application
+ */
+export interface OperationAppliedEvent {
+  operation: SyncOperation;
+  result: 'success' | 'error' | 'conflict';
+  error?: Error;
+}
+
+/**
+ * Event data for local operation updates
+ */
+export interface LocalOperationUpdateEvent {
+  operationId: string;
+  updatedOperation: SyncOperation;
+}
+
+/**
+ * Full sync conflict data
+ */
+export interface FullSyncConflictData {
+  serverData: any;
+  localData: any;
+}
+
+/**
+ * Statistics interface
+ */
+export interface SyncStats {
+  syncState: any;
+  operationQueue: any;
+  realtimeCommunication: any;
+  conflictResolver: any;
+}
+
+/**
+ * Local data interface
+ */
+export interface LocalData {
+  mindmapId: string | null;
+  vectorClock: VectorClock;
+  pendingOperations: SyncOperation[];
+}
+
+/**
+ * HTTP request options
+ */
+export interface RequestOptions {
+  headers?: Record<string, string>;
+  timeout?: number;
+  [key: string]: any;
+}
+
+/**
+ * HTTP methods
+ */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+/**
+ * State change listener function type
+ */
+export type StateChangeListener = (event: StateChangeEvent) => void;
+
+/**
+ * Real-time event listener function type
+ */
+export type RealtimeEventListener = (data: any) => void;
+
+/**
+ * Cleanup function type
+ */
+export type CleanupFunction = () => void;
+
+/**
+ * React hook return type for useCloudSync
+ */
+export interface UseCloudSyncReturn {
+  // State
+  syncState: SyncState;
+  isInitialized: boolean;
+  error: Error | null;
+  
+  // Operation API
+  createNode: (nodeData: NodeData) => Promise<string>;
+  updateNode: (nodeId: string, updates: Partial<NodeData>) => Promise<string>;
+  deleteNode: (nodeId: string) => Promise<string>;
+  moveNode: (nodeId: string, position: NodePosition) => Promise<string>;
+  
+  // Real-time collaboration
+  updateCursor: (cursor: CursorData) => void;
+  startEditing: (nodeId: string) => void;
+  endEditing: (nodeId: string) => void;
+  
+  // Sync control
+  forceSync: () => Promise<any>;
+  fullSync: () => Promise<any>;
+  
+  // State monitoring
+  onStateChange: (listener: StateChangeListener) => CleanupFunction;
+  onRealtimeEvent: (event: string, listener: RealtimeEventListener) => CleanupFunction;
+  
+  // Statistics
+  getStats: () => SyncStats;
+}
+
 /**
  * CloudSyncService - 統合同期サービス
  * 全同期コンポーネントを統合し、Reactフックとして提供
  */
 class CloudSyncService {
+  private syncStateManager: SyncStateManager;
+  private operationQueue: OperationQueue | null;
+  private realtimeCommunication: RealtimeCommunication | null;
+  private conflictResolver: ConflictResolver;
+  private currentMindmapId: string | null;
+  private apiClient: APIClient | null;
+  private isInitialized: boolean;
+  private periodicSyncInterval: NodeJS.Timeout | null = null;
+
   constructor() {
     this.syncStateManager = new SyncStateManager();
     this.operationQueue = null; // APIクライアント設定後に初期化
@@ -24,7 +301,7 @@ class CloudSyncService {
   /**
    * イベントハンドラーを設定
    */
-  setupEventHandlers() {
+  private setupEventHandlers(): void {
     // リアルタイム通信からの操作適用
     document.addEventListener('operation_applied', this.handleOperationApplied.bind(this));
     
@@ -37,10 +314,10 @@ class CloudSyncService {
 
   /**
    * サービス初期化
-   * @param {string} mindmapId - マインドマップID
-   * @param {Object} config - 設定
+   * @param mindmapId - マインドマップID
+   * @param config - 設定
    */
-  async initialize(mindmapId, config = {}) {
+  async initialize(mindmapId: string, config: CloudSyncConfig = {}): Promise<void> {
     if (this.isInitialized && this.currentMindmapId === mindmapId) {
       return;
     }
@@ -82,7 +359,7 @@ class CloudSyncService {
   /**
    * 定期同期を設定
    */
-  setupPeriodicSync() {
+  private setupPeriodicSync(): void {
     // 🔧 修正: 定期同期の頻度を最適化（30秒→60秒）と条件強化
     this.periodicSyncInterval = setInterval(() => {
       // オンライン状態、非同期中、未処理操作の存在をチェック
@@ -102,10 +379,10 @@ class CloudSyncService {
 
   /**
    * ノード作成
-   * @param {Object} nodeData - ノードデータ
-   * @returns {Promise} - 操作ID
+   * @param nodeData - ノードデータ
+   * @returns 操作ID
    */
-  async createNode(nodeData) {
+  async createNode(nodeData: NodeData): Promise<string> {
     if (!this.operationQueue) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -123,11 +400,11 @@ class CloudSyncService {
 
   /**
    * ノード更新
-   * @param {string} nodeId - ノードID
-   * @param {Object} updates - 更新データ
-   * @returns {Promise} - 操作ID
+   * @param nodeId - ノードID
+   * @param updates - 更新データ
+   * @returns 操作ID
    */
-  async updateNode(nodeId, updates) {
+  async updateNode(nodeId: string, updates: Partial<NodeData>): Promise<string> {
     if (!this.operationQueue) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -145,10 +422,10 @@ class CloudSyncService {
 
   /**
    * ノード削除
-   * @param {string} nodeId - ノードID
-   * @returns {Promise} - 操作ID
+   * @param nodeId - ノードID
+   * @returns 操作ID
    */
-  async deleteNode(nodeId) {
+  async deleteNode(nodeId: string): Promise<string> {
     if (!this.operationQueue) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -166,11 +443,11 @@ class CloudSyncService {
 
   /**
    * ノード移動
-   * @param {string} nodeId - ノードID
-   * @param {Object} newPosition - 新しい位置 {x, y, parent_id}
-   * @returns {Promise} - 操作ID
+   * @param nodeId - ノードID
+   * @param newPosition - 新しい位置 {x, y, parent_id}
+   * @returns 操作ID
    */
-  async moveNode(nodeId, newPosition) {
+  async moveNode(nodeId: string, newPosition: NodePosition): Promise<string> {
     if (!this.operationQueue) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -190,9 +467,9 @@ class CloudSyncService {
 
   /**
    * カーソル位置更新
-   * @param {Object} cursorData - カーソルデータ
+   * @param cursorData - カーソルデータ
    */
-  updateCursor(cursorData) {
+  updateCursor(cursorData: CursorData): void {
     if (this.realtimeCommunication) {
       this.realtimeCommunication.sendCursorUpdate(cursorData);
     }
@@ -200,9 +477,9 @@ class CloudSyncService {
 
   /**
    * 編集開始通知
-   * @param {string} nodeId - ノードID
+   * @param nodeId - ノードID
    */
-  startEditing(nodeId) {
+  startEditing(nodeId: string): void {
     if (this.realtimeCommunication) {
       this.realtimeCommunication.sendEditingStart(nodeId);
     }
@@ -211,9 +488,9 @@ class CloudSyncService {
 
   /**
    * 編集終了通知
-   * @param {string} nodeId - ノードID
+   * @param nodeId - ノードID
    */
-  endEditing(nodeId) {
+  endEditing(nodeId: string): void {
     if (this.realtimeCommunication) {
       this.realtimeCommunication.sendEditingEnd(nodeId);
     }
@@ -222,9 +499,9 @@ class CloudSyncService {
 
   /**
    * プレゼンス更新
-   * @param {Object} presence - プレゼンス情報
+   * @param presence - プレゼンス情報
    */
-  updatePresence(presence) {
+  updatePresence(presence: PresenceData): void {
     if (this.realtimeCommunication) {
       this.realtimeCommunication.sendPresenceUpdate(presence);
     }
@@ -234,9 +511,9 @@ class CloudSyncService {
 
   /**
    * 強制同期
-   * @returns {Promise} - 同期結果
+   * @returns 同期結果
    */
-  async forceSync() {
+  async forceSync(): Promise<any> {
     if (!this.operationQueue) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -250,9 +527,9 @@ class CloudSyncService {
 
   /**
    * 完全同期（サーバーからの全データ取得）
-   * @returns {Promise} - 同期されたデータ
+   * @returns 同期されたデータ
    */
-  async fullSync() {
+  async fullSync(): Promise<any> {
     if (!this.apiClient) {
       throw new Error('CloudSyncService not initialized');
     }
@@ -273,9 +550,9 @@ class CloudSyncService {
 
   /**
    * 完全同期時の競合解決
-   * @param {Object} serverData - サーバーデータ
+   * @param serverData - サーバーデータ
    */
-  async resolveFullSyncConflicts(serverData) {
+  private async resolveFullSyncConflicts(serverData: any): Promise<void> {
     // 実装では詳細な競合解決ロジックを適用
     console.log('Resolving full sync conflicts with server data:', serverData);
     
@@ -300,9 +577,9 @@ class CloudSyncService {
 
   /**
    * 操作適用の処理
-   * @param {CustomEvent} event - 操作適用イベント
+   * @param event - 操作適用イベント
    */
-  handleOperationApplied(event) {
+  private handleOperationApplied(event: CustomEvent<OperationAppliedEvent>): void {
     const operation = event.detail;
     
     // UI更新イベントを発行
@@ -311,9 +588,9 @@ class CloudSyncService {
 
   /**
    * 競合解決の処理
-   * @param {CustomEvent} event - 競合解決イベント
+   * @param event - 競合解決イベント
    */
-  handleConflictResolved(event) {
+  private handleConflictResolved(event: CustomEvent<ConflictResolutionEvent>): void {
     const { operation, resolution } = event.detail;
     
     // 競合解決通知
@@ -326,9 +603,9 @@ class CloudSyncService {
 
   /**
    * ローカル操作更新の処理
-   * @param {CustomEvent} event - ローカル操作更新イベント
+   * @param event - ローカル操作更新イベント
    */
-  handleLocalOperationUpdated(event) {
+  private handleLocalOperationUpdated(event: CustomEvent<LocalOperationUpdateEvent>): void {
     const { operationId, updatedOperation } = event.detail;
     
     // 必要に応じてUI更新
@@ -342,17 +619,17 @@ class CloudSyncService {
 
   /**
    * 同期状態を取得
-   * @returns {Object} - 同期状態
+   * @returns 同期状態
    */
-  getSyncState() {
+  getSyncState(): SyncState {
     return this.syncStateManager.state;
   }
 
   /**
    * 統計情報を取得
-   * @returns {Object} - 統計情報
+   * @returns 統計情報
    */
-  getStats() {
+  getStats(): SyncStats {
     return {
       syncState: this.syncStateManager.getStats(),
       operationQueue: this.operationQueue?.getStats() || {},
@@ -363,9 +640,9 @@ class CloudSyncService {
 
   /**
    * ローカルデータを取得
-   * @returns {Object} - ローカルデータ
+   * @returns ローカルデータ
    */
-  getLocalData() {
+  getLocalData(): LocalData {
     // 実装では実際のローカルデータを返す
     return {
       mindmapId: this.currentMindmapId,
@@ -376,9 +653,9 @@ class CloudSyncService {
 
   /**
    * 現在のユーザーID取得（クラウド専用）
-   * @returns {string} - ユーザーID
+   * @returns ユーザーID
    */
-  getCurrentUserId() {
+  private getCurrentUserId(): string {
     // Cloud mode: get user ID from auth manager or session
     try {
       const authManager = require('../features/auth/authManager.js').authManager;
@@ -394,20 +671,20 @@ class CloudSyncService {
 
   /**
    * 状態変更リスナーを追加
-   * @param {Function} listener - リスナー関数
-   * @returns {Function} - リスナー削除関数
+   * @param listener - リスナー関数
+   * @returns リスナー削除関数
    */
-  onStateChange(listener) {
+  onStateChange(listener: StateChangeListener): CleanupFunction {
     return this.syncStateManager.subscribe(listener);
   }
 
   /**
    * リアルタイムイベントリスナーを追加
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
-   * @returns {Function} - リスナー削除関数
+   * @param event - イベント名
+   * @param listener - リスナー関数
+   * @returns リスナー削除関数
    */
-  onRealtimeEvent(event, listener) {
+  onRealtimeEvent(event: string, listener: RealtimeEventListener): CleanupFunction {
     if (this.realtimeCommunication) {
       return this.realtimeCommunication.addEventListener(event, listener);
     }
@@ -419,7 +696,7 @@ class CloudSyncService {
   /**
    * クリーンアップ
    */
-  cleanup() {
+  cleanup(): void {
     if (this.periodicSyncInterval) {
       clearInterval(this.periodicSyncInterval);
       this.periodicSyncInterval = null;
@@ -451,62 +728,65 @@ class CloudSyncService {
  * API Client - HTTP API 通信
  */
 class APIClient {
-  constructor(baseUrl, authToken) {
+  private baseUrl: string;
+  private authToken: string | undefined;
+
+  constructor(baseUrl?: string, authToken?: string) {
     this.baseUrl = baseUrl || 'https://mindflow-api-production.shigekazukoya.workers.dev';
     this.authToken = authToken;
   }
 
   /**
    * GET リクエスト
-   * @param {string} path - パス
-   * @param {Object} options - オプション
-   * @returns {Promise} - Fetchレスポンス
+   * @param path - パス
+   * @param options - オプション
+   * @returns Fetchレスポンス
    */
-  async get(path, options = {}) {
+  async get(path: string, options: RequestOptions = {}): Promise<Response> {
     return await this.request('GET', path, null, options);
   }
 
   /**
    * POST リクエスト
-   * @param {string} path - パス
-   * @param {Object} data - データ
-   * @param {Object} options - オプション
-   * @returns {Promise} - Fetchレスポンス
+   * @param path - パス
+   * @param data - データ
+   * @param options - オプション
+   * @returns Fetchレスポンス
    */
-  async post(path, data, options = {}) {
+  async post(path: string, data: any, options: RequestOptions = {}): Promise<Response> {
     return await this.request('POST', path, data, options);
   }
 
   /**
    * PUT リクエスト
-   * @param {string} path - パス
-   * @param {Object} data - データ
-   * @param {Object} options - オプション
-   * @returns {Promise} - Fetchレスポンス
+   * @param path - パス
+   * @param data - データ
+   * @param options - オプション
+   * @returns Fetchレスポンス
    */
-  async put(path, data, options = {}) {
+  async put(path: string, data: any, options: RequestOptions = {}): Promise<Response> {
     return await this.request('PUT', path, data, options);
   }
 
   /**
    * DELETE リクエスト
-   * @param {string} path - パス
-   * @param {Object} options - オプション
-   * @returns {Promise} - Fetchレスポンス
+   * @param path - パス
+   * @param options - オプション
+   * @returns Fetchレスポンス
    */
-  async delete(path, options = {}) {
+  async delete(path: string, options: RequestOptions = {}): Promise<Response> {
     return await this.request('DELETE', path, null, options);
   }
 
   /**
    * HTTP リクエスト実行
-   * @param {string} method - HTTPメソッド
-   * @param {string} path - パス
-   * @param {Object} data - データ
-   * @param {Object} options - オプション
-   * @returns {Promise} - Fetchレスポンス
+   * @param method - HTTPメソッド
+   * @param path - パス
+   * @param data - データ
+   * @param options - オプション
+   * @returns Fetchレスポンス
    */
-  async request(method, path, data, options = {}) {
+  private async request(method: HttpMethod, path: string, data: any, options: RequestOptions = {}): Promise<Response> {
     const url = `${this.baseUrl}${path}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -540,16 +820,16 @@ class APIClient {
 
 /**
  * useCloudSync - Reactフック
- * @param {string} mindmapId - マインドマップID
- * @param {Object} config - 設定
- * @returns {Object} - 同期API
+ * @param mindmapId - マインドマップID
+ * @param config - 設定
+ * @returns 同期API
  */
-export function useCloudSync(mindmapId, config = {}) {
+export function useCloudSync(mindmapId: string, config: CloudSyncConfig = {}): UseCloudSyncReturn {
   const [syncService] = useState(() => new CloudSyncService());
-  const [syncState, setSyncState] = useState(syncService.getSyncState());
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [error, setError] = useState(null);
-  const initializeRef = useRef(false);
+  const [syncState, setSyncState] = useState<SyncState>(syncService.getSyncState());
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
+  const initializeRef = useRef<boolean>(false);
 
   // 初期化
   useEffect(() => {
@@ -592,25 +872,25 @@ export function useCloudSync(mindmapId, config = {}) {
   }, [syncService]);
 
   // API関数をメモ化
-  const createNode = useCallback((nodeData) => 
+  const createNode = useCallback((nodeData: NodeData) => 
     syncService.createNode(nodeData), [syncService]);
   
-  const updateNode = useCallback((nodeId, updates) => 
+  const updateNode = useCallback((nodeId: string, updates: Partial<NodeData>) => 
     syncService.updateNode(nodeId, updates), [syncService]);
   
-  const deleteNode = useCallback((nodeId) => 
+  const deleteNode = useCallback((nodeId: string) => 
     syncService.deleteNode(nodeId), [syncService]);
   
-  const moveNode = useCallback((nodeId, position) => 
+  const moveNode = useCallback((nodeId: string, position: NodePosition) => 
     syncService.moveNode(nodeId, position), [syncService]);
   
-  const updateCursor = useCallback((cursor) => 
+  const updateCursor = useCallback((cursor: CursorData) => 
     syncService.updateCursor(cursor), [syncService]);
   
-  const startEditing = useCallback((nodeId) => 
+  const startEditing = useCallback((nodeId: string) => 
     syncService.startEditing(nodeId), [syncService]);
   
-  const endEditing = useCallback((nodeId) => 
+  const endEditing = useCallback((nodeId: string) => 
     syncService.endEditing(nodeId), [syncService]);
   
   const forceSync = useCallback(() => 
@@ -641,9 +921,9 @@ export function useCloudSync(mindmapId, config = {}) {
     fullSync,
     
     // 状態監視
-    onStateChange: useCallback((listener) => 
+    onStateChange: useCallback((listener: StateChangeListener) => 
       syncService.onStateChange(listener), [syncService]),
-    onRealtimeEvent: useCallback((event, listener) => 
+    onRealtimeEvent: useCallback((event: string, listener: RealtimeEventListener) => 
       syncService.onRealtimeEvent(event, listener), [syncService]),
     
     // 統計

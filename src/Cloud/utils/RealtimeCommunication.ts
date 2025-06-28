@@ -1,6 +1,100 @@
-import { SyncStateManager } from './SyncStateManager.js';
-import { MessageManager } from './MessageManager.js';
-import { ConflictResolver } from './ConflictResolver.js';
+import { SyncStateManager, Operation } from './SyncStateManager';
+import { MessageManager, MessageOptions } from './MessageManager';
+import { ConflictResolver, ConflictResolution } from './ConflictResolver';
+
+// ===== Type Definitions =====
+
+/** WebSocket connection options */
+export interface WebSocketConnectionOptions {
+  mindmapId: string;
+  authToken: string;
+  maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
+}
+
+/** Connection state information */
+export interface ConnectionState {
+  isConnected: boolean;
+  connectionQuality: string;
+  reconnectAttempts: number;
+  lastPingTime: string | null;
+  pingLatency: number | null;
+}
+
+/** Performance metrics */
+export interface RealtimePerformanceMetrics {
+  connectionTime: number | null;
+  messagesPerSecond: number;
+  averageLatency: number;
+  errorRate: number;
+  lastErrorTime: number | null;
+}
+
+/** Extended performance metrics */
+export interface ExtendedPerformanceMetrics extends RealtimePerformanceMetrics {
+  syncState: unknown;
+  messageManager: unknown;
+  conflictResolver: unknown;
+}
+
+/** Position data for cursor updates */
+export interface Position {
+  x: number;
+  y: number;
+  nodeId?: string;
+}
+
+/** Presence information */
+export interface PresenceInfo {
+  status?: string;
+  timestamp?: string;
+  userAgent?: string;
+  viewport?: {
+    width: number;
+    height: number;
+  };
+  [key: string]: unknown;
+}
+
+/** Event listener function */
+export type RealtimeEventListener = (data?: unknown) => void;
+
+/** Connection event data */
+export interface ConnectionEventData {
+  mindmapId: string;
+  connectionTime: number | null;
+}
+
+/** Disconnection event data */
+export interface DisconnectionEventData {
+  code: number;
+  reason: string;
+  wasClean: boolean;
+}
+
+/** Reconnection event data */
+export interface ReconnectionEventData {
+  attempts: number;
+}
+
+/** Reconnection failed event data */
+export interface ReconnectionFailedEventData {
+  attempts: number;
+  error: string;
+}
+
+/** Conflict resolved event data */
+export interface ConflictResolvedEventData {
+  operation: Operation;
+  resolution: ConflictResolution;
+  conflictInfo: unknown;
+}
+
+/** Local operation updated event data */
+export interface LocalOperationUpdatedEventData {
+  operationId: string;
+  updatedOperation: Operation;
+}
 
 /**
  * WebSocketイベント定義
@@ -43,12 +137,31 @@ export const WebSocketEvents = {
   }
 };
 
+// ===== Main Class =====
+
 /**
  * RealtimeCommunication - リアルタイム通信管理
  * WebSocket接続、メッセージ処理、自動再接続を担当
  */
 export class RealtimeCommunication {
-  constructor(websocketUrl, authToken) {
+  private websocketUrl: string;
+  private authToken: string;
+  private websocket: WebSocket | null;
+  private messageManager: MessageManager | null;
+  private syncStateManager: SyncStateManager;
+  private conflictResolver: ConflictResolver;
+  
+  private currentMindmapId: string | null;
+  private isIntentionalClose: boolean;
+  private reconnectAttempts: number;
+  private maxReconnectAttempts: number;
+  private heartbeatInterval: number | null;
+  private connectionTimeout: number | null;
+  
+  private eventListeners: Map<string, Set<RealtimeEventListener>>;
+  private performanceMetrics: RealtimePerformanceMetrics;
+
+  constructor(websocketUrl: string, authToken: string) {
     this.websocketUrl = websocketUrl;
     this.authToken = authToken;
     this.websocket = null;
@@ -63,7 +176,7 @@ export class RealtimeCommunication {
     this.heartbeatInterval = null;
     this.connectionTimeout = null;
     
-    this.eventListeners = new Map();
+    this.eventListeners = new Map<string, Set<RealtimeEventListener>>();
     this.performanceMetrics = {
       connectionTime: null,
       messagesPerSecond: 0,
@@ -78,7 +191,7 @@ export class RealtimeCommunication {
   /**
    * イベントハンドラーを設定
    */
-  setupEventHandlers() {
+  private setupEventHandlers(): void {
     // 同期操作の受信処理
     document.addEventListener('sync_operation_received', this.handleRemoteOperation.bind(this));
     
@@ -91,10 +204,10 @@ export class RealtimeCommunication {
 
   /**
    * WebSocket接続開始
-   * @param {string} mindmapId - マインドマップID
-   * @returns {Promise} - 接続Promise
+   * @param mindmapId - マインドマップID
+   * @returns 接続Promise
    */
-  async connect(mindmapId) {
+  async connect(mindmapId: string): Promise<void> {
     if (this.websocket?.readyState === WebSocket.OPEN) {
       // 既に接続済みの場合は一度切断
       await this.disconnect();
@@ -140,7 +253,7 @@ export class RealtimeCommunication {
   /**
    * WebSocketイベントハンドラーを設定
    */
-  setupWebSocketHandlers() {
+  private setupWebSocketHandlers(): void {
     this.websocket.onopen = () => this.onConnected();
     this.websocket.onclose = (event) => this.onDisconnected(event);
     this.websocket.onerror = (error) => this.onError(error);
@@ -154,7 +267,7 @@ export class RealtimeCommunication {
   /**
    * 接続成功時の処理
    */
-  onConnected() {
+  private onConnected(): void {
     console.log('WebSocket connected');
     this.reconnectAttempts = 0;
     this.syncStateManager.updateState({
@@ -175,9 +288,9 @@ export class RealtimeCommunication {
 
   /**
    * 切断時の処理
-   * @param {CloseEvent} event - 切断イベント
+   * @param event - 切断イベント
    */
-  onDisconnected(event) {
+  private onDisconnected(event: CloseEvent): void {
     console.log('WebSocket disconnected:', event.code, event.reason);
     this.syncStateManager.updateState({
       isConnected: false,
@@ -199,9 +312,9 @@ export class RealtimeCommunication {
 
   /**
    * エラー時の処理
-   * @param {Event} error - エラーイベント
+   * @param error - エラーイベント
    */
-  onError(error) {
+  private onError(error: Event): void {
     console.error('WebSocket error:', error);
     this.updateErrorMetrics();
     this.syncStateManager.addError(error, 'websocket_error');
@@ -211,8 +324,8 @@ export class RealtimeCommunication {
   /**
    * ハートビート開始
    */
-  startHeartbeat() {
-    this.heartbeatInterval = setInterval(async () => {
+  private startHeartbeat(): void {
+    this.heartbeatInterval = window.setInterval(async () => {
       if (this.websocket?.readyState === WebSocket.OPEN && this.messageManager) {
         try {
           const startTime = Date.now();
@@ -236,9 +349,9 @@ export class RealtimeCommunication {
   /**
    * ハートビート停止
    */
-  stopHeartbeat() {
+  private stopHeartbeat(): void {
     if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
+      window.clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
   }
@@ -246,7 +359,7 @@ export class RealtimeCommunication {
   /**
    * 再接続のスケジューリング
    */
-  scheduleReconnect() {
+  private scheduleReconnect(): void {
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     this.reconnectAttempts++;
 
@@ -280,9 +393,9 @@ export class RealtimeCommunication {
 
   /**
    * リモート操作の処理
-   * @param {CustomEvent} event - リモート操作イベント
+   * @param event - リモート操作イベント
    */
-  async handleRemoteOperation(event) {
+  private async handleRemoteOperation(event: CustomEvent): Promise<void> {
     const operation = event.detail;
     
     try {
@@ -323,9 +436,9 @@ export class RealtimeCommunication {
 
   /**
    * ローカル操作更新の処理
-   * @param {CustomEvent} event - ローカル操作更新イベント
+   * @param event - ローカル操作更新イベント
    */
-  handleLocalOperationUpdate(event) {
+  private handleLocalOperationUpdate(event: CustomEvent): void {
     const { operationId, updatedOperation } = event.detail;
     
     // UI更新イベントを発行
@@ -337,18 +450,18 @@ export class RealtimeCommunication {
 
   /**
    * 解決済み操作の処理
-   * @param {CustomEvent} event - 解決済み操作イベント
+   * @param event - 解決済み操作イベント
    */
-  async handleResolvedOperation(event) {
+  private async handleResolvedOperation(event: CustomEvent): Promise<void> {
     const operation = event.detail;
     await this.applyOperation(operation);
   }
 
   /**
    * 操作を適用
-   * @param {Object} operation - 操作
+   * @param operation - 操作
    */
-  async applyOperation(operation) {
+  private async applyOperation(operation: Operation): Promise<void> {
     // UIに操作適用を通知
     this.notifyEventListeners('operation_applied', operation);
   }
@@ -357,10 +470,10 @@ export class RealtimeCommunication {
 
   /**
    * 同期操作を送信
-   * @param {Object} operation - 操作データ
-   * @returns {Promise} - 送信結果
+   * @param operation - 操作データ
+   * @returns 送信結果
    */
-  async sendSyncOperation(operation) {
+  async sendSyncOperation(operation: Operation): Promise<unknown> {
     if (!this.messageManager) {
       throw new Error('Not connected');
     }
@@ -374,10 +487,10 @@ export class RealtimeCommunication {
 
   /**
    * カーソル位置を送信
-   * @param {Object} position - カーソル位置 {x, y, nodeId}
-   * @returns {Promise} - 送信結果
+   * @param position - カーソル位置 {x, y, nodeId}
+   * @returns 送信結果
    */
-  async sendCursorUpdate(position) {
+  async sendCursorUpdate(position: Position): Promise<unknown> {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
@@ -389,10 +502,10 @@ export class RealtimeCommunication {
 
   /**
    * 編集開始を送信
-   * @param {string} nodeId - ノードID
-   * @returns {Promise} - 送信結果
+   * @param nodeId - ノードID
+   * @returns 送信結果
    */
-  async sendEditingStart(nodeId) {
+  async sendEditingStart(nodeId: string): Promise<unknown> {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
@@ -403,10 +516,10 @@ export class RealtimeCommunication {
 
   /**
    * 編集終了を送信
-   * @param {string} nodeId - ノードID
-   * @returns {Promise} - 送信結果
+   * @param nodeId - ノードID
+   * @returns 送信結果
    */
-  async sendEditingEnd(nodeId) {
+  async sendEditingEnd(nodeId: string): Promise<unknown> {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
@@ -417,10 +530,10 @@ export class RealtimeCommunication {
 
   /**
    * プレゼンス情報を送信
-   * @param {Object} presence - プレゼンス情報
-   * @returns {Promise} - 送信結果
+   * @param presence - プレゼンス情報
+   * @returns 送信結果
    */
-  async sendPresenceUpdate(presence = {}) {
+  async sendPresenceUpdate(presence: PresenceInfo = {}): Promise<unknown> {
     if (!this.messageManager) return;
 
     const defaultPresence = {
@@ -443,15 +556,15 @@ export class RealtimeCommunication {
 
   /**
    * イベントリスナーを追加
-   * @param {string} event - イベント名
-   * @param {Function} listener - リスナー関数
-   * @returns {Function} - リスナー削除関数
+   * @param event - イベント名
+   * @param listener - リスナー関数
+   * @returns リスナー削除関数
    */
-  addEventListener(event, listener) {
+  addEventListener(event: string, listener: RealtimeEventListener): () => void {
     if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, new Set());
+      this.eventListeners.set(event, new Set<RealtimeEventListener>());
     }
-    this.eventListeners.get(event).add(listener);
+    this.eventListeners.get(event)!.add(listener);
 
     return () => {
       const listeners = this.eventListeners.get(event);
@@ -463,10 +576,10 @@ export class RealtimeCommunication {
 
   /**
    * イベントリスナーに通知
-   * @param {string} event - イベント名
-   * @param {*} data - イベントデータ
+   * @param event - イベント名
+   * @param data - イベントデータ
    */
-  notifyEventListeners(event, data) {
+  private notifyEventListeners(event: string, data?: unknown): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.forEach(listener => {
@@ -483,17 +596,17 @@ export class RealtimeCommunication {
 
   /**
    * 同期状態を取得
-   * @returns {Object} - 同期状態
+   * @returns 同期状態
    */
-  getSyncState() {
+  getSyncState(): unknown {
     return this.syncStateManager.state;
   }
 
   /**
    * パフォーマンスメトリクスを取得
-   * @returns {Object} - パフォーマンスメトリクス
+   * @returns パフォーマンスメトリクス
    */
-  getPerformanceMetrics() {
+  getPerformanceMetrics(): ExtendedPerformanceMetrics {
     return {
       ...this.performanceMetrics,
       syncState: this.syncStateManager.getStats(),
@@ -504,9 +617,9 @@ export class RealtimeCommunication {
 
   /**
    * 接続状態を取得
-   * @returns {Object} - 接続状態
+   * @returns 接続状態
    */
-  getConnectionState() {
+  getConnectionState(): ConnectionState {
     return {
       isConnected: this.syncStateManager.state.isConnected,
       connectionQuality: this.syncStateManager.state.connectionQuality,
@@ -520,9 +633,9 @@ export class RealtimeCommunication {
 
   /**
    * レイテンシメトリクスを更新
-   * @param {number} latency - レイテンシ
+   * @param latency - レイテンシ
    */
-  updateLatencyMetrics(latency) {
+  private updateLatencyMetrics(latency: number): void {
     this.performanceMetrics.averageLatency = 
       (this.performanceMetrics.averageLatency * 0.9) + (latency * 0.1);
   }
@@ -530,7 +643,7 @@ export class RealtimeCommunication {
   /**
    * エラーメトリクスを更新
    */
-  updateErrorMetrics() {
+  private updateErrorMetrics(): void {
     this.performanceMetrics.lastErrorTime = Date.now();
     this.performanceMetrics.errorRate = 
       (this.performanceMetrics.errorRate * 0.95) + 0.05;
@@ -541,7 +654,7 @@ export class RealtimeCommunication {
   /**
    * 切断
    */
-  async disconnect() {
+  async disconnect(): Promise<void> {
     this.isIntentionalClose = true;
     this.stopHeartbeat();
     
@@ -571,7 +684,7 @@ export class RealtimeCommunication {
   /**
    * 完全なクリーンアップ
    */
-  cleanup() {
+  cleanup(): void {
     this.disconnect();
     this.syncStateManager.cleanup();
     this.conflictResolver.cleanup();
