@@ -1,15 +1,12 @@
-// 完全分離ストレージマネージャー（最終版）
-// ローカル/クラウド完全独立、条件分岐なし
+// クラウド専用ストレージマネージャー
+// クラウドモード専用、ローカルストレージ依存なし
 
-import { getAppSettings } from './storageUtils.js';
-import { localEngine } from './local/LocalEngine.js';
 import { createCloudEngine } from './cloud/CloudEngine.js';
 import { authManager } from '../../features/auth/authManager.js';
-import type { LocalEngine } from './local/LocalEngine.js';
 import type { CloudEngine } from './cloud/CloudEngine.js';
 import type { MindMapData, Node, StorageResult, SyncStatus } from './types.js';
 
-type StorageEngine = LocalEngine | CloudEngine;
+type StorageEngine = CloudEngine;
 
 export class StorageManager {
   private static instance: StorageManager | null = null;
@@ -64,16 +61,11 @@ export class StorageManager {
 
   private createEngine(storageMode: string, isAuthenticated: boolean): void {
     try {
-      if (storageMode === 'cloud') {
-        console.log('☁️ クラウドエンジン作成（認証状態:', isAuthenticated, '）');
-        this.currentEngine = createCloudEngine();
-      } else {
-        console.log('🏠 ローカルエンジン使用');
-        this.currentEngine = localEngine;
-      }
+      console.log('☁️ クラウド専用エンジン作成（認証状態:', isAuthenticated, '）');
+      this.currentEngine = createCloudEngine();
     } catch (error) {
-      console.error('❌ ストレージエンジン作成失敗、ローカルモードにフォールバック:', error);
-      this.currentEngine = localEngine;
+      console.error('❌ クラウドエンジン作成失敗:', error);
+      throw error;
     }
   }
 

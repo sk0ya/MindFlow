@@ -423,28 +423,17 @@ class DataManager {
     }
   }
   
-  // 緊急保存（ページ離脱時）
+  // 緊急保存（ページ離脱時）- クラウド専用
   emergencySave() {
     if (!this.hasPendingOperations()) return;
     
     console.log('🚨 DataManager: 緊急保存実行');
     
-    // 同期的な保存（限定的）
+    // クラウドモードでは緊急保存は制限的
     try {
-      const settings = getAppSettings();
-      
-      if (settings.storageMode === 'local') {
-        // ローカルモードは同期保存可能
-        try {
-          // 同期的importは使用できないため、localStorage APIを直接使用
-          localStorage.setItem(`mindmap_${this.currentData.id}`, JSON.stringify(this.currentData));
-          console.log('✅ DataManager: 緊急ローカル保存完了');
-        } catch (storageError) {
-          console.error('❌ DataManager: 緊急ローカルストレージ保存失敗', storageError);
-        }
-      } else {
-        console.warn('⚠️ DataManager: クラウドモードでは緊急保存制限あり');
-      }
+      console.warn('⚠️ DataManager: クラウドモードでは緊急保存制限あり - 保留操作をキューに保持');
+      // 保留操作はメモリに保持され、次回の初期化時に復旧される可能性がある
+      // クラウドAPIへの同期的保存は技術的に困難なため、ユーザーに警告を表示
     } catch (error) {
       console.error('❌ DataManager: 緊急保存失敗', error);
     }

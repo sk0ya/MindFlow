@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { isFirstTimeSetup, setStorageMode } from '../storage/StorageManager.js';
 import { getAppSettings } from '../storage/storageUtils.js';
-import { localEngine } from '../storage/local/LocalEngine.js';
 import { authManager } from '../../features/auth/authManager.js';
 import { reinitializeStorage } from '../storage/StorageManager.js';
 
@@ -23,66 +22,47 @@ export const useAppInitialization = () => {
       try {
         console.log('🚀 アプリ初期化シーケンス開始');
         
-        // Step 1: ローカルデータ存在チェック
-        const hasData = await localEngine.hasLocalData();
+        // Step 1: 初期化状態チェック（クラウド専用）
         const isFirstTime = isFirstTimeSetup();
         const settings = getAppSettings();
         
         console.log('📊 初期化状態:', {
-          hasData,
           isFirstTime,
           currentStorageMode: settings.storageMode
         });
 
-        // Step 2: フロー分岐（設定優先）
-        if (settings.storageMode) {
-          // ケース1: 既にストレージモードが設定されている場合
-          console.log('⚙️ 設定済みストレージモード:', settings.storageMode);
+        // Step 2: クラウドモード専用フロー
+        if (settings.storageMode === 'cloud') {
+          // ケース1: 既にクラウドモードが設定されている場合
+          const isAuthenticated = authManager.isAuthenticated();
           
-          if (settings.storageMode === 'local') {
-            // ローカルモード
+          console.log('☁️ クラウドモード: 認証状態 =', isAuthenticated);
+          
+          if (isAuthenticated) {
+            // 認証済み - 直接アプリ開始
             setInitState({
               isInitializing: false,
               showStorageModeSelector: false,
               showAuthModal: false,
               showOnboarding: false,
-              storageMode: 'local',
-              hasExistingLocalData: hasData,
+              storageMode: 'cloud',
+              hasExistingLocalData: false,
               isReady: true
             });
-          } else if (settings.storageMode === 'cloud') {
-            // クラウドモード - 認証状態をチェック
-            const isAuthenticated = authManager.isAuthenticated();
-            
-            console.log('☁️ クラウドモード: 認証状態 =', isAuthenticated);
-            
-            if (isAuthenticated) {
-              // 認証済み - 直接アプリ開始
-              setInitState({
-                isInitializing: false,
-                showStorageModeSelector: false,
-                showAuthModal: false,
-                showOnboarding: false,
-                storageMode: 'cloud',
-                hasExistingLocalData: hasData,
-                isReady: true
-              });
-            } else {
-              // 未認証 - 認証画面を表示
-              setInitState({
-                isInitializing: false,
-                showStorageModeSelector: false,
-                showAuthModal: true,
-                showOnboarding: false,
-                storageMode: 'cloud',
-                hasExistingLocalData: hasData,
-                isReady: false
-              });
-            }
+          } else {
+            // 未認証 - 認証画面を表示
+            setInitState({
+              isInitializing: false,
+              showStorageModeSelector: false,
+              showAuthModal: true,
+              showOnboarding: false,
+              storageMode: 'cloud',
+              hasExistingLocalData: false,
+              isReady: false
+            });
           }
-          
         } else {
-          // ケース2: ストレージモード未設定の場合
+          // ケース2: 初回セットアップ - クラウドモードを設定
           const isAuthenticated = authManager.isAuthenticated();
           
           if (isAuthenticated) {
@@ -95,46 +75,36 @@ export const useAppInitialization = () => {
               showAuthModal: false,
               showOnboarding: false,
               storageMode: 'cloud',
-              hasExistingLocalData: hasData,
-              isReady: true
-            });
-          } else if (hasData && !isFirstTime) {
-            // ローカルデータがある場合はローカルモードを提案
-            console.log('📁 既存ローカルデータ発見 → ローカルモードで継続');
-            await setStorageMode('local');
-            setInitState({
-              isInitializing: false,
-              showStorageModeSelector: false,
-              showAuthModal: false,
-              showOnboarding: false,
-              storageMode: 'local',
-              hasExistingLocalData: true,
+              hasExistingLocalData: false,
               isReady: true
             });
           } else {
-            // ローカルデータがない場合はストレージ選択画面
-            console.log('❓ ローカルデータなし → ストレージモード選択');
-            setInitState(prev => ({
-              ...prev,
+            // 未認証の場合は認証画面を表示
+            console.log('❓ 未認証状態 → 認証画面表示');
+            await setStorageMode('cloud');
+            setInitState({
               isInitializing: false,
-              showStorageModeSelector: true,
+              showStorageModeSelector: false,
+              showAuthModal: true,
+              showOnboarding: false,
+              storageMode: 'cloud',
               hasExistingLocalData: false,
-              isReady: false // ストレージ選択中はisReady=falseを維持
-            }));
+              isReady: false
+            });
           }
         }
         
       } catch (error) {
         console.error('❌ 初期化エラー:', error);
-        // エラー時は安全にローカルモードで開始
+        // エラー時は認証画面を表示
         setInitState({
           isInitializing: false,
           showStorageModeSelector: false,
-          showAuthModal: false,
+          showAuthModal: true,
           showOnboarding: false,
-          storageMode: 'local',
+          storageMode: 'cloud',
           hasExistingLocalData: false,
-          isReady: true
+          isReady: false
         });
       }
     };
@@ -142,39 +112,26 @@ export const useAppInitialization = () => {
     initializeApp();
   }, []);
 
-  // ストレージモード選択処理
+  // ストレージモード選択処理（クラウド専用）
   const handleStorageModeSelect = async (mode) => {
     try {
       console.log('📝 ストレージモード選択:', mode);
       
+      // クラウドモードのみサポート
       if (mode === 'cloud') {
-        // クラウドモード → 即座に設定して認証画面表示
         console.log('☁️ クラウドモード選択 → 設定永続化と認証画面表示');
         
-        // 即座にクラウドモードを永続化（認証前でも）
         await setStorageMode('cloud');
         
         setInitState(prev => ({
           ...prev,
           showStorageModeSelector: false,
           showAuthModal: true,
-          pendingStorageMode: null, // 既に永続化済み
-          storageMode: 'cloud' // 永続化完了
+          pendingStorageMode: null,
+          storageMode: 'cloud'
         }));
-        
       } else {
-        // ローカルモード → 即座に設定して初期化
-        console.log('🏠 ローカルモード選択 → 設定永続化と初期化');
-        await setStorageMode(mode);
-        reinitializeStorage();
-        
-        setInitState(prev => ({
-          ...prev,
-          showStorageModeSelector: false,
-          showOnboarding: true,
-          storageMode: 'local',
-          pendingStorageMode: null
-        }));
+        console.warn('⚠️ ローカルモードはサポートされていません（クラウド専用）');
       }
       
     } catch (error) {

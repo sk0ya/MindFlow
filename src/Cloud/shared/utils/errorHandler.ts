@@ -71,8 +71,7 @@ class ErrorLogger {
     // コンソールに出力
     this.logToConsole(errorEntry);
 
-    // LocalStorageに保存
-    this.saveToStorage();
+    // Cloud mode: errors logged to console only
 
     return errorEntry;
   }
@@ -102,22 +101,13 @@ class ErrorLogger {
   }
 
   saveToStorage() {
-    try {
-      localStorage.setItem('mindflow_error_log', JSON.stringify(this.errors.slice(-50)));
-    } catch (error) {
-      console.warn('Failed to save errors to localStorage:', error);
-    }
+    // Cloud mode: no localStorage for error storage
+    console.log('☁️ Cloud mode: errors not saved to localStorage');
   }
 
   loadFromStorage() {
-    try {
-      const stored = localStorage.getItem('mindflow_error_log');
-      if (stored) {
-        this.errors = JSON.parse(stored);
-      }
-    } catch (error) {
-      console.warn('Failed to load errors from localStorage:', error);
-    }
+    // Cloud mode: no localStorage for error storage
+    console.log('☁️ Cloud mode: errors not loaded from localStorage');
   }
 
   addListener(listener) {

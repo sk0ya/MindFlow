@@ -48,12 +48,14 @@ const TutorialOverlay = ({ isVisible, onComplete, onSkip }) => {
   };
 
   const handleComplete = () => {
-    localStorage.setItem('mindflow_tutorial_completed', 'true');
+    // Cloud mode: tutorial completion stored in session
+    console.log('✅ Tutorial completed (cloud mode)');
     onComplete();
   };
 
   const handleSkip = () => {
-    localStorage.setItem('mindflow_tutorial_completed', 'true');
+    // Cloud mode: tutorial skipped stored in session
+    console.log('⏭️ Tutorial skipped (cloud mode)');
     onSkip();
   };
 

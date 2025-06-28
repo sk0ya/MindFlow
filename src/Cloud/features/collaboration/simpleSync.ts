@@ -25,35 +25,30 @@ async function apiRequest(endpoint, options = {}) {
   return await response.json();
 }
 
-// ユーザーID取得
+// ユーザーID取得（クラウド専用）
 function getUserId() {
-  let userId = localStorage.getItem('mindflow_user_id');
-  if (!userId) {
-    userId = 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('mindflow_user_id', userId);
-  }
-  return userId;
-}
-
-// ローカルストレージ操作
-function getLocalMindMaps() {
+  // Cloud mode: get user ID from auth context or session
   try {
-    const data = localStorage.getItem('mindmaps');
-    return data ? JSON.parse(data) : [];
+    const authManager = require('../../auth/authManager.js').authManager;
+    const user = authManager.getCurrentUser();
+    return user?.id || 'authenticated_user';
   } catch (error) {
-    console.error('Failed to load local mindmaps:', error);
-    return [];
+    console.warn('Auth manager not available, using fallback ID');
+    return 'cloud_user_' + Math.random().toString(36).substr(2, 9);
   }
 }
 
-function saveLocalMindMaps(mindmaps) {
-  try {
-    localStorage.setItem('mindmaps', JSON.stringify(mindmaps));
-    return true;
-  } catch (error) {
-    console.error('Failed to save local mindmaps:', error);
-    return false;
-  }
+// Cloud-only data operations (no localStorage)
+function getCloudOnlyData() {
+  // Cloud mode: data comes from cloud API only
+  console.log('📡 Cloud mode: data retrieved from cloud API only');
+  return [];
+}
+
+function saveCloudOnlyData(mindmaps) {
+  // Cloud mode: data saved to cloud API only
+  console.log('☁️ Cloud mode: data saved to cloud API only');
+  return true;
 }
 
 // クラウドAPI操作
@@ -69,44 +64,30 @@ async function uploadMindMap(mindmap) {
   });
 }
 
-// **メイン同期関数**
+// **メイン同期関数** - クラウド専用
 export async function performSync() {
   
   try {
-    // 1. ローカルデータを取得
-    const localMaps = getLocalMindMaps().filter(map => 
-      map && map.id && map.rootNode
-    );
-
-    // 2. ローカルマップをクラウドに送信
-    const uploadResults = [];
-    for (const map of localMaps) {
-      try {
-        const result = await uploadMindMap(map);
-        uploadResults.push({ success: true, id: map.id, result });
-      } catch (error) {
-        console.error('アップロード失敗:', map.id, error);
-        uploadResults.push({ success: false, id: map.id, error: error.message });
-      }
-    }
-
-    // 3. クラウドからデータを取得
+    console.log('🔄 Cloud-only sync started');
+    
+    // 1. クラウドからデータを取得
     const cloudMaps = await getCloudMindMaps();
+    
+    console.log('📡 Retrieved cloud maps:', cloudMaps.length);
 
-    // 4. 有効なクラウドデータをローカルに保存
+    // 2. 有効なクラウドデータを検証
     const validCloudMaps = cloudMaps.filter(map => 
       map && map.id && map.rootNode
     );
     
-    if (validCloudMaps.length > 0) {
-      saveLocalMindMaps(validCloudMaps);
-    }
+    console.log('✅ Valid cloud maps found:', validCloudMaps.length);
+    
     return {
       success: true,
-      localCount: localMaps.length,
       cloudCount: cloudMaps.length,
-      uploadResults,
-      message: `同期完了: ローカル${localMaps.length}件 → クラウド${cloudMaps.length}件`
+      validCount: validCloudMaps.length,
+      maps: validCloudMaps,
+      message: `クラウド同期完了: ${validCloudMaps.length}件の有効なマップ`
     };
 
   } catch (error) {

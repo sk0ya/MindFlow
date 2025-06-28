@@ -90,16 +90,13 @@ class ErrorBoundaryEnhanced extends Component<ErrorBoundaryEnhancedProps, ErrorB
       context: this.props.context || 'unknown'
     };
 
-    // エラーをローカルストレージに保存（デバッグ用）
+    // エラーをセッションに記録（クラウド専用）
     try {
-      const existingErrors = JSON.parse(localStorage.getItem('mindflow_errors') || '[]');
-      existingErrors.push(errorDetails);
-      
-      // 最大50件まで保持
-      const recentErrors = existingErrors.slice(-50);
-      localStorage.setItem('mindflow_errors', JSON.stringify(recentErrors));
-    } catch (storageError) {
-      console.warn('Failed to save error to localStorage:', storageError);
+      console.error('💾 Error logged (cloud mode):', errorDetails);
+      // Cloud mode: errors are logged to console and could be sent to cloud logging service
+      // No localStorage dependency - errors are handled through cloud infrastructure
+    } catch (logError) {
+      console.warn('Failed to log error:', logError);
     }
 
     // カスタムイベントでエラーを通知

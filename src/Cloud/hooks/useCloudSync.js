@@ -375,11 +375,19 @@ class CloudSyncService {
   }
 
   /**
-   * 現在のユーザーID取得
+   * 現在のユーザーID取得（クラウド専用）
    * @returns {string} - ユーザーID
    */
   getCurrentUserId() {
-    return localStorage.getItem('user_id') || 'anonymous';
+    // Cloud mode: get user ID from auth manager or session
+    try {
+      const authManager = require('../features/auth/authManager.js').authManager;
+      const user = authManager.getCurrentUser();
+      return user?.id || 'authenticated_user';
+    } catch (error) {
+      console.warn('Auth manager not available, using fallback ID');
+      return 'cloud_user_' + Math.random().toString(36).substr(2, 9);
+    }
   }
 
   // ===== 状態監視 =====

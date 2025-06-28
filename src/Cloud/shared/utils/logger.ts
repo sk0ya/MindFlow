@@ -203,23 +203,10 @@ class Logger {
     return styles[level] || styles[LOG_LEVELS.INFO];
   }
   
-  // ローカルストレージ出力
+  // クラウド専用ログ出力（ローカルストレージなし）
   outputToStorage(logEntry) {
-    if (typeof localStorage === 'undefined') return;
-    
-    try {
-      const existingLogs = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
-      existingLogs.push(logEntry);
-      
-      // 最大エントリー数を超えた場合は古いものを削除
-      if (existingLogs.length > this.maxStorageEntries) {
-        existingLogs.splice(0, existingLogs.length - this.maxStorageEntries);
-      }
-      
-      localStorage.setItem(this.storageKey, JSON.stringify(existingLogs));
-    } catch (error) {
-      console.warn('Failed to save log to localStorage:', error);
-    }
+    // Cloud mode: no localStorage for log storage
+    console.log('☁️ Cloud mode: log not saved to localStorage', logEntry.message);
   }
   
   // リモート出力
@@ -284,12 +271,8 @@ class Logger {
       // リモート送信に失敗した場合は console.warn で記録
       console.warn('Failed to send logs to remote endpoint:', error);
       
-      // 重要なログの場合は localStorage にフォールバック
-      logsToSend.forEach(log => {
-        if (log.levelNumber >= LOG_LEVELS.ERROR) {
-          this.outputToStorage(log);
-        }
-      });
+      // Cloud mode: important logs handled through cloud infrastructure
+      console.warn('☁️ Failed to send logs to remote endpoint, logs handled by cloud infrastructure');
     }
   }
   
@@ -303,18 +286,10 @@ class Logger {
     }, this.flushInterval);
   }
   
-  // ストレージの初期化
+  // クラウド専用ストレージ初期化
   initializeStorage() {
-    if (typeof localStorage === 'undefined') return;
-    
-    try {
-      const existingLogs = localStorage.getItem(this.storageKey);
-      if (!existingLogs) {
-        localStorage.setItem(this.storageKey, '[]');
-      }
-    } catch (error) {
-      console.warn('Failed to initialize log storage:', error);
-    }
+    // Cloud mode: no localStorage initialization needed
+    console.log('☁️ Cloud mode: log storage initialization skipped');
   }
   
   // 便利メソッド
@@ -324,36 +299,18 @@ class Logger {
   error(message, meta) { this.log(LOG_LEVELS.ERROR, message, meta); }
   fatal(message, meta) { this.log(LOG_LEVELS.FATAL, message, meta); }
   
-  // ログの取得
+  // ログの取得（クラウド専用）
   getLogs(filter = {}) {
-    if (typeof localStorage === 'undefined') return [];
-    
-    try {
-      const logs = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
-      
-      return logs.filter(log => {
-        if (filter.level && log.levelNumber < filter.level) return false;
-        if (filter.since && new Date(log.timestamp) < new Date(filter.since)) return false;
-        if (filter.until && new Date(log.timestamp) > new Date(filter.until)) return false;
-        if (filter.message && !log.message.toLowerCase().includes(filter.message.toLowerCase())) return false;
-        return true;
-      });
-    } catch (error) {
-      console.warn('Failed to retrieve logs:', error);
-      return [];
-    }
+    // Cloud mode: logs not stored in localStorage
+    console.log('☁️ Cloud mode: logs not available from localStorage');
+    return [];
   }
   
-  // ログのクリア
+  // ログのクリア（クラウド専用）
   clearLogs() {
-    if (typeof localStorage === 'undefined') return;
-    
-    try {
-      localStorage.setItem(this.storageKey, '[]');
-      this.info('Logs cleared');
-    } catch (error) {
-      console.warn('Failed to clear logs:', error);
-    }
+    // Cloud mode: no localStorage to clear
+    console.log('☁️ Cloud mode: logs not stored in localStorage');
+    this.info('Logs cleared (cloud mode)');
   }
   
   // ログの統計

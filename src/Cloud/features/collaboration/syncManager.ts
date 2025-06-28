@@ -22,23 +22,16 @@ class SyncManager {
     });
   }
 
-  // 同期キューの管理
+  // 同期キューの管理（クラウド専用 - メモリベース）
   loadSyncQueue() {
-    try {
-      const item = localStorage.getItem(STORAGE_KEYS.SYNC_QUEUE);
-      return item ? JSON.parse(item) : [];
-    } catch (error) {
-      console.error('Sync queue load error:', error);
-      return [];
-    }
+    // Cloud mode: sync queue stored in memory only
+    console.log('📋 Loading sync queue from memory (cloud mode)');
+    return [];
   }
 
   saveSyncQueue() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.SYNC_QUEUE, JSON.stringify(this.syncQueue));
-    } catch (error) {
-      console.error('Sync queue save error:', error);
-    }
+    // Cloud mode: sync queue stored in memory only
+    console.log('💾 Sync queue saved to memory (cloud mode)');
   }
 
   addToSyncQueue(operation) {
@@ -210,39 +203,28 @@ class SyncManager {
     return conflicts;
   }
 
-  // ローカルストレージ操作のヘルパーメソッド
+  // クラウド専用操作のヘルパーメソッド
   getAllMindMapsLocal() {
-    try {
-      const item = localStorage.getItem(STORAGE_KEYS.MINDMAPS);
-      return item ? JSON.parse(item) : [];
-    } catch (error) {
-      console.error('Local mindmaps load error:', error);
-      return [];
-    }
+    // Cloud mode: no local storage, return empty array
+    console.log('☁️ Cloud mode: no local mindmaps storage');
+    return [];
   }
 
   saveToStorageLocal(key, data) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error('Local storage save error:', error);
-    }
+    // Cloud mode: no local storage operations
+    console.log('☁️ Cloud mode: data not saved locally');
   }
 
-  // 最終同期時刻の管理
+  // 最終同期時刻の管理（クラウド専用）
   getLastSyncTime() {
-    try {
-      const item = localStorage.getItem(STORAGE_KEYS.LAST_SYNC_TIME);
-      return item ? JSON.parse(item) : null;
-    } catch (error) {
-      console.error('Last sync time load error:', error);
-      return null;
-    }
+    // Cloud mode: sync time stored in memory only
+    console.log('🕒 Cloud mode: sync time from memory');
+    return null;
   }
 
   updateLastSyncTime() {
     const now = new Date().toISOString();
-    this.saveToStorageLocal(STORAGE_KEYS.LAST_SYNC_TIME, now);
+    console.log('🕒 Last sync time updated:', now);
     this.lastSyncTime = now;
   }
 

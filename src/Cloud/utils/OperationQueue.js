@@ -319,11 +319,16 @@ export class OperationQueue {
   }
 
   /**
-   * ユーザーID取得
+   * ユーザーID取得（クラウド専用）
    * @returns {string} - 現在のユーザーID
    */
   getCurrentUserId() {
-    return localStorage.getItem('user_id') || 'anonymous';
+    // Cloud mode: get user ID from auth manager or session
+    const authManager = this.syncStateManager?.authManager;
+    if (authManager && authManager.getCurrentUser()) {
+      return authManager.getCurrentUser().id || 'authenticated_user';
+    }
+    return 'anonymous';
   }
 
   /**

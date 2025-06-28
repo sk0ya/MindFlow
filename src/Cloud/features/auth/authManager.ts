@@ -1,14 +1,15 @@
-// 認証管理システム
+// 認証管理システム - Cloud-only mode
 
 import { getAllMindMaps } from '../../core/storage/StorageManager.js';
 
-const AUTH_STORAGE_KEY = 'mindflow_auth';
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ
 
 class AuthManager {
   constructor() {
     this.token = null;
     this.user = null;
+    this.sessionStorage = new Map(); // In-memory session storage for cloud mode
+    
     // API base URL with environment detection
     this.apiBase = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
       ? 'http://localhost:8787' 
@@ -18,11 +19,10 @@ class AuthManager {
     this.setupTokenRefresh();
   }
 
-  // 認証データをローカルストレージから読み込み
+  // 認証データをセッションから読み込み（クラウド専用）
   loadAuthData() {
     try {
-      const item = localStorage.getItem(AUTH_STORAGE_KEY);
-      const authData = item ? JSON.parse(item) : null;
+      const authData = this.sessionStorage.get('auth_data');
       
       if (authData && authData.token) {
         // トークンの有効性をチェック
@@ -51,7 +51,7 @@ class AuthManager {
     }
   }
 
-  // 認証データを保存
+  // 認証データを保存（セッションストレージ）
   saveAuthData() {
     try {
       const authData = {
@@ -59,7 +59,8 @@ class AuthManager {
         user: this.user,
         timestamp: Date.now()
       };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      this.sessionStorage.set('auth_data', authData);
+      console.log('💾 Auth data saved to session storage');
     } catch (error) {
       console.error('Auth data save error:', error);
     }
@@ -69,7 +70,8 @@ class AuthManager {
   clearAuthData() {
     this.token = null;
     this.user = null;
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    this.sessionStorage.delete('auth_data');
+    console.log('🗑️ Auth data cleared from session storage');
   }
 
   // JWTトークンをデコード（検証なし）
