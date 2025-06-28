@@ -1,15 +1,40 @@
 import { useEffect } from 'react';
 
 // キーボードショートカット管理専用のカスタムフック
+interface UseKeyboardShortcutsProps {
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  setEditingNodeId: (id: string | null) => void;
+  startEdit: (nodeId: string) => void;
+  finishEdit: (nodeId: string, text: string) => void;
+  editText: string;
+  updateNode: (nodeId: string, updates: any) => void;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  addSiblingNode: (siblingId: string, text?: string, startEditing?: boolean) => Promise<void>;
+  deleteNode: (nodeId: string) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  saveMindMap: () => void;
+  showMapList: boolean;
+  setShowMapList: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showCloudStorage: boolean;
+  setShowCloudStorage: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showTutorial: boolean;
+  setShowTutorial: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showKeyboardHelper: boolean;
+  setShowKeyboardHelper: (show: boolean | ((prev: boolean) => boolean)) => void;
+}
+
 export const useKeyboardShortcuts = ({
   selectedNodeId,
   editingNodeId,
   setEditingNodeId,
-  setEditText,
   startEdit,
   finishEdit,
   editText,
-  updateNode,
   addChildNode,
   addSiblingNode,
   deleteNode,
@@ -27,10 +52,10 @@ export const useKeyboardShortcuts = ({
   setShowTutorial,
   showKeyboardHelper,
   setShowKeyboardHelper
-}) => {
+}: UseKeyboardShortcutsProps): void => {
   
   useEffect(() => {
-    const handleKeyDown = async (e) => {
+    const handleKeyDown = async (e: KeyboardEvent): Promise<void> => {
       // デバッグ用：重要なキーイベントのみログ出力
       if (e.key === 'Enter' || e.key === 'Tab' || (e.ctrlKey && ['s', 'z', 'y'].includes(e.key.toLowerCase()))) {
         console.log('🎹 重要キーイベント:', {

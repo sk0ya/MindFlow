@@ -4,39 +4,7 @@ import { getAllMindMaps } from '../../core/storage/StorageManager.js';
 
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  provider?: string;
-}
-
-interface AuthData {
-  token: string;
-  user: User;
-  timestamp: number;
-}
-
-interface AuthResult {
-  success: boolean;
-  user?: User;
-  token?: string;
-  message?: string;
-  error?: string;
-  magicLink?: string;
-  expiresIn?: number;
-}
-
-interface JWTPayload {
-  exp?: number;
-  [key: string]: any;
-}
-
 class AuthManager {
-  private token: string | null;
-  private user: User | null;
-  private apiBase: string;
-
   constructor() {
     this.token = null;
     this.user = null;
@@ -51,17 +19,17 @@ class AuthManager {
   }
 
   // 認証データをセッションストレージから読み込み
-  loadAuthData(): void {
+  loadAuthData() {
     try {
       const authDataStr = sessionStorage.getItem('mindflow_auth_data');
       
       if (authDataStr) {
-        const authData: AuthData = JSON.parse(authDataStr);
+        const authData = JSON.parse(authDataStr);
         
         if (authData && authData.token) {
           // トークンの有効性をチェック
           const payload = this.decodeJWT(authData.token);
-          if (payload && payload.exp && payload.exp * 1000 > Date.now()) {
+          if (payload && payload.exp * 1000 > Date.now()) {
             this.token = authData.token;
             this.user = authData.user;
             console.log('✅ 認証データ復元成功');
@@ -78,11 +46,11 @@ class AuthManager {
   }
 
   // 認証データを保存（セッションストレージ）
-  saveAuthData(): void {
+  saveAuthData() {
     try {
-      const authData: AuthData = {
-        token: this.token!,
-        user: this.user!,
+      const authData = {
+        token: this.token,
+        user: this.user,
         timestamp: Date.now()
       };
       sessionStorage.setItem('mindflow_auth_data', JSON.stringify(authData));
@@ -93,7 +61,7 @@ class AuthManager {
   }
 
   // 認証データをクリア
-  clearAuthData(): void {
+  clearAuthData() {
     this.token = null;
     this.user = null;
     sessionStorage.removeItem('mindflow_auth_data');
@@ -101,7 +69,7 @@ class AuthManager {
   }
 
   // JWTトークンをデコード（検証なし）
-  decodeJWT(token: string): JWTPayload | null {
+  decodeJWT(token) {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
@@ -114,27 +82,27 @@ class AuthManager {
   }
 
   // ログイン状態の確認
-  isAuthenticated(): boolean {
+  isAuthenticated() {
     return !!this.token && !!this.user;
   }
 
   // 現在のユーザー情報を取得
-  getCurrentUser(): User | null {
+  getCurrentUser() {
     return this.user;
   }
 
   // 認証ヘッダーを取得
-  getAuthHeader(): string | null {
+  getAuthHeader() {
     return this.token ? `Bearer ${this.token}` : null;
   }
 
   // 認証トークンを取得
-  getAuthToken(): string | null {
+  getAuthToken() {
     return this.token;
   }
 
   // Magic Linkを送信
-  async sendMagicLink(email: string): Promise<AuthResult> {
+  async sendMagicLink(email) {
     try {
       const response = await fetch(`${this.apiBase}/api/auth/login`, {
         method: 'POST',
@@ -165,7 +133,7 @@ class AuthManager {
   }
 
   // Magic Linkトークンを検証してログイン
-  async verifyMagicLink(token: string): Promise<AuthResult> {
+  async verifyMagicLink(token) {
     try {
       const response = await fetch(`${this.apiBase}/api/auth/verify`, {
         method: 'POST',
@@ -203,7 +171,7 @@ class AuthManager {
   }
 
   // Google OAuth ログイン
-  async loginWithGoogle(): Promise<AuthResult> {
+  async loginWithGoogle() {
     try {
       const response = await fetch(`${this.apiBase}/api/auth/google`);
       const data = await response.json();
@@ -214,7 +182,6 @@ class AuthManager {
 
       // Google認証ページにリダイレクト
       window.location.href = data.authUrl;
-      return { success: true };
     } catch (error) {
       console.error('Google login error:', error);
       throw error;
@@ -222,7 +189,7 @@ class AuthManager {
   }
 
   // OAuth コールバック処理
-  async handleAuthCallback(token: string): Promise<AuthResult> {
+  async handleAuthCallback(token) {
     if (!token) {
       throw new Error('No token provided');
     }
@@ -253,7 +220,7 @@ class AuthManager {
   }
 
   // 認証データを設定（CloudAuthManager用）
-  async setAuthData(token: string, user: User): Promise<AuthResult> {
+  async setAuthData(token, user) {
     this.token = token;
     this.user = user;
     this.saveAuthData();
@@ -261,20 +228,25 @@ class AuthManager {
   }
 
   // 汎用ログインメソッド（CloudAuthManager拡張用）
-  async login(email: string): Promise<AuthResult> {
-    // Email形式の場合はMagic Link
-    return await this.sendMagicLink(email);
+  async login(...args) {
+    // 既存の認証処理を呼び出し
+    if (args.length === 1 && typeof args[0] === 'string') {
+      // Email形式の場合はMagic Link
+      return await this.sendMagicLink(args[0]);
+    }
+    // その他の形式はサポートなし
+    throw new Error('Unsupported login method');
   }
 
   // ログアウト
-  async logout(): Promise<void> {
+  async logout() {
     this.clearAuthData();
     
     // 必要に応じてサーバーサイドでのトークン無効化
   }
 
   // トークンリフレッシュ
-  async refreshToken(): Promise<boolean> {
+  async refreshToken() {
     if (!this.token) return false;
 
     try {
@@ -304,12 +276,12 @@ class AuthManager {
   }
 
   // 自動トークンリフレッシュの設定
-  setupTokenRefresh(): void {
+  setupTokenRefresh() {
     setInterval(() => {
       if (!this.token) return;
 
       const payload = this.decodeJWT(this.token);
-      if (!payload || !payload.exp) return;
+      if (!payload) return;
 
       const expiresAt = payload.exp * 1000;
       const now = Date.now();
@@ -322,13 +294,13 @@ class AuthManager {
   }
 
   // 認証が必要なAPIリクエスト用のfetchラッパー
-  async authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  async authenticatedFetch(url, options = {}) {
     const authHeader = this.getAuthHeader();
     if (!authHeader) {
       throw new Error('Not authenticated');
     }
 
-    const config: RequestInit = {
+    const config = {
       ...options,
       headers: {
         ...options.headers,
@@ -343,10 +315,7 @@ class AuthManager {
       const refreshed = await this.refreshToken();
       if (refreshed) {
         // リフレッシュ成功、リクエスト再試行
-        config.headers = {
-          ...config.headers,
-          'Authorization': this.getAuthHeader()!
-        };
+        config.headers['Authorization'] = this.getAuthHeader();
         return await fetch(url, config);
       } else {
         // リフレッシュ失敗、ログアウト

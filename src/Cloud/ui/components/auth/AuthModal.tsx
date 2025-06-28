@@ -86,52 +86,52 @@ const AuthModal: React.FC<AuthModalProps> = ({
     auth.clearError(); // 統一システムのエラーをクリア
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setEmail(e.target.value);
   };
 
-  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>): void => {
     e.target.style.borderColor = '#667eea';
   };
 
-  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
     e.target.style.borderColor = '#ddd';
   };
 
-  const handleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     if (!isLoading && target.style.backgroundColor === '#667eea') {
       target.style.backgroundColor = '#5a6fd8';
     }
   };
 
-  const handleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     if (!isLoading && target.style.backgroundColor === '#5a6fd8') {
       target.style.backgroundColor = '#667eea';
     }
   };
 
-  const handleSecondaryButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSecondaryButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     target.style.backgroundColor = '#667eea';
     target.style.color = 'white';
   };
 
-  const handleSecondaryButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSecondaryButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     target.style.backgroundColor = 'transparent';
     target.style.color = '#667eea';
   };
 
-  const handleGoogleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleGoogleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     if (!isLoading) {
       target.style.backgroundColor = '#f8f9fa';
     }
   };
 
-  const handleGoogleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleGoogleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const target = e.target as HTMLButtonElement;
     if (!isLoading) {
       target.style.backgroundColor = 'white';
@@ -456,7 +456,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 onClick={() => {
                   setStep('email');
-                  setError('');
+                  auth.clearError();
                   setSuccess('');
                 }}
                 style={{
