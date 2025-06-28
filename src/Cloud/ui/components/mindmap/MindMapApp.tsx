@@ -52,9 +52,38 @@ const MindMapApp: React.FC = () => {
   // アプリ初期化（統一フロー）- まず初期化状態を取得
   const initState = useAppInitialization();
   
-  // クラウドモードで未認証の場合は早期リターン
+  // クラウドモードで未認証の場合は早期リターン - リアクティブな認証状態監視
   const settings = getAppSettings();
-  const isAuthenticated = authManager.isAuthenticated();
+  const [isAuthenticated, setIsAuthenticated] = React.useState(authManager.isAuthenticated());
+  
+  // 認証状態の変化を監視
+  React.useEffect(() => {
+    const checkAuthStatus = async () => {
+      // URLにトークンがある場合は認証処理を実行
+      if (authToken && !authManager.isAuthenticated()) {
+        try {
+          console.log('🔑 URL認証トークン検出: 認証処理開始');
+          await authManager.handleAuthCallback();
+        } catch (error) {
+          console.error('❌ URL認証処理エラー:', error);
+        }
+      }
+      
+      const authStatus = authManager.isAuthenticated();
+      setIsAuthenticated(authStatus);
+    };
+    
+    // 初回チェック
+    checkAuthStatus();
+    
+    // 定期的にチェック（認証後のトークン確認用）
+    const interval = setInterval(() => {
+      const authStatus = authManager.isAuthenticated();
+      setIsAuthenticated(authStatus);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [authToken]);
   
   if (settings.storageMode === 'cloud' && !isAuthenticated) {
     console.log('🔐 クラウドモード未認証: 認証画面を表示');
