@@ -44,95 +44,67 @@ import { useRealtimeHandlers } from './hooks/useRealtimeHandlers.js';
 import type { MindMapNode, MindMapData, User } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
-  // URL パラメータで認証トークンをチェック（複数のパラメータ名を試す）
-  const [currentUrl, setCurrentUrl] = React.useState(window.location.href);
-  const urlParams = new URLSearchParams(window.location.search);
-  const authToken = urlParams.get('token') || 
-                   urlParams.get('auth_token') || 
-                   urlParams.get('magic_token') ||
-                   urlParams.get('verification_token');
-  const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
-  
-  console.log('🔍 URL認証チェック:', { 
-    url: window.location.href,
-    search: window.location.search,
-    hasToken: !!authToken, 
-    token: authToken?.substring(0, 20) + '...', // 最初の20文字のみ表示
-    tokenLength: authToken?.length, 
-    isAuthVerification 
-  });
-  
-  // アプリ初期化（統一フロー）- まず初期化状態を取得
+  // アプリ初期化（統一フロー）
   const initState = useAppInitialization();
-  
-  // クラウドモードで未認証の場合は早期リターン - リアクティブな認証状態監視
   const settings = getAppSettings();
-  const [isAuthenticated, setIsAuthenticated] = React.useState(authManager.isAuthenticated());
+  
+  // URL認証トークンの処理（シンプル化）
+  const urlParams = new URLSearchParams(window.location.search);
+  const authToken = urlParams.get('token') || urlParams.get('auth_token') || urlParams.get('magic_token');
+  
+  // 認証処理状態管理
+  const [authProcessing, setAuthProcessing] = React.useState(false);
   
   // URL認証処理（一度だけ実行）
   React.useEffect(() => {
-    const handleUrlAuth = async () => {
-      // URLにトークンがある場合のみ認証処理を実行
-      if (authToken && authToken.length > 10 && !authManager.isAuthenticated()) {
-        try {
-          console.log('🔑 URL認証トークン検出: 認証処理開始', {
-            tokenLength: authToken.length,
-            tokenPreview: authToken.substring(0, 10) + '...'
-          });
-          const result = await authManager.verifyMagicLink(authToken);
-          console.log('✅ URL認証成功:', result);
-          
-          // 認証成功後はURLからトークンを削除し、状態を即座に更新
-          if (result.success) {
-            setIsAuthenticated(true);
-            console.log('🧹 URLからトークンを削除中...');
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setCurrentUrl(window.location.href); // URL状態を更新して再レンダリング
-            console.log('✅ URL更新完了:', window.location.href);
-          }
-        } catch (error) {
-          console.error('❌ URL認証処理エラー:', {
-            error: error.message,
-            status: error.status,
-            tokenLength: authToken.length
-          });
-          
-          // 認証エラーの場合もURLからトークンを削除（無限ループ防止）
-          console.log('🧹 エラー後URLクリーンアップ...');
+    if (authToken && !authProcessing) {
+      setAuthProcessing(true);
+      console.log('🔑 URL認証処理開始');
+      
+      authManager.verifyMagicLink(authToken)
+        .then(() => {
+          console.log('✅ 認証成功 - URLクリア');
+          // URLをクリアしてリロード
           window.history.replaceState({}, document.title, window.location.pathname);
-          setCurrentUrl(window.location.href); // URL状態を更新
-        }
-      }
-    };
-    
-    handleUrlAuth();
-  }, []); // 空の依存配列で一度だけ実行
-
-  // 認証状態の監視（別のuseEffect）
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      const authStatus = authManager.isAuthenticated();
-      if (authStatus !== isAuthenticated) {
-        console.log('🔄 認証状態変化検出:', { previous: isAuthenticated, current: authStatus });
-        setIsAuthenticated(authStatus);
-      }
-    }, 1000); // 1秒間隔で監視
-    
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
-  
-  // 認証状態の管理
-  const [showAuthModal, setShowAuthModal] = React.useState(false);
-  
-  // クラウドモードで未認証の場合は認証モーダルを表示
-  React.useEffect(() => {
-    if (settings.storageMode === 'cloud' && !isAuthenticated) {
-      console.log('🔐 クラウドモード未認証: 認証モーダルを表示');
-      setShowAuthModal(true);
-    } else {
-      setShowAuthModal(false);
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('❌ 認証失敗:', error);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setAuthProcessing(false);
+        });
     }
-  }, [settings.storageMode, isAuthenticated]);
+  }, [authToken, authProcessing]);
+  
+  // 認証処理中の表示
+  if (authToken && authProcessing) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>認証処理中...</h2>
+          <p>しばらくお待ちください</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // 認証状態チェック
+  const isAuthenticated = authManager.isAuthenticated();
+  
+  // クラウドモードで未認証の場合は認証モーダル表示
+  if (settings.storageMode === 'cloud' && !isAuthenticated && !authToken) {
+    return (
+      <AuthModal
+        isOpen={true}
+        onClose={() => {}}
+        onSuccess={() => {
+          console.log('🎉 認証モーダル成功');
+          window.location.reload();
+        }}
+      />
+    );
+  }
   
   const {
     data,
@@ -351,30 +323,7 @@ const MindMapApp: React.FC = () => {
     }
   };
 
-  // 認証検証中の場合は専用画面を表示（まだ認証していない場合のみ）
-  if (isAuthVerification && !authHandlers.authState.isAuthenticated) {
-    return (
-      <AuthVerification 
-        onAuthSuccess={(user: User) => {
-          // 認証状態を更新
-          authHandlers.setAuthState({
-            isAuthenticated: true,
-            user: user,
-            isLoading: false
-          });
-          // URLからトークンを除去
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }}
-        onAuthError={(error: Error) => {
-          console.error('Authentication failed:', error);
-          // エラー時もホームに戻る
-          setTimeout(() => {
-            window.location.href = '/MindFlow/';
-          }, 3000);
-        }}
-      />
-    );
-  }
+  // 上記の認証処理で全てカバー済み - このセクションは削除
 
   // 初期化中の場合の処理
   if (initState.isInitializing) {
@@ -642,18 +591,7 @@ const MindMapApp: React.FC = () => {
         />
       )}
 
-      {/* 認証モーダル */}
-      {showAuthModal && (
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={(result) => {
-            console.log('🎉 認証モーダル成功:', result);
-            setIsAuthenticated(true);
-            setShowAuthModal(false);
-          }}
-        />
-      )}
+      {/* 重複の認証モーダルは削除済み */}
     </div>
   );
 };

@@ -8,7 +8,6 @@ class AuthManager {
   constructor() {
     this.token = null;
     this.user = null;
-    this.sessionStorage = new Map(); // In-memory session storage for cloud mode
     
     // API base URL with environment detection
     this.apiBase = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
@@ -19,30 +18,25 @@ class AuthManager {
     this.setupTokenRefresh();
   }
 
-  // 認証データをセッションから読み込み（クラウド専用）
+  // 認証データをセッションストレージから読み込み
   loadAuthData() {
     try {
-      const authData = this.sessionStorage.get('auth_data');
+      const authDataStr = sessionStorage.getItem('mindflow_auth_data');
       
-      if (authData && authData.token) {
-        // トークンの有効性をチェック
-        const payload = this.decodeJWT(authData.token);
-        if (payload && payload.exp * 1000 > Date.now()) {
-          this.token = authData.token;
-          this.user = authData.user;
-          
-          // 自動ログイン成功時にマップ一覧を同期（非同期で実行してブロックを避ける）
-          setTimeout(async () => {
-            try {
-              console.log('🔄 自動ログイン時マップ一覧同期開始...');
-              await getAllMindMaps();
-              console.log('✅ 自動ログイン時マップ一覧同期完了');
-            } catch (syncError) {
-              console.warn('⚠️ 自動ログイン時マップ一覧同期失敗:', syncError);
-            }
-          }, 1000); // 1秒後に実行してアプリ初期化を優先
-        } else {
-          this.clearAuthData();
+      if (authDataStr) {
+        const authData = JSON.parse(authDataStr);
+        
+        if (authData && authData.token) {
+          // トークンの有効性をチェック
+          const payload = this.decodeJWT(authData.token);
+          if (payload && payload.exp * 1000 > Date.now()) {
+            this.token = authData.token;
+            this.user = authData.user;
+            console.log('✅ 認証データ復元成功');
+          } else {
+            console.log('⏰ トークン期限切れ - 認証データクリア');
+            this.clearAuthData();
+          }
         }
       }
     } catch (error) {
@@ -59,8 +53,8 @@ class AuthManager {
         user: this.user,
         timestamp: Date.now()
       };
-      this.sessionStorage.set('auth_data', authData);
-      console.log('💾 Auth data saved to session storage');
+      sessionStorage.setItem('mindflow_auth_data', JSON.stringify(authData));
+      console.log('💾 認証データ保存成功');
     } catch (error) {
       console.error('Auth data save error:', error);
     }
@@ -70,8 +64,8 @@ class AuthManager {
   clearAuthData() {
     this.token = null;
     this.user = null;
-    this.sessionStorage.delete('auth_data');
-    console.log('🗑️ Auth data cleared from session storage');
+    sessionStorage.removeItem('mindflow_auth_data');
+    console.log('🗑️ 認証データクリア成功');
   }
 
   // JWTトークンをデコード（検証なし）
