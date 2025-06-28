@@ -31,16 +31,15 @@ export const useKeyboardShortcuts = ({
   
   useEffect(() => {
     const handleKeyDown = async (e) => {
-      // デバッグ用：キーイベントをログ出力
-      console.log('🎹 キーイベント:', {
-        key: e.key,
-        target: e.target.tagName,
-        editingNodeId,
-        selectedNodeId,
-        ctrlKey: e.ctrlKey,
-        metaKey: e.metaKey,
-        shiftKey: e.shiftKey
-      });
+      // デバッグ用：重要なキーイベントのみログ出力
+      if (e.key === 'Enter' || e.key === 'Tab' || (e.ctrlKey && ['s', 'z', 'y'].includes(e.key.toLowerCase()))) {
+        console.log('🎹 重要キーイベント:', {
+          key: e.key,
+          target: e.target.tagName,
+          editingNodeId: !!editingNodeId,
+          selectedNodeId: !!selectedNodeId
+        });
+      }
       
       // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
       const isInputFocused = document.activeElement?.tagName === 'INPUT' || 

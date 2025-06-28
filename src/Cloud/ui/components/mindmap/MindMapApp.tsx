@@ -49,6 +49,12 @@ const MindMapApp: React.FC = () => {
   const authToken = urlParams.get('token');
   const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
   
+  console.log('🔍 URL認証チェック:', { 
+    hasToken: !!authToken, 
+    tokenLength: authToken?.length, 
+    isAuthVerification 
+  });
+  
   // アプリ初期化（統一フロー）- まず初期化状態を取得
   const initState = useAppInitialization();
   
@@ -59,11 +65,11 @@ const MindMapApp: React.FC = () => {
   // 認証状態の変化を監視
   React.useEffect(() => {
     const checkAuthStatus = async () => {
-      // URLにトークンがある場合は認証処理を実行
-      if (authToken && !authManager.isAuthenticated()) {
+      // URLにトークンがある場合のみ認証処理を実行
+      if (authToken && authToken.length > 10 && !authManager.isAuthenticated()) {
         try {
           console.log('🔑 URL認証トークン検出: 認証処理開始');
-          await authManager.handleAuthCallback();
+          await authManager.handleAuthCallback(authToken);
         } catch (error) {
           console.error('❌ URL認証処理エラー:', error);
         }
@@ -76,14 +82,16 @@ const MindMapApp: React.FC = () => {
     // 初回チェック
     checkAuthStatus();
     
-    // 定期的にチェック（認証後のトークン確認用）
+    // 認証状態の変化を監視（頻度を下げる）
     const interval = setInterval(() => {
       const authStatus = authManager.isAuthenticated();
-      setIsAuthenticated(authStatus);
-    }, 1000);
+      if (authStatus !== isAuthenticated) {
+        setIsAuthenticated(authStatus);
+      }
+    }, 2000); // 2秒に1回に変更
     
     return () => clearInterval(interval);
-  }, [authToken]);
+  }, [authToken, isAuthenticated]);
   
   // 認証状態の管理
   const [showAuthModal, setShowAuthModal] = React.useState(false);
