@@ -87,7 +87,7 @@ async function handleSendMagicLink(request, env) {
     const authToken = await createAuthToken(email, request, env);
     
     // Magic Linkを生成
-    const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}`;
+    const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}&type=magic-link`;
     
     // メール送信
     const emailResult = await sendMagicLinkEmail(email, magicLink, env);

@@ -264,7 +264,7 @@ export const useMagicLinkVerification = () => {
     const token = urlParams.get('token');
     const type = urlParams.get('type');
 
-    if (token && type === 'magic-link' && !auth.state.isAuthenticated) {
+    if (token && (type === 'magic-link' || !type) && !auth.state.isAuthenticated) {
       setIsVerifying(true);
       setVerificationError(null);
 
