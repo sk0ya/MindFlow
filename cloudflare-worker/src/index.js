@@ -94,11 +94,12 @@ async function initializeDatabase(env) {
       );
 
       CREATE TABLE auth_tokens (
-        token TEXT PRIMARY KEY,
-        email TEXT NOT NULL,
-        expires_at INTEGER NOT NULL,
-        used_at INTEGER DEFAULT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used_at TEXT DEFAULT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
 
       CREATE TABLE mindmaps (
