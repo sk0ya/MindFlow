@@ -57,17 +57,32 @@ export const useMindMap = () => {
     setData(newData);
   }, [data, setData]);
 
-  const addChildNode = useCallback((parentId: string, text: string = 'New Node') => {
+  const addChildNode = useCallback((parentId: string, text: string = 'New Node', autoEdit: boolean = false) => {
     if (!data) return;
 
     const parentNode = findNode(parentId);
     if (!parentNode) return;
 
+    // ローカルモードと同じ座標計算ロジック
+    let newX, newY;
+    if (parentId === 'root') {
+      // ルートノードの場合
+      const childCount = parentNode.children.length;
+      const angle = (childCount * (2 * Math.PI / 8)) + (Math.PI / 4); // 8分割で配置
+      const radius = 180;
+      newX = parentNode.x + Math.cos(angle) * radius;
+      newY = parentNode.y + Math.sin(angle) * radius;
+    } else {
+      // 子ノードの場合
+      newX = parentNode.x + (parentNode.children.length * 40) + 120;
+      newY = parentNode.y + 80;
+    }
+
     const newNode: Node = {
       id: generateId(),
       text,
-      x: parentNode.x + (parentNode.children.length * 50) + 100,
-      y: parentNode.y + 80,
+      x: newX,
+      y: newY,
       children: []
     };
 
@@ -92,6 +107,14 @@ export const useMindMap = () => {
 
     setData(newData);
     setSelectedNodeId(newNode.id);
+
+    // 自動編集開始
+    if (autoEdit) {
+      setTimeout(() => {
+        setEditingNodeId(newNode.id);
+        setEditText(newNode.text);
+      }, 50);
+    }
   }, [data, setData, findNode]);
 
   const deleteNode = useCallback((id: string) => {
