@@ -83,9 +83,9 @@ interface UseMindMapResult {
   reinitializeAfterModeSelection: () => Promise<void>;
 }
 
-// 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
+// 正しいReactパターン: 常に同じフックを同じ順序で呼び出す
 export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
-  // 🚨 重要: 認証完了後のみデータフックを有効化
+  // 🚨 重要: 常に同じフックを呼び出し、内部で条件制御
   const dataHook = useMindMapData(isAppReady);
   
   // デバッグログ（レンダリング中に状態を変更しない）

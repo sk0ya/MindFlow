@@ -55,13 +55,10 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   // isSavingRef removed as it's no longer used
   const syncServiceInitialized = useRef<boolean>(false);
 
-  // 統一同期サービス初期化（レンダリング後に実行）
+  // 統一同期サービス初期化（正しいReactパターン）
   useEffect(() => {
     if (!syncServiceInitialized.current && isAppReady) {
-      // setTimeoutで次のイベントループで実行してレンダリング競合を回避
-      setTimeout(() => {
-        if (!syncServiceInitialized.current) {
-          syncServiceInitialized.current = true;
+      syncServiceInitialized.current = true;
       
       const initializeSyncService = async () => {
         try {
@@ -94,11 +91,9 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
             console.error('❌ フォールバック初期化も失敗:', fallbackError);
           }
         }
-          };
-          
-          initializeSyncService();
-        }
-      }, 0);
+      };
+      
+      initializeSyncService();
     }
   }, [isAppReady]);
 
@@ -188,18 +183,28 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     if (!isAppReady || data !== null) return;
 
     const initializeData = async () => {
-      console.log('🚀 データ初期化開始 (isAppReady: true)');
-      
-      // 統一インターフェース：StorageManagerを通してデータ初期化
-      const mindMap = await getCurrentMindMap();
-      if (mindMap && mindMap.rootNode) {
-        console.log('📊 既存データ読み込み');
-        setData(assignColorsToExistingNodes(mindMap as any) as any);
-      } else {
-        console.log('📊 新規マップ作成');
-        setData(createInitialData() as any);
+      try {
+        console.log('🚀 データ初期化開始 (isAppReady: true)');
+        
+        // 統一インターフェース：StorageManagerを通してデータ初期化
+        const mindMap = await getCurrentMindMap();
+        if (mindMap && mindMap.rootNode) {
+          console.log('📊 既存データ読み込み');
+          const processedData = assignColorsToExistingNodes(mindMap as any) as any;
+          // 非同期でsetDataを呼び出し
+          setTimeout(() => setData(processedData), 0);
+        } else {
+          console.log('📊 新規マップ作成');
+          const initialData = createInitialData() as any;
+          // 非同期でsetDataを呼び出し
+          setTimeout(() => setData(initialData), 0);
+        }
+        console.log('✅ データ初期化完了');
+      } catch (error) {
+        console.error('❌ データ初期化エラー:', error);
+        // エラー時も非同期で初期データを設定
+        setTimeout(() => setData(createInitialData() as any), 0);
       }
-      console.log('✅ データ初期化完了');
     };
 
     initializeData();
@@ -214,7 +219,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
       const mindMap = await getCurrentMindMap();
       if (mindMap && mindMap.rootNode) {
         const processedData = assignColorsToExistingNodes(mindMap as any);
-        setData(processedData as any);
+        setTimeout(() => setData(processedData as any), 0);
         console.log('✅ 同期完了');
       }
     }
