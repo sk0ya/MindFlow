@@ -308,7 +308,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     }
   });
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     
     if (svgRef.current) {
@@ -316,7 +316,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       const newZoom = Math.min(Math.max(zoom * delta, 0.3), 5);
       setZoom(newZoom);
     }
-  };
+  }, [zoom, setZoom]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.target === svgRef.current) {
@@ -393,16 +393,26 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   }, [selectedNodeId, editingNodeId, onNavigateToDirection]);
 
   useEffect(() => {
+    const svgElement = svgRef.current;
+    
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('keydown', handleKeyDown);
+    
+    // passive: false を指定してpreventDefaultを有効にする
+    if (svgElement) {
+      svgElement.addEventListener('wheel', handleWheel, { passive: false });
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('keydown', handleKeyDown);
+      if (svgElement) {
+        svgElement.removeEventListener('wheel', handleWheel);
+      }
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, handleWheel]);
 
   return (
     <div className="mindmap-canvas-container">
@@ -410,7 +420,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         ref={svgRef}
         width="100%"
         height="calc(100vh - 150px)"
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onClick={handleBackgroundClick}
         onContextMenu={(e) => {

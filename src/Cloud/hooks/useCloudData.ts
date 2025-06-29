@@ -175,12 +175,28 @@ export const useCloudData = () => {
         }
         setData(cleanedServerData);
       } else if (createIfNotExists) {
-        // データがない場合はデフォルトデータを作成
+        // データがない場合はデフォルトデータを作成してすぐに保存
         const defaultData = createDefaultData();
         if (process.env.NODE_ENV === 'development') {
-          console.log('🆕 デフォルトデータ作成');
+          console.log('🆕 デフォルトデータ作成:', { id: defaultData.id, title: defaultData.title });
         }
         setData(defaultData);
+        
+        // デフォルトデータをすぐにAPIに保存
+        setTimeout(async () => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('💾 デフォルトデータ即座保存開始');
+          }
+          const saveResult = await saveMindMapData(defaultData);
+          if (saveResult && saveResult.success && saveResult.data) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ デフォルトデータ保存成功');
+            }
+            setData(saveResult.data);
+          } else {
+            console.warn('⚠️ デフォルトデータ保存失敗:', saveResult);
+          }
+        }, 100);
       }
       
       setLastSyncTime(new Date());
@@ -371,25 +387,30 @@ export const useCloudData = () => {
     }
   }, [authState.isAuthenticated, data, isLoading, fetchMindMapData]);
 
-  // 新規データの保存
+  // 新規データの保存（サーバーに未保存のデータ）
   useEffect(() => {
-    if (!data || !authState.isAuthenticated || data.id || isLoading) return;
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🆕 新規データ検出 - 保存実行');
-    }
-    const saveNewData = async () => {
-      const saveResult = await saveMindMapData(data);
-      if (saveResult && saveResult.success && saveResult.data) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ 新規データ保存成功 - IDを含むデータに更新');
-        }
-        setData(saveResult.data);
-      }
-    };
+    if (!data || !authState.isAuthenticated || isLoading) return;
     
-    saveNewData();
-  }, [data?.id, authState.isAuthenticated, isLoading, saveMindMapData]);
+    // createdAt と updatedAt が一致していて、データベースに保存されていない新規データかチェック
+    const isNewUnsavedData = data.id && !data.createdAt && !data.updatedAt;
+
+    if (isNewUnsavedData) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🆕 新規データ検出 - 保存実行:', { id: data.id, title: data.title });
+      }
+      const saveNewData = async () => {
+        const saveResult = await saveMindMapData(data);
+        if (saveResult && saveResult.success && saveResult.data) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ 新規データ保存成功 - IDを含むデータに更新');
+          }
+          setData(saveResult.data);
+        }
+      };
+      
+      saveNewData();
+    }
+  }, [data?.id, data?.createdAt, data?.updatedAt, authState.isAuthenticated, isLoading, saveMindMapData]);
 
   // デバウンス自動保存（5秒後）
   useEffect(() => {
