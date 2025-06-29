@@ -55,10 +55,13 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   // isSavingRef removed as it's no longer used
   const syncServiceInitialized = useRef<boolean>(false);
 
-  // 統一同期サービス初期化
+  // 統一同期サービス初期化（レンダリング後に実行）
   useEffect(() => {
     if (!syncServiceInitialized.current && isAppReady) {
-      syncServiceInitialized.current = true;
+      // setTimeoutで次のイベントループで実行してレンダリング競合を回避
+      setTimeout(() => {
+        if (!syncServiceInitialized.current) {
+          syncServiceInitialized.current = true;
       
       const initializeSyncService = async () => {
         try {
@@ -91,9 +94,11 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
             console.error('❌ フォールバック初期化も失敗:', fallbackError);
           }
         }
-      };
-      
-      initializeSyncService();
+          };
+          
+          initializeSyncService();
+        }
+      }, 0);
     }
   }, [isAppReady]);
 

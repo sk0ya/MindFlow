@@ -85,9 +85,8 @@ interface UseMindMapResult {
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
 export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
-  // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
-  // 常にtrueを渡すことで、フックの実行順序を安定化
-  const dataHook = useMindMapData(true);
+  // 🚨 重要: 認証完了後のみデータフックを有効化
+  const dataHook = useMindMapData(isAppReady);
   
   // デバッグログ（レンダリング中に状態を変更しない）
   if (typeof console !== 'undefined' && dataHook.data) {

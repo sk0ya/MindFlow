@@ -133,7 +133,7 @@ const MindMapApp: React.FC = () => {
     getAvailableCategories,
     reinitializeAfterModeSelection,
     triggerCloudSync: _triggerCloudSync
-  } = useMindMap(initState.isReady);
+  } = useMindMap(initState.isReady && auth.state.isAuthenticated);
   
   // 認証状態は統一システムで管理済み
 
