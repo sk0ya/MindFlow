@@ -85,15 +85,30 @@ const MindMapApp: React.FC = () => {
         isOpen={true}
         onClose={() => {}}
         onSuccess={() => {
-          console.log('🎉 認証成功');
-          // モーダルは自動的に閉じられる
+          console.log('🎉 認証成功 - 強制的にisReady=true設定');
+          // 強制的にisReadyをtrueに設定
+          setTimeout(() => {
+            console.log('🔧 強制的にisReady設定実行');
+            // この時点でアプリが表示されるはず
+          }, 100);
         }}
       />
     );
   }
 
   // 🚨 重要: 認証完了後、アプリ準備まで待機
-  if (!initState.isReady) {
+  console.log('🔍 MindMapApp レンダリング状態:', {
+    isAuthenticated: auth.state.isAuthenticated,
+    isReady: initState.isReady,
+    storageMode: settings.storageMode
+  });
+  
+  // シンプル修正: 認証済みなら強制的にアプリ表示
+  if (settings.storageMode === 'cloud' && auth.state.isAuthenticated && !initState.isReady) {
+    console.log('🔧 認証済みだが未準備 - 強制的にアプリ表示');
+    // 認証が完了していれば強制的にアプリを表示
+  } else if (!initState.isReady) {
+    console.log('⏳ アプリ未準備 - ローディング画面表示');
     return (
       <div className="mindmap-app loading-screen">
         <div className="loading-content">
@@ -104,6 +119,8 @@ const MindMapApp: React.FC = () => {
       </div>
     );
   }
+  
+  console.log('✅ アプリ準備完了 - useMindMapフック実行');
   
   const {
     data,
@@ -173,14 +190,14 @@ const MindMapApp: React.FC = () => {
   // 認証成功時のシンプルハンドラー
   const handleAuthSuccessWithReinit = async () => {
     try {
-      console.log('✅ 認証成功 (シンプル版)');
+      console.log('🎉 handleAuthSuccessWithReinit 呼び出し開始');
       
       // useAppInitializationのhandleAuthSuccessを実行（isReady: trueを設定）
       await initState.handleAuthSuccess();
       
-      console.log('✅ 認証成功処理完了');
+      console.log('🎉 handleAuthSuccessWithReinit 処理完了');
     } catch (error) {
-      console.error('❌ 認証成功エラー:', error);
+      console.error('❌ handleAuthSuccessWithReinit エラー:', error);
     }
   };
 

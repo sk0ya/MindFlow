@@ -185,6 +185,7 @@ export const useAppInitialization = (): UseAppInitializationResult => {
       console.log('✅ クラウドストレージアダプターが作成されました');
       
       // 状態を更新
+      console.log('🔧 isReady を true に設定');
       setInitState(prev => ({
         ...prev,
         showAuthModal: false,
@@ -192,6 +193,7 @@ export const useAppInitialization = (): UseAppInitializationResult => {
         pendingStorageMode: null,
         isReady: true
       }));
+      console.log('✅ isReady 設定完了');
       
       console.log('✅ クラウドモード初期化完了');
     } catch (error) {
