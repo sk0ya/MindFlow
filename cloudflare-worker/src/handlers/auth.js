@@ -146,19 +146,9 @@ async function handleVerifyMagicLink(request, env) {
   try {
     const result = await verifyAuthToken(token, env);
     
-    if (request.method === 'GET') {
-      // GETリクエストの場合はフロントエンドにリダイレクト
-      const redirectUrl = `${env.FRONTEND_URL}/auth/success?token=${result.token}`;
-      return Response.redirect(redirectUrl, 302);
-    }
-    
+    // GETリクエストでも常にJSONレスポンスを返す
     return result;
   } catch (error) {
-    if (request.method === 'GET') {
-      // GETリクエストの場合はエラーページにリダイレクト
-      const redirectUrl = `${env.FRONTEND_URL}/auth/error?message=${encodeURIComponent(error.message)}`;
-      return Response.redirect(redirectUrl, 302);
-    }
     throw error;
   }
 }
