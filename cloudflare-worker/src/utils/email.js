@@ -2,8 +2,16 @@
 // Resend.com APIを使用してメール送信
 
 export async function sendMagicLinkEmail(email, magicLink, env) {
+  console.log('📧 メール送信開始:', { 
+    email, 
+    hasResendKey: !!env.RESEND_KEY,
+    resendKeyLength: env.RESEND_KEY?.length,
+    fromEmail: env.FROM_EMAIL 
+  });
+  
   // Resend.com APIを使用してメール送信
-  if (!env.RESEND_API_KEY || env.RESEND_API_KEY === 're_placeholder_key') {
+  if (!env.RESEND_KEY || env.RESEND_KEY === 're_placeholder_key') {
+    console.log('⚠️ RESEND_KEY が設定されていないため開発モードで動作');
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
@@ -19,11 +27,11 @@ Magic Link: ${magicLink}
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Authorization': `Bearer ${env.RESEND_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'MindFlow <onboarding@resend.dev>', // Resendの検証済みドメイン
+        from: `MindFlow <${env.FROM_EMAIL || 'onboarding@resend.dev'}>`, // 環境変数から取得
         to: [email],
         subject: 'MindFlow - ログインリンク',
         html: createMagicLinkEmailHTML(magicLink),
