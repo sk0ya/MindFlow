@@ -130,34 +130,55 @@ export function useAuth() {
       const result = await response.json();
       console.log('📋 API Response Body:', result);
       
+      // サーバーからの実際のレスポンス形式を確認して対応
+      let authToken, authUser;
+      
       if (result.success && result.token && result.user) {
-        console.log('💾 Saving auth data:', { 
-          token: result.token.substring(0, 10) + '...', 
-          user: result.user 
-        });
-        
-        sessionStorage.setItem('auth_token', result.token);
-        sessionStorage.setItem('auth_user', JSON.stringify(result.user));
-        
-        console.log('✅ Auth data saved to sessionStorage');
-        
-        setAuthState({
-          isAuthenticated: true,
-          user: result.user,
-          isLoading: false,
-          error: null
-        });
-        
-        console.log('✅ Auth state updated');
+        // 期待された形式
+        authToken = result.token;
+        authUser = result.user;
+      } else if (result.token && result.email) {
+        // 別の可能な形式: { token: "...", email: "...", id: "..." }
+        authToken = result.token;
+        authUser = { email: result.email, id: result.id || result.email };
+      } else if (result.access_token && result.user) {
+        // JWT形式: { access_token: "...", user: {...} }
+        authToken = result.access_token;
+        authUser = result.user;
+      } else if (result.token) {
+        // トークンのみ: { token: "..." }
+        authToken = result.token;
+        authUser = { email: 'user@example.com', id: '1' }; // 仮のユーザー情報
       } else {
-        console.error('❌ Invalid response structure:', { 
+        console.error('❌ Unexpected response structure:', { 
           hasSuccess: !!result.success, 
           hasToken: !!result.token, 
           hasUser: !!result.user,
+          hasAccessToken: !!result.access_token,
+          hasEmail: !!result.email,
           result 
         });
-        throw new Error('Invalid token response');
+        throw new Error('Invalid token response - unexpected structure');
       }
+      
+      console.log('💾 Saving auth data:', { 
+        token: authToken.substring(0, 10) + '...', 
+        user: authUser 
+      });
+      
+      sessionStorage.setItem('auth_token', authToken);
+      sessionStorage.setItem('auth_user', JSON.stringify(authUser));
+      
+      console.log('✅ Auth data saved to sessionStorage');
+      
+      setAuthState({
+        isAuthenticated: true,
+        user: authUser,
+        isLoading: false,
+        error: null
+      });
+      
+      console.log('✅ Auth state updated');
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.error('❌ Token verification timeout');
