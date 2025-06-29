@@ -146,6 +146,11 @@ async function handleVerifyMagicLink(request, env) {
   const url = new URL(request.url);
   let token;
   
+  console.log('🔍 Magic Link検証開始:', { 
+    method: request.method, 
+    url: request.url.replace(/token=[^&]+/, 'token=***') 
+  });
+  
   if (request.method === 'GET') {
     token = url.searchParams.get('token');
   } else {
@@ -153,12 +158,25 @@ async function handleVerifyMagicLink(request, env) {
     token = body.token;
   }
   
+  console.log('🔍 Token抽出:', { 
+    hasToken: !!token, 
+    tokenStart: token?.substring(0, 10) + '...' 
+  });
+  
   if (!token) {
+    console.error('❌ Token不足');
     throw new Error('Authentication token is required');
   }
   
   try {
+    console.log('🔍 Token検証開始 - バックエンド');
     const result = await verifyAuthToken(token, env);
+    console.log('✅ Token検証成功:', { 
+      success: result.success,
+      hasToken: !!result.token,
+      hasUser: !!result.user,
+      userEmail: result.user?.email
+    });
     
     // JSONレスポンスとして返す（修正: Response オブジェクトを作成）
     return new Response(JSON.stringify(result), {
@@ -169,6 +187,7 @@ async function handleVerifyMagicLink(request, env) {
       }
     });
   } catch (error) {
+    console.error('❌ Magic Link検証エラー:', error);
     throw error;
   }
 }

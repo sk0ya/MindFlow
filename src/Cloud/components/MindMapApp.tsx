@@ -13,6 +13,28 @@ interface Props {
 const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const { authState } = useAuth();
   const { isProcessing } = useMagicLink();
+
+  // 認証状態の変化をログ出力
+  React.useEffect(() => {
+    console.log('🔐 認証状態変化 - MindMapApp:', {
+      isAuthenticated: authState.isAuthenticated,
+      hasUser: !!authState.user,
+      isLoading: authState.isLoading,
+      error: authState.error,
+      userEmail: authState.user?.email
+    });
+  }, [authState]);
+
+  // データとローディング状態の変化をログ出力
+  React.useEffect(() => {
+    console.log('📋 データ状態変化 - MindMapApp:', {
+      hasData: !!data,
+      dataTitle: data?.title,
+      isLoading,
+      error,
+      isProcessing
+    });
+  }, [data, isLoading, error, isProcessing]);
   const { 
     data, 
     selectedNodeId, 

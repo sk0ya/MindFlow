@@ -6,24 +6,34 @@ export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const method = request.method;
   
+  console.log('🗺️ Mindmaps API Request:', { 
+    method, 
+    pathname: url.pathname,
+    hasAuth: !!request.headers.get('Authorization')
+  });
+  
   // JWT authentication
   let userId;
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.error('❌ 認証ヘッダーなし');
     const error = new Error('Authorization header required');
     error.status = 401;
     throw error;
   }
   
   const token = authHeader.substring(7);
+  console.log('🔍 JWT検証開始:', { tokenStart: token.substring(0, 10) + '...' });
   const verification = await verifyJWT(token);
   if (!verification.valid) {
+    console.error('❌ 無効なJWTトークン');
     const error = new Error('Invalid token');
     error.status = 401;
     throw error;
   }
   
   userId = verification.payload.userId; // email address
+  console.log('✅ 認証成功 - Mindmaps API:', { userId });
 
   // Extract mindmap ID from path if present
   const pathParts = url.pathname.split('/');
@@ -35,8 +45,10 @@ export async function handleRequest(request, env) {
     switch (method) {
       case 'GET':
         if (mindmapId) {
+          console.log('📋 特定マップ取得:', { mindmapId });
           response = await getMindMap(env.DB, userId, mindmapId);
         } else {
+          console.log('📋 全マップ一覧取得:', { userId });
           response = await getAllMindMaps(env.DB, userId);
         }
         break;
@@ -83,13 +95,43 @@ export async function handleRequest(request, env) {
 }
 
 async function getAllMindMaps(db, userId) {
-  await ensureUser(db, userId);
+  console.log('📋 getAllMindMaps開始:', { userId });
   
+  await ensureUser(db, userId);
+  console.log('✅ ユーザー確認完了');
+  
+  console.log('🔍 マップクエリ実行');
   const { results } = await db.prepare(
-    'SELECT id, title, created_at, updated_at FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
+    'SELECT * FROM mindmaps WHERE user_id = ? ORDER BY updated_at DESC'
   ).bind(userId).all();
   
-  return { mindmaps: results };
+  console.log('📋 マップクエリ結果:', { 
+    count: results.length,
+    maps: results.map(r => ({ id: r.id, title: r.title }))
+  });
+  
+  // dataフィールドをパースして、完全なマインドマップデータを返す
+  const mindmaps = results.map(row => {
+    const data = JSON.parse(row.data);
+    return {
+      ...data,
+      id: row.id,
+      title: row.title,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  });
+  
+  console.log('📋 完全なマップデータ:', { 
+    count: mindmaps.length,
+    firstMap: mindmaps[0] ? { 
+      id: mindmaps[0].id, 
+      title: mindmaps[0].title,
+      hasRootNode: !!mindmaps[0].rootNode 
+    } : null
+  });
+  
+  return { mindmaps };
 }
 
 async function getMindMap(db, userId, mindmapId) {

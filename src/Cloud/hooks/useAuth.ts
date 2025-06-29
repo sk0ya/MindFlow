@@ -90,27 +90,47 @@ export const useAuth = () => {
   };
 
   const verifyToken = async (token: string) => {
+    console.log('🔐 Token検証開始 - useAuth:', { tokenStart: token.substring(0, 10) + '...' });
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify?token=${token}`, {
+      const url = `${API_BASE_URL}/api/auth/verify?token=${token}`;
+      console.log('📡 API Request:', { url: url.replace(token, token.substring(0, 10) + '...') });
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('📋 API Response:', { 
+        status: response.status, 
+        ok: response.ok,
+        statusText: response.statusText 
+      });
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
         throw new Error('トークン検証に失敗しました');
       }
 
       const data = await response.json();
+      console.log('📋 Response Data:', { 
+        success: data.success,
+        hasToken: !!data.token,
+        hasUser: !!data.user,
+        user: data.user
+      });
       
       if (data.success && data.token && data.user) {
+        console.log('✅ 認証成功 - セッション保存開始');
         // 認証情報をセッションストレージに保存
         sessionStorage.setItem('auth_token', data.token);
         sessionStorage.setItem('auth_user', JSON.stringify(data.user));
         
+        console.log('🔐 認証状態更新');
         setAuthState({
           isAuthenticated: true,
           user: data.user,
@@ -118,12 +138,15 @@ export const useAuth = () => {
           error: null
         });
         
+        console.log('✅ Token検証完了 - 成功');
         return { success: true };
       } else {
+        console.error('❌ Invalid response data:', data);
         throw new Error(data.message || 'トークンが無効です');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'トークン検証に失敗しました';
+      console.error('❌ Token検証エラー:', { error: errorMessage });
       setAuthState(prev => ({ 
         ...prev, 
         isLoading: false, 
