@@ -11,7 +11,7 @@ export const useMagicLink = () => {
     const token = urlParams.get('token');
     const type = urlParams.get('type');
 
-    if (token && type === 'auth' && !magicLinkProcessed) {
+    if (token && type === 'magic-link' && !magicLinkProcessed) {
       setIsProcessing(true);
       setMagicLinkProcessed(true);
 

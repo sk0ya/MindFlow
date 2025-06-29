@@ -48,7 +48,8 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   }
 
   // 未認証の場合は認証モーダルを表示
-  if (!authState.isAuthenticated) {
+  // ただし、認証状態の更新中（isLoading中）は待機
+  if (!authState.isAuthenticated && !authState.isLoading) {
     return (
       <div className="mindmap-app">
         <div className="auth-container">
@@ -74,6 +75,19 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           isVisible={showAuthModal}
           onClose={() => setShowAuthModal(false)}
         />
+      </div>
+    );
+  }
+
+  // 認証状態が更新中の場合は待機画面を表示
+  if (authState.isLoading) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>認証確認中...</h2>
+          <p>認証状態を確認しています</p>
+        </div>
       </div>
     );
   }
