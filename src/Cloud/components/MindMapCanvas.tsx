@@ -143,8 +143,13 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       id: allNodes[0].id,
       text: allNodes[0].text,
       x: allNodes[0].x,
-      y: allNodes[0].y
-    } : null
+      y: allNodes[0].y,
+      fontSize: allNodes[0].fontSize,
+      fontWeight: allNodes[0].fontWeight
+    } : null,
+    zoom,
+    pan,
+    svgHeight: 'calc(100vh - 150px)'
   });
   
   // ドロップターゲット検出のためのヘルパー関数

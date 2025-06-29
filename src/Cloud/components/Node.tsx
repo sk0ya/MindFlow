@@ -39,6 +39,17 @@ const Node: React.FC<NodeProps> = ({
   onDoubleClick,
   scale = 1
 }) => {
+  console.log('🔴 Node レンダリング:', {
+    id: node.id,
+    text: node.text,
+    x: node.x,
+    y: node.y,
+    left: node.x - 50,
+    top: node.y - 20,
+    scale,
+    isSelected,
+    isEditing
+  });
   const handleClick = () => {
     onSelect(node.id);
   };

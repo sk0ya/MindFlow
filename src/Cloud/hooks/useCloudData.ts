@@ -229,17 +229,18 @@ export const useCloudData = () => {
     saveNewData();
   }, [data?.id, authState.isAuthenticated]); // 最小限の依存のみ
 
-  // 自動保存（2秒ごと）
+  // 自動保存（10秒ごと）- 無限ループを防ぐため依存配列を最小化
   useEffect(() => {
     if (!data || !authState.isAuthenticated || !data.id) return;
 
     const interval = setInterval(() => {
       console.log('⏰ 自動保存実行:', { hasId: !!data.id, title: data.title });
+      // 現在のdataをクロージャーでキャプチャして保存
       updateMindMapData(data);
-    }, 2000);
+    }, 10000); // 10秒に延長
 
     return () => clearInterval(interval);
-  }, [data, authState.isAuthenticated, updateMindMapData]);
+  }, [data?.id, authState.isAuthenticated]); // dataオブジェクト全体ではなくIDのみ監視
 
   return {
     data,
