@@ -78,20 +78,7 @@ const MindMapApp: React.FC = () => {
     );
   }
 
-  // 🚨 重要: 認証完了まで、useMindMapフックを呼び出さない
-  if (!auth.state.isAuthenticated || !initState.isReady) {
-    return (
-      <div className="mindmap-app loading-screen">
-        <div className="loading-content">
-          <div className="loading-spinner"></div>
-          <h2>アプリケーション準備中...</h2>
-          <p>認証とデータの初期化を行っています...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // クラウドモードで未認証の場合は認証モーダル表示
+  // クラウドモードで未認証の場合は認証モーダル表示（最優先）
   if (settings.storageMode === 'cloud' && !auth.state.isAuthenticated) {
     return (
       <AuthModal
@@ -102,6 +89,19 @@ const MindMapApp: React.FC = () => {
           // モーダルは自動的に閉じられる
         }}
       />
+    );
+  }
+
+  // 🚨 重要: 認証完了後、アプリ準備まで待機
+  if (!initState.isReady) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>アプリケーション準備中...</h2>
+          <p>認証完了、データの初期化を行っています...</p>
+        </div>
+      </div>
     );
   }
   
@@ -556,7 +556,7 @@ const MindMapApp: React.FC = () => {
 
       {/* 初期化UI - データの有無に関係なく表示 */}
       <AuthModal
-        isVisible={initState.showAuthModal}
+        isOpen={initState.showAuthModal}
         onClose={initState.handleAuthClose}
         onAuthSuccess={handleAuthSuccessWithReinit}
       />

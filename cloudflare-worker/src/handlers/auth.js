@@ -212,7 +212,7 @@ async function handleGetCurrentUser(request, env) {
   
   const userId = verification.payload.userId;
   const { results } = await env.DB.prepare(
-    'SELECT id, email, created_at FROM users WHERE id = ?'
+    'SELECT id, created_at FROM users WHERE id = ?'
   ).bind(userId).all();
   
   if (results.length === 0) {
@@ -222,7 +222,11 @@ async function handleGetCurrentUser(request, env) {
   }
   
   return {
-    user: results[0]
+    user: {
+      id: results[0].id,
+      email: results[0].id, // id = email in new schema
+      created_at: results[0].created_at
+    }
   };
 }
 
@@ -312,13 +316,13 @@ async function handleGoogleCallback(request, env) {
   const now = new Date().toISOString();
   
   const { results } = await env.DB.prepare(
-    'SELECT * FROM users WHERE email = ?'
+    'SELECT * FROM users WHERE id = ?'
   ).bind(userData.email).all();
   
   if (results.length === 0) {
     await env.DB.prepare(
-      'INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)'
-    ).bind(userId, userData.email, now, now).run();
+      'INSERT INTO users (id, created_at, updated_at) VALUES (?, ?, ?)'
+    ).bind(userId, now, now).run();
   }
   
   // JWTトークンを生成
