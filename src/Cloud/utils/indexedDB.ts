@@ -276,6 +276,76 @@ class CloudIndexedDB {
     });
   }
 
+  // データクリーンアップ（空文字ノード除去）
+  async cleanupEmptyNodes(): Promise<number> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
+      const store = transaction.objectStore(this.STORES.MINDMAPS);
+      const request = store.getAll();
+
+      request.onsuccess = async () => {
+        const allMaps = request.result || [];
+        let cleanedCount = 0;
+
+        for (const mapData of allMaps) {
+          let hasChanges = false;
+          
+          // 空文字ノードを再帰的に除去
+          const cleanNodes = (node: any): any => {
+            if (!node) return node;
+            
+            const cleanedChildren = node.children
+              ?.map(cleanNodes)
+              ?.filter((child: any) => child && child.text && child.text.trim() !== '') || [];
+            
+            if (cleanedChildren.length !== node.children?.length) {
+              hasChanges = true;
+            }
+            
+            return {
+              ...node,
+              children: cleanedChildren
+            };
+          };
+
+          const cleanedRootNode = cleanNodes(mapData.rootNode);
+          
+          if (hasChanges) {
+            const cleanedMapData = {
+              ...mapData,
+              rootNode: cleanedRootNode,
+              _metadata: {
+                ...mapData._metadata,
+                isDirty: true // クリーンアップ後は同期が必要
+              }
+            };
+
+            const putRequest = store.put(cleanedMapData);
+            await new Promise((putResolve, putReject) => {
+              putRequest.onsuccess = () => putResolve(void 0);
+              putRequest.onerror = () => putReject(putRequest.error);
+            });
+
+            cleanedCount++;
+            console.log('🧹 IndexedDB: 空文字ノードをクリーンアップ:', {
+              mapId: mapData.id,
+              title: mapData.title
+            });
+          }
+        }
+
+        console.log('✅ IndexedDB: クリーンアップ完了', { cleanedCount });
+        resolve(cleanedCount);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // データベースクリア（開発用）
   async clearAll(): Promise<void> {
     if (!this.db) {
@@ -347,6 +417,10 @@ export async function getDirtyData(): Promise<CachedMindMap[]> {
 
 export async function clearCloudIndexedDB(): Promise<void> {
   return cloudIndexedDB.clearAll();
+}
+
+export async function cleanupEmptyNodesInIndexedDB(): Promise<number> {
+  return cloudIndexedDB.cleanupEmptyNodes();
 }
 
 export type { MindMapData, CachedMindMap, CacheMetadata };

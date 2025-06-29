@@ -114,20 +114,22 @@ export const useMindMap = () => {
       updatedAt: new Date().toISOString()
     };
 
-    setData(newData);
+    // 自動編集の場合はIndexedDB保存を遅延（編集完了後に保存）
+    const saveOptions = autoEdit ? { delayIndexedDB: true } : {};
+    setData(newData, saveOptions);
     setSelectedNodeId(newNode.id);
 
     // 自動編集開始
     if (autoEdit) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🎯 autoEdit=true: 自動編集状態を設定', {
+        console.log('🎯 autoEdit=true: 自動編集状態を設定（IndexedDB保存遅延）', {
           newNodeId: newNode.id,
           newNodeText: newNode.text
         });
       }
       setPendingAutoEdit(newNode.id);
     } else if (process.env.NODE_ENV === 'development') {
-      console.log('🎯 autoEdit=false: 自動編集なし');
+      console.log('🎯 autoEdit=false: 自動編集なし（即座保存）');
     }
   }, [data, setData, findNode]);
 
@@ -162,24 +164,48 @@ export const useMindMap = () => {
     }
   }, [findNode]);
 
-  const finishEdit = useCallback((nodeId?: string, text?: string) => {
+  const finishEdit = useCallback((nodeId?: string, text?: string, options: any = {}) => {
     const targetNodeId = nodeId || editingNodeId;
     const targetText = text !== undefined ? text : editText;
     const isEmpty = !targetText || targetText.trim() === '';
-    
-    // 削除判定（新規作成で空の場合のみ）
     const currentNode = findNode(targetNodeId || '');
-    const isNewEmptyNode = isEmpty && currentNode && (!currentNode.text || currentNode.text.trim() === '');
     const isRoot = targetNodeId === 'root';
     
-    if (isNewEmptyNode && !isRoot) {
-      // 空のノードは削除
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 finishEdit開始:', {
+        targetNodeId,
+        targetText,
+        isEmpty,
+        isRoot,
+        originalText: currentNode?.text,
+        skipDelete: options.skipDelete
+      });
+    }
+    
+    // 削除判定の改善（ローカルモードと同等の判定）
+    const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipDelete && (
+      // 新規作成されたノード（元々空だった）で、テキストが空の場合のみ削除
+      (!currentNode.text || currentNode.text.trim() === '') ||
+      // または、明示的に削除を要求された場合
+      options.forceDelete === true
+    );
+    
+    if (shouldDelete) {
       if (process.env.NODE_ENV === 'development') {
         console.log('🗑️ 空のノードを削除:', targetNodeId);
       }
       deleteNode(targetNodeId || '');
+    } else if (isEmpty && !isRoot && currentNode?.text) {
+      // 空でも既存の内容があった場合は削除せず、元の内容を復元
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 元のテキストを復元:', { targetNodeId, originalText: currentNode.text });
+      }
+      updateNode(targetNodeId || '', { text: currentNode.text });
     } else if (!isEmpty && targetNodeId) {
       // テキストを保存
+      if (process.env.NODE_ENV === 'development') {
+        console.log('💾 テキストを保存:', { targetNodeId, text: targetText.trim() });
+      }
       updateNode(targetNodeId, { text: targetText.trim() });
     }
     
@@ -214,6 +240,18 @@ export const useMindMap = () => {
       }
     }
   }, [pendingAutoEdit, data, findNode]);
+
+  // 編集完了時にIndexedDBに確実に保存するuseEffect
+  useEffect(() => {
+    // 編集が終了した時点でデータを保存（editingNodeIdがnullになった時）
+    if (!editingNodeId && data) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 編集完了 - IndexedDB同期実行');
+      }
+      // 編集完了時は即座にIndexedDBに保存
+      setData(data, { immediate: false });
+    }
+  }, [editingNodeId, data, setData]);
 
   return {
     data,

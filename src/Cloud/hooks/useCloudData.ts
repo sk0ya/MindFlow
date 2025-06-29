@@ -6,7 +6,8 @@ import {
   getFromIndexedDB, 
   getAllFromIndexedDB,
   markAsSynced,
-  getDirtyData
+  getDirtyData,
+  cleanupEmptyNodesInIndexedDB
 } from '../utils/indexedDB';
 
 interface Node {
@@ -396,13 +397,15 @@ export const useCloudData = () => {
     return () => clearInterval(interval);
   }, [data, authState.isAuthenticated, updateMindMapData]);
 
-  // データ更新のラッパー関数（IndexedDB即座保存付き）
+  // データ更新のラッパー関数（編集状態を考慮したIndexedDB保存）
   const updateDataSafe = useCallback(async (newData: MindMapData, options: any = {}) => {
     if (process.env.NODE_ENV === 'development') {
       console.log('📝 データ更新実行:', { 
         hasId: !!newData.id,
         title: newData.title,
         immediate: options.immediate,
+        skipIndexedDB: options.skipIndexedDB,
+        delayIndexedDB: options.delayIndexedDB,
         isIndexedDBReady
       });
     }
@@ -410,15 +413,29 @@ export const useCloudData = () => {
     // 1. メモリ更新（即座のUI反映）
     setData(newData);
     
-    // 2. IndexedDBに即座保存（データ保護）
-    if (isIndexedDBReady && authState.isAuthenticated) {
-      try {
-        await saveToIndexedDB(newData, authState.user?.email);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('💾 updateDataSafe: IndexedDB即座保存完了');
+    // 2. IndexedDBに保存（編集中は遅延可能）
+    const shouldSaveToIndexedDB = isIndexedDBReady && authState.isAuthenticated && !options.skipIndexedDB;
+    
+    if (shouldSaveToIndexedDB) {
+      const saveToIndexedDBWithDelay = async () => {
+        try {
+          await saveToIndexedDB(newData, authState.user?.email);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('💾 updateDataSafe: IndexedDB保存完了', {
+              delayed: !!options.delayIndexedDB
+            });
+          }
+        } catch (indexedDBError) {
+          console.warn('⚠️ updateDataSafe: IndexedDB保存警告:', indexedDBError);
         }
-      } catch (indexedDBError) {
-        console.warn('⚠️ updateDataSafe: IndexedDB保存警告:', indexedDBError);
+      };
+      
+      if (options.delayIndexedDB) {
+        // 編集中の場合は少し遅延させる（編集完了を待つ）
+        setTimeout(saveToIndexedDBWithDelay, 100);
+      } else {
+        // 通常は即座保存
+        await saveToIndexedDBWithDelay();
       }
     }
     
@@ -477,12 +494,29 @@ export const useCloudData = () => {
     }
   }, [isIndexedDBReady, authState.isAuthenticated, getAuthHeaders]);
 
-  // 定期的なバックグラウンド同期（30秒間隔）
+  // 定期的なバックグラウンド同期とクリーンアップ（30秒間隔）
   useEffect(() => {
     if (!isIndexedDBReady || !authState.isAuthenticated) return;
 
-    const syncInterval = setInterval(() => {
-      syncDirtyData();
+    const syncInterval = setInterval(async () => {
+      await syncDirtyData();
+      
+      // 5分に1回クリーンアップ実行
+      const now = Date.now();
+      const lastCleanup = localStorage.getItem('cloud_last_cleanup');
+      const shouldCleanup = !lastCleanup || (now - parseInt(lastCleanup)) > 300000; // 5分
+      
+      if (shouldCleanup) {
+        try {
+          const cleanedCount = await cleanupEmptyNodesInIndexedDB();
+          if (cleanedCount > 0) {
+            console.log('🧹 定期クリーンアップ完了:', { cleanedCount });
+          }
+          localStorage.setItem('cloud_last_cleanup', now.toString());
+        } catch (cleanupError) {
+          console.warn('⚠️ クリーンアップエラー:', cleanupError);
+        }
+      }
     }, 30000); // 30秒間隔
 
     // 初回同期も実行
