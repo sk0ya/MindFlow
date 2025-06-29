@@ -1,6 +1,6 @@
 // オフライン検知とバックグラウンド同期管理
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface OfflineState {
   isOnline: boolean;

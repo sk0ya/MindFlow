@@ -42,6 +42,56 @@ const createDefaultData = (): MindMapData => ({
   updatedAt: new Date().toISOString()
 });
 
+// 空文字ノードをデータから除去する統一関数
+const cleanEmptyNodesFromData = (data: any): any => {
+  if (!data || !data.rootNode) return data;
+
+  const cleanNode = (node: any): any => {
+    if (!node) return node;
+    
+    // 子ノードを再帰的にクリーンアップし、空文字ノードを除去
+    const cleanedChildren = node.children
+      ?.map(cleanNode)
+      ?.filter((child: any) => {
+        // ルートノード以外で、テキストが空またはnullの場合は除去
+        const hasValidText = child && child.text && child.text.trim() !== '';
+        const isRoot = child && child.id === 'root';
+        return isRoot || hasValidText;
+      }) || [];
+
+    return {
+      ...node,
+      children: cleanedChildren
+    };
+  };
+
+  const cleanedData = {
+    ...data,
+    rootNode: cleanNode(data.rootNode),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (process.env.NODE_ENV === 'development') {
+    const originalNodeCount = countNodes(data.rootNode);
+    const cleanedNodeCount = countNodes(cleanedData.rootNode);
+    if (originalNodeCount !== cleanedNodeCount) {
+      console.log('🧹 空文字ノードをクリーンアップ:', {
+        original: originalNodeCount,
+        cleaned: cleanedNodeCount,
+        removed: originalNodeCount - cleanedNodeCount
+      });
+    }
+  }
+
+  return cleanedData;
+};
+
+// ノード数をカウントするヘルパー関数
+const countNodes = (node: any): number => {
+  if (!node) return 0;
+  return 1 + (node.children?.reduce((sum: number, child: any) => sum + countNodes(child), 0) || 0);
+};
+
 export const useCloudData = () => {
   const { authState, getAuthHeaders } = useAuth();
   const [data, setData] = useState<MindMapData | null>(null);
@@ -94,15 +144,19 @@ export const useCloudData = () => {
         try {
           const allLocalData = await getAllFromIndexedDB(authState.user?.email);
           if (allLocalData.length > 0) {
-            localData = allLocalData[0]; // 最初のマップを使用
+            const rawLocalData = allLocalData[0]; // 最初のマップを使用
+            
+            // ローカルデータもクリーンアップ
+            localData = cleanEmptyNodesFromData(rawLocalData);
+            
             if (process.env.NODE_ENV === 'development') {
-              console.log('📱 IndexedDB: ローカルキャッシュ発見:', {
+              console.log('📱 IndexedDB: ローカルキャッシュ発見・クリーンアップ:', {
                 id: localData.id,
                 title: localData.title,
                 isDirty: localData._metadata?.isDirty
               });
             }
-            // ローカルデータを即座に表示
+            // クリーンアップ済みローカルデータを即座に表示
             setData(localData);
           }
         } catch (indexedDBError) {
@@ -148,24 +202,28 @@ export const useCloudData = () => {
       if (result.mindmaps && result.mindmaps.length > 0) {
         const serverData = result.mindmaps[0];
         
-        // 3. サーバーデータをIndexedDBに保存
+        // 3. サーバーデータの空文字ノードをクリーンアップ
+        const cleanedServerData = cleanEmptyNodesFromData(serverData);
+        
+        // 4. クリーンアップ済みデータをIndexedDBに保存
         if (isIndexedDBReady) {
           try {
-            await saveToIndexedDB(serverData, authState.user?.email);
+            await saveToIndexedDB(cleanedServerData, authState.user?.email);
             // 同期済みとしてマーク
-            await markAsSynced(serverData.id);
+            await markAsSynced(cleanedServerData.id);
           } catch (saveError) {
             console.warn('⚠️ IndexedDB保存警告:', saveError);
           }
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('✅ サーバーデータ取得・保存完了:', { 
-            id: serverData.id, 
-            title: serverData.title
+          console.log('✅ サーバーデータ取得・クリーンアップ・保存完了:', { 
+            id: cleanedServerData.id, 
+            title: cleanedServerData.title,
+            nodeCount: countNodes(cleanedServerData.rootNode)
           });
         }
-        setData(serverData);
+        setData(cleanedServerData);
       } else if (createIfNotExists) {
         // データがない場合はデフォルトデータを作成
         const defaultData = createDefaultData();
@@ -406,23 +464,34 @@ export const useCloudData = () => {
         immediate: options.immediate,
         skipIndexedDB: options.skipIndexedDB,
         delayIndexedDB: options.delayIndexedDB,
+        cleanupEmptyNodes: options.cleanupEmptyNodes,
         isIndexedDBReady
       });
     }
     
-    // 1. メモリ更新（即座のUI反映）
-    setData(newData);
+    // 1. 空ノードのクリーンアップ（必要に応じて）
+    let cleanedData = newData;
+    if (options.cleanupEmptyNodes) {
+      cleanedData = cleanEmptyNodesFromData(newData);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧹 空ノードクリーンアップ実行');
+      }
+    }
     
-    // 2. IndexedDBに保存（編集中は遅延可能）
+    // 2. メモリ更新（即座のUI反映）
+    setData(cleanedData);
+    
+    // 3. IndexedDBに保存（編集中は遅延可能）
     const shouldSaveToIndexedDB = isIndexedDBReady && authState.isAuthenticated && !options.skipIndexedDB;
     
     if (shouldSaveToIndexedDB) {
       const saveToIndexedDBWithDelay = async () => {
         try {
-          await saveToIndexedDB(newData, authState.user?.email);
+          await saveToIndexedDB(cleanedData, authState.user?.email);
           if (process.env.NODE_ENV === 'development') {
             console.log('💾 updateDataSafe: IndexedDB保存完了', {
-              delayed: !!options.delayIndexedDB
+              delayed: !!options.delayIndexedDB,
+              cleaned: !!options.cleanupEmptyNodes
             });
           }
         } catch (indexedDBError) {
@@ -439,9 +508,9 @@ export const useCloudData = () => {
       }
     }
     
-    // 3. 即座API同期が必要な場合
+    // 4. 即座API同期が必要な場合
     if (options.immediate) {
-      updateMindMapData(newData);
+      updateMindMapData(cleanedData);
     }
   }, [isIndexedDBReady, authState.isAuthenticated, authState.user?.email, updateMindMapData]);
 

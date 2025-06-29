@@ -123,7 +123,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           if (process.env.NODE_ENV === 'development') {
             console.log('🔄 編集完了 + 新規ノード追加');
           }
-          finishEdit(editingNodeId, editText);
+          finishEdit(editingNodeId, editText, { userInitiated: true });
           setTimeout(() => {
             if (e.key === 'Tab') {
               if (process.env.NODE_ENV === 'development') {
