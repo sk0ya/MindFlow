@@ -152,8 +152,23 @@ export const useCloudData = () => {
       const result = await response.json();
       
       if (result.mindmaps && result.mindmaps.length > 0) {
-        // 全マップのリストを保存
-        const allServerMaps = result.mindmaps.map((mapData: any) => cleanEmptyNodesFromData(mapData));
+        // 全マップのリストを保存（rootNodeが存在しない場合はデフォルトを作成）
+        const allServerMaps = result.mindmaps.map((mapData: any) => {
+          // rootNodeが存在しない場合はデフォルトrootNodeを追加
+          if (!mapData.rootNode) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('⚠️ rootNodeが存在しないため、デフォルトrootNodeを作成:', { id: mapData.id, title: mapData.title });
+            }
+            mapData.rootNode = {
+              id: 'root',
+              text: 'メイントピック',
+              x: 400,
+              y: 300,
+              children: []
+            };
+          }
+          return cleanEmptyNodesFromData(mapData);
+        });
         setAllMaps(allServerMaps);
         
         const serverData = allServerMaps[0];
@@ -181,6 +196,21 @@ export const useCloudData = () => {
           });
         }
         setData(cleanedServerData);
+        
+        // rootNodeが追加された場合は、修正されたデータを保存
+        const originalData = result.mindmaps[0];
+        if (!originalData.rootNode && cleanedServerData.rootNode) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('💾 rootNode追加後のデータを保存:', { id: cleanedServerData.id });
+          }
+          setTimeout(async () => {
+            try {
+              await updateMindMapData(cleanedServerData);
+            } catch (error) {
+              console.warn('⚠️ rootNode追加後の保存エラー:', error);
+            }
+          }, 500);
+        }
       } else if (createIfNotExists) {
         // データがない場合はデフォルトデータを作成してすぐに保存
         const defaultData = createDefaultData();
@@ -416,9 +446,17 @@ export const useCloudData = () => {
     }
   }, [authState.isAuthenticated, data, isLoading, fetchMindMapData]);
 
-  // 新規データの保存（サーバーに未保存のデータ）
+  // 新規データの保存（サーバーに未保存のデータ）- 既存データがある場合は無効化
   useEffect(() => {
     if (!data || !authState.isAuthenticated || isLoading) return;
+    
+    // 既にマップが存在する場合は新規作成を避ける
+    if (allMaps.length > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏭️ 既存マップ存在により新規データ保存をスキップ:', { existingMaps: allMaps.length });
+      }
+      return;
+    }
     
     // createdAt と updatedAt が一致していて、データベースに保存されていない新規データかチェック
     const isNewUnsavedData = data.id && !data.createdAt && !data.updatedAt;
@@ -439,7 +477,7 @@ export const useCloudData = () => {
       
       saveNewData();
     }
-  }, [data?.id, data?.createdAt, data?.updatedAt, authState.isAuthenticated, isLoading, saveMindMapData]);
+  }, [data?.id, data?.createdAt, data?.updatedAt, authState.isAuthenticated, isLoading, saveMindMapData, allMaps.length]);
 
   // デバウンス自動保存（5秒後）
   useEffect(() => {
