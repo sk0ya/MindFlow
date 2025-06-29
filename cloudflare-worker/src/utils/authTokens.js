@@ -21,17 +21,33 @@ export async function createAuthToken(email, request, env) {
   const ipAddress = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
   const userAgent = request.headers.get('User-Agent') || 'unknown';
 
-  // データベースに保存（新スキーマ対応: emailではなくuser_id）
-  await env.DB.prepare(`
-    INSERT INTO auth_tokens (id, user_id, expires_at, used_at, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).bind(
-    tokenId,
-    email,  // user_id = email（新スキーマ）
-    expiresAt.toISOString(),
-    null,
-    new Date().toISOString()
-  ).run();
+  // データベースに保存（互換性対応: token, email または user_id）
+  try {
+    // 新しいスキーマ（id, user_id）を試す
+    await env.DB.prepare(`
+      INSERT INTO auth_tokens (id, user_id, expires_at, used_at, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      tokenId,
+      email,  // user_id = email
+      expiresAt.toISOString(),
+      null,
+      new Date().toISOString()
+    ).run();
+  } catch (error) {
+    // 古いスキーマ（token, email）にフォールバック
+    console.log('新スキーマ失敗、古いスキーマを使用:', error.message);
+    await env.DB.prepare(`
+      INSERT INTO auth_tokens (token, email, expires_at, used_at, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      tokenId,
+      email,
+      expiresAt.getTime(),  // 古いスキーマはUNIXタイムスタンプ
+      null,
+      new Date().toISOString()
+    ).run();
+  }
 
   return {
     tokenId,
@@ -40,28 +56,63 @@ export async function createAuthToken(email, request, env) {
   };
 }
 
-// トークンを検証して使用済みにマーク（新スキーマ対応）
+// トークンを検証して使用済みにマーク（互換性対応）
 export async function verifyAuthToken(token, env) {
-  const { results } = await env.DB.prepare(`
-    SELECT * FROM auth_tokens 
-    WHERE id = ? AND expires_at > datetime('now') AND used_at IS NULL
-  `).bind(token).all();
+  let authToken = null;
+  let userEmail = null;
 
-  if (results.length === 0) {
+  try {
+    // 新しいスキーマ（id, user_id）を試す
+    const { results } = await env.DB.prepare(`
+      SELECT * FROM auth_tokens 
+      WHERE id = ? AND expires_at > datetime('now') AND used_at IS NULL
+    `).bind(token).all();
+
+    if (results.length > 0) {
+      authToken = results[0];
+      userEmail = authToken.user_id;
+      
+      // トークンを使用済みにマーク
+      await env.DB.prepare(`
+        UPDATE auth_tokens 
+        SET used_at = datetime('now') 
+        WHERE id = ?
+      `).bind(authToken.id).run();
+    }
+  } catch (error) {
+    console.log('新スキーマ失敗、古いスキーマを使用:', error.message);
+  }
+
+  // 新スキーマで見つからなかった場合、古いスキーマを試す
+  if (!authToken) {
+    try {
+      const { results } = await env.DB.prepare(`
+        SELECT * FROM auth_tokens 
+        WHERE token = ? AND expires_at > ? AND used_at IS NULL
+      `).bind(token, Date.now()).all();
+
+      if (results.length > 0) {
+        authToken = results[0];
+        userEmail = authToken.email;
+        
+        // トークンを使用済みにマーク
+        await env.DB.prepare(`
+          UPDATE auth_tokens 
+          SET used_at = ? 
+          WHERE token = ?
+        `).bind(Date.now(), authToken.token).run();
+      }
+    } catch (error) {
+      console.log('古いスキーマも失敗:', error.message);
+    }
+  }
+
+  if (!authToken) {
     throw new Error('Invalid or expired authentication token');
   }
 
-  const authToken = results[0];
-  
-  // トークンを使用済みにマーク
-  await env.DB.prepare(`
-    UPDATE auth_tokens 
-    SET used_at = datetime('now') 
-    WHERE id = ?
-  `).bind(authToken.id).run();
-
-  // ユーザーを取得または作成（新スキーマ対応）
-  const user = await getOrCreateUser(authToken.user_id, env);
+  // ユーザーを取得または作成
+  const user = await getOrCreateUser(userEmail, env);
   
   // JWTトークンを生成
   const jwtToken = await generateJWT({
@@ -82,13 +133,27 @@ export async function verifyAuthToken(token, env) {
   };
 }
 
-// ユーザーの既存トークンを無効化（新スキーマ対応）
+// ユーザーの既存トークンを無効化（互換性対応）
 async function invalidateExistingTokens(email, env) {
-  await env.DB.prepare(`
-    UPDATE auth_tokens 
-    SET used_at = datetime('now') 
-    WHERE user_id = ? AND used_at IS NULL
-  `).bind(email).run();
+  try {
+    // 新しいスキーマを試す
+    await env.DB.prepare(`
+      UPDATE auth_tokens 
+      SET used_at = datetime('now') 
+      WHERE user_id = ? AND used_at IS NULL
+    `).bind(email).run();
+  } catch (error) {
+    // 古いスキーマにフォールバック
+    try {
+      await env.DB.prepare(`
+        UPDATE auth_tokens 
+        SET used_at = ? 
+        WHERE email = ? AND used_at IS NULL
+      `).bind(Date.now(), email).run();
+    } catch (oldError) {
+      console.log('トークン無効化エラー:', oldError.message);
+    }
+  }
 }
 
 // ユーザーを取得または作成（新スキーマ対応）
@@ -113,14 +178,31 @@ async function getOrCreateUser(email, env) {
   return { id: userId, created_at: now };
 }
 
-// 期限切れトークンをクリーンアップ
+// 期限切れトークンをクリーンアップ（互換性対応）
 export async function cleanupExpiredTokens(env) {
-  const result = await env.DB.prepare(`
-    DELETE FROM auth_tokens 
-    WHERE expires_at < datetime('now')
-  `).run();
+  let changes = 0;
+  
+  try {
+    // 新しいスキーマを試す
+    const result = await env.DB.prepare(`
+      DELETE FROM auth_tokens 
+      WHERE expires_at < datetime('now')
+    `).run();
+    changes = result.changes || 0;
+  } catch (error) {
+    try {
+      // 古いスキーマにフォールバック
+      const result = await env.DB.prepare(`
+        DELETE FROM auth_tokens 
+        WHERE expires_at < ?
+      `).bind(Date.now()).run();
+      changes = result.changes || 0;
+    } catch (oldError) {
+      console.log('クリーンアップエラー:', oldError.message);
+    }
+  }
 
-  return result.changes || 0;
+  return changes;
 }
 
 // ランダムなIDを生成

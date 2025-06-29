@@ -69,7 +69,10 @@ export const useAuth = () => {
       });
 
       if (!response.ok) {
-        throw new Error('ログインリクエストに失敗しました');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `API Error: ${response.status} ${response.statusText}`;
+        console.error('Login API Error:', { status: response.status, statusText: response.statusText, errorData });
+        throw new Error(errorMessage);
       }
 
       // Magic Link送信成功
