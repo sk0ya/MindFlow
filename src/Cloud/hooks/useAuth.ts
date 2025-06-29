@@ -17,6 +17,12 @@ export function useAuth() {
       const token = sessionStorage.getItem('auth_token');
       const userStr = sessionStorage.getItem('auth_user');
       
+      console.log('🔍 SessionStorage contents:', { 
+        hasToken: !!token, 
+        hasUser: !!userStr,
+        tokenStart: token ? token.substring(0, 10) + '...' : null
+      });
+      
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr) as AuthUser;
@@ -39,7 +45,7 @@ export function useAuth() {
           });
         }
       } else {
-        console.log('❌ No auth data found');
+        console.log('❌ No auth data found in sessionStorage');
         setAuthState({
           isAuthenticated: false,
           user: null,
@@ -122,10 +128,18 @@ export function useAuth() {
       }
 
       const result = await response.json();
+      console.log('📋 API Response Body:', result);
       
       if (result.success && result.token && result.user) {
+        console.log('💾 Saving auth data:', { 
+          token: result.token.substring(0, 10) + '...', 
+          user: result.user 
+        });
+        
         sessionStorage.setItem('auth_token', result.token);
         sessionStorage.setItem('auth_user', JSON.stringify(result.user));
+        
+        console.log('✅ Auth data saved to sessionStorage');
         
         setAuthState({
           isAuthenticated: true,
@@ -133,7 +147,15 @@ export function useAuth() {
           isLoading: false,
           error: null
         });
+        
+        console.log('✅ Auth state updated');
       } else {
+        console.error('❌ Invalid response structure:', { 
+          hasSuccess: !!result.success, 
+          hasToken: !!result.token, 
+          hasUser: !!result.user,
+          result 
+        });
         throw new Error('Invalid token response');
       }
     } catch (error) {
