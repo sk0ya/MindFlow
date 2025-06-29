@@ -201,7 +201,7 @@ export const useMindMapFiles = (
         });
 
         // デバッグ: APIエンドポイントと認証ヘッダーを詳細ログ出力
-        const apiUrl = `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`;
+        const apiUrl = `https://mindflow-api.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`;
         console.log('🔗 API URL:', apiUrl);
         console.log('🔐 認証ヘッダー:', authHeader ? `${authHeader.substring(0, 20)}...` : 'なし');
         
@@ -253,7 +253,7 @@ export const useMindMapFiles = (
           console.error('R2アップロードエラー詳細:', {
             status: uploadResponse.status,
             statusText: uploadResponse.statusText,
-            url: `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`,
+            url: `https://mindflow-api.shigekazukoya.workers.dev/api/files/${currentMapId}/${nodeId}`,
             mapId: currentMapId,
             nodeId,
             errorDetail
@@ -381,7 +381,7 @@ export const useMindMapFiles = (
             }
             
             await fetch(
-              `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}/${fileToRemove.r2FileId}`,
+              `https://mindflow-api.shigekazukoya.workers.dev/api/files/${mapId}/${nodeId}/${fileToRemove.r2FileId}`,
               {
                 method: 'DELETE',
                 headers: {
@@ -454,7 +454,7 @@ export const useMindMapFiles = (
             headers['X-User-ID'] = userId;
           }
           
-          const downloadResponse = await fetch(`https://mindflow-api-production.shigekazukoya.workers.dev${file.downloadUrl}`, {
+          const downloadResponse = await fetch(`https://mindflow-api.shigekazukoya.workers.dev${file.downloadUrl}`, {
             headers
           });
           
@@ -536,7 +536,7 @@ export const useMindMapFiles = (
 
         // ダウンロード用の署名付きURLを取得（マップID修正なし）
         const downloadResponse = await fetch(
-          `https://mindflow-api-production.shigekazukoya.workers.dev/api/files/${mapId}/${actualNodeId}/${file.r2FileId}?type=download`,
+          `https://mindflow-api.shigekazukoya.workers.dev/api/files/${mapId}/${actualNodeId}/${file.r2FileId}?type=download`,
           { headers }
         );
 

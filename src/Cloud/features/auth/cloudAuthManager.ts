@@ -9,7 +9,7 @@ class CloudAuthManager {
   private readonly GITHUB_REDIRECT_URI = undefined; // Remove Vite env dependency
   private readonly API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
     ? 'http://localhost:8787' 
-    : 'https://mindflow-api-production.shigekazukoya.workers.dev';
+    : 'https://mindflow-api.shigekazukoya.workers.dev';
   
   private authEventListeners: Set<(event: AuthEvent) => void> = new Set();
   private tokenRefreshTimer: NodeJS.Timeout | null = null;

@@ -50,7 +50,7 @@ const CloudStoragePanel: React.FC<CloudStoragePanelProps> = ({ isVisible, onClos
       }
       
       const response = await authManager.authenticatedFetch(
-        'https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps'
+        'https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps'
       );
       setConnectionStatus(response.ok ? 'connected' : 'failed');
     } catch (error) {

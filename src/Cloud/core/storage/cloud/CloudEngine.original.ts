@@ -33,7 +33,7 @@ export class CloudEngine {
     // API base URL を環境別に設定
     this.baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
       ? 'http://localhost:8787/api' 
-      : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
+      : 'https://mindflow-api.shigekazukoya.workers.dev/api';
     
     console.log('☁️ クラウドエンジン: 初期化完了', {
       baseUrl: this.baseUrl,

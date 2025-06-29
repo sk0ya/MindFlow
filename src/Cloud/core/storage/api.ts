@@ -19,7 +19,7 @@ const getAPIBase = (): string => {
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     return 'http://localhost:8787/api';
   }
-  return 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
+  return 'https://mindflow-api.shigekazukoya.workers.dev/api';
 };
 
 const API_BASE = getAPIBase();

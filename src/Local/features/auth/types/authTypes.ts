@@ -243,7 +243,7 @@ export const DEFAULT_AUTH_CONFIG: UnifiedAuthConfig = {
   api: {
     baseUrl: process.env.NODE_ENV === 'development' 
       ? 'http://localhost:8787'
-      : 'https://mindflow-api-production.shigekazukoya.workers.dev',
+      : 'https://mindflow-api.shigekazukoya.workers.dev',
     timeout: 30000 // 30秒
   }
 };

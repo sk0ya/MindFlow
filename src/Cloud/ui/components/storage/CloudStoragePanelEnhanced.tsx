@@ -74,7 +74,7 @@ const CloudStoragePanelEnhanced: React.FC<CloudStoragePanelEnhancedProps> = ({ i
     setIsConnecting(true);
     try {
       const response = await authManager.authenticatedFetch(
-        'https://mindflow-api-production.shigekazukoya.workers.dev/api/mindmaps'
+        'https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps'
       );
       setConnectionStatus(response.ok ? 'connected' : 'failed');
     } catch (error) {
@@ -85,7 +85,7 @@ const CloudStoragePanelEnhanced: React.FC<CloudStoragePanelEnhancedProps> = ({ i
   };
 
   const handleLogin = () => {
-    const authUrl = 'https://mindflow-api-production.shigekazukoya.workers.dev/auth/google';
+    const authUrl = 'https://mindflow-api.shigekazukoya.workers.dev/auth/google';
     window.location.href = authUrl;
   };
 

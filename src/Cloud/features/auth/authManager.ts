@@ -40,7 +40,7 @@ class AuthManager {
     // API base URL with environment detection
     this.apiBase = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
       ? 'http://localhost:8787' 
-      : 'https://mindflow-api-production.shigekazukoya.workers.dev';
+      : 'https://mindflow-api.shigekazukoya.workers.dev';
     
     this.loadAuthData();
     this.setupTokenRefresh();

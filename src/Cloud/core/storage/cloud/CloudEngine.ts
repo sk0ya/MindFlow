@@ -27,7 +27,7 @@ export class CloudEngine implements CloudSyncAPI {
     // API base URL を環境別に設定
     this.baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
       ? 'http://localhost:8787/api' 
-      : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
+      : 'https://mindflow-api.shigekazukoya.workers.dev/api';
     
     // IndexedDBとバックグラウンド同期を初期化
     await indexedDBManager.initialize();

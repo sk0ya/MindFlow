@@ -77,7 +77,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
           const mode = isAuthenticated ? 'cloud' : 'local';
           
           // await unifiedSyncService.initialize(mode, {
-          //   apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          //   apiBaseUrl: 'https://mindflow-api.shigekazukoya.workers.dev'
           // });
           
           console.log(`🔄 統一同期サービス初期化完了: ${mode}モード`);
@@ -104,7 +104,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
         if (authState.isAuthenticated) {
           console.log('🔑 認証成功: クラウドモードに切り替え');
           // await unifiedSyncService.switchToCloudMode({
-          //   apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          //   apiBaseUrl: 'https://mindflow-api.shigekazukoya.workers.dev'
           // });
           await triggerCloudSync();
         } else {

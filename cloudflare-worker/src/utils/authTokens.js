@@ -13,40 +13,38 @@ export async function createAuthToken(email, request, env) {
   // 既存の未使用トークンを無効化
   await invalidateExistingTokens(email, env);
 
-  // 新しいトークンを生成
-  const tokenId = generateRandomId();
-  const token = generateRandomToken();
+  // 新しいトークンを生成（新スキーマではid = token）
+  const tokenId = generateRandomToken();  // tokenId自体がトークン
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10分後
   
   // リクエスト情報を取得
   const ipAddress = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
   const userAgent = request.headers.get('User-Agent') || 'unknown';
 
-  // データベースに保存
+  // データベースに保存（新スキーマ対応: emailではなくuser_id）
   await env.DB.prepare(`
-    INSERT INTO auth_tokens (id, email, token, expires_at, ip_address, user_agent)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO auth_tokens (id, user_id, expires_at, used_at, created_at)
+    VALUES (?, ?, ?, ?, ?)
   `).bind(
     tokenId,
-    email,
-    token,
+    email,  // user_id = email（新スキーマ）
     expiresAt.toISOString(),
-    ipAddress,
-    userAgent
+    null,
+    new Date().toISOString()
   ).run();
 
   return {
     tokenId,
-    token,
+    token: tokenId,  // 新スキーマではid = token
     expiresAt
   };
 }
 
-// トークンを検証して使用済みにマーク
+// トークンを検証して使用済みにマーク（新スキーマ対応）
 export async function verifyAuthToken(token, env) {
   const { results } = await env.DB.prepare(`
     SELECT * FROM auth_tokens 
-    WHERE token = ? AND expires_at > datetime('now') AND used_at IS NULL
+    WHERE id = ? AND expires_at > datetime('now') AND used_at IS NULL
   `).bind(token).all();
 
   if (results.length === 0) {
@@ -62,8 +60,8 @@ export async function verifyAuthToken(token, env) {
     WHERE id = ?
   `).bind(authToken.id).run();
 
-  // ユーザーを取得または作成
-  const user = await getOrCreateUser(authToken.email, env);
+  // ユーザーを取得または作成（新スキーマ対応）
+  const user = await getOrCreateUser(authToken.user_id, env);
   
   // JWTトークンを生成
   const jwtToken = await generateJWT({
@@ -78,41 +76,41 @@ export async function verifyAuthToken(token, env) {
     token: jwtToken,
     user: {
       id: user.id,
-      email: user.email,
+      email: user.id,  // 新スキーマではid = email
       created_at: user.created_at
     }
   };
 }
 
-// ユーザーの既存トークンを無効化
+// ユーザーの既存トークンを無効化（新スキーマ対応）
 async function invalidateExistingTokens(email, env) {
   await env.DB.prepare(`
     UPDATE auth_tokens 
     SET used_at = datetime('now') 
-    WHERE email = ? AND used_at IS NULL
+    WHERE user_id = ? AND used_at IS NULL
   `).bind(email).run();
 }
 
-// ユーザーを取得または作成
+// ユーザーを取得または作成（新スキーマ対応）
 async function getOrCreateUser(email, env) {
-  // 既存ユーザーを検索
+  // 既存ユーザーを検索（新スキーマではid = email）
   const { results } = await env.DB.prepare(
-    'SELECT * FROM users WHERE email = ?'
+    'SELECT * FROM users WHERE id = ?'
   ).bind(email).all();
 
   if (results.length > 0) {
     return results[0];
   }
 
-  // 新規ユーザーを作成（メールアドレスをそのまま使用）
+  // 新規ユーザーを作成（新スキーマ対応: id = email）
   const userId = email;
   const now = new Date().toISOString();
 
   await env.DB.prepare(
-    'INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)'
-  ).bind(userId, email, now, now).run();
+    'INSERT INTO users (id, created_at, updated_at) VALUES (?, ?, ?)'
+  ).bind(userId, now, now).run();
 
-  return { id: userId, email, created_at: now };
+  return { id: userId, created_at: now };
 }
 
 // 期限切れトークンをクリーンアップ
