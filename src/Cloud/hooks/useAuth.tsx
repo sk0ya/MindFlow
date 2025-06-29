@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 
 interface AuthUser {
   id: string;
@@ -12,9 +12,20 @@ interface AuthState {
   error: string | null;
 }
 
+interface AuthContextType {
+  authState: AuthState;
+  login: (email: string) => Promise<{ success: boolean; error?: string }>;
+  verifyToken: (token: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  getAuthToken: () => string | null;
+  getAuthHeaders: () => { [key: string]: string };
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev';
 
-export const useAuth = () => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -174,7 +185,7 @@ export const useAuth = () => {
     };
   };
 
-  return {
+  const contextValue: AuthContextType = {
     authState,
     login,
     verifyToken,
@@ -182,4 +193,18 @@ export const useAuth = () => {
     getAuthToken,
     getAuthHeaders
   };
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
