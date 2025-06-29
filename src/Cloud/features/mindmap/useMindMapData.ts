@@ -203,13 +203,18 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
         // シンプル: 即座に新規マップを作成
         console.log('📊 新規マップ作成');
         const initialData = createInitialData() as any;
-        setTimeout(() => setData(initialData), 0);
-        console.log('✅ 初期データ設定完了');
+        // レンダリング後に安全に設定
+        Promise.resolve().then(() => {
+          setData(initialData);
+          console.log('✅ 初期データ設定完了');
+        });
         
       } catch (error) {
         console.error('❌ データ初期化エラー:', error);
         // エラー時も初期データを設定
-        setTimeout(() => setData(createInitialData() as any), 0);
+        Promise.resolve().then(() => {
+          setData(createInitialData() as any);
+        });
       }
     };
 

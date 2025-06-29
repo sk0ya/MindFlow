@@ -103,24 +103,21 @@ const MindMapApp: React.FC = () => {
     storageMode: settings.storageMode
   });
   
-  // シンプル修正: 認証済みなら強制的にアプリ表示
-  if (settings.storageMode === 'cloud' && auth.state.isAuthenticated && !initState.isReady) {
-    console.log('🔧 認証済みだが未準備 - 強制的にアプリ表示');
-    // 認証が完了していれば強制的にアプリを表示
-  } else if (!initState.isReady) {
-    console.log('⏳ アプリ未準備 - ローディング画面表示');
+  // 🔧 最もシンプルな修正: 認証済みならすぐにアプリ表示
+  if (settings.storageMode === 'cloud' && !auth.state.isAuthenticated) {
+    console.log('🔐 未認証 - 認証モーダル表示継続');
     return (
       <div className="mindmap-app loading-screen">
         <div className="loading-content">
           <div className="loading-spinner"></div>
-          <h2>アプリケーション準備中...</h2>
-          <p>認証完了、データの初期化を行っています...</p>
+          <h2>認証が必要です</h2>
+          <p>ログインしてください</p>
         </div>
       </div>
     );
   }
   
-  console.log('✅ アプリ準備完了 - useMindMapフック実行');
+  console.log('✅ 認証完了 - アプリ表示');
   
   const {
     data,
@@ -163,7 +160,7 @@ const MindMapApp: React.FC = () => {
     getAvailableCategories,
     reinitializeAfterModeSelection,
     triggerCloudSync: _triggerCloudSync
-  } = useMindMap(initState.isReady);
+  } = useMindMap(true); // 🔧 常にtrue
   
   // 認証状態は統一システムで管理済み
 
