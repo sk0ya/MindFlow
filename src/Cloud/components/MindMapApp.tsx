@@ -58,6 +58,47 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   }, [data, isLoading, error, isProcessing]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // キーボードショートカット
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingNodeId) return; // 編集中は無効
+
+      console.log('⌨️ キー入力:', {
+        key: e.key,
+        selectedNodeId,
+        hasSelectedNode: !!selectedNodeId
+      });
+
+      if (!selectedNodeId) return;
+
+      switch (e.key) {
+        case 'Tab':
+          e.preventDefault();
+          console.log('🔄 Tab: 子ノード追加');
+          handleAddChild(selectedNodeId);
+          break;
+        case 'Enter':
+          e.preventDefault();
+          console.log('🔄 Enter: 兄弟ノード追加');
+          handleAddSibling(selectedNodeId);
+          break;
+        case ' ': // スペースキー
+          e.preventDefault();
+          console.log('🔄 Space: 編集開始');
+          startEdit(selectedNodeId);
+          break;
+        case 'Delete':
+          e.preventDefault();
+          console.log('🔄 Delete: ノード削除');
+          deleteNode(selectedNodeId);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, editingNodeId, handleAddChild, handleAddSibling, startEdit, deleteNode]);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
@@ -76,7 +117,22 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   };
 
   const handleAddSibling = (nodeId: string) => {
-    const parentNode = findNode(nodeId);
+    // 兄弟ノードを追加する場合は、同じ親の下に追加
+    const node = findNode(nodeId);
+    if (!node || nodeId === 'root') return;
+    
+    // 親ノードを見つける
+    const findParent = (searchNode: any, targetId: string): any => {
+      if (!searchNode.children) return null;
+      for (const child of searchNode.children) {
+        if (child.id === targetId) return searchNode;
+        const found = findParent(child, targetId);
+        if (found) return found;
+      }
+      return null;
+    };
+    
+    const parentNode = findParent(data?.rootNode, nodeId);
     if (parentNode) {
       addChildNode(parentNode.id);
     }

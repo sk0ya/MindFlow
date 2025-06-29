@@ -363,9 +363,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   }, [editingNodeId, onSelectNode]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    console.log('🖱️ Canvas handleKeyDown:', { key: e.key, selectedNodeId, editingNodeId });
+    // ナビゲーション用の矢印キーのみ処理（他はMindMapAppで処理）
     if (selectedNodeId && !editingNodeId) {
-      // 基本的なナビゲーションのみ処理（Tab/Enter/削除はuseKeyboardShortcutsに委任）
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
@@ -382,9 +381,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         case 'ArrowRight':
           e.preventDefault();
           onNavigateToDirection('right');
-          break;
-        default:
-          // 他のキーはuseKeyboardShortcutsで統一処理
           break;
       }
     }
