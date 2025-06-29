@@ -210,6 +210,328 @@ export default function MindMapApp({ onModeChange }: Props) {
   const magicLink = useMagicLink(auth.verifyToken);
   const [email, setEmail] = useState('');
   const [data, setData] = useState<MindMapData>(createDefaultData());
+  const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [cloudMaps, setCloudMaps] = useState<MindMapData[]>([]);
+  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+
+  // Cloud API functions
+  const getAuthToken = () => sessionStorage.getItem('auth_token');
+
+  const fetchMindMaps = async () => {
+    const token = getAuthToken();
+    if (!token || !auth.isAuthenticated) return;
+
+    try {
+      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch mindmaps');
+
+      const result = await response.json();
+      setCloudMaps(result.mindmaps || []);
+      
+      if (result.mindmaps?.length > 0 && !currentMapId) {
+        const firstMap = result.mindmaps[0];
+        await loadMindMap(firstMap.id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch mindmaps:', error);
+    }
+  };
+
+  const loadMindMap = async (mapId: string) => {
+    const token = getAuthToken();
+    if (!token || !auth.isAuthenticated) return;
+
+    try {
+      setIsSyncing(true);
+      const response = await fetch(`https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps/${mapId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to load mindmap');
+
+      const mapData = await response.json();
+      setData(mapData);
+      setCurrentMapId(mapId);
+    } catch (error) {
+      console.error('Failed to load mindmap:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const saveMindMap = async (mapData: MindMapData) => {
+    const token = getAuthToken();
+    if (!token || !auth.isAuthenticated) return;
+
+    try {
+      setIsSyncing(true);
+      
+      let response;
+      if (currentMapId) {
+        response = await fetch(`https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps/${currentMapId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mapData)
+        });
+      } else {
+        response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mapData)
+        });
+      }
+
+      if (!response.ok) throw new Error('Failed to save mindmap');
+
+      const savedMap = await response.json();
+      setCurrentMapId(savedMap.id);
+      
+      fetchMindMaps();
+    } catch (error) {
+      console.error('Failed to save mindmap:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const createNewMindMap = async () => {
+    const newMap = createDefaultData();
+    setData(newMap);
+    setCurrentMapId(null);
+    setSelectedNodeId('root');
+    await saveMindMap(newMap);
+  };
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (auth.isAuthenticated && data && currentMapId) {
+      const timeoutId = setTimeout(() => {
+        saveMindMap(data);
+      }, 2000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [data, auth.isAuthenticated, currentMapId]);
+
+  // Load mindmaps on authentication
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      fetchMindMaps();
+    }
+  }, [auth.isAuthenticated]);
+
+  // MindMap functions
+  const findNode = (id: string, node: Node = data.rootNode): Node | null => {
+    if (node.id === id) return node;
+    for (const child of node.children) {
+      const found = findNode(id, child);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const updateNode = (id: string, updates: Partial<Node>) => {
+    if (!auth.isAuthenticated) return;
+    
+    const updateInNode = (node: Node): Node => {
+      if (node.id === id) {
+        return { ...node, ...updates };
+      }
+      return {
+        ...node,
+        children: node.children.map(updateInNode)
+      };
+    };
+    
+    setData(prev => ({
+      ...prev,
+      rootNode: updateInNode(prev.rootNode),
+      updatedAt: new Date().toISOString()
+    }));
+  };
+
+  const addChild = (parentId: string) => {
+    if (!auth.isAuthenticated) return;
+    
+    const newNode: Node = {
+      id: generateId(),
+      text: 'New Node',
+      x: 0,
+      y: 0,
+      children: []
+    };
+
+    const addToNode = (node: Node): Node => {
+      if (node.id === parentId) {
+        return {
+          ...node,
+          children: [...node.children, newNode]
+        };
+      }
+      return {
+        ...node,
+        children: node.children.map(addToNode)
+      };
+    };
+
+    setData(prev => ({
+      ...prev,
+      rootNode: addToNode(prev.rootNode),
+      updatedAt: new Date().toISOString()
+    }));
+
+    setSelectedNodeId(newNode.id);
+    startEdit(newNode.id);
+  };
+
+  const deleteNode = (id: string) => {
+    if (id === 'root' || !auth.isAuthenticated) return;
+
+    const removeFromNode = (node: Node): Node => ({
+      ...node,
+      children: node.children
+        .filter(child => child.id !== id)
+        .map(removeFromNode)
+    });
+
+    setData(prev => ({
+      ...prev,
+      rootNode: removeFromNode(prev.rootNode),
+      updatedAt: new Date().toISOString()
+    }));
+
+    if (selectedNodeId === id) {
+      setSelectedNodeId('root');
+    }
+  };
+
+  const startEdit = (nodeId: string) => {
+    if (!auth.isAuthenticated) return;
+    
+    const node = findNode(nodeId);
+    if (node) {
+      setEditingNodeId(nodeId);
+      setEditText(node.text);
+    }
+  };
+
+  const finishEdit = () => {
+    if (editingNodeId && editText.trim()) {
+      updateNode(editingNodeId, { text: editText.trim() });
+    }
+    setEditingNodeId(null);
+    setEditText('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (editingNodeId) {
+      if (e.key === 'Enter') {
+        finishEdit();
+      } else if (e.key === 'Escape') {
+        setEditingNodeId(null);
+        setEditText('');
+      }
+      return;
+    }
+
+    if (selectedNodeId) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        addChild(selectedNodeId);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteNode(selectedNodeId);
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        startEdit(selectedNodeId);
+      }
+    }
+  };
+
+  const renderNode = (node: Node): React.ReactElement => (
+    <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+      <rect
+        x={-50}
+        y={-20}
+        width={100}
+        height={40}
+        rx={8}
+        fill={selectedNodeId === node.id ? '#e3f2fd' : '#ffffff'}
+        stroke={selectedNodeId === node.id ? '#2196f3' : '#cccccc'}
+        strokeWidth={selectedNodeId === node.id ? 2 : 1}
+        style={{ cursor: 'pointer' }}
+        onClick={() => setSelectedNodeId(node.id)}
+        onDoubleClick={() => startEdit(node.id)}
+      />
+      {editingNodeId === node.id ? (
+        <foreignObject x={-45} y={-15} width={90} height={30}>
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onBlur={finishEdit}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              handleKeyDown(e);
+            }}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              textAlign: 'center',
+              fontSize: '14px'
+            }}
+            autoFocus
+          />
+        </foreignObject>
+      ) : (
+        <text
+          x={0}
+          y={5}
+          textAnchor="middle"
+          fontSize="14"
+          fill="#333"
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+          onClick={() => setSelectedNodeId(node.id)}
+          onDoubleClick={() => startEdit(node.id)}
+        >
+          {node.text}
+        </text>
+      )}
+      {node.children.map(child => (
+        <line
+          key={`line-${child.id}`}
+          x1={0}
+          y1={0}
+          x2={child.x - node.x}
+          y2={child.y - node.y}
+          stroke="#999"
+          strokeWidth="2"
+        />
+      ))}
+      {node.children.map(renderNode)}
+    </g>
+  );
 
   // Loading states
   if (auth.isLoading || magicLink.isVerifying) {
@@ -378,6 +700,30 @@ export default function MindMapApp({ onModeChange }: Props) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <h1 style={{ margin: 0, fontSize: '24px', color: '#2196f3' }}>MindFlow</h1>
+          {cloudMaps.length > 0 && (
+            <select
+              value={currentMapId || ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  loadMindMap(e.target.value);
+                }
+              }}
+              style={{
+                padding: '8px 12px',
+                border: '2px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minWidth: '150px'
+              }}
+            >
+              <option value="">マップを選択</option>
+              {cloudMaps.map(map => (
+                <option key={map.id} value={map.id}>
+                  {map.title || 'Untitled'}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             value={data.title}
@@ -390,8 +736,36 @@ export default function MindMapApp({ onModeChange }: Props) {
               minWidth: '200px'
             }}
           />
+          <button
+            onClick={createNewMindMap}
+            disabled={isSyncing}
+            style={{
+              padding: '8px 16px',
+              background: '#4caf50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              opacity: isSyncing ? 0.6 : 1
+            }}
+          >
+            新規作成
+          </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {isSyncing && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#2196f3' }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid #f3f3f3',
+                borderTop: '2px solid #2196f3',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              <span style={{ fontSize: '14px' }}>同期中...</span>
+            </div>
+          )}
           <span style={{ color: '#666', fontSize: '14px' }}>
             こんにちは、{auth.user?.email}
           </span>
@@ -425,24 +799,26 @@ export default function MindMapApp({ onModeChange }: Props) {
       </header>
       
       <main style={{ flex: 1, background: '#f8f9fa', overflow: 'hidden' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          height: '100%',
-          color: '#666'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <h2>🎉 認証成功！</h2>
-            <p>クラウドモードで接続されました</p>
-            <p>マインドマップ機能は実装中です</p>
-          </div>
-        </div>
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 800 600"
+          style={{ outline: 'none' }}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedNodeId('root');
+            }
+          }}
+        >
+          {renderNode(data.rootNode)}
+        </svg>
       </main>
       
       <footer style={{
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '12px 24px',
         background: '#fff',
@@ -450,7 +826,8 @@ export default function MindMapApp({ onModeChange }: Props) {
         fontSize: '14px',
         color: '#666'
       }}>
-        <span>Cloud Mode - {new Date().toLocaleString('ja-JP')}</span>
+        <span>最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')} (Cloud)</span>
+        <span>Tab: 子ノード追加 | Space: 編集 | Delete: 削除</span>
       </footer>
     </div>
   );
