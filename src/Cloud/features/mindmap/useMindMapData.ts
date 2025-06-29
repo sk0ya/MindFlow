@@ -178,7 +178,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     }, 2000); // 2秒後に保存
   };
   
-  // アプリ準備完了時のデータ初期化
+  // アプリ準備完了時のデータ初期化 - 完全に安全なバージョン
   useEffect(() => {
     console.log('🔍 useMindMapData初期化チェック:', { 
       isAppReady, 
@@ -196,29 +196,22 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
       return;
     }
 
-    const initializeData = async () => {
+    // 最も安全な初期化：次のイベントループで実行
+    const timeoutId = setTimeout(() => {
       try {
-        console.log('🚀 データ初期化開始');
-        
-        // シンプル: 即座に新規マップを作成
-        console.log('📊 新規マップ作成');
+        console.log('🚀 データ初期化開始（安全版）');
         const initialData = createInitialData() as any;
-        // レンダリング後に安全に設定
-        Promise.resolve().then(() => {
-          setData(initialData);
-          console.log('✅ 初期データ設定完了');
-        });
-        
+        setData(initialData);
+        console.log('✅ 初期データ設定完了');
       } catch (error) {
         console.error('❌ データ初期化エラー:', error);
-        // エラー時も初期データを設定
-        Promise.resolve().then(() => {
-          setData(createInitialData() as any);
-        });
+        setData(createInitialData() as any);
       }
-    };
+    }, 0);
 
-    initializeData();
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [isAppReady, data]);
 
   // クラウド同期処理（統一）
