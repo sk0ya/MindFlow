@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "serve": "serve -s dist",
     "type-check": "tsc --noEmit",
+    "type-check:strict": "tsc --noEmit --strict --noUnusedLocals --noUnusedParameters",
+    "lint:imports": "npx tsc --noEmit --strict --noImplicitReturns --noUnusedLocals --noUnusedParameters",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
