@@ -58,6 +58,44 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   }, [data, isLoading, error, isProcessing]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // ローカルモードと同等の操作性のためのダミー関数
+  const dragNode = (nodeId: string, x: number, y: number) => {
+    // クラウドモード用のドラッグ実装が必要
+    console.log('Drag node:', nodeId, x, y);
+  };
+
+  const handleNodeSelect = (nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+  };
+
+  const handleAddChild = React.useCallback((parentId: string) => {
+    addChildNode(parentId);
+  }, [addChildNode]);
+
+  const handleAddSibling = React.useCallback((nodeId: string) => {
+    // 兄弟ノードを追加する場合は、同じ親の下に追加
+    const node = findNode(nodeId);
+    if (!node || nodeId === 'root') return;
+    
+    // 親ノードを見つける
+    const findParent = (searchNode: any, targetId: string): any => {
+      if (!searchNode.children) return null;
+      for (const child of searchNode.children) {
+        if (child.id === targetId) return searchNode;
+        const found = findParent(child, targetId);
+        if (found) return found;
+      }
+      return null;
+    };
+    
+    const parentNode = findParent(data?.rootNode, nodeId);
+    if (parentNode) {
+      addChildNode(parentNode.id);
+    }
+  }, [findNode, data?.rootNode, addChildNode]);
 
   // キーボードショートカット
   React.useEffect(() => {
@@ -99,44 +137,6 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, editingNodeId, handleAddChild, handleAddSibling, startEdit, deleteNode]);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-
-  // ローカルモードと同等の操作性のためのダミー関数
-  const dragNode = (nodeId: string, x: number, y: number) => {
-    // クラウドモード用のドラッグ実装が必要
-    console.log('Drag node:', nodeId, x, y);
-  };
-
-  const handleNodeSelect = (nodeId: string | null) => {
-    setSelectedNodeId(nodeId);
-  };
-
-  const handleAddChild = (parentId: string) => {
-    addChildNode(parentId);
-  };
-
-  const handleAddSibling = (nodeId: string) => {
-    // 兄弟ノードを追加する場合は、同じ親の下に追加
-    const node = findNode(nodeId);
-    if (!node || nodeId === 'root') return;
-    
-    // 親ノードを見つける
-    const findParent = (searchNode: any, targetId: string): any => {
-      if (!searchNode.children) return null;
-      for (const child of searchNode.children) {
-        if (child.id === targetId) return searchNode;
-        const found = findParent(child, targetId);
-        if (found) return found;
-      }
-      return null;
-    };
-    
-    const parentNode = findParent(data?.rootNode, nodeId);
-    if (parentNode) {
-      addChildNode(parentNode.id);
-    }
-  };
 
   const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
     e.preventDefault();

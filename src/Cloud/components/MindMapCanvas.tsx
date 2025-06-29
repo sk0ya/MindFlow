@@ -41,7 +41,7 @@ interface MindMapCanvasProps {
   setEditText: (text: string) => void;
   onSelectNode: (nodeId: string | null) => void;
   onStartEdit: (nodeId: string) => void;
-  onFinishEdit: (nodeId: string, text: string) => void;
+  onFinishEdit: (nodeId?: string, text?: string) => void;
   onDragNode: (nodeId: string, x: number, y: number) => void;
   onChangeParent?: (nodeId: string, newParentId: string) => void;
   onAddChild: (parentId: string) => void;

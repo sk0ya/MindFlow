@@ -18,7 +18,7 @@ interface NodeProps {
   setEditText: (text: string) => void;
   onSelect: (nodeId: string) => void;
   onStartEdit: (nodeId: string) => void;
-  onFinishEdit: (nodeId: string, text: string) => void;
+  onFinishEdit: (nodeId?: string, text?: string) => void;
   onDrag: (nodeId: string, x: number, y: number) => void;
   onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
   onDoubleClick?: (nodeId: string) => void;

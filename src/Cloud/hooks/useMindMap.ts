@@ -125,9 +125,12 @@ export const useMindMap = () => {
     }
   }, [findNode]);
 
-  const finishEdit = useCallback(() => {
-    if (editingNodeId && editText.trim()) {
-      updateNode(editingNodeId, { text: editText.trim() });
+  const finishEdit = useCallback((nodeId?: string, text?: string) => {
+    const targetNodeId = nodeId || editingNodeId;
+    const targetText = text || editText;
+    
+    if (targetNodeId && targetText.trim()) {
+      updateNode(targetNodeId, { text: targetText.trim() });
     }
     setEditingNodeId(null);
     setEditText('');
