@@ -87,7 +87,14 @@ export const useCloudData = () => {
       if (result.mindmaps && result.mindmaps.length > 0) {
         // 最初のマインドマップを使用
         const mindmap = result.mindmaps[0];
-        console.log('✅ 既存マップデータ使用:', { id: mindmap.id, title: mindmap.title });
+        console.log('✅ 既存マップデータ使用:', { 
+          id: mindmap.id, 
+          title: mindmap.title,
+          hasRootNode: !!mindmap.rootNode,
+          rootNodeId: mindmap.rootNode?.id,
+          rootNodeText: mindmap.rootNode?.text,
+          dataStructure: Object.keys(mindmap)
+        });
         setData(mindmap);
       } else if (createIfNotExists) {
         // データがない場合はデフォルトデータを作成

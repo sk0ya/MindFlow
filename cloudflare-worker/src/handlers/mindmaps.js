@@ -127,7 +127,14 @@ async function getAllMindMaps(db, userId) {
     firstMap: mindmaps[0] ? { 
       id: mindmaps[0].id, 
       title: mindmaps[0].title,
-      hasRootNode: !!mindmaps[0].rootNode 
+      hasRootNode: !!mindmaps[0].rootNode,
+      rootNodeDetails: mindmaps[0].rootNode ? {
+        id: mindmaps[0].rootNode.id,
+        text: mindmaps[0].rootNode.text,
+        x: mindmaps[0].rootNode.x,
+        y: mindmaps[0].rootNode.y
+      } : null,
+      dataKeys: Object.keys(mindmaps[0])
     } : null
   });
   

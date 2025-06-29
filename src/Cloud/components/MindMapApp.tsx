@@ -4,6 +4,9 @@ import { useMagicLink } from '../hooks/useMagicLink';
 import { useMindMap } from '../hooks/useMindMap';
 import { AuthModal } from './AuthModal';
 import type { StorageMode } from '../types';
+import MindMapCanvas from './MindMapCanvas';
+import Toolbar from './Toolbar';
+import ErrorBoundary from './ErrorBoundary';
 import './MindMapApp.css';
 
 interface Props {
@@ -55,6 +58,45 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   }, [data, isLoading, error, isProcessing]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // ローカルモードと同等の操作性のためのダミー関数
+  const dragNode = (nodeId: string, x: number, y: number) => {
+    // クラウドモード用のドラッグ実装が必要
+    console.log('Drag node:', nodeId, x, y);
+  };
+
+  const handleNodeSelect = (nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+  };
+
+  const handleAddChild = (parentId: string) => {
+    addChildNode(parentId);
+  };
+
+  const handleAddSibling = (nodeId: string) => {
+    const parentNode = findNode(nodeId);
+    if (parentNode) {
+      addChildNode(parentNode.id);
+    }
+  };
+
+  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault();
+    // 右クリックメニューの実装が必要
+    console.log('Right click on node:', nodeId);
+  };
+
+  const toggleCollapse = (nodeId: string) => {
+    // 折りたたみ機能の実装が必要
+    console.log('Toggle collapse:', nodeId);
+  };
+
+  const navigateToDirection = (direction: string) => {
+    // キーボードナビゲーションの実装が必要
+    console.log('Navigate to direction:', direction);
+  };
 
   // Magic Link処理中の表示
   if (isProcessing) {
@@ -142,152 +184,79 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     );
   }
 
-  // キーボードイベント処理
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (editingNodeId) {
-      if (e.key === 'Enter') {
-        finishEdit();
-      } else if (e.key === 'Escape') {
-        setEditingNodeId(null);
-        setEditText('');
-      }
-      return;
-    }
-
-    if (selectedNodeId) {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        addChildNode(selectedNodeId);
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        deleteNode(selectedNodeId);
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        startEdit(selectedNodeId);
-      }
-    }
-  };
-
-  // ノードレンダリング
-  const renderNode = (node: any): React.ReactElement => (
-    <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
-      <rect
-        x={-50}
-        y={-20}
-        width={100}
-        height={40}
-        rx={8}
-        fill={selectedNodeId === node.id ? '#e3f2fd' : '#ffffff'}
-        stroke={selectedNodeId === node.id ? '#2196f3' : '#cccccc'}
-        strokeWidth={selectedNodeId === node.id ? 2 : 1}
-        style={{ cursor: 'pointer' }}
-        onClick={() => setSelectedNodeId(node.id)}
-        onDoubleClick={() => startEdit(node.id)}
-      />
-      {editingNodeId === node.id ? (
-        <foreignObject x={-45} y={-15} width={90} height={30}>
-          <input
-            type="text"
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            onBlur={finishEdit}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              handleKeyDown(e);
-            }}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              textAlign: 'center',
-              fontSize: '14px'
-            }}
-            autoFocus
-          />
-        </foreignObject>
-      ) : (
-        <text
-          x={0}
-          y={5}
-          textAnchor="middle"
-          fontSize="14"
-          fill="#333"
-          style={{ cursor: 'pointer', userSelect: 'none' }}
-          onClick={() => setSelectedNodeId(node.id)}
-          onDoubleClick={() => startEdit(node.id)}
-        >
-          {node.text}
-        </text>
-      )}
-      {node.children?.map((child: any) => (
-        <line
-          key={`line-${child.id}`}
-          x1={0}
-          y1={0}
-          x2={child.x - node.x}
-          y2={child.y - node.y}
-          stroke="#999"
-          strokeWidth="2"
-        />
-      ))}
-      {node.children?.map(renderNode)}
-    </g>
-  );
-
   return (
     <div className="mindmap-app">
-      <header className="app-header">
-        <div className="header-left">
-          <h1>MindFlow - クラウド</h1>
-          <input
-            type="text"
-            value={data.title}
-            onChange={(e) => updateTitle(e.target.value)}
-            className="title-input"
-            placeholder="マップタイトル"
-          />
-        </div>
-        <div className="header-right">
-          <span className="user-info">
-            👤 {authState.user?.email}
-          </span>
-          <button
-            onClick={() => onModeChange('local')}
-            className="mode-switch-button"
-          >
-            ローカルモード
-          </button>
-        </div>
-      </header>
+      <ErrorBoundary>
+        <Toolbar
+          title={data?.title || 'クラウドマップ'}
+          onTitleChange={updateTitle}
+          onExport={() => console.log('Export not implemented')}
+          onImport={() => console.log('Import not implemented')}
+          onUndo={() => console.log('Undo not implemented')}
+          onRedo={() => console.log('Redo not implemented')}
+          canUndo={false}
+          canRedo={false}
+          zoom={zoom}
+          onZoomReset={() => setZoom(1)}
+          onShowLocalStoragePanel={() => console.log('Local storage panel not needed')}
+          onToggleSidebar={() => console.log('Sidebar toggle not implemented')}
+          showSidebar={true}
+          authState={authState}
+          onShowAuthModal={() => setShowAuthModal(true)}
+          onLogout={() => console.log('Logout not implemented')}
+          onShowShortcutHelper={() => console.log('Shortcut helper not implemented')}
+        />
 
-      <main className="app-main">
-        <svg
-          width="100%"
-          height="100%"
-          viewBox="0 0 800 600"
-          style={{ outline: 'none' }}
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setSelectedNodeId('root');
-            }
-          }}
-        >
-          {data.rootNode && renderNode(data.rootNode)}
-        </svg>
-      </main>
+        <div className="app-content">
+          {data && data.rootNode ? (
+            <MindMapCanvas
+              data={data}
+              selectedNodeId={selectedNodeId}
+              editingNodeId={editingNodeId}
+              editText={editText}
+              setEditText={setEditText}
+              onSelectNode={handleNodeSelect}
+              onStartEdit={startEdit}
+              onFinishEdit={finishEdit}
+              onDragNode={dragNode}
+              onChangeParent={(nodeId, newParentId) => console.log('Change parent:', nodeId, newParentId)}
+              onAddChild={handleAddChild}
+              onAddSibling={handleAddSibling}
+              onDeleteNode={deleteNode}
+              onRightClick={handleRightClick}
+              onToggleCollapse={toggleCollapse}
+              onNavigateToDirection={navigateToDirection}
+              onFileUpload={(nodeId, file) => console.log('File upload:', nodeId, file)}
+              onRemoveFile={(nodeId, fileId) => console.log('Remove file:', nodeId, fileId)}
+              onShowImageModal={(file) => console.log('Show image modal:', file)}
+              onShowFileActionMenu={(file, position) => console.log('Show file action menu:', file, position)}
+              onShowNodeMapLinks={(node, position) => console.log('Show node map links:', node, position)}
+              zoom={zoom}
+              setZoom={setZoom}
+              pan={pan}
+              setPan={setPan}
+            />
+          ) : (
+            <div className="loading-message">
+              <p>マップデータを読み込み中...</p>
+            </div>
+          )}
+          
+          <div className="mode-switch-container">
+            <button
+              onClick={() => onModeChange('local')}
+              className="mode-switch-button"
+            >
+              ローカルモードに切り替え
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
 
-      <footer className="app-footer">
-        <div className="footer-left">
-          <span>クラウド同期: 自動保存中</span>
-        </div>
-        <div className="footer-right">
-          <span>最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')}</span>
-        </div>
-      </footer>
+      <AuthModal 
+        isVisible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
   );
 };
