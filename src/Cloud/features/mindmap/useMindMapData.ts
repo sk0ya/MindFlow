@@ -183,61 +183,32 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     console.log('🔍 useMindMapData初期化チェック:', { 
       isAppReady, 
       hasData: data !== null, 
-      dataType: typeof data,
-      dataKeys: data ? Object.keys(data) : null 
+      dataType: typeof data 
     });
     
-    if (!isAppReady || data !== null) return;
+    if (!isAppReady) {
+      console.log('⏳ アプリ未準備、初期化スキップ');
+      return;
+    }
+    
+    if (data !== null) {
+      console.log('📊 データ既存、初期化スキップ');
+      return;
+    }
 
     const initializeData = async () => {
       try {
-        console.log('🚀 データ初期化開始 (isAppReady: true)');
+        console.log('🚀 データ初期化開始');
         
-        // 統一インターフェース：StorageManagerを通してデータ初期化
-        const mindMap = await getCurrentMindMap();
-        if (mindMap && mindMap.rootNode) {
-          console.log('📊 既存データ読み込み');
-          const processedData = assignColorsToExistingNodes(mindMap as any) as any;
-          // 非同期でsetDataを呼び出し
-          setTimeout(() => setData(processedData), 0);
-        } else {
-          console.log('📊 getCurrentMapがnull、全マップを確認中...');
-          
-          // getCurrentMapがnullの場合、利用可能なマップを確認
-          const { getAllMindMaps, storageManager } = await import('../../core/storage/StorageManager.js');
-          const allMaps = await getAllMindMaps();
-          
-          if (allMaps && allMaps.length > 0) {
-            console.log('📊 利用可能なマップが見つかりました:', allMaps.length, '件');
-            // 最新のマップを使用
-            const latestMap = allMaps.sort((a, b) => 
-              new Date(b.updatedAt || b.createdAt || 0).getTime() - 
-              new Date(a.updatedAt || a.createdAt || 0).getTime()
-            )[0];
-            
-            const processedData = assignColorsToExistingNodes(latestMap as any) as any;
-            setTimeout(() => setData(processedData), 0);
-            console.log('✅ 最新マップ読み込み:', latestMap.title);
-          } else {
-            console.log('📊 マップが存在しない、新規マップ作成');
-            const initialData = createInitialData() as any;
-            
-            // 新規マップをストレージに保存
-            try {
-              await storageManager.createMap(initialData);
-              console.log('✅ 新規マップをストレージに保存完了');
-            } catch (saveError) {
-              console.warn('⚠️ 新規マップ保存失敗、メモリのみで続行:', saveError);
-            }
-            
-            // 非同期でsetDataを呼び出し
-            setTimeout(() => setData(initialData), 0);
-          }
-        }
-        console.log('✅ データ初期化完了');
+        // シンプル: 即座に新規マップを作成
+        console.log('📊 新規マップ作成');
+        const initialData = createInitialData() as any;
+        setTimeout(() => setData(initialData), 0);
+        console.log('✅ 初期データ設定完了');
+        
       } catch (error) {
         console.error('❌ データ初期化エラー:', error);
-        // エラー時も非同期で初期データを設定
+        // エラー時も初期データを設定
         setTimeout(() => setData(createInitialData() as any), 0);
       }
     };
@@ -246,60 +217,10 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   }, [isAppReady, data]);
 
   // クラウド同期処理（統一）
-  // 認証成功時のクラウド同期トリガー（統一インターフェース）
+  // 認証成功時のクラウド同期トリガー（シンプル版）
   const triggerCloudSync = async () => {
-    console.log('🔑 認証成功: クラウド同期をトリガー', { 
-      hasData: !!data, 
-      isPlaceholder: (data as any)?.isPlaceholder 
-    });
-    
-    // バックグラウンド同期完了を待機してからデータを再取得
-    const waitForSyncAndInitialize = async (retries = 5) => {
-      for (let i = 0; i < retries; i++) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 1秒, 2秒, 3秒...
-        
-        console.log(`🔄 同期後データ確認 (試行 ${i + 1}/${retries})`);
-        
-        // 統一インターフェースで再初期化
-        const { getAllMindMaps } = await import('../../core/storage/StorageManager.js');
-        const allMaps = await getAllMindMaps();
-        
-        if (allMaps && allMaps.length > 0) {
-          console.log('📊 同期後にマップ発見:', allMaps.length, '件');
-          // 最新のマップを使用
-          const latestMap = allMaps.sort((a, b) => 
-            new Date(b.updatedAt || b.createdAt || 0).getTime() - 
-            new Date(a.updatedAt || a.createdAt || 0).getTime()
-          )[0];
-          
-          const processedData = assignColorsToExistingNodes(latestMap as any);
-          setTimeout(() => setData(processedData as any), 0);
-          console.log('✅ 同期後マップ表示:', latestMap.title);
-          return;
-        }
-      }
-      
-      // 同期後もマップが見つからない場合は新規作成
-      console.log('📊 同期後もマップなし、新規マップ作成');
-      const initialData = createInitialData() as any;
-      
-      try {
-        const { storageManager } = await import('../../core/storage/StorageManager.js');
-        await storageManager.createMap(initialData);
-        console.log('✅ 新規マップをクラウドに作成完了');
-      } catch (error) {
-        console.warn('⚠️ 新規マップ作成失敗:', error);
-      }
-      
-      setTimeout(() => setData(initialData), 0);
-    };
-    
-    // 非同期で実行（現在の処理をブロックしない）
-    waitForSyncAndInitialize().catch(error => {
-      console.error('❌ 同期後初期化エラー:', error);
-      // フォールバック: 即座に新規データを作成
-      setTimeout(() => setData(createInitialData() as any), 0);
-    });
+    console.log('🔑 認証成功: データ再読み込み');
+    // 何もしない（初期化は通常フローに任せる）
   };
 
   // 履歴に追加

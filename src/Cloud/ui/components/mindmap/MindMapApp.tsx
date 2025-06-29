@@ -170,22 +170,17 @@ const MindMapApp: React.FC = () => {
     }
   };
 
-  // 認証成功時の統合ハンドラー
+  // 認証成功時のシンプルハンドラー
   const handleAuthSuccessWithReinit = async () => {
     try {
-      console.log('✅ 認証成功 (統合版)');
+      console.log('✅ 認証成功 (シンプル版)');
       
-      // useAppInitializationのhandleAuthSuccessを実行（設定永続化とアダプター初期化を含む）
+      // useAppInitializationのhandleAuthSuccessを実行（isReady: trueを設定）
       await initState.handleAuthSuccess();
       
-      // 認証成功後のマップデータ再初期化
-      if (typeof reinitializeAfterModeSelection === 'function') {
-        console.log('🔄 認証成功後のマップデータ再初期化開始');
-        await reinitializeAfterModeSelection();
-        console.log('✅ 認証成功後のマップデータ再初期化完了');
-      }
+      console.log('✅ 認証成功処理完了');
     } catch (error) {
-      console.error('❌ 認証成功とリニューアルエラー:', error);
+      console.error('❌ 認証成功エラー:', error);
     }
   };
 
