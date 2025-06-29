@@ -4,7 +4,7 @@ import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
 import ContextMenu from '../common/ContextMenu';
-import ErrorBoundary from '../errors/ErrorBoundary';
+import { ErrorBoundary } from '../../../../shared/components';
 import ImageModal from '../files/ImageModal';
 import FileActionMenu from '../files/FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
