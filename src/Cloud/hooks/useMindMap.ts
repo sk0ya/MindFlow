@@ -15,7 +15,7 @@ interface Node {
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
 export const useMindMap = () => {
-  const { data, setData, isLoading, error } = useCloudData();
+  const { data, allMaps, setData, isLoading, error, switchToMap, createNewMap } = useCloudData();
   const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
@@ -230,6 +230,7 @@ export const useMindMap = () => {
 
   return {
     data,
+    allMaps,
     selectedNodeId,
     editingNodeId,
     editText,
@@ -244,6 +245,8 @@ export const useMindMap = () => {
     deleteNode,
     startEdit,
     finishEdit,
-    updateTitle
+    updateTitle,
+    switchToMap,
+    createNewMap
   };
 };

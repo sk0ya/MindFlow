@@ -20,6 +20,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const { offlineState } = useOfflineSync();
   const { 
     data, 
+    allMaps,
     selectedNodeId, 
     editingNodeId, 
     editText, 
@@ -33,7 +34,9 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     startEdit,
     finishEdit,
     updateTitle,
-    updateNode
+    updateNode,
+    switchToMap,
+    createNewMap
   } = useMindMap();
 
   // 認証状態の変化をログ出力
@@ -63,6 +66,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   }, [data, isLoading, error, isProcessing]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showMapList, setShowMapList] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
@@ -371,6 +375,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           onShowAuthModal={() => setShowAuthModal(true)}
           onLogout={() => console.log('Logout not implemented')}
           onShowShortcutHelper={() => console.log('Shortcut helper not implemented')}
+          onShowMapList={() => setShowMapList(true)}
         />
 
         <div className="app-content">

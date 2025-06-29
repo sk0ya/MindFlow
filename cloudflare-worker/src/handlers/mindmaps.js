@@ -167,23 +167,53 @@ async function createMindMap(db, userId, mindmapData) {
   const id = mindmapData.id || crypto.randomUUID();
   const now = new Date().toISOString();
   
-  await db.prepare(
-    'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(
-    id,
-    userId,
-    mindmapData.title || 'Untitled Mind Map',
-    JSON.stringify(mindmapData),
-    now,
-    now
-  ).run();
+  console.log('💾 マインドマップ作成/更新:', { id, userId, title: mindmapData.title });
   
-  return {
-    ...mindmapData,
-    id: id,
-    createdAt: now,
-    updatedAt: now
-  };
+  // 既存マップをチェック
+  const { results: existing } = await db.prepare(
+    'SELECT id, created_at FROM mindmaps WHERE id = ? AND user_id = ?'
+  ).bind(id, userId).all();
+  
+  if (existing.length > 0) {
+    // 既存の場合は更新
+    console.log('🔄 既存マップを更新:', { id });
+    await db.prepare(
+      'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+    ).bind(
+      mindmapData.title || 'Untitled Mind Map',
+      JSON.stringify(mindmapData),
+      now,
+      id,
+      userId
+    ).run();
+    
+    return {
+      ...mindmapData,
+      id: id,
+      createdAt: existing[0].created_at,
+      updatedAt: now
+    };
+  } else {
+    // 新規作成
+    console.log('🆕 新規マップを作成:', { id });
+    await db.prepare(
+      'INSERT INTO mindmaps (id, user_id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(
+      id,
+      userId,
+      mindmapData.title || 'Untitled Mind Map',
+      JSON.stringify(mindmapData),
+      now,
+      now
+    ).run();
+    
+    return {
+      ...mindmapData,
+      id: id,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
 }
 
 async function updateMindMap(db, userId, mindmapId, mindmapData) {

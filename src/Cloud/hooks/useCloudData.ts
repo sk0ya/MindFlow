@@ -45,10 +45,12 @@ const createDefaultData = (): MindMapData => ({
 export const useCloudData = () => {
   const { authState, getAuthHeaders } = useAuth();
   const [data, setData] = useState<MindMapData | null>(null);
+  const [allMaps, setAllMaps] = useState<MindMapData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isIndexedDBReady, setIsIndexedDBReady] = useState(false);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
   // IndexedDB初期化
   useEffect(() => {
@@ -150,7 +152,11 @@ export const useCloudData = () => {
       const result = await response.json();
       
       if (result.mindmaps && result.mindmaps.length > 0) {
-        const serverData = result.mindmaps[0];
+        // 全マップのリストを保存
+        const allServerMaps = result.mindmaps.map((mapData: any) => cleanEmptyNodesFromData(mapData));
+        setAllMaps(allServerMaps);
+        
+        const serverData = allServerMaps[0];
         
         // 3. サーバーデータの空文字ノードをクリーンアップ
         const cleanedServerData = cleanEmptyNodesFromData(serverData);
@@ -170,7 +176,8 @@ export const useCloudData = () => {
           console.log('✅ サーバーデータ取得・クリーンアップ・保存完了:', { 
             id: cleanedServerData.id, 
             title: cleanedServerData.title,
-            nodeCount: countNodes(cleanedServerData.rootNode)
+            nodeCount: countNodes(cleanedServerData.rootNode),
+            totalMaps: allServerMaps.length
           });
         }
         setData(cleanedServerData);
@@ -182,19 +189,23 @@ export const useCloudData = () => {
         }
         setData(defaultData);
         
-        // デフォルトデータをすぐにAPIに保存
+        // デフォルトデータをすぐにAPIに保存（重複を避けるため一度だけ）
         setTimeout(async () => {
           if (process.env.NODE_ENV === 'development') {
             console.log('💾 デフォルトデータ即座保存開始');
           }
-          const saveResult = await saveMindMapData(defaultData);
-          if (saveResult && saveResult.success && saveResult.data) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ デフォルトデータ保存成功');
+          try {
+            const saveResult = await saveMindMapData(defaultData);
+            if (saveResult && saveResult.success && saveResult.data) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('✅ デフォルトデータ保存成功');
+              }
+              setData(saveResult.data);
+            } else {
+              console.warn('⚠️ デフォルトデータ保存失敗:', saveResult);
             }
-            setData(saveResult.data);
-          } else {
-            console.warn('⚠️ デフォルトデータ保存失敗:', saveResult);
+          } catch (error) {
+            console.warn('⚠️ デフォルトデータ保存エラー:', error);
           }
         }, 100);
       }
@@ -219,11 +230,22 @@ export const useCloudData = () => {
         isAuthenticated: authState.isAuthenticated,
         hasId: !!mapData.id,
         title: mapData.title,
-        isIndexedDBReady
+        isIndexedDBReady,
+        isAlreadySaving: savingIds.has(mapData.id)
       });
     }
     
     if (!authState.isAuthenticated) return { success: false, error: '未認証' };
+    
+    // 重複保存防止
+    if (savingIds.has(mapData.id)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏭️ 重複保存をスキップ:', { id: mapData.id, title: mapData.title });
+      }
+      return { success: false, error: '保存中...' };
+    }
+    
+    setSavingIds(prev => new Set(prev).add(mapData.id));
 
     // 1. 先にIndexedDBに保存（即座の応答性）
     if (isIndexedDBReady) {
@@ -298,8 +320,15 @@ export const useCloudData = () => {
         error: errorMessage,
         localSaved: isIndexedDBReady // ローカル保存は成功している
       };
+    } finally {
+      // 保存完了後にIDを削除
+      setSavingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(mapData.id);
+        return newSet;
+      });
     }
-  }, [authState.isAuthenticated, authState.user?.email, isIndexedDBReady, getAuthHeaders]);
+  }, [authState.isAuthenticated, authState.user?.email, isIndexedDBReady, getAuthHeaders, savingIds]);
 
   // マインドマップデータの更新（IndexedDB + API）
   const updateMindMapData = useCallback(async (mapData: MindMapData) => {
@@ -515,8 +544,39 @@ export const useCloudData = () => {
   }, [isIndexedDBReady, authState.isAuthenticated, syncDirtyData]);
 
 
+  // マップ切り替え関数
+  const switchToMap = useCallback(async (mapId: string) => {
+    const targetMap = allMaps.find(map => map.id === mapId);
+    if (targetMap) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 マップ切り替え:', { from: data?.id, to: mapId, title: targetMap.title });
+      }
+      setData(targetMap);
+    }
+  }, [allMaps, data?.id]);
+
+  // 新規マップ作成関数
+  const createNewMap = useCallback(async (title: string = '新しいマインドマップ') => {
+    const newMapData = createDefaultData();
+    newMapData.title = title;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🆕 新規マップ作成:', { title, id: newMapData.id });
+    }
+    
+    // 新規マップを保存
+    const saveResult = await saveMindMapData(newMapData);
+    if (saveResult && saveResult.success && saveResult.data) {
+      setData(saveResult.data);
+      setAllMaps(prev => [saveResult.data, ...prev]);
+      return saveResult.data;
+    }
+    return null;
+  }, [saveMindMapData]);
+
   return {
     data,
+    allMaps,
     setData: updateDataSafe,
     isLoading,
     error,
@@ -525,6 +585,8 @@ export const useCloudData = () => {
     saveMindMapData,
     updateMindMapData,
     syncDirtyData,
+    switchToMap,
+    createNewMap,
     isIndexedDBReady
   };
 };
