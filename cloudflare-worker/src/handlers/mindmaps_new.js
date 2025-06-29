@@ -20,7 +20,7 @@ export async function handleMindMapsRequest(request, env) {
         status: authResult.status,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders
+          ...corsHeaders(env.CORS_ORIGIN)(env.CORS_ORIGIN)
         }
       });
     }
@@ -63,7 +63,7 @@ export async function handleMindMapsRequest(request, env) {
       status: 404,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
 
@@ -77,7 +77,7 @@ export async function handleMindMapsRequest(request, env) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -115,7 +115,7 @@ async function getAllMindMaps(request, env, userId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -134,7 +134,7 @@ async function createMindMap(request, env, userId) {
       status: 400,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -154,7 +154,7 @@ async function createMindMap(request, env, userId) {
       status: 409,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -197,7 +197,7 @@ async function createMindMap(request, env, userId) {
       status: 201,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
 
@@ -211,7 +211,7 @@ async function createMindMap(request, env, userId) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -248,7 +248,7 @@ async function getMindMap(request, env, userId, mindmapId) {
       status: 404,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -265,7 +265,7 @@ async function getMindMap(request, env, userId, mindmapId) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -285,7 +285,7 @@ async function getMindMap(request, env, userId, mindmapId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -313,7 +313,7 @@ async function updateMindMap(request, env, userId, mindmapId) {
       status: 404,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -329,7 +329,7 @@ async function updateMindMap(request, env, userId, mindmapId) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -372,7 +372,7 @@ async function updateMindMap(request, env, userId, mindmapId) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
 
@@ -386,7 +386,7 @@ async function updateMindMap(request, env, userId, mindmapId) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -413,7 +413,7 @@ async function deleteMindMap(request, env, userId, mindmapId) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -447,7 +447,7 @@ async function deleteMindMap(request, env, userId, mindmapId) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
 
@@ -461,7 +461,7 @@ async function deleteMindMap(request, env, userId, mindmapId) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -491,7 +491,7 @@ async function getSyncInfo(request, env, userId, mindmapId) {
       status: 404,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -500,7 +500,7 @@ async function getSyncInfo(request, env, userId, mindmapId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }

@@ -20,7 +20,7 @@ export async function handleSyncRequest(request, env) {
         status: authResult.status,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders
+          ...corsHeaders(env.CORS_ORIGIN)
         }
       });
     }
@@ -61,7 +61,7 @@ export async function handleSyncRequest(request, env) {
       status: 404,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
 
@@ -75,7 +75,7 @@ export async function handleSyncRequest(request, env) {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -94,7 +94,7 @@ async function handleBatchOperations(request, env, userId) {
       status: 400,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(env.CORS_ORIGIN)
       }
     });
   }
@@ -130,7 +130,7 @@ async function handleBatchOperations(request, env, userId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -333,7 +333,7 @@ async function getPendingOperations(request, env, userId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -357,7 +357,7 @@ async function updateOperationStatus(request, env, userId, operationId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -384,7 +384,7 @@ async function getSyncStatus(request, env, userId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -404,7 +404,7 @@ async function getConflicts(request, env, userId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }
@@ -437,7 +437,7 @@ async function resolveConflict(request, env, userId, mindmapId) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      ...corsHeaders
+      ...corsHeaders(env.CORS_ORIGIN)
     }
   });
 }

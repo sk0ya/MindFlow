@@ -91,14 +91,14 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
   // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
   const dataHook = useMindMapData(isAppReady);
   
-  // デバッグログ（初回または状態変化時のみ）
+  // デバッグログ（初回のみ）
   useEffect(() => {
-    if (!debugLogged || (dataHook.data?.id && !debugLogged)) {
+    if (!debugLogged) {
       console.log('🔧 useMindMap called with isAppReady:', isAppReady);
       console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
       setDebugLogged(true);
     }
-  }, [isAppReady, dataHook.data?.id, debugLogged]);
+  }, [debugLogged]);
   
   // ノード操作（dataがある場合のみ）
   const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData, dataHook.blockRealtimeSyncTemporarily);
