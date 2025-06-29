@@ -15,7 +15,7 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 200,
-        headers: corsHeaders
+        headers: corsHeaders(env.CORS_ORIGIN)
       });
     }
 
@@ -48,7 +48,7 @@ export default {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders
+            ...corsHeaders(env.CORS_ORIGIN)
           }
         });
       }
@@ -71,7 +71,7 @@ export default {
         status: 404,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders
+          ...corsHeaders(env.CORS_ORIGIN)
         }
       });
 
@@ -86,7 +86,7 @@ export default {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders
+          ...corsHeaders(env.CORS_ORIGIN)
         }
       });
     }
