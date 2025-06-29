@@ -75,7 +75,7 @@ export const useOfflineSync = () => {
 
     try {
       // シンプルなネットワークテスト
-      const response = await fetch('https://httpbin.org/get', {
+      await fetch('https://httpbin.org/get', {
         method: 'HEAD',
         mode: 'no-cors',
         cache: 'no-cache'

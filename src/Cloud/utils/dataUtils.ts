@@ -6,6 +6,7 @@ interface Node {
   x: number;
   y: number;
   children: Node[];
+  collapsed?: boolean;
 }
 
 interface MindMapData {

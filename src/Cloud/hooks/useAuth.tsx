@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 
 interface AuthUser {
   id: string;
@@ -175,12 +175,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return sessionStorage.getItem('auth_token');
   };
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): { [key: string]: string } => {
     const token = getAuthToken();
-    return token ? {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    } : {
+    if (token) {
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+    }
+    return {
       'Content-Type': 'application/json'
     };
   };

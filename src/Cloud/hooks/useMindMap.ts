@@ -8,19 +8,14 @@ interface Node {
   x: number;
   y: number;
   children: Node[];
+  collapsed?: boolean;
 }
 
-interface MindMapData {
-  id: string;
-  title: string;
-  rootNode: Node;
-  updatedAt: string;
-}
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
 export const useMindMap = () => {
-  const { data, setData, updateMindMapData, isLoading, error } = useCloudData();
+  const { data, setData, isLoading, error } = useCloudData();
   const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useMagicLink } from '../hooks/useMagicLink';
 import { useMindMap } from '../hooks/useMindMap';
@@ -17,7 +17,7 @@ interface Props {
 const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const { authState } = useAuth();
   const { isProcessing } = useMagicLink();
-  const { offlineState, markUnsyncedData } = useOfflineSync();
+  const { offlineState } = useOfflineSync();
   const { 
     data, 
     selectedNodeId, 
@@ -364,7 +364,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           canRedo={false}
           zoom={zoom}
           onZoomReset={() => setZoom(1)}
-          onShowLocalStoragePanel={() => console.log('Local storage panel not needed')}
+          onShowCloudStoragePanel={() => console.log('Cloud storage panel not needed')}
           onToggleSidebar={() => console.log('Sidebar toggle not implemented')}
           showSidebar={true}
           authState={authState}

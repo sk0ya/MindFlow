@@ -3,7 +3,6 @@ import { useAuth } from './useAuth';
 import { 
   initCloudIndexedDB, 
   saveToIndexedDB, 
-  getFromIndexedDB, 
   getAllFromIndexedDB,
   markAsSynced,
   getDirtyData
