@@ -90,12 +90,19 @@ export function useAuth() {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
+      // リソース不足エラーを避けるため、タイムアウトを設定
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒タイムアウト
+
       const response = await fetch(`https://mindflow-api.shigekazukoya.workers.dev/api/auth/verify?token=${encodeURIComponent(token)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       console.log('📡 API Response:', { 
         status: response.status, 
@@ -125,11 +132,20 @@ export function useAuth() {
         throw new Error('Invalid token response');
       }
     } catch (error) {
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Token verification failed'
-      }));
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('❌ Token verification timeout');
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'サーバーの応答がタイムアウトしました。しばらく時間をおいて再試行してください。'
+        }));
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Token verification failed'
+        }));
+      }
     }
   };
 

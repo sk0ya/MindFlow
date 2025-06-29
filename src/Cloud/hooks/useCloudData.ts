@@ -16,10 +16,15 @@ export function useCloudData(isAuthenticated: boolean) {
     error: null
   });
 
-  // ログイン後のデータ同期
+  // ログイン後のデータ同期（遅延実行でリソース負荷を軽減）
   useEffect(() => {
     if (isAuthenticated) {
-      syncData();
+      // 少し遅延させてからデータ同期を実行
+      const timeoutId = setTimeout(() => {
+        syncData();
+      }, 1000);
+      
+      return () => clearTimeout(timeoutId);
     } else {
       // ログアウト時にデータをクリア
       setState({
@@ -40,15 +45,48 @@ export function useCloudData(isAuthenticated: boolean) {
         throw new Error('認証トークンがありません');
       }
 
+      // リソース不足を避けるため、シンプルな実装でテスト
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒タイムアウト
+
       const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/maps', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        }
+        },
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
+        // リソース不足エラーの場合、初期マップを作成
+        if (response.status === 0 || response.status >= 500) {
+          console.warn('⚠️ Server resource issue, creating initial map locally');
+          const initialMap = {
+            id: crypto.randomUUID(),
+            title: '最初のマインドマップ',
+            rootNode: {
+              id: 'root',
+              text: '最初のマインドマップ',
+              x: 400,
+              y: 300,
+              children: []
+            },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          setState(prev => ({
+            ...prev,
+            maps: [initialMap],
+            currentMapId: initialMap.id,
+            isLoading: false,
+            error: null
+          }));
+          return;
+        }
         throw new Error(`データ取得に失敗しました: ${response.status}`);
       }
 
@@ -65,12 +103,37 @@ export function useCloudData(isAuthenticated: boolean) {
 
       console.log('✅ Cloud data synced:', { mapCount: maps.length });
     } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'データ同期に失敗しました'
-      }));
-      console.error('❌ Cloud data sync failed:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('⚠️ Request timeout, creating initial map locally');
+        const initialMap = {
+          id: crypto.randomUUID(),
+          title: '最初のマインドマップ',
+          rootNode: {
+            id: 'root',
+            text: '最初のマインドマップ',
+            x: 400,
+            y: 300,
+            children: []
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        setState(prev => ({
+          ...prev,
+          maps: [initialMap],
+          currentMapId: initialMap.id,
+          isLoading: false,
+          error: null
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'データ同期に失敗しました'
+        }));
+        console.error('❌ Cloud data sync failed:', error);
+      }
     }
   };
 

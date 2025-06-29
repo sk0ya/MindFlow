@@ -11,7 +11,7 @@ export function useMindMap(isAuthenticated: boolean = false) {
   
   const cloudData = useCloudData(isAuthenticated);
 
-  // クラウドデータとの同期
+  // クラウドデータとの同期（リソース負荷を軽減）
   useEffect(() => {
     if (isAuthenticated && cloudData.maps.length > 0) {
       const currentMap = cloudData.getCurrentMap();
@@ -20,11 +20,10 @@ export function useMindMap(isAuthenticated: boolean = false) {
         setSelectedNodeId(currentMap.rootNode.id);
         console.log('✅ Map loaded from cloud:', currentMap.id);
       }
-    } else if (isAuthenticated && cloudData.maps.length === 0 && !cloudData.isLoading) {
-      // クラウドにマップがない場合、新しいマップを作成
-      cloudData.createNewMap('最初のマインドマップ');
     }
-  }, [isAuthenticated, cloudData.maps, cloudData.isLoading]);
+    // リソース不足エラーを避けるため、自動マップ作成は無効化
+    // ユーザーが手動で作成ボタンを押すまで待機
+  }, [isAuthenticated, cloudData.maps]);
 
   // ログアウト時の初期化
   useEffect(() => {
