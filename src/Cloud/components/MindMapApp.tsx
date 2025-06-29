@@ -13,6 +13,24 @@ interface Props {
 const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const { authState } = useAuth();
   const { isProcessing } = useMagicLink();
+  const { 
+    data, 
+    selectedNodeId, 
+    editingNodeId, 
+    editText, 
+    isLoading,
+    error,
+    setSelectedNodeId,
+    setEditingNodeId,
+    setEditText,
+    findNode,
+    updateNode,
+    addChildNode,
+    deleteNode,
+    startEdit,
+    finishEdit,
+    updateTitle
+  } = useMindMap();
 
   // 認証状態の変化をログ出力
   React.useEffect(() => {
@@ -35,24 +53,6 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
       isProcessing
     });
   }, [data, isLoading, error, isProcessing]);
-  const { 
-    data, 
-    selectedNodeId, 
-    editingNodeId, 
-    editText, 
-    isLoading,
-    error,
-    setSelectedNodeId,
-    setEditingNodeId,
-    setEditText,
-    findNode,
-    updateNode,
-    addChildNode,
-    deleteNode,
-    startEdit,
-    finishEdit,
-    updateTitle
-  } = useMindMap();
 
   const [showAuthModal, setShowAuthModal] = useState(false);
 
