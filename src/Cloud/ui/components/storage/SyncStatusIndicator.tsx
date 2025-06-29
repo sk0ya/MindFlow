@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'; // React is required for JSX
 import { getSyncStatus } from '../../../core/storage/StorageManager.js';
-import { syncManager } from '../../../features/collaboration/syncManager.js';
+import { backgroundSyncManager } from '../../../../utils/backgroundSyncManager';
 import { authManager } from '../../../features/auth/authManager.js';
 
 const SyncStatusIndicator = () => {
@@ -70,7 +70,7 @@ const SyncStatusIndicator = () => {
     
     setIsSyncing(true);
     try {
-      const result = await syncManager.forcSync();
+      const result = await backgroundSyncManager.performManualSync();
       console.log('Manual sync completed:', result);
       setSyncStatus(getSyncStatus() as any);
     } catch (error) {

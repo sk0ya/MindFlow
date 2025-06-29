@@ -1,41 +1,50 @@
-// クラウドストレージ専用エンジン
-// 完全にクラウド環境に特化、ローカルストレージ依存なし
+/**
+ * IndexedDBベースのCloudEngine - バックグラウンド同期対応
+ */
 
+import { indexedDBManager, type MindMapIndexedData } from '../../../../utils/indexedDBManager';
+import { backgroundSyncManager, type CloudSyncAPI } from '../../../../utils/backgroundSyncManager';
 import { authManager } from '../../../features/auth/authManager.js';
 import { generateId } from '../../../shared/types/dataTypes.js';
 import type { MindMapData, Node, StorageResult, SyncStatus } from '../types.js';
 
-export class CloudEngine {
+export class CloudEngine implements CloudSyncAPI {
   readonly mode = 'cloud' as const;
-  readonly name = 'クラウドストレージエンジン';
+  readonly name = 'クラウドストレージエンジン (IndexedDB)';
   
   private baseUrl = '';
   private isInitialized = false;
   private initPromise: Promise<void>;
-  private pendingOperations = new Map<string, any>();
-  private lastSyncTime: string | null = null;
-
-  // リアルタイム同期機能（クラウド専用）
-  private isRealtimeSyncEnabled = false;
-  private pollingInterval: number | null = null;
-  private syncFrequency = 5000; // 5秒ごと
-  private eventListeners = new Map<string, Set<(event: any) => void>>();
-  private lastMapsSnapshot = new Map<string, string>(); // mapId -> updatedAt
 
   constructor() {
-    console.log('☁️ クラウドエンジン: 初期化開始（認証状態確認中）');
+    console.log('☁️ CloudEngine: 初期化開始');
     this.initPromise = this.initialize();
   }
 
   private async initialize(): Promise<void> {
-    console.log('☁️ クラウドエンジン: 初期化開始');
+    console.log('☁️ CloudEngine: 初期化開始');
     
     // API base URL を環境別に設定
     this.baseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
       ? 'http://localhost:8787/api' 
       : 'https://mindflow-api-production.shigekazukoya.workers.dev/api';
     
-    console.log('☁️ クラウドエンジン: 初期化完了', {
+    // IndexedDBとバックグラウンド同期を初期化
+    await indexedDBManager.initialize();
+    await backgroundSyncManager.initialize(this, {
+      enabled: true,
+      intervalMs: 30000, // 30秒間隔
+      maxRetries: 3,
+      retryDelayMs: 5000,
+      batchSize: 10
+    });
+    
+    // 認証状態が有効な場合はバックグラウンド同期を開始
+    if (authManager.isAuthenticated()) {
+      backgroundSyncManager.startBackgroundSync();
+    }
+    
+    console.log('☁️ CloudEngine: 初期化完了', {
       baseUrl: this.baseUrl,
       authenticated: authManager.isAuthenticated()
     });
@@ -128,7 +137,6 @@ export class CloudEngine {
       }
     }
     
-    // This should never be reached, but TypeScript requires a return
     throw new Error(`Max retries (${maxRetries}) exceeded without successful response`);
   }
 
@@ -153,29 +161,8 @@ export class CloudEngine {
       try {
         errorBody = await response.text();
         errorMessage += ` - ${errorBody}`;
-        
-        // UNIQUE制約違反の検出
-        if (response.status === 500 && errorBody.includes('UNIQUE constraint failed: nodes.id')) {
-          console.warn('🔄 UNIQUE制約違反検出: ノードIDの再生成が必要');
-          const error = new Error('UNIQUE_CONSTRAINT_VIOLATION');
-          (error as any).originalError = errorMessage;
-          (error as any).needsRetry = true;
-          throw error;
-        }
-        
-        // Parent node not foundの検出
-        if (response.status === 400 && errorBody.includes('Parent node not found')) {
-          console.warn('🔄 Parent node not found 検出: マップ同期が必要');
-          const error = new Error('PARENT_NODE_NOT_FOUND');
-          (error as any).originalError = errorMessage;
-          (error as any).needsMapSync = true;
-          throw error;
-        }
-        
-      } catch (e: unknown) {
-        if (e instanceof Error && (e.message === 'UNIQUE_CONSTRAINT_VIOLATION' || e.message === 'PARENT_NODE_NOT_FOUND')) {
-          throw e;
-        }
+      } catch (e) {
+        // JSON parse error is expected for some responses
       }
       
       const error = new Error(errorMessage);
@@ -211,398 +198,508 @@ export class CloudEngine {
     return Math.min(1000 * Math.pow(2, attempt - 1), 10000);
   }
 
-  // マップ管理
-  async getAllMaps(): Promise<MindMapData[]> {
-    console.log('☁️ クラウド: マップ一覧取得開始');
-    
+  /**
+   * CloudSyncAPI実装 - バックグラウンド同期用
+   */
+  async getMindMaps(): Promise<any[]> {
     const response = await this.apiCall<{ mindmaps?: MindMapData[], maps?: MindMapData[] } | MindMapData[]>('/mindmaps', 'GET');
+    return Array.isArray(response) ? response : ((response as any).mindmaps || (response as any).maps || []);
+  }
+
+  async getMindMap(id: string): Promise<any> {
+    return await this.apiCall<MindMapData>(`/mindmaps/${id}`, 'GET');
+  }
+
+  async createMindMap(data: any): Promise<any> {
+    return await this.apiCall<MindMapData>('/mindmaps', 'POST', data);
+  }
+
+  async updateMindMap(id: string, data: any): Promise<any> {
+    return await this.apiCall<MindMapData>(`/mindmaps/${id}`, 'PUT', { ...data, id });
+  }
+
+  async deleteMindMap(id: string): Promise<void> {
+    await this.apiCall(`/mindmaps/${id}`, 'DELETE');
+  }
+
+  async createNode(mapId: string, nodeData: any): Promise<any> {
+    return await this.apiCall(`/nodes/${mapId}`, 'POST', {
+      mapId,
+      node: nodeData,
+      parentId: nodeData.parentId,
+      operation: 'add'
+    });
+  }
+
+  // CloudSyncAPI実装 - バックグラウンド同期で使用される部分をオーバーライド
+  async updateNode(mapId: string, nodeId: string, nodeData: any): Promise<any> {
+    // CloudSyncAPIとして使用される場合は直接API呼び出し
+    return await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'PUT', {
+      mapId,
+      updates: nodeData,
+      operation: 'update'
+    });
+  }
+
+  async deleteNode(mapId: string, nodeId: string): Promise<void> {
+    // CloudSyncAPIとして使用される場合は直接API呼び出し
+    await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'DELETE', {
+      mapId,
+      operation: 'delete'
+    });
+  }
+
+  async moveNode(mapId: string, nodeId: string, moveData: any): Promise<any> {
+    // CloudSyncAPIとして使用される場合は直接API呼び出し
+    return await this.apiCall(`/nodes/${mapId}/${nodeId}/move`, 'PUT', {
+      mapId,
+      newParentId: moveData.newParentId,
+      operation: 'move'
+    });
+  }
+
+  /**
+   * マップ管理 - ローカルファーストアプローチ
+   */
+  async getAllMaps(): Promise<MindMapData[]> {
+    await this.ensureInitialized();
+    console.log('☁️ IndexedDB: マップ一覧取得開始');
     
-    const maps = Array.isArray(response) ? response : ((response as any).mindmaps || (response as any).maps || []);
-    console.log('☁️ クラウド: マップ一覧取得完了', maps.length, '件');
+    const user = authManager.getCurrentUser();
+    const localMaps = await indexedDBManager.getAllMindMaps(user?.email);
+    
+    // IndexedDBからMindMapData形式に変換
+    const maps = localMaps.map(this.convertToMindMapData);
+    
+    console.log('☁️ IndexedDB: マップ一覧取得完了', maps.length, '件');
     return maps;
   }
 
   async getMap(mapId: string): Promise<MindMapData> {
-    console.log('☁️ クラウド: マップ取得開始', mapId);
+    await this.ensureInitialized();
+    console.log('☁️ IndexedDB: マップ取得開始', mapId);
     
-    const map = await this.apiCall<MindMapData>(`/mindmaps/${mapId}`, 'GET');
+    const localMap = await indexedDBManager.getMindMap(mapId);
+    if (!localMap) {
+      throw new Error(`マップが見つかりません: ${mapId}`);
+    }
     
-    // データ構造の検証と正規化
-    this.validateAndNormalizeMapData(map);
-    
-    console.log('☁️ クラウド: マップ取得完了', map.title);
+    const map = this.convertToMindMapData(localMap);
+    console.log('☁️ IndexedDB: マップ取得完了', map.title);
     return map;
-  }
-
-  private validateAndNormalizeMapData(map: MindMapData): void {
-    if (!map || !map.rootNode) {
-      throw new Error('クラウドサーバーからのデータにrootNodeが含まれていません');
-    }
-
-    // rootNodeが文字列の場合はパース
-    if (typeof map.rootNode === 'string') {
-      try {
-        console.log('📦 rootNodeをJSONパース中...');
-        map.rootNode = JSON.parse(map.rootNode);
-        console.log('✅ rootNodeパース成功');
-      } catch (parseError: unknown) {
-        const parseErrorMessage = parseError instanceof Error ? parseError.message : String(parseError);
-        console.error('❌ rootNodeパース失敗:', parseError);
-        throw new Error(`rootNodeのパースに失敗しました: ${parseErrorMessage}`);
-      }
-    }
-    
-    // 基本構造の検証
-    if (!map.rootNode.id) {
-      console.warn('⚠️ rootNode.idが見つかりません');
-      map.rootNode.id = 'root';
-    }
-    
-    if (!map.rootNode.children) {
-      console.warn('⚠️ rootNode.childrenが見つかりません、空配列で初期化');
-      map.rootNode.children = [];
-    }
-    
-    if (!Array.isArray(map.rootNode.children)) {
-      console.error('❌ rootNode.childrenが配列ではありません:', typeof map.rootNode.children);
-      map.rootNode.children = [];
-    }
-    
-    console.log('✅ クラウドデータ構造検証完了:', {
-      rootNodeId: map.rootNode.id,
-      childrenCount: map.rootNode.children.length
-    });
   }
 
   async createMap(mapData: MindMapData): Promise<StorageResult<MindMapData>> {
     try {
-      console.log('☁️ クラウド: マップ作成開始', mapData.title);
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: マップ作成開始', mapData.title);
       
-      const result = await this.apiCall<MindMapData>('/mindmaps', 'POST', mapData);
-      console.log('☁️ クラウド: マップ作成完了', result.title);
+      const user = authManager.getCurrentUser();
+      const indexedData: MindMapIndexedData = {
+        id: mapData.id,
+        title: mapData.title,
+        rootNode: mapData.rootNode,
+        settings: mapData.settings || { autoSave: true, autoLayout: false },
+        lastModified: Date.now(),
+        syncStatus: 'pending',
+        localVersion: 1,
+        userId: user?.email
+      };
       
-      return { success: true, data: result };
+      // ローカルに保存
+      await indexedDBManager.saveMindMap(indexedData);
+      
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapData.id,
+        operation: 'create',
+        data: mapData,
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: マップ作成完了（同期待ち）', mapData.title);
+      return { success: true, data: mapData };
+      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('☁️ クラウド: マップ作成失敗:', error);
+      console.error('☁️ IndexedDB: マップ作成失敗:', error);
       return { success: false, error: errorMessage };
     }
   }
 
   async updateMap(mapId: string, mapData: MindMapData): Promise<StorageResult<MindMapData>> {
     try {
-      console.log('☁️ クラウド: マップ更新開始:', mapId, mapData.title);
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: マップ更新開始:', mapId, mapData.title);
       
-      const dataToSend = {
-        ...mapData,
-        id: mapId
+      const existingMap = await indexedDBManager.getMindMap(mapId);
+      if (!existingMap) {
+        throw new Error(`更新対象のマップが見つかりません: ${mapId}`);
+      }
+      
+      const updatedMap: MindMapIndexedData = {
+        ...existingMap,
+        title: mapData.title,
+        rootNode: mapData.rootNode,
+        settings: mapData.settings || existingMap.settings,
+        lastModified: Date.now(),
+        syncStatus: 'pending',
+        localVersion: existingMap.localVersion + 1
       };
       
-      const result = await this.apiCall<MindMapData>(`/mindmaps/${mapId}`, 'PUT', dataToSend);
-      console.log('☁️ クラウド: マップ更新完了:', result.title);
+      // ローカルに保存
+      await indexedDBManager.saveMindMap(updatedMap);
       
-      this.lastSyncTime = new Date().toISOString();
-      return { success: true, data: result };
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'update',
+        data: mapData,
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: マップ更新完了（同期待ち）:', mapData.title);
+      return { success: true, data: mapData };
+      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('☁️ クラウド: マップ更新失敗:', error);
+      console.error('☁️ IndexedDB: マップ更新失敗:', error);
       return { success: false, error: errorMessage };
     }
   }
 
   async deleteMap(mapId: string): Promise<StorageResult<boolean>> {
     try {
-      console.log('☁️ クラウド: マップ削除開始', mapId);
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: マップ削除開始', mapId);
       
-      await this.apiCall(`/mindmaps/${mapId}`, 'DELETE');
-      console.log('☁️ クラウド: マップ削除完了');
+      // ローカルから削除
+      await indexedDBManager.deleteMindMap(mapId);
       
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'delete',
+        data: { mapId },
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: マップ削除完了（同期待ち）');
       return { success: true, data: true };
+      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('☁️ クラウド: マップ削除失敗:', error);
+      console.error('☁️ IndexedDB: マップ削除失敗:', error);
       return { success: false, error: errorMessage };
     }
   }
 
-  // 現在のマップ管理（クラウドモードでは個別管理）
-  async getCurrentMap(): Promise<MindMapData | null> {
-    console.log('☁️ クラウドモード: getCurrentMap をスキップ（個別ロード方式）');
+  /**
+   * ノード操作
+   */
+  async addNode(mapId: string, nodeData: Node, parentId: string): Promise<StorageResult<Node>> {
+    try {
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: ノード追加開始', nodeData.id);
+      
+      // ローカルマップを更新
+      const localMap = await indexedDBManager.getMindMap(mapId);
+      if (!localMap) {
+        throw new Error(`マップが見つかりません: ${mapId}`);
+      }
+      
+      // ノードをローカルに追加
+      this.addNodeToRootNode(localMap.rootNode, nodeData, parentId);
+      
+      // マップを保存
+      localMap.lastModified = Date.now();
+      localMap.syncStatus = 'pending';
+      localMap.localVersion++;
+      await indexedDBManager.saveMindMap(localMap);
+      
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'node_create',
+        data: { ...nodeData, parentId },
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: ノード追加完了（同期待ち）', nodeData.id);
+      return { success: true, data: nodeData };
+      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('☁️ IndexedDB: ノード追加失敗:', error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async updateNodeLocal(mapId: string, nodeId: string, updates: Partial<Node>): Promise<StorageResult<Node>> {
+    try {
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: ノード更新開始', nodeId);
+      
+      // ローカルマップを更新
+      const localMap = await indexedDBManager.getMindMap(mapId);
+      if (!localMap) {
+        throw new Error(`マップが見つかりません: ${mapId}`);
+      }
+      
+      // ノードをローカルで更新
+      const updatedNode = this.updateNodeInRootNode(localMap.rootNode, nodeId, updates);
+      if (!updatedNode) {
+        throw new Error(`ノードが見つかりません: ${nodeId}`);
+      }
+      
+      // マップを保存
+      localMap.lastModified = Date.now();
+      localMap.syncStatus = 'pending';
+      localMap.localVersion++;
+      await indexedDBManager.saveMindMap(localMap);
+      
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'node_update',
+        data: { nodeId, ...updates },
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: ノード更新完了（同期待ち）');
+      return { success: true, data: updatedNode };
+      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('☁️ IndexedDB: ノード更新失敗:', error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async deleteNodeLocal(mapId: string, nodeId: string): Promise<StorageResult<boolean>> {
+    try {
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: ノード削除開始', nodeId);
+      
+      // ローカルマップを更新
+      const localMap = await indexedDBManager.getMindMap(mapId);
+      if (!localMap) {
+        throw new Error(`マップが見つかりません: ${mapId}`);
+      }
+      
+      // ノードをローカルから削除
+      const deleted = this.deleteNodeFromRootNode(localMap.rootNode, nodeId);
+      if (!deleted) {
+        throw new Error(`ノードが見つかりません: ${nodeId}`);
+      }
+      
+      // マップを保存
+      localMap.lastModified = Date.now();
+      localMap.syncStatus = 'pending';
+      localMap.localVersion++;
+      await indexedDBManager.saveMindMap(localMap);
+      
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'node_delete',
+        data: { nodeId },
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: ノード削除完了（同期待ち）');
+      return { success: true, data: true };
+      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('☁️ IndexedDB: ノード削除失敗:', error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async moveNodeLocal(mapId: string, nodeId: string, newParentId: string): Promise<StorageResult<boolean>> {
+    try {
+      await this.ensureInitialized();
+      console.log('☁️ IndexedDB: ノード移動開始', nodeId, '->', newParentId);
+      
+      // ローカルマップを更新
+      const localMap = await indexedDBManager.getMindMap(mapId);
+      if (!localMap) {
+        throw new Error(`マップが見つかりません: ${mapId}`);
+      }
+      
+      // ノードをローカルで移動
+      const moved = this.moveNodeInRootNode(localMap.rootNode, nodeId, newParentId);
+      if (!moved) {
+        throw new Error(`ノード移動に失敗しました: ${nodeId}`);
+      }
+      
+      // マップを保存
+      localMap.lastModified = Date.now();
+      localMap.syncStatus = 'pending';
+      localMap.localVersion++;
+      await indexedDBManager.saveMindMap(localMap);
+      
+      // バックグラウンド同期に登録
+      await indexedDBManager.addSyncOperation({
+        mapId: mapId,
+        operation: 'node_move',
+        data: { nodeId, newParentId },
+        timestamp: Date.now()
+      });
+      
+      console.log('☁️ IndexedDB: ノード移動完了（同期待ち）');
+      return { success: true, data: true };
+      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('☁️ IndexedDB: ノード移動失敗:', error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * ヘルパー関数
+   */
+  private convertToMindMapData(indexedData: MindMapIndexedData): MindMapData {
+    return {
+      id: indexedData.id,
+      title: indexedData.title,
+      rootNode: indexedData.rootNode,
+      settings: indexedData.settings,
+      createdAt: new Date(indexedData.lastModified).toISOString(),
+      updatedAt: new Date(indexedData.lastModified).toISOString()
+    };
+  }
+
+  private addNodeToRootNode(rootNode: any, nodeData: Node, parentId: string): void {
+    if (parentId === 'root' || parentId === rootNode.id) {
+      if (!rootNode.children) {
+        rootNode.children = [];
+      }
+      rootNode.children.push(nodeData);
+      return;
+    }
+
+    if (rootNode.children) {
+      for (const child of rootNode.children) {
+        if (child.id === parentId) {
+          if (!child.children) {
+            child.children = [];
+          }
+          child.children.push(nodeData);
+          return;
+        }
+        this.addNodeToRootNode(child, nodeData, parentId);
+      }
+    }
+  }
+
+  private updateNodeInRootNode(rootNode: any, nodeId: string, updates: Partial<Node>): Node | null {
+    if (rootNode.id === nodeId) {
+      Object.assign(rootNode, updates);
+      return rootNode;
+    }
+
+    if (rootNode.children) {
+      for (const child of rootNode.children) {
+        const result = this.updateNodeInRootNode(child, nodeId, updates);
+        if (result) return result;
+      }
+    }
+
     return null;
   }
 
-  async setCurrentMap(mapData: MindMapData): Promise<StorageResult<MindMapData>> {
-    console.log('☁️ クラウドモード: setCurrentMap（互換性のため成功）', mapData.title);
-    return { success: true, data: mapData };
-  }
-
-  // ノード操作
-  async addNode(mapId: string, nodeData: Node, parentId: string): Promise<StorageResult<Node>> {
-    try {
-      console.log('☁️ クラウド: ノード追加開始', nodeData.id);
+  private deleteNodeFromRootNode(rootNode: any, nodeId: string): boolean {
+    if (rootNode.children) {
+      const initialLength = rootNode.children.length;
+      rootNode.children = rootNode.children.filter((child: any) => child.id !== nodeId);
       
-      // データ検証
-      if (!nodeData.id || typeof nodeData.id !== 'string') {
-        return { success: false, error: 'Invalid node ID' };
-      }
-      if (!parentId || typeof parentId !== 'string') {
-        return { success: false, error: 'Invalid parent ID' };
-      }
-      if (typeof nodeData.x !== 'number' || typeof nodeData.y !== 'number') {
-        return { success: false, error: 'Invalid node coordinates' };
+      if (rootNode.children.length < initialLength) {
+        return true;
       }
 
-      // ルートノードの場合の特別処理
-      if (parentId === 'root') {
-        console.log('🔍 ルートノードへの追加: サーバー側でルートノード存在確認');
-        
-        try {
-          await this.ensureRootNodeExists(mapId);
-          console.log('✅ ルートノード存在確認完了');
-        } catch (rootError: unknown) {
-          const rootErrorMessage = rootError instanceof Error ? rootError.message : String(rootError);
-          console.warn('⚠️ ルートノード確認失敗、通常の処理を継続:', rootErrorMessage);
+      for (const child of rootNode.children) {
+        if (this.deleteNodeFromRootNode(child, nodeId)) {
+          return true;
         }
       }
-      
-      const requestBody = {
-        mapId,
-        node: nodeData,
-        parentId,
-        operation: 'add'
-      };
-      
-      const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
-      console.log('☁️ クラウド: ノード追加完了', {
-        originalId: nodeData.id,
-        finalId: result.id,
-        newId: result.newId
-      });
-      
-      return { 
-        success: true, 
-        data: { ...nodeData, ...result },
-        newId: result.newId || result.id
-      };
-
-    } catch (error) {
-      return await this.handleNodeError(error, 'add', { mapId, nodeData, parentId });
     }
+
+    return false;
   }
 
-  private async handleNodeError(error: unknown, operation: string, params: any): Promise<StorageResult<any>> {
-    const errorObj = error instanceof Error ? error : new Error(String(error));
-    if (errorObj.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
-      console.warn('🔄 UNIQUE制約違反: ノードIDを再生成してリトライします', params.nodeData?.id);
-      return await this.retryWithNewId(params.mapId, params.nodeData, params.parentId);
+  private moveNodeInRootNode(rootNode: any, nodeId: string, newParentId: string): boolean {
+    // 1. ノードを見つけて削除
+    const nodeToMove = this.findAndRemoveNode(rootNode, nodeId);
+    if (!nodeToMove) {
+      return false;
     }
-    
-    if (errorObj.message === 'PARENT_NODE_NOT_FOUND') {
-      console.warn('🔄 Parent node not found: ルートノード同期後リトライします', { mapId: params.mapId, parentId: params.parentId });
-      try {
-        await this.forceMapSync(params.mapId);
-        console.log('✅ マップ同期完了、操作をリトライします');
-        
-        // リトライ実行
-        switch (operation) {
-          case 'add':
-            const requestBody = {
-              mapId: params.mapId,
-              node: params.nodeData,
-              parentId: params.parentId,
-              operation: 'add'
-            };
-            const result = await this.apiCall(`/nodes/${params.mapId}`, 'POST', requestBody);
-            return { success: true, data: { ...params.nodeData, ...result } };
-          case 'update':
-            const updateResult = await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}`, 'PUT', {
-              mapId: params.mapId,
-              updates: params.updates,
-              operation: 'update'
-            });
-            return { success: true, data: { id: params.nodeId, ...params.updates, ...updateResult } };
-          case 'delete':
-            await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}`, 'DELETE', {
-              mapId: params.mapId,
-              operation: 'delete'
-            });
-            return { success: true, data: true };
-          case 'move':
-            await this.apiCall(`/nodes/${params.mapId}/${params.nodeId}/move`, 'PUT', {
-              mapId: params.mapId,
-              newParentId: params.newParentId,
-              operation: 'move'
-            });
-            return { success: true, data: true };
-          default:
-            return { success: false, error: `Unknown operation: ${operation}` };
+
+    // 2. 新しい親に追加
+    this.addNodeToRootNode(rootNode, nodeToMove, newParentId);
+    return true;
+  }
+
+  private findAndRemoveNode(rootNode: any, nodeId: string): Node | null {
+    if (rootNode.children) {
+      for (let i = 0; i < rootNode.children.length; i++) {
+        if (rootNode.children[i].id === nodeId) {
+          return rootNode.children.splice(i, 1)[0];
         }
-      } catch (syncError: unknown) {
-        const syncErrorMessage = syncError instanceof Error ? syncError.message : String(syncError);
-        console.error('❌ マップ同期失敗:', syncError);
-        return { success: false, error: `Parent node not found (マップ同期も失敗): ${syncErrorMessage}` };
+        
+        const found = this.findAndRemoveNode(rootNode.children[i], nodeId);
+        if (found) return found;
       }
     }
-
-    console.error('☁️ クラウド: ノード操作失敗:', errorObj);
     
-    // 失敗した操作をキューに追加
-    const operationKey = `${operation}_${params.nodeData?.id || params.nodeId || Date.now()}`;
-    this.pendingOperations.set(operationKey, {
-      type: operation,
-      ...params,
-      timestamp: Date.now()
-    });
-    
-    return { success: false, error: errorObj.message };
+    return null;
   }
 
-  private async ensureRootNodeExists(mapId: string): Promise<boolean> {
+  /**
+   * 同期・接続
+   */
+  async testConnection(): Promise<boolean> {
     try {
-      const mapData = await this.apiCall<MindMapData>(`/mindmaps/${mapId}`, 'GET');
-      
-      console.log('🔍 サーバー側マップ状態:', {
-        mapId,
-        hasRootNode: !!mapData.rootNode,
-        rootNodeId: mapData.rootNode?.id,
-        serverChildrenCount: mapData.rootNode?.children?.length || 0
-      });
-
-      if (!mapData.rootNode || mapData.rootNode.id !== 'root') {
-        console.warn('⚠️ サーバー側でルートノードが正しく設定されていません');
-        throw new Error('ルートノードがサーバー側で認識されていません');
-      }
-
+      await this.getMindMaps();
       return true;
     } catch (error: unknown) {
-      console.error('❌ ルートノード存在確認エラー:', error);
-      throw error instanceof Error ? error : new Error(String(error));
+      console.error('☁️ IndexedDB接続テスト失敗:', error);
+      return false;
     }
   }
 
-  private async forceMapSync(mapId: string): Promise<boolean> {
-    try {
-      const mapData = await this.getMap(mapId);
-      if (!mapData) {
-        throw new Error('マップデータが取得できません');
-      }
-
-      const updateResult = await this.updateMap(mapId, mapData);
-      if (!updateResult.success) {
-        throw new Error('マップ更新に失敗しました');
-      }
-
-      console.log('✅ マップ強制更新でルートノード同期完了');
-      return true;
-    } catch (error: unknown) {
-      console.error('❌ マップ同期エラー:', error);
-      throw error instanceof Error ? error : new Error(String(error));
-    }
+  getSyncStatus(): SyncStatus {
+    const syncStatus = backgroundSyncManager.getSyncStatus();
+    return {
+      isOnline: navigator.onLine,
+      pendingCount: 0, // バックグラウンド同期で管理
+      lastSync: null,
+      mode: 'cloud',
+      backgroundSync: syncStatus
+    };
   }
 
-  private async retryWithNewId(
-    mapId: string, 
-    originalNodeData: Node, 
-    parentId: string, 
-    maxRetries: number = 3
-  ): Promise<StorageResult<Node>> {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const newId = generateId();
-        const newNodeData = { ...originalNodeData, id: newId };
-        
-        console.log(`🔄 リトライ ${attempt}/${maxRetries}: 新ID生成`, {
-          originalId: originalNodeData.id,
-          newId: newId,
-          attempt
-        });
-
-        const requestBody = {
-          mapId,
-          node: newNodeData,
-          parentId,
-          operation: 'add'
-        };
-
-        try {
-          const result = await this.apiCall(`/nodes/${mapId}`, 'POST', requestBody);
-          console.log('✅ ID再生成リトライ成功:', newId);
-          return { success: true, data: { ...newNodeData, ...result }, newId };
-        } catch (error: unknown) {
-          const errorObj = error instanceof Error ? error : new Error(String(error));
-          console.warn(`❌ リトライ ${attempt} 失敗:`, errorObj.message);
-          
-          if (errorObj.message === 'UNIQUE_CONSTRAINT_VIOLATION') {
-            continue;
-          } else {
-            throw errorObj;
-          }
-        }
-      } catch (error: unknown) {
-        console.error(`❌ リトライ ${attempt} でエラー:`, error);
-        if (attempt === maxRetries) {
-          throw error instanceof Error ? error : new Error(String(error));
-        }
-      }
-    }
-    
-    return { success: false, error: `ID再生成リトライが ${maxRetries} 回失敗しました` };
+  // バックグラウンド同期制御
+  async startBackgroundSync(): Promise<void> {
+    await this.ensureInitialized();
+    backgroundSyncManager.startBackgroundSync();
+    console.log('🔄 バックグラウンド同期開始');
   }
 
-  async updateNode(mapId: string, nodeId: string, updates: Partial<Node>): Promise<StorageResult<Node>> {
-    try {
-      console.log('☁️ クラウド: ノード更新開始', nodeId);
-      
-      const result = await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'PUT', {
-        mapId,
-        updates,
-        operation: 'update'
-      });
-      
-      console.log('☁️ クラウド: ノード更新完了');
-      return { success: true, data: { id: nodeId, ...updates, ...result } as Node };
-
-    } catch (error) {
-      return await this.handleNodeError(error, 'update', { mapId, nodeId, updates });
-    }
+  async stopBackgroundSync(): Promise<void> {
+    backgroundSyncManager.stopBackgroundSync();
+    console.log('⏹️ バックグラウンド同期停止');
   }
 
-  async deleteNode(mapId: string, nodeId: string): Promise<StorageResult<boolean>> {
-    try {
-      console.log('☁️ クラウド: ノード削除開始', nodeId);
-      
-      await this.apiCall(`/nodes/${mapId}/${nodeId}`, 'DELETE', {
-        mapId,
-        operation: 'delete'
-      });
-      
-      console.log('☁️ クラウド: ノード削除完了');
-      return { success: true, data: true };
-
-    } catch (error) {
-      return await this.handleNodeError(error, 'delete', { mapId, nodeId });
-    }
+  async performManualSync(): Promise<void> {
+    await this.ensureInitialized();
+    const result = await backgroundSyncManager.performManualSync();
+    console.log('🔄 手動同期完了:', result);
   }
 
-  async moveNode(mapId: string, nodeId: string, newParentId: string): Promise<StorageResult<boolean>> {
-    try {
-      console.log('☁️ クラウド: ノード移動開始', nodeId, '->', newParentId);
-      
-      await this.apiCall(`/nodes/${mapId}/${nodeId}/move`, 'PUT', {
-        mapId,
-        newParentId,
-        operation: 'move'
-      });
-      
-      console.log('☁️ クラウド: ノード移動完了');
-      return { success: true, data: true };
-
-    } catch (error) {
-      return await this.handleNodeError(error, 'move', { mapId, nodeId, newParentId });
-    }
-  }
-
-  // エクスポート・インポート
+  // エクスポート・インポート・ユーティリティ
   async exportMapAsJSON(mapData: MindMapData): Promise<void> {
     const dataStr = JSON.stringify(mapData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -613,7 +710,7 @@ export class CloudEngine {
     link.click();
     
     URL.revokeObjectURL(link.href);
-    console.log('☁️ クラウド: JSONエクスポート完了', mapData.title);
+    console.log('☁️ IndexedDB: JSONエクスポート完了', mapData.title);
   }
 
   async importMapFromJSON(file: File): Promise<StorageResult<MindMapData>> {
@@ -657,76 +754,20 @@ export class CloudEngine {
     });
   }
 
-  // 同期・接続
-  async testConnection(): Promise<boolean> {
-    try {
-      await this.getAllMaps();
-      return true;
-    } catch (error: unknown) {
-      console.error('☁️ クラウド接続テスト失敗:', error);
-      return false;
-    }
+  // 現在のマップ管理（互換性のため）
+  async getCurrentMap(): Promise<MindMapData | null> {
+    console.log('☁️ IndexedDBモード: getCurrentMap をスキップ（個別ロード方式）');
+    return null;
   }
 
-  getSyncStatus(): SyncStatus {
-    return {
-      isOnline: navigator.onLine,
-      pendingCount: this.pendingOperations.size,
-      lastSync: this.lastSyncTime,
-      mode: 'cloud'
-    };
+  async setCurrentMap(mapData: MindMapData): Promise<StorageResult<MindMapData>> {
+    console.log('☁️ IndexedDBモード: setCurrentMap（互換性のため成功）', mapData.title);
+    return { success: true, data: mapData };
   }
 
-  // 失敗操作のリトライ
-  async retryPendingOperations(): Promise<void> {
-    if (this.pendingOperations.size === 0) return;
-
-    console.log('☁️ クラウド: 失敗操作のリトライ開始', this.pendingOperations.size, '件');
-
-    for (const [key, operation] of Array.from(this.pendingOperations.entries())) {
-      try {
-        // 古い操作（5分以上前）は破棄
-        if (Date.now() - operation.timestamp > 5 * 60 * 1000) {
-          console.log('⏰ 古い操作を破棄:', key);
-          this.pendingOperations.delete(key);
-          continue;
-        }
-
-        let result: StorageResult<any> | undefined;
-        switch (operation.type) {
-          case 'add':
-            result = await this.addNode(operation.mapId, operation.nodeData, operation.parentId);
-            break;
-          case 'update':
-            result = await this.updateNode(operation.mapId, operation.nodeId, operation.updates);
-            break;
-          case 'delete':
-            result = await this.deleteNode(operation.mapId, operation.nodeId);
-            break;
-          case 'move':
-            result = await this.moveNode(operation.mapId, operation.nodeId, operation.newParentId);
-            break;
-          default:
-            console.warn('Unknown operation type:', operation.type);
-            this.pendingOperations.delete(key);
-            continue;
-        }
-
-        if (result?.success) {
-          console.log('✅ リトライ成功:', key);
-          this.pendingOperations.delete(key);
-        }
-
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.warn('❌ リトライ失敗:', key, errorMessage);
-      }
-    }
-  }
-
-  // ユーティリティ（クラウドモードでは該当なし）
   async hasLocalData(): Promise<boolean> {
-    return false; // クラウドモードではローカルデータは管理しない
+    const maps = await indexedDBManager.getAllMindMaps();
+    return maps.length > 0;
   }
 
   async cleanupCorruptedData(): Promise<{
@@ -735,219 +776,31 @@ export class CloudEngine {
     removed: number;
     corruptedMaps: any[];
   }> {
-    console.log('☁️ クラウドモード: ローカルデータクリーンアップは不要');
+    console.log('☁️ IndexedDBモード: データクリーンアップ開始');
+    const maps = await indexedDBManager.getAllMindMaps();
+    
     return {
-      before: 0,
-      after: 0,
+      before: maps.length,
+      after: maps.length,
       removed: 0,
       corruptedMaps: []
     };
   }
 
   async clearAllData(): Promise<boolean> {
-    console.log('☁️ クラウドモード: ローカルデータクリアは不要');
-    return true;
-  }
-
-  // ========================================
-  // リアルタイム同期機能（クラウド専用）
-  // ========================================
-
-  startRealtimeSync(): void {
-    if (this.isRealtimeSyncEnabled) {
-      console.log('⚠️ リアルタイム同期は既に開始されています');
-      return;
-    }
-
-    console.log('🔄 クラウドエンジン: リアルタイム同期を開始します');
-    this.isRealtimeSyncEnabled = true;
-    
-    // 初回同期
-    this.performRealtimeSync();
-    
-    // 定期的な同期
-    this.pollingInterval = window.setInterval(() => {
-      this.performRealtimeSync();
-    }, this.syncFrequency);
-  }
-
-  stopRealtimeSync(): void {
-    if (!this.isRealtimeSyncEnabled) {
-      return;
-    }
-
-    console.log('⏹️ クラウドエンジン: リアルタイム同期を停止します');
-    this.isRealtimeSyncEnabled = false;
-    
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
-  }
-
-  setSyncFrequency(milliseconds: number): void {
-    this.syncFrequency = Math.max(1000, milliseconds);
-    
-    if (this.isRealtimeSyncEnabled) {
-      this.stopRealtimeSync();
-      this.startRealtimeSync();
-    }
-  }
-
-  private async performRealtimeSync(): Promise<void> {
-    if (!this.isRealtimeSyncEnabled) {
-      return;
-    }
-
     try {
-      console.log('🔄 クラウドエンジン: リアルタイム同期実行中');
-      
-      // 全マップを取得
-      const maps = await this.getAllMaps();
-      
-      // 変更を検出
-      const changes = this.detectChanges(maps);
-      
-      // 変更があればイベントを発火
-      if (changes.length > 0) {
-        changes.forEach(change => {
-          this.emitEvent(change);
-        });
-      }
-
-      // スナップショットを更新
-      this.updateSnapshot(maps);
-      
-    } catch (error: unknown) {
-      const errorObj = error instanceof Error ? error : new Error(String(error));
-      console.error('❌ クラウドリアルタイム同期エラー:', error);
-      
-      this.emitEvent({
-        type: 'sync_error',
-        data: { 
-          error: errorObj.message,
-          type: errorObj.name || 'Unknown',
-          timestamp: new Date().toISOString()
-        },
-        timestamp: new Date().toISOString()
-      });
+      await indexedDBManager.clearDatabase();
+      console.log('☁️ IndexedDBモード: 全データクリア完了');
+      return true;
+    } catch (error) {
+      console.error('☁️ IndexedDBモード: データクリア失敗:', error);
+      return false;
     }
-  }
-
-  private detectChanges(maps: MindMapData[]): any[] {
-    const changes: any[] = [];
-    const currentMapIds = new Set<string>();
-
-    maps.forEach(map => {
-      currentMapIds.add(map.id);
-      
-      const lastUpdated = this.lastMapsSnapshot.get(map.id);
-      
-      if (!lastUpdated) {
-        // 新しいマップ
-        changes.push({
-          type: 'map_created',
-          data: map,
-          timestamp: new Date().toISOString()
-        });
-      } else if (lastUpdated !== map.updatedAt) {
-        // 更新されたマップ
-        changes.push({
-          type: 'map_updated',
-          data: map,
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    // 削除されたマップを検出
-    this.lastMapsSnapshot.forEach((_, mapId) => {
-      if (!currentMapIds.has(mapId)) {
-        changes.push({
-          type: 'map_deleted',
-          data: { mapId },
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    if (changes.length > 0) {
-      console.log(`🔄 クラウドエンジン: ${changes.length}件の変更を検出しました`);
-    }
-
-    return changes;
-  }
-
-  private updateSnapshot(maps: MindMapData[]): void {
-    this.lastMapsSnapshot.clear();
-    maps.forEach(map => {
-      this.lastMapsSnapshot.set(map.id, map.updatedAt || new Date().toISOString());
-    });
-  }
-
-  addEventListener(eventType: string, listener: (event: any) => void): () => void {
-    if (!this.eventListeners.has(eventType)) {
-      this.eventListeners.set(eventType, new Set());
-    }
-    
-    this.eventListeners.get(eventType)!.add(listener);
-    
-    // リスナー削除関数を返す
-    return () => {
-      const listeners = this.eventListeners.get(eventType);
-      if (listeners) {
-        listeners.delete(listener);
-      }
-    };
-  }
-
-  private emitEvent(event: any): void {
-    const listeners = this.eventListeners.get(event.type);
-    if (listeners) {
-      listeners.forEach(listener => {
-        try {
-          listener(event);
-        } catch (error: unknown) {
-          console.error(`イベントリスナーエラー (${event.type}):`, error);
-        }
-      });
-    }
-
-    // 全イベントリスナー
-    const allListeners = this.eventListeners.get('*');
-    if (allListeners) {
-      allListeners.forEach(listener => {
-        try {
-          listener(event);
-        } catch (error: unknown) {
-          console.error('全イベントリスナーエラー:', error);
-        }
-      });
-    }
-  }
-
-  getRealtimeSyncStatus(): {
-    isEnabled: boolean;
-    lastSyncTime: string | null;
-    syncFrequency: number;
-    mapsInSnapshot: number;
-  } {
-    return {
-      isEnabled: this.isRealtimeSyncEnabled,
-      lastSyncTime: this.lastSyncTime,
-      syncFrequency: this.syncFrequency,
-      mapsInSnapshot: this.lastMapsSnapshot.size
-    };
-  }
-
-  async syncNow(): Promise<void> {
-    console.log('🔄 クラウドエンジン: 手動同期を実行します');
-    await this.performRealtimeSync();
   }
 }
 
-// ファクトリー関数（認証待機状態を許可）
+// ファクトリー関数
 export function createCloudEngine(): CloudEngine {
-  console.log('☁️ クラウドエンジンファクトリー: インスタンス作成（認証待機対応）');
+  console.log('☁️ CloudEngineファクトリー: インスタンス作成');
   return new CloudEngine();
 }

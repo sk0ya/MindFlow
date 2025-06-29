@@ -4,7 +4,7 @@ import { getCurrentMindMap, updateMindMap as saveMindMap } from '../../core/stor
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
-import { unifiedSyncService } from '../../core/sync/UnifiedSyncService.js';
+// import { unifiedSyncService } from '../../core/sync/UnifiedSyncService.js'; // 削除済み
 import type { MindMapData, AuthState } from '../../shared/types/index.js';
 
 interface SaveOptions {
@@ -76,16 +76,16 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
           // モード決定（エラー時はローカルモード）
           const mode = isAuthenticated ? 'cloud' : 'local';
           
-          await unifiedSyncService.initialize(mode, {
-            apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
-          });
+          // await unifiedSyncService.initialize(mode, {
+          //   apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          // });
           
           console.log(`🔄 統一同期サービス初期化完了: ${mode}モード`);
         } catch (error) {
           console.error('❌ 統一同期サービス初期化失敗:', error);
           // フォールバック: ローカルモードで初期化
           try {
-            await unifiedSyncService.initialize('local');
+            // await unifiedSyncService.initialize('local');
             console.log('🔄 フォールバック: ローカルモードで初期化完了');
           } catch (fallbackError) {
             console.error('❌ フォールバック初期化も失敗:', fallbackError);
@@ -103,13 +103,13 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
       try {
         if (authState.isAuthenticated) {
           console.log('🔑 認証成功: クラウドモードに切り替え');
-          await unifiedSyncService.switchToCloudMode({
-            apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
-          });
+          // await unifiedSyncService.switchToCloudMode({
+          //   apiBaseUrl: 'https://mindflow-api-production.shigekazukoya.workers.dev'
+          // });
           await triggerCloudSync();
         } else {
           console.log('🔐 ログアウト: ローカルモードに切り替え');
-          await unifiedSyncService.switchToLocalMode();
+          // await unifiedSyncService.switchToLocalMode();
         }
       } catch (error) {
         console.error('❌ 認証状態変更処理エラー:', error);
@@ -152,14 +152,9 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     // 統一同期サービスを使用（編集保護機能付き）
     try {
       // 統一同期サービスが利用可能かチェック
-      if (unifiedSyncService && typeof unifiedSyncService.saveData === 'function') {
-        await unifiedSyncService.saveData(dataToSave as any, options as any);
-        console.log('💾 統一同期サービス保存完了:', dataToSave.title);
-      } else {
-        // フォールバック: 直接保存
-        await saveMindMap(dataToSave.id, dataToSave as any);
-        console.log('💾 直接保存完了:', dataToSave.title);
-      }
+      // フォールバック: 直接保存（統一同期サービス削除のため）
+      await saveMindMap(dataToSave.id, dataToSave as any);
+      console.log('💾 直接保存完了:', dataToSave.title);
     } catch (error) {
       console.warn('⚠️ 統一同期サービス保存失敗:', (error as Error).message);
       // フォールバック: 直接保存
