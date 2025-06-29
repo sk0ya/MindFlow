@@ -3,7 +3,7 @@ import { useAppInitialization } from './StorageSelection/core/hooks/useAppInitia
 import { StorageModeSelector } from './StorageSelection/ui/components/storage/StorageModeSelector';
 
 // Dynamic imports for Cloud and Local MindMapApp
-const CloudMindMapApp = React.lazy(() => import('./Cloud/ui/components/mindmap/MindMapApp'));
+const CloudMindMapApp = React.lazy(() => import('./Cloud/components/MindMapApp'));
 const LocalMindMapApp = React.lazy(() => import('./Local/ui/components/mindmap/MindMapApp'));
 
 const App: React.FC = () => {
