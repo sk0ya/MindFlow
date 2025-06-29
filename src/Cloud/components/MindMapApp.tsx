@@ -217,14 +217,6 @@ export default function MindMapApp({ onModeChange }: Props) {
   const [cloudMaps, setCloudMaps] = useState<MindMapData[]>([]);
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
   
-  // UI State Management
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [contextMenu, setContextMenu] = useState<{visible: boolean, x: number, y: number, nodeId: string | null}>({
-    visible: false, x: 0, y: 0, nodeId: null
-  });
-  const [showKeyboardHelper, setShowKeyboardHelper] = useState<boolean>(false);
 
   // Cloud API functions
   const getAuthToken = () => sessionStorage.getItem('auth_token');
@@ -390,18 +382,6 @@ export default function MindMapApp({ onModeChange }: Props) {
     }
   };
 
-  // Get available categories
-  const getAvailableCategories = () => {
-    const categories = [...new Set(cloudMaps.map(map => map.category || 'general'))];
-    return ['all', ...categories];
-  };
-
-  // Filter maps by search and category
-  const filteredMaps = cloudMaps.filter(map => {
-    const matchesSearch = map.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || map.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   // Auto-save functionality
   useEffect(() => {
@@ -525,149 +505,31 @@ export default function MindMapApp({ onModeChange }: Props) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Close modals/menus with Escape
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      if (editingNodeId) {
+    console.log('🎹 Key pressed:', e.key, { editingNodeId, selectedNodeId });
+    
+    if (editingNodeId) {
+      if (e.key === 'Enter') {
+        finishEdit();
+      } else if (e.key === 'Escape') {
         setEditingNodeId(null);
         setEditText('');
-      } else if (contextMenu.visible) {
-        setContextMenu({ visible: false, x: 0, y: 0, nodeId: null });
-      } else if (showKeyboardHelper) {
-        setShowKeyboardHelper(false);
       }
       return;
     }
 
-    // Global keyboard shortcuts
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key) {
-        case 's':
-          e.preventDefault();
-          if (data && currentMapId) {
-            saveMindMap(data);
-          }
-          break;
-        case 'n':
-          e.preventDefault();
-          createNewMindMap();
-          break;
-        case 'b':
-          e.preventDefault();
-          setShowSidebar(!showSidebar);
-          break;
-        case '?':
-          e.preventDefault();
-          setShowKeyboardHelper(!showKeyboardHelper);
-          break;
-      }
-      return;
-    }
-
-    // Function keys
-    if (e.key === 'F1') {
-      e.preventDefault();
-      setShowKeyboardHelper(!showKeyboardHelper);
-      return;
-    }
-
-    // Editing mode shortcuts
-    if (editingNodeId) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        finishEdit();
-      }
-      return;
-    }
-
-    // Node navigation and editing shortcuts
     if (selectedNodeId) {
-      switch (e.key) {
-        case 'Tab':
-          e.preventDefault();
-          addChild(selectedNodeId);
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (selectedNodeId === 'root') {
-            addChild('root');
-          } else {
-            addSibling(selectedNodeId);
-          }
-          break;
-        case ' ':
-          e.preventDefault();
-          startEdit(selectedNodeId);
-          break;
-        case 'Delete':
-        case 'Backspace':
-          e.preventDefault();
-          deleteNode(selectedNodeId);
-          break;
-        case 'ArrowUp':
-        case 'ArrowDown':
-        case 'ArrowLeft':
-        case 'ArrowRight':
-          e.preventDefault();
-          navigateNodes(e.key);
-          break;
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        addChild(selectedNodeId);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteNode(selectedNodeId);
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        startEdit(selectedNodeId);
       }
     }
-  };
 
-  const addSibling = (nodeId: string) => {
-    const parentNode = findParentNode(nodeId);
-    if (parentNode) {
-      addChild(parentNode.id);
-    }
-  };
-
-  const findParentNode = (nodeId: string, node: Node = data.rootNode, parent: Node | null = null): Node | null => {
-    if (node.id === nodeId) return parent;
-    for (const child of node.children) {
-      const found = findParentNode(nodeId, child, node);
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const navigateNodes = (direction: string) => {
-    // Simple navigation - can be enhanced later
-    const currentNode = findNode(selectedNodeId);
-    if (!currentNode) return;
-
-    switch (direction) {
-      case 'ArrowUp':
-        const parent = findParentNode(selectedNodeId);
-        if (parent) setSelectedNodeId(parent.id);
-        break;
-      case 'ArrowDown':
-        if (currentNode.children.length > 0) {
-          setSelectedNodeId(currentNode.children[0].id);
-        }
-        break;
-      case 'ArrowLeft':
-      case 'ArrowRight':
-        const siblings = findParentNode(selectedNodeId)?.children || [];
-        const currentIndex = siblings.findIndex(s => s.id === selectedNodeId);
-        if (direction === 'ArrowLeft' && currentIndex > 0) {
-          setSelectedNodeId(siblings[currentIndex - 1].id);
-        } else if (direction === 'ArrowRight' && currentIndex < siblings.length - 1) {
-          setSelectedNodeId(siblings[currentIndex + 1].id);
-        }
-        break;
-    }
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, nodeId: string) => {
-    e.preventDefault();
-    setContextMenu({
-      visible: true,
-      x: e.clientX,
-      y: e.clientY,
-      nodeId
-    });
-    setSelectedNodeId(nodeId);
   };
 
   const renderNode = (node: Node): React.ReactElement => (
@@ -684,7 +546,6 @@ export default function MindMapApp({ onModeChange }: Props) {
         style={{ cursor: 'pointer' }}
         onClick={() => setSelectedNodeId(node.id)}
         onDoubleClick={() => startEdit(node.id)}
-        onContextMenu={(e) => handleContextMenu(e, node.id)}
       />
       {editingNodeId === node.id ? (
         <foreignObject x={-45} y={-15} width={90} height={30}>
@@ -719,7 +580,6 @@ export default function MindMapApp({ onModeChange }: Props) {
           style={{ cursor: 'pointer', userSelect: 'none' }}
           onClick={() => setSelectedNodeId(node.id)}
           onDoubleClick={() => startEdit(node.id)}
-          onContextMenu={(e) => handleContextMenu(e, node.id)}
         >
           {node.text}
         </text>
@@ -893,124 +753,110 @@ export default function MindMapApp({ onModeChange }: Props) {
     );
   }
 
-  // Authenticated - show advanced mindmap app with sidebar
+  // Authenticated - show simple mindmap app like Local mode
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Toolbar */}
       <header style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        padding: '12px 16px', 
+        padding: '16px 24px', 
         background: '#fff', 
-        borderBottom: '1px solid #eee',
-        zIndex: 1000
+        borderBottom: '1px solid #eee' 
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            style={{
-              padding: '8px',
-              background: 'none',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            ☰
-          </button>
-          <h1 style={{ margin: 0, fontSize: '20px', color: '#2196f3' }}>MindFlow</h1>
-          {currentMapId && (
-            <input
-              type="text"
-              value={data.title}
-              onChange={(e) => setData(prev => ({ ...prev, title: e.target.value }))}
-              style={{
-                padding: '6px 10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-                minWidth: '200px'
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h1 style={{ margin: 0, fontSize: '24px', color: '#2196f3' }}>MindFlow</h1>
+          {cloudMaps.length > 0 && (
+            <select
+              value={currentMapId || ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  loadMindMap(e.target.value);
+                }
               }}
-            />
+              style={{
+                padding: '8px 12px',
+                border: '2px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minWidth: '150px'
+              }}
+            >
+              <option value="">マップを選択</option>
+              {cloudMaps.map(map => (
+                <option key={map.id} value={map.id}>
+                  {map.title || 'Untitled'}
+                </option>
+              ))}
+            </select>
           )}
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <input
+            type="text"
+            value={data.title}
+            onChange={(e) => setData(prev => ({ ...prev, title: e.target.value }))}
+            style={{
+              padding: '8px 12px',
+              border: '2px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '16px',
+              minWidth: '200px'
+            }}
+          />
           <button
             onClick={() => createNewMindMap()}
             disabled={isSyncing}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               background: '#4caf50',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: isSyncing ? 'not-allowed' : 'pointer',
-              opacity: isSyncing ? 0.6 : 1,
-              fontSize: '14px'
+              opacity: isSyncing ? 0.6 : 1
             }}
           >
-            + 新規
+            新規作成
           </button>
-          
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {isSyncing && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2196f3' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#2196f3' }}>
               <div style={{
-                width: '12px',
-                height: '12px',
+                width: '16px',
+                height: '16px',
                 border: '2px solid #f3f3f3',
                 borderTop: '2px solid #2196f3',
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }} />
-              <span style={{ fontSize: '12px' }}>同期中</span>
+              <span style={{ fontSize: '14px' }}>同期中...</span>
             </div>
           )}
-          
-          <button
-            onClick={() => setShowKeyboardHelper(!showKeyboardHelper)}
-            style={{
-              padding: '6px 10px',
-              background: 'none',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
-            ?
-          </button>
-          
-          <span style={{ color: '#666', fontSize: '12px' }}>
-            {auth.user?.email}
+          <span style={{ color: '#666', fontSize: '14px' }}>
+            こんにちは、{auth.user?.email}
           </span>
-          
           <button
             onClick={() => onModeChange('local')}
             style={{
-              padding: '6px 10px',
+              padding: '8px 16px',
               background: '#666',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px'
+              cursor: 'pointer'
             }}
           >
-            Local
+            Local Mode
           </button>
-          
           <button
             onClick={auth.logout}
             style={{
-              padding: '6px 10px',
+              padding: '8px 16px',
               background: '#dc3545',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px'
+              cursor: 'pointer'
             }}
           >
             ログアウト
@@ -1018,325 +864,36 @@ export default function MindMapApp({ onModeChange }: Props) {
         </div>
       </header>
       
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Sidebar */}
-        {showSidebar && (
-          <aside style={{
-            width: '280px',
-            background: '#f8f9fa',
-            borderRight: '1px solid #eee',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            {/* Search and Filters */}
-            <div style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
-              <input
-                type="text"
-                placeholder="マップを検索..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  marginBottom: '8px'
-                }}
-              />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              >
-                {getAvailableCategories().map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'すべて' : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Maps List */}
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              {filteredMaps.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: '#666' }}>
-                  {cloudMaps.length === 0 ? 'マップがありません' : '該当するマップがありません'}
-                </div>
-              ) : (
-                filteredMaps.map(map => (
-                  <div
-                    key={map.id}
-                    style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid #eee',
-                      cursor: 'pointer',
-                      background: currentMapId === map.id ? '#e3f2fd' : 'transparent'
-                    }}
-                    onClick={() => loadMindMap(map.id)}
-                  >
-                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                      {map.title}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                      {new Date(map.updatedAt).toLocaleDateString('ja-JP')}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newTitle = prompt('新しいタイトル:', map.title);
-                          if (newTitle && newTitle !== map.title) {
-                            renameMindMap(map.id, newTitle);
-                          }
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          background: '#2196f3',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          fontSize: '11px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        名前変更
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`"${map.title}"を削除しますか？`)) {
-                            deleteMindMap(map.id);
-                          }
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          background: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          fontSize: '11px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </aside>
-        )}
-        
-        {/* Main Canvas Area */}
-        <main style={{ flex: 1, background: '#f8f9fa', overflow: 'hidden', position: 'relative' }}>
-          {currentMapId ? (
-            <svg
-              width="100%"
-              height="100%"
-              viewBox="0 0 800 600"
-              style={{ outline: 'none' }}
-              tabIndex={0}
-              onKeyDown={handleKeyDown}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setSelectedNodeId('root');
-                  setContextMenu({ visible: false, x: 0, y: 0, nodeId: null });
-                }
-              }}
-            >
-              {renderNode(data.rootNode)}
-            </svg>
-          ) : (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: '#666'
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <h2>マインドマップを選択してください</h2>
-                <p>左のサイドバーからマップを選択するか、新しいマップを作成してください。</p>
-                <button
-                  onClick={() => createNewMindMap()}
-                  style={{
-                    padding: '12px 24px',
-                    background: '#4caf50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '16px'
-                  }}
-                >
-                  新しいマップを作成
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-      
-      {/* Context Menu */}
-      {contextMenu.visible && (
-        <div
-          style={{
-            position: 'fixed',
-            left: contextMenu.x,
-            top: contextMenu.y,
-            background: 'white',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            zIndex: 1000,
-            minWidth: '150px'
+      <main style={{ flex: 1, background: '#f8f9fa', overflow: 'hidden' }}>
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 800 600"
+          style={{ outline: 'none' }}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedNodeId('root');
+            }
           }}
         >
-          <button
-            onClick={() => {
-              startEdit(contextMenu.nodeId!);
-              setContextMenu({ visible: false, x: 0, y: 0, nodeId: null });
-            }}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px 12px',
-              background: 'none',
-              border: 'none',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            編集
-          </button>
-          <button
-            onClick={() => {
-              addChild(contextMenu.nodeId!);
-              setContextMenu({ visible: false, x: 0, y: 0, nodeId: null });
-            }}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px 12px',
-              background: 'none',
-              border: 'none',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            子ノード追加
-          </button>
-          {contextMenu.nodeId !== 'root' && (
-            <button
-              onClick={() => {
-                deleteNode(contextMenu.nodeId!);
-                setContextMenu({ visible: false, x: 0, y: 0, nodeId: null });
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '8px 12px',
-                background: 'none',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                color: '#dc3545'
-              }}
-            >
-              削除
-            </button>
-          )}
-        </div>
-      )}
+          {renderNode(data.rootNode)}
+        </svg>
+      </main>
       
-      {/* Keyboard Helper Modal */}
-      {showKeyboardHelper && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h3>キーボードショートカット</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <h4>ノード操作</h4>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li><strong>Tab</strong> - 子ノード追加</li>
-                  <li><strong>Enter</strong> - 兄弟ノード追加</li>
-                  <li><strong>Space</strong> - ノード編集</li>
-                  <li><strong>Delete</strong> - ノード削除</li>
-                  <li><strong>矢印キー</strong> - ノード移動</li>
-                </ul>
-              </div>
-              <div>
-                <h4>アプリ操作</h4>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li><strong>Ctrl+S</strong> - 保存</li>
-                  <li><strong>Ctrl+N</strong> - 新規作成</li>
-                  <li><strong>Ctrl+B</strong> - サイドバー表示切替</li>
-                  <li><strong>F1</strong> - このヘルプ</li>
-                  <li><strong>Esc</strong> - モーダルを閉じる</li>
-                </ul>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowKeyboardHelper(false)}
-              style={{
-                marginTop: '16px',
-                padding: '8px 16px',
-                background: '#2196f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              閉じる
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Status Bar */}
       <footer style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '8px 16px',
+        padding: '12px 24px',
         background: '#fff',
         borderTop: '1px solid #eee',
-        fontSize: '12px',
+        fontSize: '14px',
         color: '#666'
       }}>
-        <span>
-          {currentMapId ? `マップ: ${data.title}` : 'マップが選択されていません'} | 
-          最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')} (Cloud)
-        </span>
-        <span>
-          総マップ数: {cloudMaps.length} | 
-          Tab: 子ノード | Space: 編集 | Delete: 削除 | F1: ヘルプ
-        </span>
+        <span>最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')} (Cloud)</span>
+        <span>Tab: 子ノード追加 | Space: 編集 | Delete: 削除</span>
       </footer>
     </div>
   );
