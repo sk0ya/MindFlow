@@ -79,58 +79,71 @@ const Node: React.FC<NodeProps> = ({
     }
   };
 
-  const nodeStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: node.x - 50,
-    top: node.y - 20,
-    width: 100,
-    height: 40,
-    border: isSelected ? '2px solid #2196f3' : '1px solid #cccccc',
-    borderRadius: 8,
-    backgroundColor: isSelected ? '#e3f2fd' : '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    fontSize: node.fontSize || 14,
-    fontWeight: node.fontWeight || 'normal',
-    color: node.color || '#333',
-    userSelect: 'none',
-    transform: `scale(${scale})`,
-    transformOrigin: 'center'
-  };
+  const width = 120;
+  const height = 40;
+  const x = node.x - width/2;
+  const y = node.y - height/2;
 
   return (
-    <div
-      style={nodeStyle}
-      onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      onContextMenu={handleRightClick}
-    >
+    <g transform={`translate(${x}, ${y})`}>
+      {/* ノードの背景 */}
+      <rect
+        width={width}
+        height={height}
+        rx={8}
+        ry={8}
+        fill={isSelected ? '#e3f2fd' : '#ffffff'}
+        stroke={isSelected ? '#2196f3' : '#cccccc'}
+        strokeWidth={isSelected ? 2 : 1}
+        style={{ cursor: 'pointer' }}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleRightClick}
+      />
+      
+      {/* ノードのテキスト */}
       {isEditing ? (
-        <input
-          type="text"
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => onFinishEdit(node.id, editText)}
-          style={{
-            width: '90%',
-            height: '80%',
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            textAlign: 'center',
-            fontSize: 'inherit',
-            fontWeight: 'inherit',
-            color: 'inherit'
-          }}
-          autoFocus
-        />
+        <foreignObject x={5} y={5} width={width - 10} height={height - 10}>
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={() => onFinishEdit(node.id, editText)}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              textAlign: 'center',
+              fontSize: node.fontSize || 14,
+              fontWeight: node.fontWeight || 'normal',
+              color: node.color || '#333',
+              padding: '8px 4px'
+            }}
+            autoFocus
+          />
+        </foreignObject>
       ) : (
-        <span>{node.text}</span>
+        <text
+          x={width/2}
+          y={height/2}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={node.fontSize || 14}
+          fontWeight={node.fontWeight || 'normal'}
+          fill={node.color || '#333'}
+          style={{ 
+            cursor: 'pointer',
+            userSelect: 'none',
+            pointerEvents: 'none'
+          }}
+        >
+          {node.text}
+        </text>
       )}
-    </div>
+    </g>
   );
 };
 
