@@ -71,11 +71,11 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     setSelectedNodeId(nodeId);
   };
 
-  const handleAddChild = React.useCallback((parentId: string, text: string = 'New Node', autoEdit: boolean = false) => {
+  const handleAddChild = React.useCallback((parentId: string, text: string = '', autoEdit: boolean = false) => {
     addChildNode(parentId, text, autoEdit);
   }, [addChildNode]);
 
-  const handleAddSibling = React.useCallback((nodeId: string, text: string = 'New Node', autoEdit: boolean = false) => {
+  const handleAddSibling = React.useCallback((nodeId: string, text: string = '', autoEdit: boolean = false) => {
     // 兄弟ノードを追加する場合は、同じ親の下に追加
     const node = findNode(nodeId);
     if (!node || nodeId === 'root') return;
@@ -118,9 +118,9 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           finishEdit(editingNodeId, editText);
           setTimeout(() => {
             if (e.key === 'Tab') {
-              handleAddChild(selectedNodeId, 'New Node', true);
+              handleAddChild(selectedNodeId, '', true);
             } else {
-              handleAddSibling(selectedNodeId, 'New Node', true);
+              handleAddSibling(selectedNodeId, '', true);
             }
           }, 50);
         }
@@ -131,12 +131,12 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
         case 'Tab':
           e.preventDefault();
           console.log('🔄 Tab: 子ノード追加');
-          handleAddChild(selectedNodeId, 'New Node', true);
+          handleAddChild(selectedNodeId, '', true);
           break;
         case 'Enter':
           e.preventDefault();
           console.log('🔄 Enter: 兄弟ノード追加');
-          handleAddSibling(selectedNodeId, 'New Node', true);
+          handleAddSibling(selectedNodeId, '', true);
           break;
         case ' ': // スペースキー
           e.preventDefault();

@@ -57,25 +57,33 @@ export const useMindMap = () => {
     setData(newData);
   }, [data, setData]);
 
-  const addChildNode = useCallback((parentId: string, text: string = 'New Node', autoEdit: boolean = false) => {
+  const addChildNode = useCallback((parentId: string, text: string = '', autoEdit: boolean = false) => {
     if (!data) return;
 
     const parentNode = findNode(parentId);
     if (!parentNode) return;
 
-    // ローカルモードと同じ座標計算ロジック
+    // ローカルモードと同じ座標計算ロジック（MindMeisterスタイル）
     let newX, newY;
+    const childCount = parentNode.children.length;
+    
     if (parentId === 'root') {
-      // ルートノードの場合
-      const childCount = parentNode.children.length;
-      const angle = (childCount * (2 * Math.PI / 8)) + (Math.PI / 4); // 8分割で配置
-      const radius = 180;
-      newX = parentNode.x + Math.cos(angle) * radius;
-      newY = parentNode.y + Math.sin(angle) * radius;
+      // ルートノードの場合：左右分散配置
+      const baseRadius = 180; // RADIAL_BASE_RADIUS + 30
+      const angle = childCount * (Math.PI / 4); // 45度ずつ配置
+      
+      // 偶数インデックス→右側、奇数インデックス→左側
+      const side = childCount % 2 === 0 ? 1 : -1; // 右: 1, 左: -1
+      
+      newX = parentNode.x + (baseRadius * side);
+      newY = parentNode.y + Math.sin(angle) * 80; // 縦方向に変化
     } else {
-      // 子ノードの場合
-      newX = parentNode.x + (parentNode.children.length * 40) + 120;
-      newY = parentNode.y + 80;
+      // 子ノードの場合：水平方向に配置
+      const levelSpacing = 200; // LEVEL_SPACING
+      const verticalSpacing = 80;
+      
+      newX = parentNode.x + levelSpacing;
+      newY = parentNode.y + (childCount * verticalSpacing) - ((parentNode.children.length - 1) * verticalSpacing / 2);
     }
 
     const newNode: Node = {
@@ -150,14 +158,26 @@ export const useMindMap = () => {
 
   const finishEdit = useCallback((nodeId?: string, text?: string) => {
     const targetNodeId = nodeId || editingNodeId;
-    const targetText = text || editText;
+    const targetText = text !== undefined ? text : editText;
+    const isEmpty = !targetText || targetText.trim() === '';
     
-    if (targetNodeId && targetText.trim()) {
+    // 削除判定（新規作成で空の場合のみ）
+    const currentNode = findNode(targetNodeId || '');
+    const isNewEmptyNode = isEmpty && currentNode && (!currentNode.text || currentNode.text.trim() === '');
+    const isRoot = targetNodeId === 'root';
+    
+    if (isNewEmptyNode && !isRoot) {
+      // 空のノードは削除
+      console.log('🗑️ 空のノードを削除:', targetNodeId);
+      deleteNode(targetNodeId || '');
+    } else if (!isEmpty && targetNodeId) {
+      // テキストを保存
       updateNode(targetNodeId, { text: targetText.trim() });
     }
+    
     setEditingNodeId(null);
     setEditText('');
-  }, [editingNodeId, editText, updateNode]);
+  }, [editingNodeId, editText, updateNode, findNode, deleteNode]);
 
   const updateTitle = useCallback((title: string) => {
     if (!data) return;

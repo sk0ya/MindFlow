@@ -250,9 +250,33 @@ export const useCloudData = () => {
     return () => clearInterval(interval);
   }, [data?.id, authState.isAuthenticated]);
 
+  // データ更新のラッパー関数（編集中保護付き）
+  const updateDataSafe = useCallback((newData: MindMapData, options: any = {}) => {
+    // 編集中かチェック
+    const editingInput = document.querySelector('input[type="text"]:focus');
+    const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
+    
+    if (isCurrentlyEditing && !options.allowDuringEdit) {
+      console.log('✋ データ更新スキップ: ノード編集中のため保護');
+      return;
+    }
+    
+    console.log('📝 データ更新実行:', { 
+      allowDuringEdit: options.allowDuringEdit,
+      isEditing: isCurrentlyEditing 
+    });
+    
+    setData(newData);
+    
+    // 即座保存が必要な場合
+    if (options.immediate) {
+      updateMindMapData(newData);
+    }
+  }, [setData, updateMindMapData]);
+
   return {
     data,
-    setData,
+    setData: updateDataSafe,
     isLoading,
     error,
     lastSyncTime,
