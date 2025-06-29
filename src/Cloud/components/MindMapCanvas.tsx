@@ -104,6 +104,19 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   pan,
   setPan
 }) => {
+  console.log('🎨 MindMapCanvas渡されたデータ:', {
+    hasData: !!data,
+    dataId: data?.id,
+    dataTitle: data?.title,
+    hasRootNode: !!data?.rootNode,
+    rootNodeDetails: data?.rootNode ? {
+      id: data.rootNode.id,
+      text: data.rootNode.text,
+      x: data.rootNode.x,
+      y: data.rootNode.y,
+      childrenCount: data.rootNode.children?.length || 0
+    } : null
+  });
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
@@ -123,7 +136,16 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     return result;
   };
   
-  const allNodes = flattenVisibleNodes(data.rootNode);
+  const allNodes = data?.rootNode ? flattenVisibleNodes(data.rootNode) : [];
+  console.log('📊 表示可能ノード:', { 
+    allNodesCount: allNodes.length, 
+    firstNode: allNodes[0] ? {
+      id: allNodes[0].id,
+      text: allNodes[0].text,
+      x: allNodes[0].x,
+      y: allNodes[0].y
+    } : null
+  });
   
   // ドロップターゲット検出のためのヘルパー関数
   const getNodeAtPosition = useCallback((x: number, y: number): MindMapNode | null => {

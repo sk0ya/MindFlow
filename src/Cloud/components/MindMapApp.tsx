@@ -208,7 +208,17 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
         />
 
         <div className="app-content">
-          {data && data.rootNode ? (
+          {(() => {
+            console.log('🔍 レンダリング条件チェック:', {
+              hasData: !!data,
+              dataId: data?.id,
+              dataTitle: data?.title,
+              hasRootNode: !!data?.rootNode,
+              rootNodeId: data?.rootNode?.id,
+              condition: !!(data && data.rootNode)
+            });
+            return data && data.rootNode;
+          })() ? (
             <MindMapCanvas
               data={data}
               selectedNodeId={selectedNodeId}
