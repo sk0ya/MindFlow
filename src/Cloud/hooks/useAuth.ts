@@ -8,6 +8,7 @@ export function useAuth() {
     isLoading: true,
     error: null
   });
+  const [emailSent, setEmailSent] = useState<boolean>(false);
 
   // 認証状態の初期化
   useEffect(() => {
@@ -72,7 +73,8 @@ export function useAuth() {
         isLoading: false,
         error: null
       });
-
+      
+      setEmailSent(true);
       console.log('Magic link sent to:', email);
     } catch (error) {
       setAuthState(prev => ({
@@ -84,19 +86,27 @@ export function useAuth() {
   };
 
   const verifyToken = async (token: string): Promise<void> => {
+    console.log('🔍 Token verification started:', { token: token.substring(0, 10) + '...' });
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/auth/verify', {
-        method: 'POST',
+      const response = await fetch(`https://mindflow-api.shigekazukoya.workers.dev/api/auth/verify?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token })
+        }
+      });
+
+      console.log('📡 API Response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok 
       });
 
       if (!response.ok) {
-        throw new Error('Token verification failed');
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`Token verification failed: ${response.status} ${errorText}`);
       }
 
       const result = await response.json();
@@ -136,8 +146,10 @@ export function useAuth() {
 
   return {
     ...authState,
+    emailSent,
     login,
     verifyToken,
-    logout
+    logout,
+    clearEmailSent: () => setEmailSent(false)
   };
 }

@@ -1,12 +1,41 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { MindMapData, MindMapNode } from '../types';
 import { createInitialData, generateId } from '../utils/dataUtils';
+import { useCloudData } from './useCloudData';
 
-export function useMindMap() {
+export function useMindMap(isAuthenticated: boolean = false) {
   const [data, setData] = useState<MindMapData>(createInitialData());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(data.rootNode.id);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
+  
+  const cloudData = useCloudData(isAuthenticated);
+
+  // クラウドデータとの同期
+  useEffect(() => {
+    if (isAuthenticated && cloudData.maps.length > 0) {
+      const currentMap = cloudData.getCurrentMap();
+      if (currentMap) {
+        setData(currentMap);
+        setSelectedNodeId(currentMap.rootNode.id);
+        console.log('✅ Map loaded from cloud:', currentMap.id);
+      }
+    } else if (isAuthenticated && cloudData.maps.length === 0 && !cloudData.isLoading) {
+      // クラウドにマップがない場合、新しいマップを作成
+      cloudData.createNewMap('最初のマインドマップ');
+    }
+  }, [isAuthenticated, cloudData.maps, cloudData.isLoading]);
+
+  // ログアウト時の初期化
+  useEffect(() => {
+    if (!isAuthenticated) {
+      const initialData = createInitialData();
+      setData(initialData);
+      setSelectedNodeId(initialData.rootNode.id);
+      setEditingNodeId(null);
+      setEditText('');
+    }
+  }, [isAuthenticated]);
 
   const findNode = useCallback((nodeId: string, node: MindMapNode = data.rootNode): MindMapNode | null => {
     if (node.id === nodeId) return node;
@@ -146,6 +175,8 @@ export function useMindMap() {
     deleteNode,
     startEdit,
     finishEdit,
-    updateTitle
+    updateTitle,
+    cloudData,
+    isDataLoading: cloudData.isLoading
   };
 }

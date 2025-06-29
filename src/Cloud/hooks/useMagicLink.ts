@@ -11,18 +11,26 @@ export function useMagicLink() {
     const token = urlParams.get('token');
     const type = urlParams.get('type');
 
+    console.log('🔗 Magic Link Check:', { 
+      hasToken: !!token, 
+      type, 
+      tokenStart: token ? token.substring(0, 10) + '...' : null 
+    });
+
     if (token && (type === 'magic-link' || !type)) {
+      console.log('✅ Magic Link detected, starting verification');
       setIsVerifying(true);
       setVerificationError(null);
       
       verifyToken(token)
         .then(() => {
-          // トークン検証成功
+          console.log('✅ Magic Link verification successful');
           // URLからパラメータを削除
           const newUrl = window.location.pathname;
           window.history.replaceState({}, document.title, newUrl);
         })
         .catch((error) => {
+          console.error('❌ Magic Link verification failed:', error);
           setVerificationError(error.message || 'Token verification failed');
         })
         .finally(() => {

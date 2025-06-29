@@ -7,7 +7,7 @@ import MindMapCanvas from './MindMapCanvas';
 import './MindMapApp.css';
 
 export default function MindMapApp() {
-  const { isAuthenticated, user, logout, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, user, logout, isLoading: authLoading, emailSent, clearEmailSent } = useAuth();
   const { isVerifying, verificationError, clearError } = useMagicLink();
   const [showAuthModal, setShowAuthModal] = useState(false);
   
@@ -22,8 +22,10 @@ export default function MindMapApp() {
     deleteNode,
     startEdit,
     finishEdit,
-    updateTitle
-  } = useMindMap();
+    updateTitle,
+    cloudData,
+    isDataLoading
+  } = useMindMap(isAuthenticated);
 
   // Magic Link検証中
   if (isVerifying) {
@@ -61,6 +63,41 @@ export default function MindMapApp() {
           <div className="loading-spinner"></div>
           <h2>MindFlow</h2>
           <p>アプリケーションを初期化中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // データローディング中（ログイン後）
+  if (isAuthenticated && isDataLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>データを同期中...</h2>
+          <p>クラウドからマインドマップデータを読み込んでいます</p>
+        </div>
+      </div>
+    );
+  }
+
+  // メール送信完了画面
+  if (emailSent && !isAuthenticated) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-content">
+          <h2>✉️ メールを送信しました</h2>
+          <p>入力されたメールアドレスに安全なログインリンクを送信しました。</p>
+          <p>メール内のリンクをクリックしてログインしてください。</p>
+          <button 
+            onClick={() => {
+              clearEmailSent();
+              setShowAuthModal(true);
+            }}
+            className="back-button"
+          >
+            戻る
+          </button>
         </div>
       </div>
     );
@@ -120,24 +157,49 @@ export default function MindMapApp() {
 
       {/* メインコンテンツ */}
       <main className="app-main">
-        <MindMapCanvas
-          data={data}
-          selectedNodeId={selectedNodeId}
-          editingNodeId={editingNodeId}
-          editText={editText}
-          onSelectNode={setSelectedNodeId}
-          onStartEdit={startEdit}
-          onFinishEdit={finishEdit}
-          onTextChange={setEditText}
-          onAddChild={handleAddChild}
-          onDeleteNode={deleteNode}
-        />
+        {cloudData.error && (
+          <div className="error-banner">
+            <span>⚠️ {cloudData.error}</span>
+            <button onClick={cloudData.syncData} className="retry-button">
+              再試行
+            </button>
+          </div>
+        )}
+        
+        {data ? (
+          <MindMapCanvas
+            data={data}
+            selectedNodeId={selectedNodeId}
+            editingNodeId={editingNodeId}
+            editText={editText}
+            onSelectNode={setSelectedNodeId}
+            onStartEdit={startEdit}
+            onFinishEdit={finishEdit}
+            onTextChange={setEditText}
+            onAddChild={handleAddChild}
+            onDeleteNode={deleteNode}
+          />
+        ) : (
+          <div className="no-data-screen">
+            <div className="no-data-content">
+              <h3>マインドマップがありません</h3>
+              <p>新しいマインドマップを作成してください</p>
+              <button 
+                onClick={() => cloudData.createNewMap('新しいマインドマップ')}
+                className="create-map-button"
+              >
+                マップを作成
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* フッター */}
       <footer className="app-footer">
         <div className="footer-info">
-          <span>最終更新: {new Date(data.updatedAt).toLocaleString('ja-JP')}</span>
+          <span>最終更新: {data ? new Date(data.updatedAt).toLocaleString('ja-JP') : '-'}</span>
+          <span>マップ数: {cloudData.maps.length}</span>
         </div>
         
         <div className="footer-controls">
