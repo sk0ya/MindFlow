@@ -49,6 +49,12 @@ export async function handleAuthRequest(request, env) {
         throw new Error(`Method ${method} not allowed`);
     }
 
+    // responseがすでにResponseオブジェクトの場合はそのまま返す
+    if (response instanceof Response) {
+      return response;
+    }
+    
+    // そうでない場合はJSONレスポンスとして返す
     return new Response(JSON.stringify(response), {
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +74,7 @@ export async function handleAuthRequest(request, env) {
   }
 }
 
-// Magic Link送信処理
+// Magic Link送信処理（JSONオブジェクトを返す）
 async function handleSendMagicLink(request, env) {
   const { email } = await request.json();
   
@@ -146,8 +152,14 @@ async function handleVerifyMagicLink(request, env) {
   try {
     const result = await verifyAuthToken(token, env);
     
-    // GETリクエストでも常にJSONレスポンスを返す
-    return result;
+    // JSONレスポンスとして返す（修正: Response オブジェクトを作成）
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders(env.CORS_ORIGIN)
+      }
+    });
   } catch (error) {
     throw error;
   }
