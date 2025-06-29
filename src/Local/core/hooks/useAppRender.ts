@@ -1,4 +1,4 @@
-import { useMindMap } from './useMindMap.js';
+import { useMindMap } from './useMindMap';
 import { useState, useEffect } from 'react';
 
 /**

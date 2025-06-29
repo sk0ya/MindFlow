@@ -6,8 +6,19 @@
  * - 自動保存からの編集データ保護
  */
 
+interface EditSessionOptions {
+  forced?: boolean;
+}
+
 export class EditSession {
-  constructor(nodeId, userId = 'local') {
+  public nodeId: string;
+  public userId: string;
+  public startTime: number;
+  public originalValue: string;
+  public currentValue: string;
+  public isActive: boolean;
+
+  constructor(nodeId: string, userId: string = 'local') {
     this.nodeId = nodeId;
     this.userId = userId;
     this.startTime = Date.now();
@@ -16,20 +27,22 @@ export class EditSession {
     this.isActive = true;
   }
 
-  updateValue(value) {
+  updateValue(value: string): void {
     this.currentValue = value;
   }
 
-  hasChanges() {
+  hasChanges(): boolean {
     return this.originalValue !== this.currentValue;
   }
 
-  getDuration() {
+  getDuration(): number {
     return Date.now() - this.startTime;
   }
 }
 
 export class EditProtectionManager {
+  private activeEdits: Map<string, EditSession>;
+
   constructor() {
     this.activeEdits = new Map(); // nodeId -> EditSession
   }
@@ -37,7 +50,7 @@ export class EditProtectionManager {
   /**
    * 編集セッション開始
    */
-  startEdit(nodeId, originalValue = '', userId = 'local') {
+  startEdit(nodeId: string, originalValue: string = '', userId: string = 'local'): EditSession {
     // 既存の編集セッションを終了
     if (this.activeEdits.has(nodeId)) {
       console.log(`⚠️ ノード ${nodeId} の既存編集セッションを終了`);
@@ -62,7 +75,7 @@ export class EditProtectionManager {
   /**
    * 編集セッション更新
    */
-  updateEdit(nodeId, currentValue) {
+  updateEdit(nodeId: string, currentValue: string): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) {
       console.warn(`⚠️ 編集セッションが見つかりません: ${nodeId}`);
@@ -75,7 +88,7 @@ export class EditProtectionManager {
   /**
    * 編集セッション終了
    */
-  finishEdit(nodeId, finalValue, options = {}) {
+  finishEdit(nodeId: string, finalValue: string, options: EditSessionOptions = {}): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) {
       console.warn(`⚠️ 編集セッション終了: セッションが見つかりません ${nodeId}`);
@@ -95,7 +108,7 @@ export class EditProtectionManager {
   /**
    * 強制編集終了（エラー処理用）
    */
-  forceFinishEdit(nodeId) {
+  forceFinishEdit(nodeId: string): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) return;
 
@@ -106,7 +119,7 @@ export class EditProtectionManager {
   /**
    * 編集中かどうかをチェック
    */
-  isEditing(nodeId = null) {
+  isEditing(nodeId?: string | null): boolean {
     if (nodeId) {
       return this.activeEdits.has(nodeId);
     }
@@ -116,21 +129,21 @@ export class EditProtectionManager {
   /**
    * 現在の編集中ノードを取得
    */
-  getEditingNodes() {
+  getEditingNodes(): string[] {
     return Array.from(this.activeEdits.keys());
   }
 
   /**
    * 編集セッション情報を取得
    */
-  getEditSession(nodeId) {
+  getEditSession(nodeId: string): EditSession | null {
     return this.activeEdits.get(nodeId) || null;
   }
 
   /**
    * すべてのリソースをクリーンアップ
    */
-  destroy() {
+  destroy(): void {
     // アクティブな編集セッションを強制終了
     for (const nodeId of this.activeEdits.keys()) {
       this.forceFinishEdit(nodeId);
@@ -142,7 +155,15 @@ export class EditProtectionManager {
   /**
    * 統計情報を取得
    */
-  getStats() {
+  getStats(): {
+    activeEdits: number;
+    editingSessions: Array<{
+      nodeId: string;
+      userId: string;
+      duration: number;
+      hasChanges: boolean;
+    }>;
+  } {
     return {
       activeEdits: this.activeEdits.size,
       editingSessions: Array.from(this.activeEdits.entries()).map(([nodeId, session]) => ({

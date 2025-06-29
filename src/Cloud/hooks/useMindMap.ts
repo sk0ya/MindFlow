@@ -23,6 +23,7 @@ export const useMindMap = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string>('root');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
+  const [pendingAutoEdit, setPendingAutoEdit] = useState<string | null>(null);
 
   const findNode = useCallback((id: string, node?: Node): Node | null => {
     if (!data) return null;
@@ -118,10 +119,15 @@ export const useMindMap = () => {
 
     // 自動編集開始
     if (autoEdit) {
-      setTimeout(() => {
-        setEditingNodeId(newNode.id);
-        setEditText(newNode.text);
-      }, 50);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎯 autoEdit=true: 自動編集状態を設定', {
+          newNodeId: newNode.id,
+          newNodeText: newNode.text
+        });
+      }
+      setPendingAutoEdit(newNode.id);
+    } else if (process.env.NODE_ENV === 'development') {
+      console.log('🎯 autoEdit=false: 自動編集なし');
     }
   }, [data, setData, findNode]);
 
@@ -168,7 +174,9 @@ export const useMindMap = () => {
     
     if (isNewEmptyNode && !isRoot) {
       // 空のノードは削除
-      console.log('🗑️ 空のノードを削除:', targetNodeId);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🗑️ 空のノードを削除:', targetNodeId);
+      }
       deleteNode(targetNodeId || '');
     } else if (!isEmpty && targetNodeId) {
       // テキストを保存
@@ -188,6 +196,24 @@ export const useMindMap = () => {
     };
     setData(newData);
   }, [data, setData]);
+
+  // pendingAutoEditを処理するuseEffect
+  useEffect(() => {
+    if (pendingAutoEdit && data) {
+      const node = findNode(pendingAutoEdit);
+      if (node) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🎯 autoEdit実行: 編集状態を設定', {
+            nodeId: pendingAutoEdit,
+            text: node.text
+          });
+        }
+        setEditingNodeId(pendingAutoEdit);
+        setEditText(node.text);
+        setPendingAutoEdit(null);
+      }
+    }
+  }, [pendingAutoEdit, data, findNode]);
 
   return {
     data,

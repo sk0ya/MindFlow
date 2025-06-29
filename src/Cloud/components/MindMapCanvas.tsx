@@ -104,19 +104,21 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   pan,
   setPan
 }) => {
-  console.log('🎨 MindMapCanvas渡されたデータ:', {
-    hasData: !!data,
-    dataId: data?.id,
-    dataTitle: data?.title,
-    hasRootNode: !!data?.rootNode,
-    rootNodeDetails: data?.rootNode ? {
-      id: data.rootNode.id,
-      text: data.rootNode.text,
-      x: data.rootNode.x,
-      y: data.rootNode.y,
-      childrenCount: data.rootNode.children?.length || 0
-    } : null
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎨 MindMapCanvas渡されたデータ:', {
+      hasData: !!data,
+      dataId: data?.id,
+      dataTitle: data?.title,
+      hasRootNode: !!data?.rootNode,
+      rootNodeDetails: data?.rootNode ? {
+        id: data.rootNode.id,
+        text: data.rootNode.text,
+        x: data.rootNode.x,
+        y: data.rootNode.y,
+        childrenCount: data.rootNode.children?.length || 0
+      } : null
+    });
+  }
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
@@ -137,20 +139,22 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   };
   
   const allNodes = data?.rootNode ? flattenVisibleNodes(data.rootNode) : [];
-  console.log('📊 表示可能ノード:', { 
-    allNodesCount: allNodes.length, 
-    firstNode: allNodes[0] ? {
-      id: allNodes[0].id,
-      text: allNodes[0].text,
-      x: allNodes[0].x,
-      y: allNodes[0].y,
-      fontSize: allNodes[0].fontSize,
-      fontWeight: allNodes[0].fontWeight
-    } : null,
-    zoom,
-    pan,
-    svgHeight: 'calc(100vh - 150px)'
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📊 表示可能ノード:', { 
+      allNodesCount: allNodes.length, 
+      firstNode: allNodes[0] ? {
+        id: allNodes[0].id,
+        text: allNodes[0].text,
+        x: allNodes[0].x,
+        y: allNodes[0].y,
+        fontSize: allNodes[0].fontSize,
+        fontWeight: allNodes[0].fontWeight
+      } : null,
+      zoom,
+      pan,
+      svgHeight: 'calc(100vh - 150px)'
+    });
+  }
   
   // ドロップターゲット検出のためのヘルパー関数
   const getNodeAtPosition = useCallback((x: number, y: number): MindMapNode | null => {
@@ -356,7 +360,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     // ただし、Node.jsxのblur処理に委任（editTextの同期問題を避けるため）
     if (editingNodeId && editingNodeId !== nodeId) {
       // editTextを渡さず、Node.jsx側で現在の入力値を使用させる
-      console.log('🖱️ Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🖱️ Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
+      }
       // onFinishEdit(editingNodeId, editText); // この行を削除
     }
     onSelectNode(nodeId);

@@ -37,24 +37,28 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
 
   // 認証状態の変化をログ出力
   React.useEffect(() => {
-    console.log('🔐 認証状態変化 - MindMapApp:', {
-      isAuthenticated: authState.isAuthenticated,
-      hasUser: !!authState.user,
-      isLoading: authState.isLoading,
-      error: authState.error,
-      userEmail: authState.user?.email
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔐 認証状態変化 - MindMapApp:', {
+        isAuthenticated: authState.isAuthenticated,
+        hasUser: !!authState.user,
+        isLoading: authState.isLoading,
+        error: authState.error,
+        userEmail: authState.user?.email
+      });
+    }
   }, [authState]);
 
   // データとローディング状態の変化をログ出力
   React.useEffect(() => {
-    console.log('📋 データ状態変化 - MindMapApp:', {
-      hasData: !!data,
-      dataTitle: data?.title,
-      isLoading,
-      error,
-      isProcessing
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 データ状態変化 - MindMapApp:', {
+        hasData: !!data,
+        dataTitle: data?.title,
+        isLoading,
+        error,
+        isProcessing
+      });
+    }
   }, [data, isLoading, error, isProcessing]);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -100,13 +104,15 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   // キーボードショートカット
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (editingNodeId) return; // 編集中は無効
-
-      console.log('⌨️ キー入力:', {
-        key: e.key,
-        selectedNodeId,
-        hasSelectedNode: !!selectedNodeId
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⌨️ キー入力:', {
+          key: e.key,
+          selectedNodeId,
+          hasSelectedNode: !!selectedNodeId,
+          editingNodeId,
+          isEditing: !!editingNodeId
+        });
+      }
 
       if (!selectedNodeId) return;
 
@@ -114,12 +120,20 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
       if (editingNodeId) {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
-          console.log('🔄 編集完了 + 新規ノード追加');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 編集完了 + 新規ノード追加');
+          }
           finishEdit(editingNodeId, editText);
           setTimeout(() => {
             if (e.key === 'Tab') {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🔄 編集完了後 Tab: 子ノード追加');
+              }
               handleAddChild(selectedNodeId, '', true);
             } else {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🔄 編集完了後 Enter: 兄弟ノード追加');
+              }
               handleAddSibling(selectedNodeId, '', true);
             }
           }, 50);
@@ -127,30 +141,41 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
         return; // 編集中は他のキーを処理しない
       }
 
+      // 編集中でない場合の通常処理
       switch (e.key) {
         case 'Tab':
           e.preventDefault();
-          console.log('🔄 Tab: 子ノード追加');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Tab: 子ノード追加 (autoEdit=true)');
+          }
           handleAddChild(selectedNodeId, '', true);
           break;
         case 'Enter':
           e.preventDefault();
-          console.log('🔄 Enter: 兄弟ノード追加');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Enter: 兄弟ノード追加 (autoEdit=true)');
+          }
           handleAddSibling(selectedNodeId, '', true);
           break;
         case ' ': // スペースキー
           e.preventDefault();
-          console.log('🔄 Space: 編集開始');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Space: 編集開始');
+          }
           startEdit(selectedNodeId);
           break;
         case 'Delete':
           e.preventDefault();
-          console.log('🔄 Delete: ノード削除');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Delete: ノード削除');
+          }
           deleteNode(selectedNodeId);
           break;
         case 'Escape':
           e.preventDefault();
-          console.log('🔄 Escape: 選択解除');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Escape: 選択解除');
+          }
           setSelectedNodeId(null);
           break;
       }
@@ -287,14 +312,16 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
 
         <div className="app-content">
           {(() => {
-            console.log('🔍 レンダリング条件チェック:', {
-              hasData: !!data,
-              dataId: data?.id,
-              dataTitle: data?.title,
-              hasRootNode: !!data?.rootNode,
-              rootNodeId: data?.rootNode?.id,
-              condition: !!(data && data.rootNode)
-            });
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔍 レンダリング条件チェック:', {
+                hasData: !!data,
+                dataId: data?.id,
+                dataTitle: data?.title,
+                hasRootNode: !!data?.rootNode,
+                rootNodeId: data?.rootNode?.id,
+                condition: !!(data && data.rootNode)
+              });
+            }
             return data && data.rootNode;
           })() ? (
             <MindMapCanvas

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { MindMapNode } from '../../shared/types/dataTypes.js';
+import type { MindMapNode } from '../../shared/types/dataTypes';
 
 interface NodeCustomizationPanelProps {
   selectedNode: MindMapNode | null;

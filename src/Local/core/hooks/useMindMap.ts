@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
-import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
-import { useMindMapFiles } from '../../features/files/useMindMapFiles.js';
-import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti.js';
+import { useMindMapData } from '../../features/mindmap/useMindMapData';
+import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes';
+import { useMindMapFiles } from '../../features/files/useMindMapFiles';
+import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti';
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
 export const useMindMap = (isAppReady = false) => {

@@ -1,0 +1,238 @@
+/**
+ * Shared constants and type definitions for application-wide use
+ */
+
+// File handling constants
+export const FILE_CONSTANTS = {
+  MAX_SIZE: 10 * 1024 * 1024, // 10MB
+  ALLOWED_TYPES: [
+    'image/jpeg',
+    'image/jpg', 
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'text/plain',
+    'application/pdf',
+    'application/json',
+    'text/markdown'
+  ],
+  IMAGE_TYPES: [
+    'image/jpeg',
+    'image/jpg',
+    'image/png', 
+    'image/gif',
+    'image/webp'
+  ]
+} as const;
+
+// Layout and coordinate constants
+export const LAYOUT_CONSTANTS = {
+  // Node positioning
+  RADIAL_BASE_RADIUS: 150,
+  LEVEL_SPACING: 200,
+  VERTICAL_SPACING: 80,
+  MIN_NODE_DISTANCE: 50,
+  
+  // Grid settings
+  GRID_SIZE: 20,
+  SNAP_THRESHOLD: 10,
+  
+  // Canvas bounds
+  MIN_ZOOM: 0.1,
+  MAX_ZOOM: 5.0,
+  DEFAULT_ZOOM: 1.0,
+  ZOOM_STEP: 0.1,
+  
+  // Animation
+  ANIMATION_DURATION: 300,
+  EASING: 'ease-out'
+} as const;
+
+// Typography constants
+export const TYPOGRAPHY_CONSTANTS = {
+  FONT_SIZES: {
+    XS: 10,
+    SM: 12,
+    MD: 14,
+    LG: 16,
+    XL: 18,
+    XXL: 20
+  },
+  FONT_WEIGHTS: {
+    NORMAL: 'normal',
+    BOLD: 'bold',
+    LIGHT: '300',
+    MEDIUM: '500',
+    SEMI_BOLD: '600'
+  },
+  LINE_HEIGHTS: {
+    TIGHT: 1.2,
+    NORMAL: 1.4,
+    LOOSE: 1.6
+  }
+} as const;
+
+// Color palette
+export const COLOR_CONSTANTS = {
+  NODE_COLORS: [
+    '#3498db', // Blue
+    '#e74c3c', // Red  
+    '#2ecc71', // Green
+    '#f39c12', // Orange
+    '#9b59b6', // Purple
+    '#1abc9c', // Teal
+    '#34495e', // Dark Gray
+    '#e67e22', // Dark Orange
+    '#95a5a6', // Light Gray
+    '#f1c40f'  // Yellow
+  ],
+  BACKGROUNDS: {
+    PRIMARY: '#ffffff',
+    SECONDARY: '#f8f9fa',
+    ACCENT: '#e3f2fd'
+  },
+  BORDERS: {
+    DEFAULT: '#ddd',
+    ACTIVE: '#3498db',
+    ERROR: '#e74c3c'
+  }
+} as const;
+
+// Application defaults
+export const DEFAULT_VALUES = {
+  MINDMAP: {
+    TITLE: '新しいマインドマップ',
+    ROOT_TEXT: 'Main Topic',
+    ROOT_POSITION: { x: 400, y: 300 },
+    SETTINGS: {
+      autoSave: true,
+      autoLayout: false,
+      snapToGrid: false,
+      showGrid: false,
+      animationEnabled: true
+    }
+  },
+  NODE: {
+    TEXT: '',
+    FONT_SIZE: 14,
+    FONT_WEIGHT: 'normal',
+    COLOR: '#000000',
+    BACKGROUND_COLOR: 'transparent'
+  }
+} as const;
+
+// Storage configuration
+export const STORAGE_CONSTANTS = {
+  LOCAL_STORAGE_KEYS: {
+    MINDMAPS: 'mindflow_mindmaps',
+    CURRENT_MAP: 'mindflow_current_map',
+    APP_SETTINGS: 'mindflow_app_settings',
+    AUTH_TOKEN: 'auth_token',
+    AUTH_USER: 'auth_user',
+    STORAGE_MODE: 'mindflow_storage_mode'
+  },
+  COMPRESSION: {
+    QUALITY: 0.8,
+    MAX_WIDTH: 1920,
+    MAX_HEIGHT: 1080
+  },
+  AUTO_SAVE_DELAY: 2000
+} as const;
+
+// Validation rules
+export const VALIDATION_CONSTANTS = {
+  NODE_TEXT: {
+    MIN_LENGTH: 0,
+    MAX_LENGTH: 500
+  },
+  MAP_TITLE: {
+    MIN_LENGTH: 1,
+    MAX_LENGTH: 100
+  },
+  EMAIL: {
+    PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  },
+  FILE_NAME: {
+    MAX_LENGTH: 255,
+    INVALID_CHARS: /[<>:"/\\|?*]/g
+  }
+} as const;
+
+// API configuration
+export const API_CONSTANTS = {
+  BASE_URL: process.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev',
+  ENDPOINTS: {
+    AUTH: '/api/auth',
+    MINDMAPS: '/api/mindmaps',
+    FILES: '/api/files',
+    HEALTH: '/api/health'
+  },
+  TIMEOUTS: {
+    DEFAULT: 10000,
+    UPLOAD: 30000,
+    AUTH: 15000
+  }
+} as const;
+
+// Keyboard shortcuts
+export const KEYBOARD_SHORTCUTS = {
+  NAVIGATION: {
+    SELECT_UP: 'ArrowUp',
+    SELECT_DOWN: 'ArrowDown', 
+    SELECT_LEFT: 'ArrowLeft',
+    SELECT_RIGHT: 'ArrowRight'
+  },
+  EDITING: {
+    START_EDIT: ' ', // Space
+    FINISH_EDIT: 'Enter',
+    CANCEL_EDIT: 'Escape',
+    ADD_CHILD: 'Tab',
+    ADD_SIBLING: 'Enter',
+    DELETE_NODE: 'Delete'
+  },
+  APPLICATION: {
+    SAVE: 'Ctrl+S',
+    UNDO: 'Ctrl+Z',
+    REDO: 'Ctrl+Y',
+    ZOOM_IN: 'Ctrl+=',
+    ZOOM_OUT: 'Ctrl+-',
+    ZOOM_RESET: 'Ctrl+0',
+    TOGGLE_HELP: 'F1'
+  }
+} as const;
+
+// Theme definitions
+export const THEME_CONSTANTS = {
+  DEFAULT: {
+    name: 'デフォルト',
+    background: '#ffffff',
+    connectionColor: '#333333',
+    textColor: '#000000',
+    nodeBackground: '#f8f9fa',
+    selectedNodeBorder: '#3498db'
+  },
+  DARK: {
+    name: 'ダーク',
+    background: '#2c3e50',
+    connectionColor: '#ecf0f1',
+    textColor: '#ffffff',
+    nodeBackground: '#34495e',
+    selectedNodeBorder: '#3498db'
+  },
+  MINIMAL: {
+    name: 'ミニマル',
+    background: '#fefefe',
+    connectionColor: '#bdc3c7',
+    textColor: '#2c3e50',
+    nodeBackground: 'transparent',
+    selectedNodeBorder: '#e74c3c'
+  }
+} as const;
+
+// Performance monitoring
+export const PERFORMANCE_CONSTANTS = {
+  RENDER_TIME_WARNING: 16, // ms (60fps threshold)
+  MEMORY_WARNING: 100 * 1024 * 1024, // 100MB
+  NODE_COUNT_WARNING: 1000,
+  MAX_HISTORY_SIZE: 50
+} as const;

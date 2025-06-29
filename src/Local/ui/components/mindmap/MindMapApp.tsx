@@ -14,16 +14,16 @@ import { getAppSettings } from '../../../core/storage/LocalEngine';
 import './MindMapApp.css';
 
 // TutorialOverlayは不要（ローカルモード専用）
-import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper.jsx';
+import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper';
 // useAppInitializationは不要（ローカルモード専用）
-import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts.js';
+import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts';
 
 // カスタムフックのインポート
-import { useFileHandlers } from './hooks/useFileHandlers.js';
-import { useMapHandlers } from './hooks/useMapHandlers.js';
-import { useUIState } from './hooks/useUIState.js';
-import { useNodeHandlers } from './hooks/useNodeHandlers.js';
-import { useAppActions } from './hooks/useAppActions.js';
+import { useFileHandlers } from './hooks/useFileHandlers';
+import { useMapHandlers } from './hooks/useMapHandlers';
+import { useUIState } from './hooks/useUIState';
+import { useNodeHandlers } from './hooks/useNodeHandlers';
+import { useAppActions } from './hooks/useAppActions';
 
 // Types
 import type { MindMapNode, MindMapData, User } from '../../../shared/types';

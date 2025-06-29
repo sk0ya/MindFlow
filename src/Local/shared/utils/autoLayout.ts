@@ -1,6 +1,6 @@
 // 自動レイアウト機能のユーティリティ
 import { cloneDeep } from './lodash-utils';
-import { COORDINATES, LAYOUT } from '../constants/index.js';
+import { COORDINATES, LAYOUT } from '../constants/index';
 
 /**
  * 放射状レイアウト - ルートノードを中心に子ノードを円形に配置

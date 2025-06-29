@@ -42,34 +42,44 @@ export const useCloudData = () => {
 
   // マインドマップデータの取得
   const fetchMindMapData = useCallback(async (createIfNotExists = true) => {
-    console.log('📋 fetchMindMapData開始:', { isAuthenticated: authState.isAuthenticated });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📋 fetchMindMapData開始:', { isAuthenticated: authState.isAuthenticated });
+    }
     
     if (!authState.isAuthenticated) {
-      console.log('⏭️ 未認証のためデータ取得スキップ');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏭️ 未認証のためデータ取得スキップ');
+      }
       return;
     }
 
-    console.log('🔄 データ取得開始');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 データ取得開始');
+    }
     setIsLoading(true);
     setError(null);
 
     try {
       const headers = getAuthHeaders();
-      console.log('📡 API Request:', { 
-        url: `${API_BASE_URL}/api/mindmaps`,
-        headers: { ...headers, Authorization: headers.Authorization?.substring(0, 20) + '...' }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📡 API Request:', { 
+          url: `${API_BASE_URL}/api/mindmaps`,
+          headers: { ...headers, Authorization: headers.Authorization?.substring(0, 20) + '...' }
+        });
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
         method: 'GET',
         headers: headers,
       });
 
-      console.log('📋 API Response:', { 
-        status: response.status, 
-        ok: response.ok,
-        statusText: response.statusText 
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 API Response:', { 
+          status: response.status, 
+          ok: response.ok,
+          statusText: response.statusText 
+        });
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -78,36 +88,46 @@ export const useCloudData = () => {
       }
 
       const result = await response.json();
-      console.log('📋 Response Data:', { 
-        hasMindmaps: !!result.mindmaps,
-        mindmapsCount: result.mindmaps?.length || 0,
-        result 
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 Response Data:', { 
+          hasMindmaps: !!result.mindmaps,
+          mindmapsCount: result.mindmaps?.length || 0,
+          result 
+        });
+      }
       
       if (result.mindmaps && result.mindmaps.length > 0) {
         // 最初のマインドマップを使用
         const mindmap = result.mindmaps[0];
-        console.log('✅ 既存マップデータ使用:', { 
-          id: mindmap.id, 
-          title: mindmap.title,
-          hasRootNode: !!mindmap.rootNode,
-          rootNodeId: mindmap.rootNode?.id,
-          rootNodeText: mindmap.rootNode?.text,
-          dataStructure: Object.keys(mindmap)
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 既存マップデータ使用:', { 
+            id: mindmap.id, 
+            title: mindmap.title,
+            hasRootNode: !!mindmap.rootNode,
+            rootNodeId: mindmap.rootNode?.id,
+            rootNodeText: mindmap.rootNode?.text,
+            dataStructure: Object.keys(mindmap)
+          });
+        }
         setData(mindmap);
       } else if (createIfNotExists) {
         // データがない場合はデフォルトデータを作成
-        console.log('🆕 デフォルトデータ作成開始');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🆕 デフォルトデータ作成開始');
+        }
         const defaultData = createDefaultData();
-        console.log('💾 デフォルトデータ作成のみ（保存は別途実行）');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('💾 デフォルトデータ作成のみ（保存は別途実行）');
+        }
         setData(defaultData);
         
         // 保存はuseEffectで別途実行（無限ループを防ぐため）
       }
       
       setLastSyncTime(new Date());
-      console.log('✅ データ取得完了');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ データ取得完了');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'データの取得に失敗しました';
       console.error('❌ データ取得エラー:', error);
@@ -115,25 +135,29 @@ export const useCloudData = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [authState.isAuthenticated]); // getAuthHeadersとsaveMindMapDataを依存配列から除外
+  }, [authState.isAuthenticated]);
 
   // マインドマップデータの保存
   const saveMindMapData = useCallback(async (mapData: MindMapData) => {
-    console.log('💾 saveMindMapData開始:', { 
-      isAuthenticated: authState.isAuthenticated,
-      hasId: !!mapData.id,
-      title: mapData.title 
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('💾 saveMindMapData開始:', { 
+        isAuthenticated: authState.isAuthenticated,
+        hasId: !!mapData.id,
+        title: mapData.title 
+      });
+    }
     
     if (!authState.isAuthenticated) return;
 
     try {
       const headers = getAuthHeaders();
-      console.log('📡 API Request (POST):', { 
-        url: `${API_BASE_URL}/api/mindmaps`,
-        headers: { ...headers, Authorization: headers.Authorization?.substring(0, 20) + '...' },
-        bodyPreview: { id: mapData.id, title: mapData.title, hasRootNode: !!mapData.rootNode }
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📡 API Request (POST):', { 
+          url: `${API_BASE_URL}/api/mindmaps`,
+          headers: { ...headers, Authorization: headers.Authorization?.substring(0, 20) + '...' },
+          bodyPreview: { id: mapData.id, title: mapData.title, hasRootNode: !!mapData.rootNode }
+        });
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
         method: 'POST',
@@ -141,11 +165,13 @@ export const useCloudData = () => {
         body: JSON.stringify(mapData),
       });
 
-      console.log('📋 API Response (POST):', { 
-        status: response.status, 
-        ok: response.ok,
-        statusText: response.statusText 
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 API Response (POST):', { 
+          status: response.status, 
+          ok: response.ok,
+          statusText: response.statusText 
+        });
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -154,7 +180,9 @@ export const useCloudData = () => {
       }
 
       const result = await response.json();
-      console.log('✅ マップ保存成功:', result);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ マップ保存成功:', result);
+      }
 
       setLastSyncTime(new Date());
       return { success: true, data: result };
@@ -164,7 +192,7 @@ export const useCloudData = () => {
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
-  }, [authState.isAuthenticated]); // getAuthHeadersを依存配列から除外
+  }, [authState.isAuthenticated]);
 
   // マインドマップデータの更新
   const updateMindMapData = useCallback(async (mapData: MindMapData) => {
@@ -190,81 +218,80 @@ export const useCloudData = () => {
       console.error('Failed to update mindmap data:', error);
       return { success: false, error: errorMessage };
     }
-  }, [authState.isAuthenticated]); // getAuthHeadersを依存配列から除外
+  }, [authState.isAuthenticated]);
 
   // 認証状態が変わったらデータを取得
   useEffect(() => {
-    console.log('🔄 認証状態変化 - useCloudData:', { 
-      isAuthenticated: authState.isAuthenticated,
-      hasData: !!data,
-      isLoading,
-      error
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 認証状態変化 - useCloudData:', { 
+        isAuthenticated: authState.isAuthenticated,
+        hasData: !!data,
+        isLoading,
+        error
+      });
+    }
     
     if (authState.isAuthenticated && !data && !isLoading) {
-      console.log('▶️ 認証済み&データなし&ロード中でない → データ取得実行');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('▶️ 認証済み&データなし&ロード中でない → データ取得実行');
+      }
       fetchMindMapData();
     } else if (!authState.isAuthenticated) {
-      console.log('❌ 未認証 → データクリア');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('❌ 未認証 → データクリア');
+      }
       setData(null);
       setError(null);
     } else if (authState.isAuthenticated && data) {
-      console.log('✅ 認証済み&データあり → データ取得スキップ');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ 認証済み&データあり → データ取得スキップ');
+      }
     }
-  }, [authState.isAuthenticated]); // dataとfetchMindMapDataを依存配列から除外
+  }, [authState.isAuthenticated]);
 
   // 新規データの保存
   useEffect(() => {
     if (!data || !authState.isAuthenticated || data.id || isLoading) return;
 
-    console.log('🆕 新規データ検出 - 保存実行');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🆕 新規データ検出 - 保存実行');
+    }
     const saveNewData = async () => {
       const saveResult = await saveMindMapData(data);
-      if (saveResult.success && saveResult.data) {
-        console.log('✅ 新規データ保存成功 - IDを含むデータに更新');
+      if (saveResult && saveResult.success && saveResult.data) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ 新規データ保存成功 - IDを含むデータに更新');
+        }
         setData(saveResult.data);
       }
     };
     
     saveNewData();
-  }, [data?.id, authState.isAuthenticated]); // 最小限の依存のみ
+  }, [data?.id, authState.isAuthenticated]);
 
-  // 自動保存（10秒ごと）- 編集中保護付き
+  // 自動保存（10秒ごと）
   useEffect(() => {
     if (!data || !authState.isAuthenticated || !data.id) return;
 
     const interval = setInterval(() => {
-      // 編集中かチェック
-      const editingInput = document.querySelector('input[type="text"]:focus');
-      const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
-      
-      if (isCurrentlyEditing) {
-        console.log('⏰ 編集中のため自動保存をスキップ');
-        return;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏰ 自動保存実行:', { hasId: !!data.id, title: data.title });
       }
-      
-      console.log('⏰ 自動保存実行:', { hasId: !!data.id, title: data.title });
       updateMindMapData(data);
     }, 10000); // 10秒間隔
 
     return () => clearInterval(interval);
   }, [data?.id, authState.isAuthenticated]);
 
-  // データ更新のラッパー関数（編集中保護付き）
+  // データ更新のラッパー関数
   const updateDataSafe = useCallback((newData: MindMapData, options: any = {}) => {
-    // 編集中かチェック
-    const editingInput = document.querySelector('input[type="text"]:focus');
-    const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
-    
-    if (isCurrentlyEditing && !options.allowDuringEdit) {
-      console.log('✋ データ更新スキップ: ノード編集中のため保護');
-      return;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📝 データ更新実行:', { 
+        hasId: !!newData.id,
+        title: newData.title,
+        immediate: options.immediate
+      });
     }
-    
-    console.log('📝 データ更新実行:', { 
-      allowDuringEdit: options.allowDuringEdit,
-      isEditing: isCurrentlyEditing 
-    });
     
     setData(newData);
     
