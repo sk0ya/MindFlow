@@ -30,7 +30,8 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     deleteNode,
     startEdit,
     finishEdit,
-    updateTitle
+    updateTitle,
+    updateNode
   } = useMindMap();
 
   // 認証状態の変化をログ出力
@@ -63,11 +64,10 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  // ローカルモードと同等の操作性のためのダミー関数
-  const dragNode = (nodeId: string, x: number, y: number) => {
-    // クラウドモード用のドラッグ実装が必要
-    console.log('Drag node:', nodeId, x, y);
-  };
+  // クラウドモード用のドラッグ実装
+  const dragNode = useCallback((nodeId: string, x: number, y: number) => {
+    updateNode(nodeId, { x, y });
+  }, [updateNode]);
 
   const handleNodeSelect = (nodeId: string | null) => {
     setSelectedNodeId(nodeId || 'root');
@@ -189,14 +189,70 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     console.log('Right click on node:', nodeId);
   };
 
-  const toggleCollapse = (nodeId: string) => {
-    // 折りたたみ機能の実装が必要
-    console.log('Toggle collapse:', nodeId);
+  const toggleCollapse = useCallback((nodeId: string) => {
+    const node = findNode(nodeId);
+    if (node) {
+      updateNode(nodeId, { collapsed: !node.collapsed });
+    }
+  }, [findNode, updateNode]);
+
+  const navigateToDirection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+    if (!data || !selectedNodeId) return;
+    
+    const allNodes = flattenNodes(data.rootNode);
+    const currentIndex = allNodes.findIndex(node => node.id === selectedNodeId);
+    
+    if (currentIndex === -1) return;
+    
+    let newIndex = currentIndex;
+    switch (direction) {
+      case 'up':
+        newIndex = Math.max(0, currentIndex - 1);
+        break;
+      case 'down':
+        newIndex = Math.min(allNodes.length - 1, currentIndex + 1);
+        break;
+      case 'left':
+        // 親ノードに移動
+        const currentNode = allNodes[currentIndex];
+        const parentNode = findParentNode(data.rootNode, currentNode.id);
+        if (parentNode) {
+          setSelectedNodeId(parentNode.id);
+          return;
+        }
+        break;
+      case 'right':
+        // 最初の子ノードに移動
+        const firstChild = allNodes[currentIndex].children?.[0];
+        if (firstChild) {
+          setSelectedNodeId(firstChild.id);
+          return;
+        }
+        break;
+    }
+    
+    if (newIndex !== currentIndex) {
+      setSelectedNodeId(allNodes[newIndex].id);
+    }
+  }, [data, selectedNodeId, setSelectedNodeId]);
+
+  const flattenNodes = (node: any): any[] => {
+    const result = [node];
+    if (node.children) {
+      node.children.forEach((child: any) => result.push(...flattenNodes(child)));
+    }
+    return result;
   };
 
-  const navigateToDirection = (direction: string) => {
-    // キーボードナビゲーションの実装が必要
-    console.log('Navigate to direction:', direction);
+  const findParentNode = (root: any, targetId: string): any | null => {
+    if (root.children) {
+      for (const child of root.children) {
+        if (child.id === targetId) return root;
+        const found = findParentNode(child, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
   };
 
   // Magic Link処理中の表示
@@ -333,8 +389,8 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
               onFinishEdit={finishEdit}
               onDragNode={dragNode}
               onChangeParent={(nodeId, newParentId) => console.log('Change parent:', nodeId, newParentId)}
-              onAddChild={handleAddChild}
-              onAddSibling={handleAddSibling}
+              onAddChild={(parentId) => handleAddChild(parentId, '', true)}
+              onAddSibling={(nodeId) => handleAddSibling(nodeId, '', true)}
               onDeleteNode={deleteNode}
               onRightClick={handleRightClick}
               onToggleCollapse={toggleCollapse}

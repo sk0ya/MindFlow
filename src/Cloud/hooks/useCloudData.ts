@@ -247,7 +247,7 @@ export const useCloudData = () => {
         console.log('✅ 認証済み&データあり → データ取得スキップ');
       }
     }
-  }, [authState.isAuthenticated]);
+  }, [authState.isAuthenticated, data, isLoading, fetchMindMapData]);
 
   // 新規データの保存
   useEffect(() => {
@@ -267,7 +267,7 @@ export const useCloudData = () => {
     };
     
     saveNewData();
-  }, [data?.id, authState.isAuthenticated]);
+  }, [data?.id, authState.isAuthenticated, isLoading, saveMindMapData]);
 
   // 自動保存（10秒ごと）
   useEffect(() => {
@@ -281,7 +281,7 @@ export const useCloudData = () => {
     }, 10000); // 10秒間隔
 
     return () => clearInterval(interval);
-  }, [data?.id, authState.isAuthenticated]);
+  }, [data, authState.isAuthenticated, updateMindMapData]);
 
   // データ更新のラッパー関数
   const updateDataSafe = useCallback((newData: MindMapData, options: any = {}) => {

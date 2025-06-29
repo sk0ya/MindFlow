@@ -37,7 +37,7 @@ export async function handleRequest(request, env) {
 
   // Extract mindmap ID from path if present
   const pathParts = url.pathname.split('/');
-  const mindmapId = pathParts[3]; // /api/mindmaps/{id}
+  const mindmapId = pathParts[3]; // /api/mindmaps/{id} or /api/maps/{id}
 
   try {
     let response;

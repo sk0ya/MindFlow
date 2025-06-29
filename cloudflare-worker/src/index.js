@@ -23,7 +23,7 @@ export default {
         return await handleAuthRequest(request, env);
       }
 
-      if (path.startsWith('/api/mindmaps')) {
+      if (path.startsWith('/api/mindmaps') || path.startsWith('/api/maps')) {
         const { handleRequest } = await import('./handlers/mindmaps.js');
         return await handleRequest(request, env);
       }
@@ -83,17 +83,13 @@ async function initializeDatabase(env) {
     console.log('🔄 Database initialization...');
 
     const schemaSQL = `
-      DROP TABLE IF EXISTS mindmaps;
-      DROP TABLE IF EXISTS auth_tokens;
-      DROP TABLE IF EXISTS users;
-
-      CREATE TABLE users (
+      CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE auth_tokens (
+      CREATE TABLE IF NOT EXISTS auth_tokens (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         expires_at TEXT NOT NULL,
@@ -102,7 +98,7 @@ async function initializeDatabase(env) {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
 
-      CREATE TABLE mindmaps (
+      CREATE TABLE IF NOT EXISTS mindmaps (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         title TEXT NOT NULL,
@@ -112,10 +108,10 @@ async function initializeDatabase(env) {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
 
-      CREATE INDEX idx_mindmaps_user_id ON mindmaps(user_id);
-      CREATE INDEX idx_mindmaps_updated_at ON mindmaps(updated_at);
-      CREATE INDEX idx_auth_tokens_user_id ON auth_tokens(user_id);
-      CREATE INDEX idx_auth_tokens_expires ON auth_tokens(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_mindmaps_user_id ON mindmaps(user_id);
+      CREATE INDEX IF NOT EXISTS idx_mindmaps_updated_at ON mindmaps(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
+      CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires ON auth_tokens(expires_at);
     `;
 
     const statements = schemaSQL
