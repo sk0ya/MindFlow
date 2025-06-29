@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles.js';
@@ -85,27 +85,24 @@ interface UseMindMapResult {
 
 // 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
 export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
-  // デバッグログを制限（初回のみ）
-  const [debugLogged, setDebugLogged] = useState(false);
-  
   // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
-  const dataHook = useMindMapData(isAppReady);
+  // 常にtrueを渡すことで、フックの実行順序を安定化
+  const dataHook = useMindMapData(true);
   
-  // デバッグログ（初回のみ）
-  useEffect(() => {
-    if (!debugLogged) {
-      console.log('🔧 useMindMap called with isAppReady:', isAppReady);
-      console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
-      setDebugLogged(true);
-    }
-  }, [debugLogged]);
+  // デバッグログ（レンダリング中に状態を変更しない）
+  if (typeof console !== 'undefined' && dataHook.data) {
+    console.log('🔧 useMindMap called with isAppReady:', isAppReady);
+    console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
+  }
   
-  // ノード操作（dataがある場合のみ）
+  // ノード操作（常に呼び出し）
   const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData, dataHook.blockRealtimeSyncTemporarily);
   
-  // ナビゲーション（簡略化版）
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  // ナビゲーション（固定値）
+  const zoom = 1;
+  const setZoom = useCallback(() => {}, []);
+  const pan = { x: 0, y: 0 };
+  const setPan = useCallback(() => {}, []);
   
   const navigateToDirection = useCallback((direction: NavigationDirection): void => {
     console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
