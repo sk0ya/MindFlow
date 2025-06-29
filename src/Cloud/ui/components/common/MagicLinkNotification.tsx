@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const MagicLinkNotification = ({ isVisible, onClose, magicLink }) => {
   const [copied, setCopied] = useState(false);
@@ -112,8 +112,8 @@ const MagicLinkNotification = ({ isVisible, onClose, magicLink }) => {
               fontWeight: '500',
               transition: 'background-color 0.2s'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#5a6fd8'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#667eea'}
+            onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#5a6fd8'}
+            onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#667eea'}
           >
             🚀 今すぐログイン
           </button>

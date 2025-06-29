@@ -441,6 +441,10 @@ export class UnifiedSyncService {
       for (let i = 0; i < operations.length; i++) {
         const operation = operations[i];
         
+        if (!operation) {
+          continue;
+        }
+        
         try {
           switch (operation.type) {
             case 'create':
@@ -489,8 +493,7 @@ export class UnifiedSyncService {
               const moveData = operation.data as { x: number; y: number; parentId?: string };
               this.updateNodeInData(updatedData, operation.nodeId, {
                 x: moveData.x,
-                y: moveData.y,
-                parentId: moveData.parentId
+                y: moveData.y
               });
               results.push({
                 index: i,

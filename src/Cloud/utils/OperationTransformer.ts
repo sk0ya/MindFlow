@@ -71,6 +71,7 @@ export interface BaseOperation {
   userId: string;
   data?: NodeData | any;
   transformNote?: string;
+  mindmap_id?: string;
 }
 
 /**
@@ -211,16 +212,17 @@ export interface TransformConfig {
 
 export class OperationTransformer {
   
-  private readonly config: TransformConfig;
+  // private readonly config: TransformConfig; // Reserved for future configuration
 
-  constructor(config: Partial<TransformConfig> = {}) {
-    this.config = {
-      enableFieldMerging: true,
-      enableTextOperations: true,
-      maxRetries: 3,
-      validateResults: true,
-      ...config
-    };
+  constructor(_config: Partial<TransformConfig> = {}) {
+    // Configuration setup reserved for future use
+    // this.config = {
+    //   enableFieldMerging: true,
+    //   enableTextOperations: true,
+    //   maxRetries: 3,
+    //   validateResults: true,
+    //   ...config
+    // };
   }
 
   /**
@@ -594,7 +596,7 @@ export class OperationTransformer {
   public transformTextOperations(textOp1: TextOperation, textOp2: TextOperation): TextOperation {
     // 簡単なケース：全体テキスト置換
     if (textOp1.type === 'replace' && textOp2.type === 'replace') {
-      const priority = this.determinePriority(textOp1, textOp2);
+      const priority = this.determinePriority(textOp1 as any, textOp2 as any);
       return priority === 'op1' ? textOp1 : textOp2;
     }
 
@@ -684,14 +686,17 @@ export class OperationTransformer {
       
       // 既に変換された操作との競合をチェック
       for (let j = 0; j < transformedOps.length; j++) {
-        if (this.areOperationsRelated(currentOp, transformedOps[j])) {
-          const result = this.transform(currentOp, transformedOps[j]);
-          currentOp = result.op1Prime;
-          transformedOps[j] = result.op2Prime;
+        const transformedOp = transformedOps[j];
+        if (currentOp && transformedOp && this.areOperationsRelated(currentOp, transformedOp)) {
+          const result = this.transform(currentOp, transformedOp);
+          currentOp = result.op1Prime || currentOp;
+          transformedOps[j] = result.op2Prime || transformedOp;
         }
       }
       
-      transformedOps.push(currentOp);
+      if (currentOp) {
+        transformedOps.push(currentOp);
+      }
     }
 
     return transformedOps.filter(op => op.operation_type !== 'noop');
@@ -923,7 +928,7 @@ export class OperationTransformer {
         const op1 = operations[i];
         const op2 = operations[j];
         
-        if (this.areOperationsRelated(op1, op2)) {
+        if (op1 && op2 && this.areOperationsRelated(op1, op2)) {
           const conflictType = this.classifyConflict(op1, op2);
           if (conflictType) {
             conflicts.push(conflictType);
@@ -1005,7 +1010,7 @@ export class OperationTransformer {
     return conflicts.map(conflict => {
       if (conflict.operations.length === 2) {
         const [op1, op2] = conflict.operations;
-        const result = this.transform(op1, op2);
+        const result = op1 && op2 ? this.transform(op1, op2) : { op1Prime: op1, op2Prime: op2 };
         
         return {
           conflict,

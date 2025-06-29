@@ -132,13 +132,13 @@ const MindMapApp: React.FC = () => {
     changeMapCategory,
     getAvailableCategories,
     reinitializeAfterModeSelection,
-    triggerCloudSync
+    triggerCloudSync: _triggerCloudSync
   } = useMindMap(initState.isReady);
   
   // 認証状態は統一システムで管理済み
 
   // ストレージモード選択ハンドラー
-  const handleStorageModeSelectWithReinit = async (mode) => {
+  const handleStorageModeSelectWithReinit = async (mode: 'local' | 'cloud') => {
     try {
       console.log('📝 ストレージモード選択 (統合版):', mode);
       
@@ -209,7 +209,9 @@ const MindMapApp: React.FC = () => {
     updateCursorPosition
   );
   
-  const appActions = useAppActions(data, saveMindMap, storageManager.exportMindMapAsJSON, storageManager.importMindMapFromJSON);
+  const appActions = useAppActions(data as any, ((data: any) => {
+    if (data) saveMindMap(data);
+  }) as any, storageManager.exportMindMapAsJSON as any, storageManager.importMindMapFromJSON as any);
   
   const realtimeHandlers = useRealtimeHandlers(initializeRealtime, isRealtimeConnected);
 
@@ -260,24 +262,24 @@ const MindMapApp: React.FC = () => {
   }, [auth.state.isAuthenticated, auth.state.user, auth.isLoading, auth.error, settings.storageMode]);
 
   // ファイルアクションメニューのハンドラーを拡張
-  const handleCloseAllPanels = () => {
+  const _handleCloseAllPanels = () => {
     uiState.handleCloseAllPanels();
     fileHandlers.handleCloseAllPanels();
   };
 
   // コンテキストメニューのハンドラー
-  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
-    nodeHandlers.handleRightClick(e, nodeId);
+  const handleRightClick = (e: React.MouseEvent<HTMLElement>, nodeId: string) => {
+    nodeHandlers.handleRightClick(e as any, nodeId);
     uiState.handleCloseAllPanels();
   };
 
   const handleCopyNode = (node: MindMapNode) => {
     const clipboard = nodeHandlers.handleCopyNode(node);
-    uiState.setClipboard(clipboard);
+    uiState.setClipboard(clipboard as any);
   };
 
   const handlePasteNode = (parentId: string) => {
-    nodeHandlers.handlePasteNode(parentId, uiState.clipboard);
+    nodeHandlers.handlePasteNode(parentId, uiState.clipboard as any);
   };
 
   // ノードマップリンクのハンドラー

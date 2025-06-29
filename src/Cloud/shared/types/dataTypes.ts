@@ -209,7 +209,7 @@ export const STORAGE_KEYS = {
 
 // ファイル関連のユーティリティ
 export const isImageFile = (file: File): boolean => {
-  return file && file.type && file.type.startsWith('image/');
+  return Boolean(file && file.type && file.type.startsWith('image/'));
 };
 
 export const getFileIcon = (file: File): string => {
@@ -268,7 +268,7 @@ export const createFileAttachment = (
     name: file.name,
     type: file.type,
     size: file.size,
-    dataURL: dataURL, // レガシー対応
+    dataURL: dataURL ?? undefined, // レガシー対応
     downloadUrl: uploadedFileInfo?.downloadUrl, // R2からのダウンロードURL
     storagePath: uploadedFileInfo?.storagePath, // R2のストレージパス
     thumbnailUrl: uploadedFileInfo?.thumbnailUrl, // サムネイルURL

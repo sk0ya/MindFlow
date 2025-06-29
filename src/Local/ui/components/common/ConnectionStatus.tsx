@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // Required for JSX
 
 /**
  * リアルタイム接続状態表示コンポーネント（Local版 - 無効化）

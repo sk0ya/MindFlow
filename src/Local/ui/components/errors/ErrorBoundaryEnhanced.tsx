@@ -82,7 +82,7 @@ class ErrorBoundaryEnhanced extends Component<ErrorBoundaryEnhancedProps, ErrorB
       errorId: this.state.errorId || 'unknown',
       message: error.message,
       stack: error.stack,
-      componentStack: errorInfo.componentStack,
+      componentStack: errorInfo.componentStack ?? '',
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: window.location.href,

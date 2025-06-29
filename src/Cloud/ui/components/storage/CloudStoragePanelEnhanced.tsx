@@ -1,14 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { authManager } from '../../../features/auth/authManager.js';
+import type { MindMapListItem } from '../../../../shared/types/app.js';
 // Storage info will be calculated inline
 import { formatFileSize } from '../../../features/files/fileOptimization.js';
 
-const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAllMindMaps, currentMapId, switchToMap, deleteMindMapById, renameMindMap, createMindMap }) => {
+interface CloudStoragePanelEnhancedProps {
+  isVisible: boolean;
+  onClose: () => void;
+  allMindMaps: MindMapListItem[];
+  refreshAllMindMaps: () => Promise<void>;
+  currentMapId: string | null;
+  switchToMap: (mapId: string) => Promise<void>;
+  deleteMindMapById: (mapId: string) => boolean;
+  renameMindMap: (mapId: string, newTitle: string) => void;
+  createMindMap: (title: string, category?: string) => Promise<string>;
+}
+
+const CloudStoragePanelEnhanced: React.FC<CloudStoragePanelEnhancedProps> = ({ isVisible, onClose, allMindMaps, refreshAllMindMaps, currentMapId, switchToMap, deleteMindMapById, renameMindMap, createMindMap }) => {
   const [activeTab, setActiveTab] = useState('maps');
   const [currentUser, setCurrentUser] = useState(authManager.getCurrentUser());
   const [connectionStatus, setConnectionStatus] = useState('unknown');
   const [isConnecting, setIsConnecting] = useState(false);
-  const [storageInfo, setStorageInfo] = useState(null);
+  interface StorageInfo {
+    used: number;
+    available: number;
+    total: number;
+    percentage: number;
+    totalSizeMB?: number;
+    percentageUsed?: number;
+    itemCount?: number;
+    largestItems?: Array<{ key: string; sizeMB: number }>;
+  }
+
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('updatedAt');
@@ -24,11 +48,19 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
 
   const updateStorageInfo = () => {
     // Calculate storage info inline
-    const info = {
-      used: 0,
-      available: 10 * 1024 * 1024, // 10MB estimate
-      total: 10 * 1024 * 1024,
-      percentage: 0
+    const used = 0;
+    const total = 10 * 1024 * 1024; // 10MB estimate
+    const percentage = (used / total) * 100;
+    
+    const info: StorageInfo = {
+      used,
+      available: total - used,
+      total,
+      percentage,
+      totalSizeMB: used / (1024 * 1024),
+      percentageUsed: percentage,
+      itemCount: allMindMaps.length,
+      largestItems: []
     };
     setStorageInfo(info);
   };
@@ -72,13 +104,13 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
   };
 
   const getFilteredMaps = () => {
-    let filtered = allMindMaps.filter(map => {
+    let filtered = allMindMaps.filter((map: MindMapListItem) => {
       const matchesSearch = map.title.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || map.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
 
-    return filtered.sort((a, b) => {
+    return filtered.sort((a: MindMapListItem, b: MindMapListItem) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -93,7 +125,7 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
 
   const getCategories = () => {
     const categories = new Set(['all']);
-    allMindMaps.forEach(map => {
+    allMindMaps.forEach((map: MindMapListItem) => {
       if (map.category) categories.add(map.category);
     });
     return Array.from(categories);
@@ -224,7 +256,7 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
               )}
 
               <div className="maps-list">
-                {getFilteredMaps().map(map => (
+                {getFilteredMaps().map((map: MindMapListItem) => (
                   <div
                     key={map.id}
                     className={`map-item ${map.id === currentMapId ? 'current' : ''}`}
@@ -307,7 +339,7 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
                     <div className="storage-bar">
                       <div 
                         className="storage-used" 
-                        style={{ width: `${Math.min(storageInfo.percentageUsed, 100)}%` }}
+                        style={{ width: `${Math.min(storageInfo.percentageUsed || 0, 100)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -315,7 +347,7 @@ const CloudStoragePanelEnhanced = ({ isVisible, onClose, allMindMaps, refreshAll
                   <div className="storage-details">
                     <h4>大きなアイテム</h4>
                     <div className="large-items">
-                      {storageInfo.largestItems.map((item, index) => (
+                      {storageInfo.largestItems.map((item: { key: string; sizeMB: number }, index: number) => (
                         <div key={index} className="item-detail">
                           <span className="item-name">{item.key}</span>
                           <span className="item-size">{item.sizeMB} MB</span>

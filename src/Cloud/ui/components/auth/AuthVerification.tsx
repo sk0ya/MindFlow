@@ -4,7 +4,7 @@ import type { User } from '../../../shared/types/index.js';
 
 interface AuthVerificationProps {
   onAuthSuccess?: (user: User) => void;
-  onAuthError?: (error: string) => void;
+  onAuthError?: (error: Error) => void;
 }
 
 type VerificationStatus = 'verifying' | 'success' | 'error';
@@ -21,7 +21,7 @@ const AuthVerification: React.FC<AuthVerificationProps> = ({ onAuthSuccess, onAu
       if (!token) {
         setStatus('error');
         setMessage('認証トークンが見つかりません');
-        onAuthError?.('認証トークンが見つかりません');
+        onAuthError?.(new Error('認証トークンが見つかりません'));
         return;
       }
 
@@ -36,7 +36,9 @@ const AuthVerification: React.FC<AuthVerificationProps> = ({ onAuthSuccess, onAu
         window.history.replaceState({}, document.title, window.location.pathname);
         
         // 成功コールバック
-        onAuthSuccess?.(result.user);
+        if (result.user) {
+          onAuthSuccess?.(result.user);
+        }
         
         // ハードリダイレクトの代わりにReact Routerのナビゲーションを使用
         // またはアプリ内の状態管理によるページ遷移を実装
@@ -46,7 +48,7 @@ const AuthVerification: React.FC<AuthVerificationProps> = ({ onAuthSuccess, onAu
         setStatus('error');
         const errorMessage = error instanceof Error ? error.message : '認証に失敗しました';
         setMessage(errorMessage);
-        onAuthError?.(errorMessage);
+        onAuthError?.(error instanceof Error ? error : new Error(errorMessage));
       }
     };
 

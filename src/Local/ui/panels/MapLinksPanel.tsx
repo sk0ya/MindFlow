@@ -1,7 +1,20 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import type { Node, MindMapListItem, Position } from '../../../shared/types/app.js';
 
-const NodeMapLinksPanel = ({
+interface NodeMapLinksPanelProps {
+  isOpen: boolean;
+  position: Position;
+  selectedNode: Node;
+  currentMapId: string | null;
+  allMaps: MindMapListItem[];
+  onClose: () => void;
+  onAddLink: (nodeId: string, targetMapId: string, targetMapTitle: string, description?: string) => void;
+  onRemoveLink: (nodeId: string, linkId: string) => void;
+  onNavigateToMap: (mapId: string) => Promise<void>;
+}
+
+const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
   isOpen,
   position,
   selectedNode,
@@ -14,11 +27,11 @@ const NodeMapLinksPanel = ({
 }) => {
   const [selectedMapId, setSelectedMapId] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
-  const panelRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const handleAddLink = useCallback(() => {
     if (selectedMapId && selectedMapId !== currentMapId) {
-      const targetMap = allMaps.find(map => map.id === selectedMapId);
+      const targetMap = allMaps.find((map: MindMapListItem) => map.id === selectedMapId);
       if (targetMap) {
         onAddLink(selectedNode.id, selectedMapId, targetMap.title, linkDescription.trim());
         setSelectedMapId('');
@@ -27,27 +40,27 @@ const NodeMapLinksPanel = ({
     }
   }, [selectedMapId, currentMapId, allMaps, linkDescription, onAddLink, selectedNode]);
 
-  const handleKeyDown = useCallback((e) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
       handleAddLink();
     }
   }, [handleAddLink]);
 
-  const availableMaps = allMaps.filter(map => 
+  const availableMaps = allMaps.filter((map: MindMapListItem) => 
     map.id !== currentMapId && 
     !selectedNode.mapLinks?.some(link => link.targetMapId === map.id)
   );
 
   // クリック外し検出でパネルを閉じる
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as any)) {
         onClose();
       }
     };
 
-    const handleEscapeKey = (event) => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }

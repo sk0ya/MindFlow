@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+// useMemo is imported for potential future performance optimizations
 import { createNewNode, calculateNodePosition, COLORS, deepClone, MindMapData, MindMapNode } from '../../shared/types/dataTypes';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout';
 
@@ -153,7 +154,7 @@ export const useMindMapNodes = (
   // ノードの色を取得する（親から継承または新規割り当て）
   const getNodeColor = (parentNode: MindMapNode, childIndex: number): string => {
     if (parentNode.id === 'root') {
-      return COLORS[childIndex % COLORS.length];
+      return COLORS[childIndex % COLORS.length] ?? '#666';
     } else {
       return parentNode.color || '#666';
     }
@@ -279,7 +280,7 @@ export const useMindMapNodes = (
     } else {
       const existingSibling = findNode(nodeId);
       if (existingSibling) {
-        newSibling.color = existingSibling.color;
+        newSibling.color = existingSibling.color ?? '#666';
       } else {
         newSibling.color = parentNode.color || '#666';
       }

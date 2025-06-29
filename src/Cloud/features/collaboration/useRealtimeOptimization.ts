@@ -311,7 +311,7 @@ export const useRealtimeOptimization = (): RealtimeOptimizationUtils => {
         name: user.name,
         color: user.color,
         isActive: user.lastActivity ? (Date.now() - user.lastActivity < 300000) : false, // 5分
-        lastSeen: user.lastActivity
+        ...(user.lastActivity !== undefined && { lastSeen: user.lastActivity })
       }));
 
       presenceCache.set(cacheKey, optimizedUsers);
@@ -319,7 +319,9 @@ export const useRealtimeOptimization = (): RealtimeOptimizationUtils => {
       // キャッシュサイズ制限
       if (presenceCache.size > 50) {
         const firstKey = presenceCache.keys().next().value;
-        presenceCache.delete(firstKey);
+        if (firstKey) {
+          presenceCache.delete(firstKey);
+        }
       }
 
       return optimizedUsers;

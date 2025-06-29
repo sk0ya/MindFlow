@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // Required for JSX
 
 /**
  * ユーザープレゼンス表示コンポーネント（Local版 - 無効化）

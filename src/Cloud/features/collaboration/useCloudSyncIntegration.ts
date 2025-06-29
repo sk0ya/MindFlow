@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useCloudSync } from '../../hooks/useCloudSync.js';
 import { authManager } from '../auth/authManager.js';
 
@@ -9,23 +9,22 @@ import { authManager } from '../auth/authManager.js';
 export const useCloudSyncIntegration = (
   data: any,
   updateData: Function,
-  selectedNodeId: string | null,
+  _selectedNodeId: string | null,
   currentMapId: string | null
 ) => {
   const isCloudMode = authManager.isAuthenticated();
-  const currentUserRef = useRef(authManager.getCurrentUser());
   
   // クラウド同期設定
   const cloudSyncConfig = {
     apiBaseUrl: '/api', // Default API base URL
     websocketUrl: 'wss://api.mindflow.com/ws', // Default WebSocket URL
-    authToken: authManager.getToken()
+    authToken: authManager.getAuthToken()
   };
 
   // クラウド同期フック（クラウドモードの場合のみ有効化）
   const cloudSync = useCloudSync(
-    isCloudMode ? currentMapId : null,
-    isCloudMode ? cloudSyncConfig : {}
+    isCloudMode ? (currentMapId || '') : '',
+    isCloudMode ? cloudSyncConfig as any : undefined
   );
 
   // ===== 既存操作とクラウド同期の統合 =====
@@ -88,7 +87,7 @@ export const useCloudSyncIntegration = (
   const integratedDeleteNode = useCallback(async (nodeId: string) => {
     try {
       // 削除前の状態を保存（ロールバック用）
-      const nodeToDelete = findNodeById(data?.rootNode, nodeId);
+      // const _nodeToDelete = findNodeById(data?.rootNode, nodeId);
       
       // ローカル状態を即座に更新
       const localUpdate = (currentData: any) => {

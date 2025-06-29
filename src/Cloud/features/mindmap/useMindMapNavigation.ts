@@ -147,14 +147,14 @@ export const useMindMapNavigation = (): UseMindMapNavigationReturn => {
           case 'down':
             // 下方向: 最初の子ノードを選択
             targetNode = currentNode.children && currentNode.children.length > 0 
-              ? currentNode.children[0] : null;
+              ? currentNode.children[0] ?? null : null;
             break;
           case 'left':
             // 左方向: 前の兄弟ノードを選択
             const leftParent: NavigationNode | null = findParentNode(selectedNodeId);
             if (leftParent && leftParent.children) {
               const currentIndex: number = leftParent.children.findIndex((child: NavigationNode) => child.id === selectedNodeId);
-              targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
+              targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] ?? null : null;
             }
             break;
           case 'right':
@@ -163,7 +163,7 @@ export const useMindMapNavigation = (): UseMindMapNavigationReturn => {
             if (rightParent && rightParent.children) {
               const currentIndex: number = rightParent.children.findIndex((child: NavigationNode) => child.id === selectedNodeId);
               targetNode = currentIndex < rightParent.children.length - 1 
-                ? rightParent.children[currentIndex + 1] : null;
+                ? rightParent.children[currentIndex + 1] ?? null : null;
             }
             break;
         }

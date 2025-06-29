@@ -1,19 +1,35 @@
-import React, { useState, useEffect, memo } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect, memo } from 'react';
 import { usePerformanceMonitor } from '../../../features/collaboration/useRealtimeOptimization.js';
+import { PerformanceDashboardProps } from '../../../../shared/types/app';
 
 /**
  * パフォーマンス監視ダッシュボード
  * 開発環境でのリアルタイム機能のパフォーマンス確認用
  */
-const PerformanceDashboard = memo(({ 
+
+interface PerformanceMetrics {
+  averageRenderTime?: number;
+  memoryUsage?: number;
+  wsMessageRate?: number;
+  wsMessageCount?: number;
+  renderCount?: number;
+  lastRenderTime?: number;
+  timestamp?: number;
+}
+
+interface PerformanceStatus {
+  status: string;
+  color: string;
+}
+
+const PerformanceDashboard = memo<PerformanceDashboardProps>(({ 
   isVisible = false, 
   onClose,
   position = 'bottom-right'
 }) => {
   const { getMetrics } = usePerformanceMonitor();
-  const [metrics, setMetrics] = useState({});
-  const [history, setHistory] = useState([]);
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({});
+  const [history, setHistory] = useState<PerformanceMetrics[]>([]);
   const [isRecording, setIsRecording] = useState(true);
 
   useEffect(() => {
@@ -36,21 +52,21 @@ const PerformanceDashboard = memo(({
     return () => clearInterval(interval);
   }, [isVisible, isRecording, getMetrics]);
 
-  const getPerformanceStatus = (renderTime) => {
+  const getPerformanceStatus = (renderTime: number): PerformanceStatus => {
     if (renderTime < 8) return { status: 'excellent', color: '#28a745' };
     if (renderTime < 16) return { status: 'good', color: '#ffc107' };
     if (renderTime < 33) return { status: 'acceptable', color: '#fd7e14' };
     return { status: 'poor', color: '#dc3545' };
   };
 
-  const getMemoryStatus = (memoryMB) => {
+  const getMemoryStatus = (memoryMB: number): PerformanceStatus => {
     if (memoryMB < 50) return { status: 'low', color: '#28a745' };
     if (memoryMB < 100) return { status: 'moderate', color: '#ffc107' };
     if (memoryMB < 200) return { status: 'high', color: '#fd7e14' };
     return { status: 'critical', color: '#dc3545' };
   };
 
-  const getConnectionStatus = (messageRate) => {
+  const getConnectionStatus = (messageRate: number): PerformanceStatus => {
     if (messageRate < 5) return { status: 'light', color: '#28a745' };
     if (messageRate < 20) return { status: 'moderate', color: '#ffc107' };
     if (messageRate < 50) return { status: 'heavy', color: '#fd7e14' };
@@ -451,11 +467,5 @@ const PerformanceDashboard = memo(({
     </div>
   );
 });
-
-PerformanceDashboard.propTypes = {
-  isVisible: PropTypes.bool,
-  onClose: PropTypes.func.isRequired,
-  position: PropTypes.oneOf(['bottom-right', 'bottom-left', 'top-right'])
-};
 
 export default PerformanceDashboard;

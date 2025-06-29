@@ -21,6 +21,7 @@ interface ContextMenuProps {
 }
 
 interface MenuItemAction {
+  type?: 'action';
   icon: string;
   label: string;
   action: () => void;
@@ -39,6 +40,7 @@ interface ColorOption {
 }
 
 interface MenuItemSubmenu {
+  type: 'submenu';
   icon: string;
   label: string;
   submenu: ColorOption[];
@@ -120,6 +122,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       }
     },
     {
+      type: 'submenu',
       icon: '🎯',
       label: 'クイックカラー',
       submenu: [
@@ -177,7 +180,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       return <div key={index} className="menu-separator" />;
     }
 
-    if ('submenu' in item) {
+    if (item.type === 'submenu' || 'submenu' in item) {
       return (
         <div key={index} className="menu-item submenu-parent">
           <div className="menu-item-content">
@@ -186,7 +189,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             <span className="submenu-arrow">▶</span>
           </div>
           <div className="submenu">
-            {item.submenu.map((subItem, subIndex) => (
+            {item.submenu.map((subItem: ColorOption, subIndex: number) => (
               <div
                 key={subIndex}
                 className="submenu-item"
@@ -204,17 +207,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       );
     }
 
+    // This must be a MenuItemAction
+    const actionItem = item as MenuItemAction;
     return (
       <div
         key={index}
-        className={`menu-item ${item.disabled ? 'disabled' : ''} ${item.danger ? 'danger' : ''}`}
-        onClick={item.disabled ? undefined : item.action}
+        className={`menu-item ${actionItem.disabled ? 'disabled' : ''} ${actionItem.danger ? 'danger' : ''}`}
+        onClick={actionItem.disabled ? undefined : actionItem.action}
       >
         <div className="menu-item-content">
-          <span className="menu-icon">{item.icon}</span>
-          <span className="menu-label">{item.label}</span>
-          {item.shortcut && (
-            <span className="menu-shortcut">{item.shortcut}</span>
+          <span className="menu-icon">{actionItem.icon}</span>
+          <span className="menu-label">{actionItem.label}</span>
+          {actionItem.shortcut && (
+            <span className="menu-shortcut">{actionItem.shortcut}</span>
           )}
         </div>
       </div>

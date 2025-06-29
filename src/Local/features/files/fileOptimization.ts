@@ -73,7 +73,7 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
       
       // 出力形式を決定
       let outputType = 'image/jpeg';
-      let outputQuality = quality;
+      let outputQuality: number | undefined = quality;
       
       // 元がPNGで透明度がある場合はPNGを維持
       if (file.type === 'image/png') {
@@ -97,28 +97,51 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
       }
       
       // DataURLとして出力
-      const dataURL = canvas.toDataURL(outputType, outputQuality);
+      const dataURL = outputQuality !== undefined 
+        ? canvas.toDataURL(outputType, outputQuality)
+        : canvas.toDataURL(outputType);
       
       // 圧縮結果をBlobとして取得
-      canvas.toBlob(
-        (blob: Blob | null) => {
-          if (blob) {
-            resolve({
-              dataURL,
-              blob,
-              originalSize: file.size,
-              compressedSize: blob.size,
-              compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(1),
-              outputType,
-              dimensions: { width, height }
-            });
-          } else {
-            reject(new Error('画像圧縮に失敗しました'));
-          }
-        },
-        outputType,
-        outputQuality
-      );
+      if (outputQuality !== undefined) {
+        canvas.toBlob(
+          (blob: Blob | null) => {
+            if (blob) {
+              resolve({
+                dataURL,
+                blob,
+                originalSize: file.size,
+                compressedSize: blob.size,
+                compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(1),
+                outputType,
+                dimensions: { width, height }
+              });
+            } else {
+              reject(new Error('画像圧縮に失敗しました'));
+            }
+          },
+          outputType,
+          outputQuality
+        );
+      } else {
+        canvas.toBlob(
+          (blob: Blob | null) => {
+            if (blob) {
+              resolve({
+                dataURL,
+                blob,
+                originalSize: file.size,
+                compressedSize: blob.size,
+                compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(1),
+                outputType,
+                dimensions: { width, height }
+              });
+            } else {
+              reject(new Error('画像圧縮に失敗しました'));
+            }
+          },
+          outputType
+        );
+      }
     };
     
     img.onerror = () => reject(new Error('画像の読み込みに失敗しました'));

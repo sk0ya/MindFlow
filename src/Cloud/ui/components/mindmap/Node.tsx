@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
 import type { MindMapNode, FileAttachment } from '../../../shared/types';
 
 interface NodeProps {
@@ -45,7 +45,7 @@ const Node: React.FC<NodeProps> = ({
   onDragMove,
   onDragEnd,
   onAddChild,
-  onAddSibling,
+  onAddSibling: _onAddSibling,
   onDelete,
   onRightClick,
   onFileUpload,
@@ -212,7 +212,7 @@ const Node: React.FC<NodeProps> = ({
   }, [node.id, onRightClick]);
 
   // 編集終了を即座に実行する関数（blur用）
-  const finishEditImmediately = useCallback(() => {
+  const _finishEditImmediately = useCallback(() => {
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
       blurTimeoutRef.current = null;
@@ -290,7 +290,7 @@ const Node: React.FC<NodeProps> = ({
     e.target.value = '';
   }, [node.id, onFileUpload]);
   
-  const handleRemoveFile = useCallback((fileId: string) => {
+  const _handleRemoveFile = useCallback((fileId: string) => {
     if (onRemoveFile) {
       onRemoveFile(node.id, fileId);
     }
@@ -309,8 +309,8 @@ const Node: React.FC<NodeProps> = ({
     e.preventDefault();
     if (onShowFileActionMenu) {
       // SVGイベントの場合は座標を適切に取得
-      const clientX = e.clientX || (e.nativeEvent && e.nativeEvent.clientX) || 0;
-      const clientY = e.clientY || (e.nativeEvent && e.nativeEvent.clientY) || 0;
+      const clientX = e.clientX || ('nativeEvent' in e && e.nativeEvent && e.nativeEvent.clientX) || 0;
+      const clientY = e.clientY || ('nativeEvent' in e && e.nativeEvent && e.nativeEvent.clientY) || 0;
       
       onShowFileActionMenu(file, node.id, {
         x: clientX,
@@ -366,7 +366,7 @@ const Node: React.FC<NodeProps> = ({
       />
       
       {/* 画像添付ファイルの表示 */}
-      {node.attachments && node.attachments.filter(file => file.isImage).map((file, index) => (
+      {node.attachments && node.attachments.filter(file => file.isImage).map((file, _index) => (
         <g key={file.id}>
           <foreignObject 
             x={node.x - nodeWidth / 2 + 5} 

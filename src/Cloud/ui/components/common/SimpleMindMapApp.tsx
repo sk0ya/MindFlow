@@ -33,7 +33,7 @@ export const SimpleMindMapApp: React.FC = () => {
     addSibling: (nodeId: string, text?: string) => console.log('addSibling:', nodeId, text),
     update: (nodeId: string, updates: Partial<NodeData>) => console.log('update:', nodeId, updates),
     remove: (nodeId: string) => console.log('remove:', nodeId),
-    find: (nodeId: string): NodeData | undefined => typedMapData?.rootNode
+    find: (_nodeId: string): NodeData | undefined => typedMapData?.rootNode
   };
 
   // 初期マップの設定
@@ -119,11 +119,11 @@ export const SimpleMindMapApp: React.FC = () => {
     }
   };
 
-  // ストレージモード切り替え
+  // ストレージモード切り替え (Cloud版では常にcloud)
   const toggleStorageMode = () => {
     const settings = storageService.getSettings();
-    const newMode: 'local' | 'cloud' = settings.storageMode === 'local' ? 'cloud' : 'local';
-    storageService.setSettings({ storageMode: newMode });
+    // Cloud版では常にcloudモード
+    storageService.setSettings({ storageMode: 'cloud' as const });
     loadMaps();
   };
 
@@ -227,7 +227,7 @@ interface SimpleCanvasProps {
 }
 
 const SimpleCanvas: React.FC<SimpleCanvasProps> = ({ 
-  mapData, 
+  _mapData, 
   selectedNodeId, 
   editingNodeId, 
   editText,

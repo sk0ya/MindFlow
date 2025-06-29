@@ -244,7 +244,7 @@ export const improvedMindMapLayout: LayoutFunction<MindMapLayoutOptions> = (root
     baseRadius = LAYOUT.RADIAL_BASE_RADIUS + 30, // 少し大きめ
     levelSpacing = LAYOUT.LEVEL_SPACING,
     minVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN - 20,
-    maxVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN + 40,
+    maxVerticalSpacing: _maxVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN + 40,
     preserveRootPosition = false
   } = options;
 
@@ -267,7 +267,7 @@ export const improvedMindMapLayout: LayoutFunction<MindMapLayoutOptions> = (root
     return { width, height };
   };
 
-  const updateNodePositions = (node: MindMapNode, depth: number = 0, side: LayoutSide = 'center', yOffset: number = 0, availableHeight: number = 0): void => {
+  const updateNodePositions = (node: MindMapNode, depth: number = 0, side: LayoutSide = 'center', yOffset: number = 0, _availableHeight: number = 0): void => {
     if (depth === 0) {
       if (!preserveRootPosition) {
         node.x = centerX;
@@ -434,7 +434,7 @@ export const organicLayout: LayoutFunction<OrganicLayoutOptions> = (rootNode: Mi
     centerY = 300,
     baseRadius = 120,
     radiusVariation = 40,
-    angleVariation = 30,
+    angleVariation: _angleVariation = 30,
     repulsionForce = 1000,
     iterations = 50
   } = options;

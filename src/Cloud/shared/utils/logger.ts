@@ -110,10 +110,10 @@ const LOG_OUTPUTS = {
 class Logger {
   private level: LogLevel;
   private enabledOutputs: LogOutput[];
-  private maxStorageEntries: number;
+  // private _maxStorageEntries: number; // Reserved for future storage management
   private remoteEndpoint: string | null;
   private context: LogMeta;
-  private storageKey: string;
+  // private _storageKey: string; // Reserved for future storage management
   private filters: LogFilter[];
   private formatter: LogFormatter;
   private logBuffer: LogEntry[];
@@ -377,7 +377,7 @@ class Logger {
   fatal(message: string, meta?: LogMeta): void { this.log(LOG_LEVELS.FATAL, message, meta); }
   
   // ログの取得（クラウド専用）
-  getLogs(filter: LogFilterOptions = {}): LogEntry[] {
+  getLogs(_filter: LogFilterOptions = {}): LogEntry[] {
     // Cloud mode: logs not stored in localStorage
     console.log('☁️ Cloud mode: logs not available from localStorage');
     return [];

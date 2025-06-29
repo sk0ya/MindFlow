@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React from 'react'; // Required for JSX
 
 const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeId, isCollapsed = false, isToggleConnection = false, color = '#666' }) => {
   const createPath = (from, to) => {

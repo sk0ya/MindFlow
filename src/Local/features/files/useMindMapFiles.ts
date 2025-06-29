@@ -4,9 +4,16 @@ import { optimizeFile, formatFileSize } from './fileOptimization';
 import { validateFile } from './fileValidation';
 import { logger } from '../../shared/utils/logger';
 import { getCurrentMindMap } from '../../core/storage/LocalEngine';
-import { getAppSettings } from '../../core/storage/LocalEngine';
+// getAppSettings is imported for potential future settings-based file handling
 
 // ===== Type Definitions =====
+
+// Extend Window interface for File System Access API
+declare global {
+  interface Window {
+    showSaveFilePicker?: (options?: any) => Promise<FileSystemFileHandle>;
+  }
+}
 
 /**
  * File operation types (Local Mode)
@@ -15,6 +22,18 @@ export interface FileValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+// Type for FileOptimizationResult to match OptimizationResult
+interface FileOptimizationResult {
+  dataURL: string;
+  originalSize: number;
+  optimizedSize: number;
+  compressionRatio: string | number;
+  isCompressed: boolean;
+  type: string;
+  file: File;
+  optimizationApplied: boolean;
 }
 
 /**
@@ -139,28 +158,20 @@ export const useMindMapFiles = (
       console.log('💾 ローカルモード: Base64エンコードで保存');
       
       // ファイル最適化
-      const optimizationResult: FileOptimizationResult = await optimizeFile(file);
-      
-      // Base64エンコード
-      const reader = new FileReader();
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(optimizationResult.file);
-      });
+      const optimizationResult = await optimizeFile(file as any);
       
       // ファイル添付データ作成
       const fileAttachment = createFileAttachment(
-        optimizationResult.file.name,
-        optimizationResult.file.type,
-        optimizationResult.file.size,
-        base64Data
+        file as any,
+        file?.type || '',
+        optimizationResult.optimizedSize,
+        optimizationResult.dataURL
       );
       
       // 最適化情報を追加
-      fileAttachment.originalSize = file.size;
-      fileAttachment.optimizationApplied = optimizationResult.optimizationApplied;
-      fileAttachment.compressionRatio = optimizationResult.compressionRatio;
+      fileAttachment.originalSize = file?.size || 0;
+      fileAttachment.isOptimized = optimizationResult.isCompressed;
+      fileAttachment.compressionRatio = String(optimizationResult.compressionRatio);
       
       // ノードに添付
       const node = findNode(nodeId);
@@ -174,9 +185,9 @@ export const useMindMapFiles = (
       logger.info(`✅ ファイル添付完了: ${file.name}`, {
         nodeId,
         fileName: file.name,
-        fileSize: formatFileSize(optimizationResult.file.size),
+        fileSize: formatFileSize(optimizationResult.optimizedSize),
         originalSize: formatFileSize(file.size),
-        optimized: optimizationResult.optimizationApplied
+        optimized: optimizationResult.isCompressed
       });
       
       return fileAttachment.id;

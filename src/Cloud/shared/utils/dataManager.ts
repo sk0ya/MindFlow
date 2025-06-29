@@ -1,5 +1,5 @@
 // 統一データ管理システム - 全ての保存・同期操作を統括
-import { getAppSettings } from '../../core/storage/storageUtils.js';
+// import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone } from '../types/dataTypes';
 import type { MindMapData, MindMapNode, FileAttachment } from '../types/dataTypes';
@@ -153,7 +153,7 @@ export type SaveStrategies = Record<OperationType, SaveStrategy>;
  */
 export class DataManager {
   private currentData: MindMapData | null;
-  private pendingOperations: Map<string, QueuedOperation>;
+  // private _pendingOperations: Map<string, QueuedOperation>; // Reserved for future operation tracking
   private syncQueue: QueuedOperation[];
   private isOnline: boolean;
   private saveTimers: Map<OperationType, NodeJS.Timeout>;
@@ -399,7 +399,7 @@ export class DataManager {
   
   // ノード移動の適用
   private applyNodeMove(data: MindMapData, payload: NodeMovePayload): MindMapData {
-    const { nodeId, newX, newY, newParentId } = payload;
+    const { nodeId, newX, newY, newParentId: _newParentId } = payload;
     // 実装詳細は既存のchangeParent関数を参考
     // ここでは簡略化
     const updateNode = (node: MindMapNode): MindMapNode => {
@@ -500,7 +500,7 @@ export class DataManager {
       this.syncInProgress = true;
       // 確定操作はマップ全体を保存
       if (this.isCommitOperation(operationType)) {
-        const result = await storageManager.updateMap(this.currentData!.id, this.currentData!);
+        const result = await storageManager.updateMap(this.currentData!.id, this.currentData! as any);
         if (!result.success) {
           throw new Error(result.error || '保存に失敗しました');
         }
@@ -515,7 +515,7 @@ export class DataManager {
           id: operationId,
           type: operationType
         });
-        const result = await storageManager.updateMap(this.currentData!.id, this.currentData!);
+        const result = await storageManager.updateMap(this.currentData!.id, this.currentData! as any);
         if (!result.success) {
           throw new Error(result.error || '保存に失敗しました');
         }

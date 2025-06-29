@@ -162,7 +162,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
                   borderWidth: '2px'
                 };
                 setCustomizations(preset);
-                onUpdateNode(selectedNode.id, preset);
+                onUpdateNode(selectedNode.id, preset as any);
               }}
               className="preset-btn"
             >
@@ -178,7 +178,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
                   borderWidth: '3px'
                 };
                 setCustomizations(preset);
-                onUpdateNode(selectedNode.id, preset);
+                onUpdateNode(selectedNode.id, preset as any);
               }}
               className="preset-btn"
             >
@@ -194,7 +194,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
                   borderWidth: '2px'
                 };
                 setCustomizations(preset);
-                onUpdateNode(selectedNode.id, preset);
+                onUpdateNode(selectedNode.id, preset as any);
               }}
               className="preset-btn"
             >

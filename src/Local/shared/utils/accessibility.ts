@@ -152,7 +152,7 @@ export class FocusManager {
     this.focusHistory.pop();
     const previousElementId = this.focusHistory[this.focusHistory.length - 1];
     
-    return this.setFocus(previousElementId, { announcement: '前の項目に戻りました' });
+    return this.setFocus(previousElementId || '', { announcement: '前の項目に戻りました' });
   }
 
   // スクリーンリーダーへの音声通知
@@ -344,7 +344,7 @@ export class KeyboardNavigationHelper {
     const owns = currentElement.getAttribute('aria-owns');
     if (owns) {
       const childIds = owns.split(' ');
-      return document.getElementById(childIds[0]);
+      return document.getElementById(childIds[0] || '') || null;
     }
     return null;
   }

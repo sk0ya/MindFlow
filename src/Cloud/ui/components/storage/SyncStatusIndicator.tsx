@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // React is required for JSX
 import { getSyncStatus } from '../../../core/storage/StorageManager.js';
 import { syncManager } from '../../../features/collaboration/syncManager.js';
 import { authManager } from '../../../features/auth/authManager.js';
@@ -34,7 +34,7 @@ const SyncStatusIndicator = () => {
         }
         
         const status = getSyncStatus();
-        setSyncStatus(status);
+        setSyncStatus(status as any);
         
         if (status.lastSyncTime) {
           const lastSync = new Date(status.lastSyncTime);
@@ -72,7 +72,7 @@ const SyncStatusIndicator = () => {
     try {
       const result = await syncManager.forcSync();
       console.log('Manual sync completed:', result);
-      setSyncStatus(getSyncStatus());
+      setSyncStatus(getSyncStatus() as any);
     } catch (error) {
       console.error('Manual sync failed:', error);
     } finally {

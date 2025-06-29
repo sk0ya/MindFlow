@@ -1,11 +1,12 @@
-import React, { memo, useMemo } from 'react';
-import PropTypes from 'prop-types';
+import { memo, useMemo } from 'react';
+// PropTypes is imported for potential future prop validation
+import { UserPresenceProps } from '../../../../shared/types/app';
 
 /**
  * 接続中ユーザーの表示コンポーネント
  * リアルタイム共同編集での参加者一覧を表示
  */
-const UserPresence = memo(({
+const UserPresence = memo<UserPresenceProps>(({
   connectedUsers = [],
   currentUserId,
   realtimeStatus = 'disconnected',
@@ -29,7 +30,7 @@ const UserPresence = memo(({
     return null;
   }
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
         return '🟢';
@@ -42,7 +43,7 @@ const UserPresence = memo(({
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: string) => {
     switch (status) {
       case 'connected':
         return '接続中';
@@ -251,7 +252,7 @@ const UserPresence = memo(({
   const prevUsers = prevProps.connectedUsers || [];
   const nextUsers = nextProps.connectedUsers || [];
   
-  return prevUsers.every((prevUser, index) => {
+  return prevUsers.every((prevUser: any, index: number) => {
     const nextUser = nextUsers[index];
     return nextUser && 
            prevUser.id === nextUser.id &&
@@ -264,7 +265,7 @@ const UserPresence = memo(({
 /**
  * 最終活動時間をフォーマット
  */
-const formatLastActivity = (timestamp) => {
+const formatLastActivity = (timestamp: number) => {
   if (!timestamp) return '';
   
   const now = Date.now();
@@ -282,18 +283,6 @@ const formatLastActivity = (timestamp) => {
     const days = Math.floor(diff / 86400000);
     return `${days}d ago`;
   }
-};
-
-UserPresence.propTypes = {
-  connectedUsers: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    color: PropTypes.string,
-    lastActivity: PropTypes.number
-  })),
-  currentUserId: PropTypes.string,
-  realtimeStatus: PropTypes.oneOf(['connected', 'connecting', 'reconnecting', 'disconnected']),
-  onUserClick: PropTypes.func
 };
 
 export default UserPresence;

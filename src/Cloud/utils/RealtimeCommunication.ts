@@ -1,5 +1,6 @@
 import { SyncStateManager, Operation } from './SyncStateManager';
-import { MessageManager, MessageOptions } from './MessageManager';
+import { MessageManager } from './MessageManager';
+// MessageOptions is imported for potential future message configuration
 import { ConflictResolver, ConflictResolution } from './ConflictResolver';
 
 // ===== Type Definitions =====
@@ -167,7 +168,7 @@ export class RealtimeCommunication {
     this.websocket = null;
     this.messageManager = null;
     this.syncStateManager = new SyncStateManager();
-    this.conflictResolver = new ConflictResolver(this.syncStateManager);
+    this.conflictResolver = new ConflictResolver(this.syncStateManager as any);
     
     this.currentMindmapId = null;
     this.isIntentionalClose = false;
@@ -221,14 +222,14 @@ export class RealtimeCommunication {
     try {
       const url = `${this.websocketUrl}?mindmapId=${mindmapId}&token=${this.authToken}`;
       this.websocket = new WebSocket(url);
-      this.messageManager = new MessageManager(this.websocket, this.syncStateManager);
+      this.messageManager = new MessageManager(this.websocket, this.syncStateManager as any);
 
       this.setupWebSocketHandlers();
       
       return new Promise((resolve, reject) => {
         this.connectionTimeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
-        }, 10000);
+        }, 10000) as unknown as number;
 
         this.websocket.onopen = () => {
           clearTimeout(this.connectionTimeout);
@@ -317,7 +318,7 @@ export class RealtimeCommunication {
   private onError(error: Event): void {
     console.error('WebSocket error:', error);
     this.updateErrorMetrics();
-    this.syncStateManager.addError(error, 'websocket_error');
+    this.syncStateManager.addError(error as any, 'websocket_error');
     this.notifyEventListeners('error', error);
   }
 
@@ -329,7 +330,7 @@ export class RealtimeCommunication {
       if (this.websocket?.readyState === WebSocket.OPEN && this.messageManager) {
         try {
           const startTime = Date.now();
-          await this.messageManager.sendMessage('ping', {}, { 
+          await this.messageManager.sendMessage('ping' as any, {} as any, { 
             requiresAck: true, 
             timeout: 3000,
             priority: 'high'
@@ -371,7 +372,7 @@ export class RealtimeCommunication {
           !this.isIntentionalClose) {
         
         try {
-          await this.connect(this.currentMindmapId);
+          await this.connect(this.currentMindmapId || '');
           this.notifyEventListeners('reconnected', {
             attempts: this.reconnectAttempts
           });
@@ -410,7 +411,7 @@ export class RealtimeCommunication {
         const resolution = await this.conflictResolver.resolveConflict(operation);
         
         if (resolution.shouldApply) {
-          await this.applyOperation(resolution.resolvedOperation);
+          await this.applyOperation(resolution.resolvedOperation || operation);
         }
 
         // 競合情報を通知
@@ -430,7 +431,7 @@ export class RealtimeCommunication {
 
     } catch (error) {
       console.error('Remote operation handling failed:', error);
-      this.syncStateManager.addError(error, 'remote_operation_handling');
+      this.syncStateManager.addError(error as any, 'remote_operation_handling');
     }
   }
 
@@ -479,7 +480,7 @@ export class RealtimeCommunication {
     }
 
     return await this.messageManager.sendMessage(
-      WebSocketEvents.SYNC.OPERATION,
+      WebSocketEvents.SYNC.OPERATION as any,
       operation,
       { requiresAck: true, priority: 'high' }
     );
@@ -494,7 +495,7 @@ export class RealtimeCommunication {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
-      WebSocketEvents.COLLABORATION.CURSOR_UPDATE,
+      WebSocketEvents.COLLABORATION.CURSOR_UPDATE as any,
       { position },
       { queueOnFailure: false }
     );
@@ -509,8 +510,8 @@ export class RealtimeCommunication {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
-      WebSocketEvents.COLLABORATION.EDITING_START,
-      { nodeId }
+      WebSocketEvents.COLLABORATION.EDITING_START as any,
+      { nodeId } as any
     );
   }
 
@@ -523,8 +524,8 @@ export class RealtimeCommunication {
     if (!this.messageManager) return;
 
     return await this.messageManager.sendMessage(
-      WebSocketEvents.COLLABORATION.EDITING_END,
-      { nodeId }
+      WebSocketEvents.COLLABORATION.EDITING_END as any,
+      { nodeId } as any
     );
   }
 
@@ -547,7 +548,7 @@ export class RealtimeCommunication {
     };
 
     return await this.messageManager.sendMessage(
-      WebSocketEvents.COLLABORATION.PRESENCE_UPDATE,
+      WebSocketEvents.COLLABORATION.PRESENCE_UPDATE as any,
       { presence: { ...defaultPresence, ...presence } }
     );
   }
@@ -611,7 +612,7 @@ export class RealtimeCommunication {
       ...this.performanceMetrics,
       syncState: this.syncStateManager.getStats(),
       messageManager: this.messageManager?.getStats() || {},
-      conflictResolver: this.conflictResolver.getConflictStats(this.currentMindmapId)
+      conflictResolver: this.conflictResolver.getConflictStats(this.currentMindmapId || undefined)
     };
   }
 

@@ -1,10 +1,9 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../shared/types/dataTypes.js';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
-import { getAppSettings } from '../../core/storage/storageUtils.js';
-import type { MindMapData, MindMapNode } from '../../shared/types/index.js';
-import type { StorageResult, Node, CloudStorageAdapter, MindMapData as CoreMindMapData } from '../../core/storage/types.js';
+import type { MindMapData } from '../../shared/types/index.js';
+import type { StorageResult, Node, MindMapData as CoreMindMapData } from '../../core/storage/types.js';
 
 // 拡張されたMindMapNodeインターフェース（一時ノード対応）
 interface ExtendedMindMapNode extends Node {
@@ -149,15 +148,15 @@ export const useMindMapNodes = (
       maxVerticalSpacing: 130
     };
     
-    return mindMapLayoutPreserveRoot(rootNode as any, layoutOptions) as ExtendedMindMapNode;
+    return mindMapLayoutPreserveRoot(rootNode as any, layoutOptions) as unknown as ExtendedMindMapNode;
   }, []);
 
   // ノードの色を取得する（親から継承または新規割り当て）
   const getNodeColor = useCallback((parentNode: ExtendedMindMapNode, childIndex: number): string => {
     if (parentNode.id === 'root') {
-      return COLORS[childIndex % COLORS.length];
+      return COLORS[childIndex % COLORS.length] ?? '#666';
     } else {
-      return parentNode.color || '#666';
+      return parentNode.color ?? '#666';
     }
   }, []);
 
@@ -268,7 +267,7 @@ export const useMindMapNodes = (
     console.log('🔄 一時ノード追加開始:', { parentId, nodeText, startEditing });
     
     // 1. ローカルに一時ノードを作成（DB保存はしない）
-    const tempChild: ExtendedMindMapNode = createNewNode(nodeText, parentNode as any) as ExtendedMindMapNode;
+    const tempChild: ExtendedMindMapNode = createNewNode(nodeText, parentNode as any) as unknown as ExtendedMindMapNode;
     const childrenCount = parentNode.children?.length || 0;
     const position: Position = calculateNodePosition(parentNode as any, childrenCount, childrenCount + 1);
     tempChild.x = position.x;
@@ -336,7 +335,7 @@ export const useMindMapNodes = (
     console.log('🔄 一時兄弟ノード追加開始:', { nodeId, parentNode: parentNode.id, nodeText, startEditing });
     
     // 1. ローカルに一時ノードを作成（DB保存はしない）
-    const tempSibling: ExtendedMindMapNode = createNewNode(nodeText, parentNode as any) as ExtendedMindMapNode;
+    const tempSibling: ExtendedMindMapNode = createNewNode(nodeText, parentNode as any) as unknown as ExtendedMindMapNode;
     
     // 色の設定
     if (parentNode.id === 'root') {
@@ -345,9 +344,9 @@ export const useMindMapNodes = (
     } else {
       const existingSibling = findNode(nodeId);
       if (existingSibling) {
-        tempSibling.color = existingSibling.color;
+        tempSibling.color = existingSibling.color ?? '#666';
       } else {
-        tempSibling.color = parentNode.color || '#666';
+        tempSibling.color = parentNode.color ?? '#666';
       }
     }
     
@@ -417,9 +416,9 @@ export const useMindMapNodes = (
         const siblings = parentNode.children || [];
         
         if (currentIndex < siblings.length - 1) {
-          nodeToSelect = siblings[currentIndex + 1].id;
+          nodeToSelect = siblings[currentIndex + 1]?.id ?? null;
         } else if (currentIndex > 0) {
-          nodeToSelect = siblings[currentIndex - 1].id;
+          nodeToSelect = siblings[currentIndex - 1]?.id ?? null;
         } else {
           nodeToSelect = parentNode.id;
         }
@@ -1058,7 +1057,7 @@ export const useMindMapNodes = (
     findNode,
     findParentNode,
     flattenNodes,
-    applyAutoLayout: (algorithm?: string): ExtendedMindMapNode => {
+    applyAutoLayout: (_algorithm?: string): ExtendedMindMapNode => {
       if (!data?.rootNode) return data?.rootNode as ExtendedMindMapNode;
       return applyAutoLayout(data.rootNode as ExtendedMindMapNode);
     },

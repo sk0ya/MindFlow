@@ -3,7 +3,7 @@
  * フロントエンド側でのファイルアップロード・ダウンロード・管理機能
  */
 
-import { validateFile, createFileAttachment, FileAttachment } from '../../shared/types/dataTypes';
+import { validateFile, FileAttachment } from '../../shared/types/dataTypes';
 
 // ===== Type Definitions =====
 
@@ -441,6 +441,11 @@ export class FileManager {
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       
+      if (!file) {
+        console.warn(`File at index ${i} is undefined, skipping`);
+        continue;
+      }
+      
       try {
         const result = await this.uploadFile(file, mindmapId, nodeId, (progress: UploadProgress) => {
           if (onProgress) {
@@ -492,9 +497,9 @@ export class FileManager {
       // レガシー用データURL（移行期間中）
       dataURL: legacyAttachment.dataURL,
       // 新しいR2ベースの情報
-      downloadUrl: null, // 後で動的に取得
+      downloadUrl: undefined, // 後で動的に取得
       storagePath: legacyAttachment.storagePath,
-      thumbnailUrl: null // 後で動的に取得
+      thumbnailUrl: undefined // 後で動的に取得
     };
   }
 

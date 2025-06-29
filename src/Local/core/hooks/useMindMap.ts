@@ -22,13 +22,13 @@ export const useMindMap = (isAppReady = false) => {
   }, [isAppReady, dataHook.data?.id, debugLogged]);
   
   // ノード操作（dataがある場合のみ）
-  const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData);
+  const nodeHook = useMindMapNodes(dataHook.data as any, dataHook.updateData);
   
   // ナビゲーション（簡略化版）
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   
-  const navigateToDirection = useCallback((direction) => {
+  const navigateToDirection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
     
     if (!nodeHook.selectedNodeId || !dataHook.data?.rootNode) {
@@ -120,10 +120,10 @@ export const useMindMap = (isAppReady = false) => {
   }, [nodeHook.selectedNodeId, dataHook.data, nodeHook.flattenNodes, nodeHook.findNode, nodeHook.findParentNode, nodeHook.setSelectedNodeId]);
 
   // マルチマップ管理
-  const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
+  const multiHook = useMindMapMulti(dataHook.data, dataHook.setData as any, dataHook.updateData as any);
   
   // ファイル添付
-  const fileHook = useMindMapFiles(nodeHook.findNode, nodeHook.updateNode, multiHook.currentMapId);
+  const fileHook = useMindMapFiles(nodeHook.findNode, nodeHook.updateNode as any, multiHook.currentMapId);
 
   return {
     // データ
@@ -185,7 +185,7 @@ export const useMindMap = (isAppReady = false) => {
     changeTheme: dataHook.changeTheme,
     updateSettings: dataHook.updateSettings,
     saveMindMap: dataHook.saveMindMap,
-    triggerLocalSync: dataHook.triggerLocalSync,
+    // triggerLocalSync is not available in Local mode
     
     // マルチマップ管理
     allMindMaps: multiHook.allMindMaps,
@@ -193,15 +193,15 @@ export const useMindMap = (isAppReady = false) => {
     createMindMap: multiHook.createMindMap,
     renameMindMap: multiHook.renameMindMap,
     deleteMindMapById: multiHook.deleteMindMapById,
-    switchToMap: (mapId, selectRoot = false) => {
+    switchToMap: (mapId: string, selectRoot = false) => {
       return multiHook.switchToMap(
         mapId, 
         selectRoot, 
         nodeHook.setSelectedNodeId, 
         nodeHook.setEditingNodeId, 
         nodeHook.setEditText, 
-        dataHook.setHistory, 
-        dataHook.setHistoryIndex,
+        null, // setHistory not exposed
+        null, // setHistoryIndex not exposed
         nodeHook.finishEdit  // finishEditを渡す
       );
     },

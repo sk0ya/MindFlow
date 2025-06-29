@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, storageManager } from '../../core/storage/LocalEngine';
+import { getAllMindMaps, deleteMindMap, updateMindMap as saveMindMap, storageManager } from '../../core/storage/LocalEngine';
+// getCurrentMindMap and createMindMap are imported for potential future operations
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes';
 // ローカルモード専用：リアルタイム同期不要
 
@@ -74,7 +75,7 @@ export interface MultiMapUtils {
 export const useMindMapMulti = (
   data: MindMapData | null,
   setData: SetDataFn,
-  updateData: UpdateDataFn
+  _updateData: UpdateDataFn
 ): MultiMapUtils => {
   // マルチマップ管理用の状態
   const [allMindMaps, setAllMindMaps] = useState<MindMapMetadata[]>([]);
@@ -251,8 +252,8 @@ export const useMindMapMulti = (
     setSelectedNodeId: SetSelectedNodeIdFn | null = null,
     setEditingNodeId: SetEditingNodeIdFn | null = null,
     setEditText: SetEditTextFn | null = null,
-    setHistory: SetHistoryFn | null = null,
-    setHistoryIndex: SetHistoryIndexFn | null = null,
+    _setHistory: SetHistoryFn | null = null,
+    _setHistoryIndex: SetHistoryIndexFn | null = null,
     finishEdit: FinishEditFn | null = null
   ): Promise<void> => {
     console.log('📖 マップ切り替え開始:', mapId);
@@ -313,8 +314,8 @@ export const useMindMapMulti = (
           mapId: data.id,
           title: data.title,
           rootNodeChildren: data.rootNode?.children?.length || 0,
-          childrenIds: data.rootNode?.children?.map(c => c.id) || [],
-          childrenDetails: data.rootNode?.children?.map(c => ({
+          childrenIds: data.rootNode?.children?.map((c: any) => c.id) || [],
+          childrenDetails: data.rootNode?.children?.map((c: any) => ({
             id: c.id,
             text: c.text,
             isTemporary: c.isTemporary,
@@ -361,7 +362,7 @@ export const useMindMapMulti = (
         hasRootNode: !!targetMap.rootNode,
         rootNodeId: targetMap.rootNode?.id,
         rootNodeChildren: targetMap.rootNode?.children?.length || 0,
-        rootNodeChildrenData: targetMap.rootNode?.children?.map(c => ({
+        rootNodeChildrenData: targetMap.rootNode?.children?.map((c: any) => ({
           id: c.id,
           text: c.text,
           hasX: typeof c.x === 'number',
@@ -421,7 +422,7 @@ export const useMindMapMulti = (
         });
         // デバッグ用に詳細な差分を出力
         console.error('詳細差分:', {
-          originalChildrenIds: originalTargetMap.rootNode?.children?.map(c => c.id) || [],
+          originalChildrenIds: originalTargetMap.rootNode?.children?.map((c: any) => c.id) || [],
           finalChildrenIds: coloredMap.rootNode?.children?.map(c => c.id) || []
         });
       }
@@ -489,8 +490,8 @@ export const useMindMapMulti = (
       // 一時ノードでない子ノードのみをフィルタリング
       if (node.children && Array.isArray(node.children)) {
         node.children = node.children
-          .filter(child => !child.isTemporary) // 一時ノードを除外
-          .map(child => filterTemporaryNodes(child)); // 再帰的に処理
+          .filter((child: any) => !child.isTemporary) // 一時ノードを除外
+          .map((child: any) => filterTemporaryNodes(child)); // 再帰的に処理
       }
       
       return node;

@@ -518,7 +518,7 @@ export class SyncStateManager {
    */
   private calculateMessageRate(): void {
     const now = Date.now();
-    const oneMinuteAgo = now - 60000;
+    const _oneMinuteAgo = now - 60000; // Reserved for future time-based filtering
     
     // 過去1分間のメッセージ数から計算
     const recentMessageCount = this.state.messageCount; // 簡略化

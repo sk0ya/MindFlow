@@ -38,18 +38,7 @@ function getUserId() {
   }
 }
 
-// Cloud-only data operations (no localStorage)
-function _getCloudOnlyData() {
-  // Cloud mode: data comes from cloud API only
-  console.log('📡 Cloud mode: data retrieved from cloud API only');
-  return [];
-}
-
-function _saveCloudOnlyData(_mindmaps: any) {
-  // Cloud mode: data saved to cloud API only
-  console.log('☁️ Cloud mode: data saved to cloud API only');
-  return true;
-}
+// Cloud-only data operations (no localStorage) - removed unused functions
 
 // クラウドAPI操作
 async function getCloudMindMaps() {
@@ -57,12 +46,7 @@ async function getCloudMindMaps() {
   return result.mindmaps || [];
 }
 
-async function _uploadMindMap(_mindmap: any) {
-  return await apiRequest(`/mindmaps/${_mindmap.id}`, {
-    method: 'PUT',
-    body: JSON.stringify(_mindmap)
-  });
-}
+// Removed unused function _uploadMindMap
 
 // **メイン同期関数** - クラウド専用
 export async function performSync() {
@@ -76,7 +60,7 @@ export async function performSync() {
     console.log('📡 Retrieved cloud maps:', cloudMaps.length);
 
     // 2. 有効なクラウドデータを検証
-    const validCloudMaps = cloudMaps.filter(map => 
+    const validCloudMaps = cloudMaps.filter((map: any) => 
       map && map.id && map.rootNode
     );
     

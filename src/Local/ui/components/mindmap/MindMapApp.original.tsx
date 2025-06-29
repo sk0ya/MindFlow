@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useMindMap } from '../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
@@ -20,9 +20,9 @@ import PerformanceDashboard from '../common/PerformanceDashboard';
 import { LocalEngine } from '../../core/storage/local/LocalEngine';
 
 // ローカルエンジンのインスタンスを作成
-const localEngine = new LocalEngine();
+const _localEngine = new LocalEngine();
 import { getAppSettings } from '../../core/storage/storageUtils';
-import { hasLocalData } from '../../core/storage/localStorage';
+// import { hasLocalData } from '../../core/storage/localStorage';
 import './MindMapApp.css';
 
 import AuthVerification from '../auth/AuthVerification.jsx';
@@ -31,26 +31,41 @@ import { authManager } from '../../features/auth/authManager.js';
 import TutorialOverlay from '../common/TutorialOverlay.jsx';
 import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper.jsx';
 import StorageModeSelector from '../storage/StorageModeSelector.jsx';
-import { useOnboarding } from '../../core/hooks/useOnboarding.js';
+// import { useOnboarding } from '../../core/hooks/useOnboarding.js';
 import { useAppInitialization } from '../../core/hooks/useAppInitialization.js';
 import { useKeyboardShortcuts } from '../../core/hooks/useKeyboardShortcuts.js';
+
+// TypeScript type imports
+import type {
+  AuthState,
+  User,
+  Node,
+  FileAttachment,
+  Position,
+  PanState,
+  Conflict,
+  ConnectedUser,
+  MindMapListItem,
+  UseMindMapReturn,
+  UseAppInitializationReturn
+} from '../../../shared/types/app';
 // リアルタイム同期はクラウドエンジンに統合
 
-const MindMapApp = () => {
+const MindMapApp: React.FC = () => {
   // URL パラメータで認証トークンをチェック
   const urlParams = new URLSearchParams(window.location.search);
   const authToken = urlParams.get('token');
   const isAuthVerification = authToken && authToken.length > 20; // 有効なトークンっぽい場合
   
   // 認証状態を管理
-  const [authState, setAuthState] = useState({
+  const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: authManager.isAuthenticated(),
     user: authManager.getCurrentUser(),
     isLoading: false
   });
   
   // 認証モーダル状態
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [_showAuthModal, _setShowAuthModal] = useState(false);
   
   
   // キーボードショートカットヘルパー状態
@@ -112,44 +127,44 @@ const MindMapApp = () => {
     initializeRealtime,
     updateCursorPosition,
     triggerCloudSync
-  } = useMindMap(initState.isReady);
+  }: UseMindMapReturn = useMindMap(initState.isReady);
 
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
-  const [customizationPosition, setCustomizationPosition] = useState({ x: 0, y: 0 });
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [clipboard, setClipboard] = useState(null);
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [modalImage, setModalImage] = useState(null);
-  const [showFileActionMenu, setShowFileActionMenu] = useState(false);
-  const [fileActionMenuPosition, setFileActionMenuPosition] = useState({ x: 0, y: 0 });
-  const [actionMenuFile, setActionMenuFile] = useState(null);
-  const [actionMenuNodeId, setActionMenuNodeId] = useState(null);
+  const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });
+  const [showCustomizationPanel, setShowCustomizationPanel] = useState<boolean>(false);
+  const [customizationPosition, setCustomizationPosition] = useState<Position>({ x: 0, y: 0 });
+  const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<Position>({ x: 0, y: 0 });
+  const [clipboard, setClipboard] = useState<Node | null>(null);
+  const [showImageModal, setShowImageModal] = useState<boolean>(false);
+  const [modalImage, setModalImage] = useState<FileAttachment | null>(null);
+  const [showFileActionMenu, setShowFileActionMenu] = useState<boolean>(false);
+  const [fileActionMenuPosition, setFileActionMenuPosition] = useState<Position>({ x: 0, y: 0 });
+  const [actionMenuFile, setActionMenuFile] = useState<FileAttachment | null>(null);
+  const [actionMenuNodeId, setActionMenuNodeId] = useState<string | null>(null);
   
   // ノードマップリンクパネル状態
-  const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState(false);
-  const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState({ x: 0, y: 0 });
-  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState(null);
+  const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState<boolean>(false);
+  const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState<Position>({ x: 0, y: 0 });
+  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState<Node | null>(null);
   
   // サイドバー状態
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   
   // クラウドストレージパネル状態
-  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
+  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState<boolean>(false);
   
   // 競合通知状態
-  const [conflicts, setConflicts] = useState([]);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
   
   // 共同編集機能パネル状態
-  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState(false);
+  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState<boolean>(false);
   
   // パフォーマンスダッシュボード状態（開発環境のみ）
-  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState<boolean>(false);
   
   // チュートリアル状態
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState<boolean>(false);
   
   // キーボードショートカットの統合
   useKeyboardShortcuts({
@@ -190,11 +205,11 @@ const MindMapApp = () => {
   // 認証状態を監視して更新
   useEffect(() => {
     // 認証状態の変更を監視
-    const checkAuthStatus = () => {
+    const checkAuthStatus = (): void => {
       const isAuth = authManager.isAuthenticated();
       const user = authManager.getCurrentUser();
       
-      setAuthState(prev => {
+      setAuthState((prev: AuthState) => {
         if (prev.isAuthenticated !== isAuth || prev.user !== user) {
           return {
             isAuthenticated: isAuth,
@@ -215,51 +230,51 @@ const MindMapApp = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleZoomReset = () => {
+  const handleZoomReset = useCallback((): void => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
-  };
+  }, []);
 
-  const handleExport = () => {
+  const handleExport = useCallback((): void => {
     exportMindMapAsJSON(data);
-  };
+  }, [data]);
 
-  const handleImport = async (file) => {
+  const handleImport = useCallback(async (file: File): Promise<void> => {
     try {
       await importMindMapFromJSON(file);
       window.location.reload();
-    } catch (error) {
+    } catch (error: any) {
       alert('ファイルの読み込みに失敗しました: ' + error.message);
     }
-  };
+  }, []);
 
-  const showSaveMessage = () => {
+  const showSaveMessage = useCallback((): void => {
     const saveMessage = document.createElement('div');
     saveMessage.textContent = '保存完了！';
     saveMessage.className = 'save-message';
     document.body.appendChild(saveMessage);
     setTimeout(() => saveMessage.remove(), 3000);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async (): Promise<void> => {
     await saveMindMap();
     showSaveMessage();
-  };
+  }, [saveMindMap, showSaveMessage]);
 
 
   // 既存のキーボードハンドラーは useKeyboardShortcuts に統合済み
 
-  const handleAddChild = (parentId) => {
+  const handleAddChild = useCallback((parentId: string): void => {
     addChildNode(parentId, '', true); // startEditing = true で即座に編集開始
-  };
+  }, [addChildNode]);
 
-  const handleShowCustomization = (node, position) => {
+  const handleShowCustomization = useCallback((node: Node, position?: Position): void => {
     setCustomizationPosition(position || { x: 300, y: 200 });
     setShowCustomizationPanel(true);
     setShowContextMenu(false);
-  };
+  }, []);
 
-  const handleRightClick = (e, nodeId) => {
+  const handleRightClick = useCallback((e: React.MouseEvent, nodeId: string): void => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -269,23 +284,23 @@ const MindMapApp = () => {
       setShowContextMenu(true);
       setShowCustomizationPanel(false);
     }
-  };
+  }, [setSelectedNodeId]);
 
-  const handleAddSibling = (nodeId) => {
+  const handleAddSibling = useCallback((nodeId: string): void => {
     addSiblingNode(nodeId, '', true); // startEditing = true で即座に編集開始
-  };
+  }, [addSiblingNode]);
 
-  const handleCopyNode = (node) => {
+  const handleCopyNode = useCallback((node: Node): void => {
     const nodeCopy = JSON.parse(JSON.stringify(node));
-    const removeIds = (n) => {
+    const removeIds = (n: any): void => {
       delete n.id;
       if (n.children) n.children.forEach(removeIds);
     };
     removeIds(nodeCopy);
     setClipboard(nodeCopy);
-  };
+  }, []);
 
-  const handlePasteNode = (parentId) => {
+  const handlePasteNode = useCallback((parentId: string): void => {
     if (!clipboard) return;
     
     const newNodeId = addChildNode(parentId);
@@ -298,38 +313,38 @@ const MindMapApp = () => {
       });
       setSelectedNodeId(newNodeId);
     }
-  };
+  }, [clipboard, addChildNode, updateNode, setSelectedNodeId]);
 
 
 
-  const handleCloseAllPanels = () => {
+  const handleCloseAllPanels = useCallback((): void => {
     setShowCustomizationPanel(false);
     setShowContextMenu(false);
     setShowImageModal(false);
     setShowFileActionMenu(false);
     setShowNodeMapLinksPanel(false);
-  };
+  }, []);
 
-  const handleShowImageModal = (image) => {
+  const handleShowImageModal = useCallback((image: FileAttachment): void => {
     setModalImage(image);
     setShowImageModal(true);
     handleCloseAllPanels();
     setShowImageModal(true); // 再度trueにして画像モーダルだけ表示
-  };
+  }, [handleCloseAllPanels]);
 
-  const handleCloseImageModal = () => {
+  const handleCloseImageModal = useCallback((): void => {
     setShowImageModal(false);
     setModalImage(null);
-  };
+  }, []);
 
-  const handleShowFileActionMenu = (file, nodeId, position) => {
+  const handleShowFileActionMenu = useCallback((file: FileAttachment, nodeId: string, position: Position): void => {
     setActionMenuFile(file);
     setActionMenuNodeId(nodeId);
     setFileActionMenuPosition(position);
     setShowFileActionMenu(true);
     handleCloseAllPanels();
     setShowFileActionMenu(true); // 再度trueにしてファイルアクションメニューだけ表示
-  };
+  }, [handleCloseAllPanels]);
 
   const handleCloseFileActionMenu = () => {
     setShowFileActionMenu(false);
@@ -337,7 +352,7 @@ const MindMapApp = () => {
     setActionMenuNodeId(null);
   };
 
-  const handleFileDownload = async (file) => {
+  const handleFileDownload = async (file: any) => {
     try {
       await downloadFile(file);
     } catch (error) {
@@ -346,7 +361,7 @@ const MindMapApp = () => {
     }
   };
 
-  const handleFileRename = (fileId, newName) => {
+  const handleFileRename = (fileId: string, newName: string) => {
     try {
       renameFileInNode(actionMenuNodeId, fileId, newName);
     } catch (error) {
@@ -355,7 +370,7 @@ const MindMapApp = () => {
     }
   };
 
-  const handleFileDelete = (fileId) => {
+  const handleFileDelete = (fileId: string) => {
     try {
       removeFileFromNode(actionMenuNodeId, fileId);
     } catch (error) {
@@ -364,19 +379,19 @@ const MindMapApp = () => {
     }
   };
 
-  const handleFileUpload = async (nodeId, files) => {
+  const handleFileUpload = useCallback(async (nodeId: string, files: FileList | File[]): Promise<void> => {
     if (!files || files.length === 0) return;
     
     try {
       const file = files[0]; // 最初のファイルのみ処理
       await attachFileToNode(nodeId, file);
-    } catch (error) {
+    } catch (error: any) {
       console.error('ファイルアップロードエラー:', error);
       alert('ファイルのアップロードに失敗しました: ' + error.message);
     }
-  };
+  }, [attachFileToNode]);
   
-  const handleRemoveFile = (nodeId, fileId) => {
+  const handleRemoveFile = (nodeId: string, fileId: string) => {
     try {
       removeFileFromNode(nodeId, fileId);
     } catch (error) {
@@ -390,7 +405,7 @@ const MindMapApp = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  const handleSelectMap = async (mapId) => {
+  const handleSelectMap = async (mapId: string) => {
     try {
       await switchToMap(mapId);
     } catch (error) {
@@ -399,13 +414,13 @@ const MindMapApp = () => {
     }
   };
 
-  const handleCreateMap = async (providedName = null, providedCategory = null) => {
+  const handleCreateMap = async (providedName: string | null = null, providedCategory: string | null = null) => {
     let mapName = providedName;
     if (!mapName) {
       mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
     }
     
-    if (mapName && mapName.trim()) {
+    if (mapName && typeof mapName === 'string' && mapName.trim()) {
       try {
         const category = providedCategory || '未分類';
         const mapId = await createMindMap(mapName.trim(), category);
@@ -419,7 +434,7 @@ const MindMapApp = () => {
     return null;
   };
 
-  const handleDeleteMap = (mapId) => {
+  const handleDeleteMap = (mapId: string) => {
     if (allMindMaps.length <= 1) {
       alert('最後のマインドマップは削除できません');
       return false;
@@ -427,16 +442,16 @@ const MindMapApp = () => {
     return deleteMindMapById(mapId);
   };
 
-  const handleRenameMap = (mapId, newTitle) => {
+  const handleRenameMap = (mapId: string, newTitle: string) => {
     renameMindMap(mapId, newTitle);
   };
 
-  const handleChangeCategory = (mapId, newCategory) => {
+  const handleChangeCategory = (mapId: string, newCategory: string) => {
     changeMapCategory(mapId, newCategory);
   };
 
   // ノードマップリンク関連のハンドラー
-  const handleShowNodeMapLinks = (node, position) => {
+  const handleShowNodeMapLinks = (node: any, position: any) => {
     setSelectedNodeForLinks(node);
     setNodeMapLinksPanelPosition(position);
     setShowNodeMapLinksPanel(true);
@@ -449,15 +464,15 @@ const MindMapApp = () => {
     setSelectedNodeForLinks(null);
   };
 
-  const handleAddNodeMapLink = (nodeId, targetMapId, targetMapTitle, description) => {
+  const handleAddNodeMapLink = (nodeId: string, targetMapId: string, targetMapTitle: string, description: string) => {
     addNodeMapLink(nodeId, targetMapId, targetMapTitle, description);
   };
 
-  const handleRemoveNodeMapLink = (nodeId, linkId) => {
+  const handleRemoveNodeMapLink = (nodeId: string, linkId: string) => {
     removeNodeMapLink(nodeId, linkId);
   };
 
-  const handleNavigateToMap = async (mapId) => {
+  const handleNavigateToMap = async (mapId: string) => {
     try {
       await switchToMap(mapId);
       setShowNodeMapLinksPanel(false);
@@ -476,7 +491,7 @@ const MindMapApp = () => {
     setShowAuthModal(false);
   };
   
-  const handleAuthSuccess = async (user) => {
+  const handleAuthSuccess = useCallback(async (user: User): Promise<void> => {
     setAuthState({
       isAuthenticated: true,
       user: user,
@@ -490,7 +505,7 @@ const MindMapApp = () => {
     try {
       // リアルタイム同期の再初期化はクラウドエンジンで自動処理
       console.log('🔄 認証成功後のリアルタイム同期再初期化完了');
-    } catch (initError) {
+    } catch (initError: any) {
       console.warn('⚠️ リアルタイム同期再初期化失敗:', initError);
     }
     
@@ -498,7 +513,7 @@ const MindMapApp = () => {
     try {
       await refreshAllMindMaps();
       console.log('🔄 認証成功後にマップ一覧をリフレッシュしました');
-    } catch (refreshError) {
+    } catch (refreshError: any) {
       console.warn('⚠️ 認証後のマップ一覧リフレッシュに失敗:', refreshError);
     }
     
@@ -507,11 +522,11 @@ const MindMapApp = () => {
       try {
         await triggerCloudSync();
         console.log('🔄 認証成功後のクラウド同期完了');
-      } catch (syncError) {
+      } catch (syncError: any) {
         console.warn('⚠️ クラウド同期に失敗:', syncError);
       }
     }
-  };
+  }, [initState, refreshAllMindMaps, triggerCloudSync]);
   
   const handleLogout = async () => {
     try {
@@ -548,28 +563,28 @@ const MindMapApp = () => {
     }
   };
 
-  const handleUserClick = (user) => {
+  const handleUserClick = useCallback((user: ConnectedUser): void => {
     // ユーザークリック時の処理（必要に応じて実装）
-  };
+  }, []);
 
   // カーソル更新（ノード選択時）
-  const handleNodeSelect = (nodeId) => {
+  const handleNodeSelect = useCallback((nodeId: string): void => {
     setSelectedNodeId(nodeId);
     if (updateCursorPosition && nodeId) {
       updateCursorPosition(nodeId);
     }
-  };
+  }, [setSelectedNodeId, updateCursorPosition]);
 
   // 競合処理関連
-  const handleConflictResolved = (conflict) => {
+  const handleConflictResolved = useCallback((conflict: Omit<Conflict, 'id' | 'timestamp'>): void => {
     setConflicts(prev => [...prev, {
       ...conflict,
       id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now()
     }]);
-  };
+  }, []);
 
-  const handleDismissConflict = (conflictId) => {
+  const handleDismissConflict = (conflictId: string) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId));
   };
 
@@ -587,7 +602,7 @@ const MindMapApp = () => {
   };
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         handleCloseAllPanels();
       }
@@ -607,7 +622,7 @@ const MindMapApp = () => {
   if (isAuthVerification && !authState.isAuthenticated) {
     return (
       <AuthVerification 
-        onAuthSuccess={(user) => {
+        onAuthSuccess={(user: User) => {
           // 認証状態を更新
           setAuthState({
             isAuthenticated: true,
@@ -617,7 +632,7 @@ const MindMapApp = () => {
           // URLからトークンを除去
           window.history.replaceState({}, document.title, window.location.pathname);
         }}
-        onAuthError={(error) => {
+        onAuthError={(error: Error) => {
           console.error('Authentication failed:', error);
           // エラー時もホームに戻る
           setTimeout(() => {

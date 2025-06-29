@@ -1,7 +1,12 @@
+import type { ConnectedUser } from '../../../../../shared/types/app.js';
+
 /**
  * リアルタイム機能関連のハンドラーを管理するカスタムフック
  */
-export const useRealtimeHandlers = (initializeRealtime, isRealtimeConnected) => {
+export const useRealtimeHandlers = (
+  initializeRealtime?: () => void,
+  isRealtimeConnected?: boolean
+) => {
   const handleRealtimeReconnect = () => {
     if (initializeRealtime) {
       initializeRealtime();
@@ -21,7 +26,7 @@ export const useRealtimeHandlers = (initializeRealtime, isRealtimeConnected) => 
     }
   };
 
-  const handleUserClick = (user) => {
+  const handleUserClick = (user: ConnectedUser) => {
     // ユーザークリック時の処理（必要に応じて実装）
   };
 

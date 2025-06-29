@@ -4,12 +4,7 @@ import { getAllMindMaps } from '../../core/storage/StorageManager.js';
 
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5分前にリフレッシュ
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  provider?: string;
-}
+import type { AuthProvider, User } from './types/authTypes.js';
 
 interface AuthData {
   token: string;
@@ -25,6 +20,7 @@ interface AuthResult {
   error?: string;
   magicLink?: string;
   expiresIn?: number;
+  redirectUrl?: string; // Add for compatibility with unified auth
 }
 
 interface JWTPayload {

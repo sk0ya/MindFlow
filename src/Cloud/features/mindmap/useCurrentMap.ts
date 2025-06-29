@@ -6,17 +6,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { storageService } from '../storage/storageService.js';
 import { createInitialMapData, generateId } from '../../shared/utils/mapUtils.js';
 
-export function useCurrentMap(mapId) {
+export function useCurrentMap(mapId: string | null) {
   const [mapData, setMapData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   
-  const autoSaveTimeoutRef = useRef(null);
-  const lastSaveDataRef = useRef(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSaveDataRef = useRef<string | null>(null);
 
   // マップデータを読み込み
-  const loadMap = useCallback(async (id) => {
+  const loadMap = useCallback(async (id: string) => {
     if (!id) return;
     
     setLoading(true);
@@ -33,8 +33,8 @@ export function useCurrentMap(mapId) {
       
       setMapData(data);
       lastSaveDataRef.current = JSON.stringify(data);
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      setError(err?.message || 'Unknown error');
       console.error('Failed to load map:', err);
     } finally {
       setLoading(false);
@@ -56,8 +56,8 @@ export function useCurrentMap(mapId) {
       try {
         await storageService.saveMap(data);
         lastSaveDataRef.current = currentDataString;
-      } catch (err) {
-        setError(err.message);
+      } catch (err: any) {
+        setError(err?.message || "Unknown error");
         console.error('Failed to save map:', err);
       } finally {
         setSaving(false);
@@ -73,7 +73,7 @@ export function useCurrentMap(mapId) {
         try {
           await storageService.saveMap(data);
           lastSaveDataRef.current = currentDataString;
-        } catch (err) {
+        } catch (err: any) {
           console.error('Auto-save failed:', err);
         } finally {
           setSaving(false);
@@ -83,7 +83,7 @@ export function useCurrentMap(mapId) {
   }, [mapData]);
 
   // マップデータを更新
-  const updateMap = useCallback((updater) => {
+  const updateMap = useCallback((updater: any) => {
     setMapData(prev => {
       const newData = typeof updater === 'function' ? updater(prev) : updater;
       
@@ -101,13 +101,13 @@ export function useCurrentMap(mapId) {
     const newId = generateId();
     const newData = createInitialMapData(newId, title);
     
-    setMapData(newData);
+    setMapData(newData as any);
     
     try {
       await storageService.saveMap(newData);
       return newId;
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      setError(err?.message || "Unknown error");
       throw err;
     }
   }, []);

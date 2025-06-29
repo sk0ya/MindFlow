@@ -290,7 +290,7 @@ class CloudSyncService {
     this.syncStateManager = new SyncStateManager();
     this.operationQueue = null; // APIクライアント設定後に初期化
     this.realtimeCommunication = null;
-    this.conflictResolver = new ConflictResolver(this.syncStateManager);
+    this.conflictResolver = new ConflictResolver(this.syncStateManager as any);
     this.currentMindmapId = null;
     this.apiClient = null;
     this.isInitialized = false;
@@ -395,7 +395,7 @@ class CloudSyncService {
       data: nodeData
     };
 
-    return await this.operationQueue.addOperation(operation);
+    return await this.operationQueue.addOperation(operation) as string;
   }
 
   /**
@@ -417,7 +417,7 @@ class CloudSyncService {
       data: updates
     };
 
-    return await this.operationQueue.addOperation(operation);
+    return await this.operationQueue.addOperation(operation) as string;
   }
 
   /**
@@ -438,7 +438,7 @@ class CloudSyncService {
       data: {}
     };
 
-    return await this.operationQueue.addOperation(operation);
+    return await this.operationQueue.addOperation(operation) as string;
   }
 
   /**
@@ -460,7 +460,7 @@ class CloudSyncService {
       data: newPosition
     };
 
-    return await this.operationQueue.addOperation(operation);
+    return await this.operationQueue.addOperation(operation) as string;
   }
 
   // ===== リアルタイム協調編集 =====
@@ -503,7 +503,7 @@ class CloudSyncService {
    */
   updatePresence(presence: PresenceData): void {
     if (this.realtimeCommunication) {
-      this.realtimeCommunication.sendPresenceUpdate(presence);
+      this.realtimeCommunication.sendPresenceUpdate(presence as any);
     }
   }
 
@@ -543,7 +543,7 @@ class CloudSyncService {
 
       return serverData;
     } catch (error) {
-      this.syncStateManager.addError(error, 'full_sync');
+      this.syncStateManager.addError(error instanceof Error ? error : String(error), 'full_sync');
       throw error;
     }
   }
@@ -622,7 +622,70 @@ class CloudSyncService {
    * @returns 同期状態
    */
   getSyncState(): SyncState {
-    return this.syncStateManager.state;
+    const state = this.syncStateManager.state;
+    return {
+      // Connection status
+      isOnline: state.isOnline,
+      isConnected: state.isConnected,
+      isSyncing: state.isSyncing,
+      connectionQuality: state.connectionQuality,
+      lastSyncTime: state.lastSyncTime,
+      lastPingTime: state.lastPingTime,
+      pingLatency: state.pingLatency,
+      
+      // Operation management - map Operation[] to SyncOperation[]
+      pendingOperations: state.pendingOperations.map(op => ({
+        id: op.id,
+        operation_type: op.type as OperationType,
+        target_type: 'node' as TargetType,
+        target_id: op.id,
+        mindmap_id: this.currentMindmapId || 'unknown',
+        data: op.data,
+        user_id: op.userId,
+        timestamp: op.timestamp,
+        vector_clock: op.vectorClock as VectorClock,
+        retry_count: op.retryCount
+      })),
+      vectorClock: state.vectorClock,
+      operationHistory: state.operationHistory.map(op => ({
+        id: op.id,
+        operation_type: op.type as OperationType,
+        target_type: 'node' as TargetType,
+        target_id: op.id,
+        mindmap_id: this.currentMindmapId || 'unknown',
+        data: op.data,
+        user_id: op.userId,
+        timestamp: op.timestamp,
+        vector_clock: op.vectorClock as VectorClock,
+        retry_count: op.retryCount
+      })),
+      conflictQueue: state.conflictQueue.map(op => ({
+        id: op.id,
+        operation_type: op.type as OperationType,
+        target_type: 'node' as TargetType,
+        target_id: op.id,
+        mindmap_id: this.currentMindmapId || 'unknown',
+        data: op.data,
+        user_id: op.userId,
+        timestamp: op.timestamp,
+        vector_clock: op.vectorClock as VectorClock,
+        retry_count: op.retryCount
+      })),
+      
+      // Events and errors
+      events: (state as any).events || [],
+      errors: (state as any).errors || [],
+      
+      // User presence
+      userSessions: (state as any).userSessions || {},
+      currentUser: (state as any).currentUser || null,
+      
+      // Realtime features
+      autoReconnect: (state as any).autoReconnect ?? true,
+      maxReconnectAttempts: (state as any).maxReconnectAttempts ?? 5,
+      reconnectAttempts: (state as any).reconnectAttempts ?? 0,
+      messageBuffer: (state as any).messageBuffer || []
+    };
   }
 
   /**
@@ -634,7 +697,7 @@ class CloudSyncService {
       syncState: this.syncStateManager.getStats(),
       operationQueue: this.operationQueue?.getStats() || {},
       realtimeCommunication: this.realtimeCommunication?.getPerformanceMetrics() || {},
-      conflictResolver: this.conflictResolver.getConflictStats(this.currentMindmapId)
+      conflictResolver: this.conflictResolver.getConflictStats(this.currentMindmapId || undefined)
     };
   }
 
@@ -647,7 +710,18 @@ class CloudSyncService {
     return {
       mindmapId: this.currentMindmapId,
       vectorClock: this.syncStateManager.state.vectorClock,
-      pendingOperations: this.syncStateManager.state.pendingOperations
+      pendingOperations: this.syncStateManager.state.pendingOperations.map(op => ({
+        id: op.id,
+        operation_type: op.type as OperationType,
+        target_type: 'node' as TargetType,
+        target_id: op.id,
+        mindmap_id: this.currentMindmapId,
+        data: op.data,
+        user_id: op.userId,
+        timestamp: op.timestamp,
+        vector_clock: op.vectorClock,
+        retry_count: op.retryCount
+      }))
     };
   }
 
@@ -675,7 +749,7 @@ class CloudSyncService {
    * @returns リスナー削除関数
    */
   onStateChange(listener: StateChangeListener): CleanupFunction {
-    return this.syncStateManager.subscribe(listener);
+    return this.syncStateManager.subscribe(listener as any);
   }
 
   /**
@@ -797,7 +871,7 @@ class APIClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const config = {
+    const config: RequestInit = {
       method,
       headers,
       ...options

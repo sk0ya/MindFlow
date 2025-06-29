@@ -1,6 +1,7 @@
 // オフライン対応とデータ同期管理
 
-import { STORAGE_KEYS, MindMapData } from '../../shared/types/dataTypes.js';
+import { STORAGE_KEYS } from '../../shared/types/dataTypes.js';
+import type { MindMapData } from '../../core/storage/types.js';
 import { storageManager } from '../../core/storage/StorageManager.js';
 
 // 型定義
@@ -14,7 +15,7 @@ export interface SyncQueueItem {
 export interface SyncOperation {
   type: 'save' | 'delete' | 'create';
   mindmapId: string;
-  data?: MindMapData;
+  data?: MindMapData | null;
 }
 
 export interface SyncStatus {
@@ -119,13 +120,17 @@ class SyncManager {
     
     switch (operation.type) {
       case 'save':
-        await storageManager.updateMindMap(operation.mindmapId, operation.data);
+        if (operation.data) {
+          await storageManager.updateMindMap(operation.mindmapId, operation.data);
+        }
         break;
       case 'delete':
         await storageManager.deleteMindMap(operation.mindmapId);
         break;
       case 'create':
-        await storageManager.createMindMap(operation.data);
+        if (operation.data) {
+          await storageManager.createMindMap(operation.data);
+        }
         break;
       default:
         throw new Error(`Unknown operation type: ${operation.type}`);
@@ -224,7 +229,6 @@ class SyncManager {
 
   getConflictCount(localMaps: MindMapData[], cloudMaps: MindMapData[]): number {
     let conflicts = 0;
-    const cloudMapIds = new Set(cloudMaps.map((m: MindMapData) => m.id));
     
     localMaps.forEach((localMap: MindMapData) => {
       const cloudMap = cloudMaps.find((m: MindMapData) => m.id === localMap.id);
@@ -247,7 +251,7 @@ class SyncManager {
     return [];
   }
 
-  saveToStorageLocal(key: string, data: any): void {
+  saveToStorageLocal(_key: string, _data: any): void {
     // Cloud mode: no local storage operations
     console.log('☁️ Cloud mode: data not saved locally');
   }
@@ -285,7 +289,7 @@ class SyncManager {
     this.addToSyncQueue({
       type,
       mindmapId,
-      data
+      data: data
     });
   }
 }

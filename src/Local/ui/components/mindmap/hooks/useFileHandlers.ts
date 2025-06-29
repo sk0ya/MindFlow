@@ -86,7 +86,9 @@ export const useFileHandlers = ({
     
     try {
       const file = files[0]; // 最初のファイルのみ処理
-      await attachFileToNode(nodeId, file);
+      if (file) {
+        await attachFileToNode(nodeId, file);
+      }
     } catch (error) {
       console.error('ファイルアップロードエラー:', error);
       alert('ファイルのアップロードに失敗しました: ' + (error as Error).message);

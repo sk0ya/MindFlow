@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // Required for JSX
 
 /**
  * 共同編集用機能パネル（Local版 - 無効化）

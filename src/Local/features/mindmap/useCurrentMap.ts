@@ -12,7 +12,7 @@ export function useCurrentMap(mapId) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   
-  const autoSaveTimeoutRef = useRef(null);
+  const autoSaveTimeoutRef = useRef<number | null>(null);
   const lastSaveDataRef = useRef(null);
 
   // マップデータを読み込み
@@ -78,7 +78,7 @@ export function useCurrentMap(mapId) {
         } finally {
           setSaving(false);
         }
-      }, 1000);
+      }, 1000) as unknown as number;
     }
   }, [mapData]);
 
@@ -101,7 +101,7 @@ export function useCurrentMap(mapId) {
     const newId = generateId();
     const newData = createInitialMapData(newId, title);
     
-    setMapData(newData);
+    setMapData(newData as any);
     
     try {
       await storageService.saveMap(newData);

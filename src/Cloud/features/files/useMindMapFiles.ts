@@ -45,6 +45,7 @@ export interface FileAttachment {
   name: string;
   type: string;
   size: number;
+  data?: string; // Base64 encoded - optional for compatibility
   dataURL?: string;
   downloadUrl?: string;
   isR2Storage?: boolean;
@@ -93,7 +94,7 @@ export type FindNodeFn = (nodeId: string) => NodeWithAttachments | null;
 /**
  * Update node function type
  */
-export type UpdateNodeFn = (nodeId: string, updates: Partial<NodeWithAttachments>) => Promise<void>;
+export type UpdateNodeFn = (nodeId: string, updates: Partial<NodeWithAttachments>, syncToCloud?: boolean, options?: any) => Promise<void>;
 import { optimizeFile, formatFileSize } from './fileOptimization.js';
 import { validateFile } from './fileValidation.js';
 import { logger } from '../../shared/utils/logger.js';
@@ -273,17 +274,14 @@ export const useMindMapFiles = (
         const fileAttachment = createFileAttachment(file, uploadResult.downloadUrl, uploadResult, {
           isR2Storage: true,
           nodeId: nodeId,
-          storagePath: uploadResult.storagePath,
-          thumbnailPath: uploadResult.thumbnailPath,
-          downloadUrl: uploadResult.downloadUrl,
-          securityValidated: true,
           validationTimestamp: new Date().toISOString(),
           warnings: validationResult.warnings
-        });
+        } as any);
 
         // 4. ノードにファイル添付情報を追加（クラウドモード）
-        if (node) {
-          const updatedAttachments = [...(node.attachments || []), fileAttachment];
+        const targetNode = findNode(nodeId);
+        if (targetNode) {
+          const updatedAttachments = [...(targetNode.attachments || []), fileAttachment as any];
           await updateNode(nodeId, { attachments: updatedAttachments });
           
           logger.info(`✅ ファイル添付完了 (クラウド): ${file.name}`, {
@@ -302,33 +300,33 @@ export const useMindMapFiles = (
         console.log('🏠 ローカルモード: Base64でローカル保存');
         
         // ファイルをBase64に変換
-        const optimizedFile: FileOptimizationResult = await optimizeFile(file);
-        const dataURL = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(optimizedFile.file);
-        });
+        const optimizationResult = await optimizeFile(file);
+        const dataURL = optimizationResult.dataURL;
         
         logger.info(`💾 ローカル保存完了: ${file.name}`, {
           nodeId,
           originalSize: file.size,
-          optimizedSize: optimizedFile.file.size,
-          compressionRatio: Math.round((1 - optimizedFile.file.size / file.size) * 100)
+          optimizedSize: optimizationResult.optimizedSize,
+          compressionRatio: Math.round(optimizationResult.compressionRatio * 100)
         });
         
         // 3. ローカルストレージ用のファイル添付情報を作成
-        const fileAttachment = createFileAttachment(optimizedFile.file, dataURL, null, {
+        const fileAttachment = createFileAttachment(file, dataURL, null, {
           isR2Storage: false,
-          securityValidated: true,
           validationTimestamp: new Date().toISOString(),
           warnings: validationResult.warnings,
-          optimization: optimizedFile
-        });
+          optimization: {
+            file: file,
+            compressionRatio: optimizationResult.compressionRatio,
+            originalSize: optimizationResult.originalSize,
+            optimizedSize: optimizationResult.optimizedSize
+          }
+        } as any);
 
         // 4. ノードにファイル添付情報を追加（ローカルモード）
+        const node = findNode(nodeId);
         if (node) {
-          const updatedAttachments = [...(node.attachments || []), fileAttachment];
+          const updatedAttachments = [...(node.attachments || []), fileAttachment as any];
           await updateNode(nodeId, { attachments: updatedAttachments });
           
           logger.info(`✅ ファイル添付完了 (ローカル): ${file.name}`, {
@@ -346,8 +344,8 @@ export const useMindMapFiles = (
       logger.error('❌ ファイル添付エラー', {
         nodeId,
         fileName: file.name,
-        error: error.message,
-        stack: error.stack
+        error: (error as Error).message,
+        stack: (error as Error).stack
       });
       throw error;
     }
@@ -374,7 +372,7 @@ export const useMindMapFiles = (
               }
               mapId = currentMapId;
             } else {
-              const currentMap = getCurrentMindMap();
+              const currentMap = await getCurrentMindMap();
               if (!currentMap) {
                 console.warn('現在のマップが見つかりません、ファイル削除をスキップ');
                 return;
@@ -433,7 +431,7 @@ export const useMindMapFiles = (
           }
           mapId = currentMapId;
         } else {
-          const currentMap = getCurrentMindMap();
+          const currentMap = await getCurrentMindMap();
           if (!currentMap) {
             throw new Error('現在のマインドマップが見つかりません');
           }
@@ -445,7 +443,7 @@ export const useMindMapFiles = (
           console.log('downloadURL使用:', file.downloadUrl);
           
           // 認証ヘッダーを準備
-          let headers = {};
+          let headers: Record<string, string> = {};
           
           const authHeader = authManager.getAuthHeader();
           if (authHeader) {
@@ -475,7 +473,7 @@ export const useMindMapFiles = (
           }
         }
         // 認証ヘッダーを準備
-        let headers = {};
+        let headers: Record<string, string> = {};
         
         console.log('認証状態確認:', {
           isAuthenticated: authManager.isAuthenticated(),
@@ -512,21 +510,23 @@ export const useMindMapFiles = (
           // マインドマップ内でファイルを検索してnodeIdを特定
           // ファイル検索はクラウドモードでは行わない（nodeIdが必須）
           if (!isCloudStorageEnabled()) {
-            const localCurrentMap = getCurrentMindMap();
-            const findFileInNodes = (node) => {
-              if (node.attachments && node.attachments.some(att => att.id === file.id || att.r2FileId === file.r2FileId)) {
-                return node.id;
-              }
-              if (node.children) {
-                for (const child of node.children) {
-                  const foundNodeId = findFileInNodes(child);
-                  if (foundNodeId) return foundNodeId;
+            const localCurrentMap = await getCurrentMindMap();
+            if (localCurrentMap) {
+              const findFileInNodes = (node: any): string | null => {
+                if (node.attachments && node.attachments.some((att: any) => att.id === file.id || att.r2FileId === file.r2FileId)) {
+                  return node.id;
                 }
-              }
-              return null;
-            };
-            
-            actualNodeId = findFileInNodes(localCurrentMap.rootNode);
+                if (node.children) {
+                  for (const child of node.children) {
+                    const foundNodeId = findFileInNodes(child);
+                    if (foundNodeId) return foundNodeId;
+                  }
+                }
+                return null;
+              };
+              
+              actualNodeId = findFileInNodes(localCurrentMap.rootNode) || undefined;
+            }
           }
         }
         
@@ -563,14 +563,14 @@ export const useMindMapFiles = (
       }
 
       // File System Access APIが利用可能かチェック
-      if (window.showSaveFilePicker) {
+      if ((window as any).showSaveFilePicker) {
         try {
           // ファイル拡張子を取得
-          const extension = file.name.split('.').pop();
+          const extension = file.name.split('.').pop() || 'file';
           const mimeType = file.type || 'application/octet-stream';
 
           // ファイル保存ダイアログを表示
-          const fileHandle = await window.showSaveFilePicker({
+          const fileHandle = await (window as any).showSaveFilePicker({
             suggestedName: file.name,
             types: [{
               description: `${extension.toUpperCase()} files`,
@@ -590,7 +590,7 @@ export const useMindMapFiles = (
           return;
         } catch (saveError) {
           // ユーザーがキャンセルした場合やエラーが発生した場合
-          if (saveError.name === 'AbortError') {
+          if ((saveError as Error).name === 'AbortError') {
             return;
           }
           console.warn('File System Access API でのダウンロードに失敗:', saveError);

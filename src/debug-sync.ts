@@ -1,5 +1,6 @@
 // Debug script to test sync functionality
-import { cloudAuthManager } from './Cloud/features/auth/cloudAuthManager.js';
+// cloudAuthManager is imported for potential future debug extensions
+import { authManager } from './Cloud/features/auth/authManager.js';
 import { getAllMindMaps } from './Cloud/core/storage/StorageManager.js';
 
 export const debugSync = async () => {
@@ -7,10 +8,11 @@ export const debugSync = async () => {
   
   // 1. Check authentication status
   try {
-    const authState = cloudAuthManager.getAuthState();
+    const isAuthenticated = authManager.isAuthenticated();
+    const user = authManager.getCurrentUser();
     console.log('🔐 Auth State:', {
-      isAuthenticated: authState.isAuthenticated,
-      user: authState.user?.email || 'None'
+      isAuthenticated,
+      user: user?.email || 'None'
     });
   } catch (error) {
     console.error('❌ Auth State check failed:', error);

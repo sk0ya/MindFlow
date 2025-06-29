@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 
 // 型定義
 export interface ConflictUser {
@@ -73,7 +72,7 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
 
   useEffect(() => {
     // 自動非表示タイマー
-    const timers = [];
+    const timers: NodeJS.Timeout[] = [];
     
     visibleConflicts.forEach(conflict => {
       if (!conflict.dismissed && autoHideDelay > 0) {
@@ -109,69 +108,73 @@ const ConflictNotification: React.FC<ConflictNotificationProps> = ({
     }, 300);
   };
 
-  const getConflictIcon = (type: string): string => {
-    switch (type) {
-      case 'concurrent_update':
-        return '⚡';
-      case 'concurrent_creation':
-        return '🆕';
-      case 'position_adjustment':
-        return '📍';
-      case 'merge_conflict':
-        return '🔀';
-      case 'deletion_conflict':
-        return '🗑️';
-      default:
-        return '⚠️';
-    }
-  };
+  // Helper function for conflict icons - reserved for future enhanced UI
+  // const getConflictIcon = (type: string): string => {
+  //   switch (type) {
+  //     case 'concurrent_update':
+  //       return '⚡';
+  //     case 'concurrent_creation':
+  //       return '🆕';
+  //     case 'position_adjustment':
+  //       return '📍';
+  //     case 'merge_conflict':
+  //       return '🔀';
+  //     case 'deletion_conflict':
+  //       return '🗑️';
+  //     default:
+  //       return '⚠️';
+  //   }
+  // };
 
-  const getConflictTitle = (type: string): string => {
-    switch (type) {
-      case 'concurrent_update':
-        return '同時編集の競合';
-      case 'concurrent_creation':
-        return '同時作成の競合';
-      case 'position_adjustment':
-        return '位置調整';
-      case 'merge_conflict':
-        return 'マージ競合';
-      case 'deletion_conflict':
-        return '削除競合';
-      default:
-        return '競合が発生';
-    }
-  };
+  // Helper function for conflict titles - reserved for future enhanced UI
+  // const getConflictTitle = (type: string): string => {
+  //   switch (type) {
+  //     case 'concurrent_update':
+  //       return '同時編集の競合';
+  //     case 'concurrent_creation':
+  //       return '同時作成の競合';
+  //     case 'position_adjustment':
+  //       return '位置調整';
+  //     case 'merge_conflict':
+  //       return 'マージ競合';
+  //     case 'deletion_conflict':
+  //       return '削除競合';
+  //     default:
+  //       return '競合が発生';
+  //   }
+  // };
 
-  const getResolutionMessage = (conflict: Conflict): string => {
-    const { resolutionType, metadata = {} } = conflict;
-    
-    switch (resolutionType) {
-      case 'last_writer_wins':
-        return `最新の変更を採用 (${metadata.discardedOperations || 0}個の操作を破棄)`;
-      case 'field_merge':
-        return `フィールドをマージ (${metadata.mergedFields?.length || 0}個のフィールド)`;
-      case 'position_adjustment':
-        return `位置を自動調整 (${Math.round(metadata.adjustedBy || 0)}px移動)`;
-      case 'first_delete_wins':
-        return '最初の削除操作を優先';
-      case 'preserve_children':
-        return '子ノードを保持して削除実行';
-      case 'averaged_position':
-        return `位置を平均化 (${metadata.operationCount || 0}個の操作)`;
-      default:
-        return '自動的に解決されました';
-    }
-  };
+  // Helper function for resolution messages - reserved for future enhanced UI
+  // const getResolutionMessage = (conflict: Conflict): string => {
+  //   const { resolutionType, metadata = {} } = conflict;
+  //   
+  //   switch (resolutionType) {
+  //     case 'last_writer_wins':
+  //       return `最新の変更を採用 (${metadata.discardedOperations || 0}個の操作を破棄)`;
+  //     case 'field_merge':
+  //       return `フィールドをマージ (${metadata.mergedFields?.length || 0}個のフィールド)`;
+  //     case 'position_adjustment':
+  //       return `位置を自動調整 (${Math.round(metadata.adjustedBy || 0)}px移動)`;
+  //     case 'first_delete_wins':
+  //       return '最初の削除操作を優先';
+  //     case 'preserve_children':
+  //       return '子ノードを保持して削除実行';
+  //     case 'averaged_position':
+  //       return `位置を平均化 (${metadata.operationCount || 0}個の操作)`;
+  //     default:
+  //       return '自動的に解決されました';
+  //   }
+  // };
 
-  const getSeverityColor = (conflict: Conflict): string => {
-    const { type, metadata = {} } = conflict;
-    
-    if (metadata.dataLoss) return '#dc3545'; // 赤 - データ損失あり
-    if (type === 'merge_conflict') return '#fd7e14'; // オレンジ - 要注意
-    if (type === 'concurrent_update') return '#ffc107'; // 黄 - 注意
-    return '#28a745'; // 緑 - 正常に解決
-  };
+  // Helper function for severity colors - reserved for future enhanced UI
+  // const getSeverityColor = (conflict: Conflict): string => {
+  //   const { type, metadata = {} } = conflict;
+  //   
+  //   if (metadata.dataLoss) return '#dc3545'; // 赤 - データ損失あり
+  //   if (type === 'merge_conflict') return '#fd7e14'; // オレンジ - 要注意
+  //   if (type === 'concurrent_update') return '#ffc107'; // 黄 - 注意
+  //   return '#28a745'; // 緑 - 正常に解決
+  // };
 
   if (visibleConflicts.length === 0) {
     return null;
@@ -490,7 +493,7 @@ const ConflictItem: React.FC<ConflictItemProps> = ({ conflict, onDismiss }) => {
 };
 
 // ヘルパー関数（重複を避けるため外部定義）
-const getSeverityColor = (conflict) => {
+const getSeverityColor = (conflict: Conflict): string => {
   const { type, metadata = {} } = conflict;
   
   if (metadata.dataLoss) return '#dc3545';
@@ -499,7 +502,7 @@ const getSeverityColor = (conflict) => {
   return '#28a745';
 };
 
-const getConflictIcon = (type) => {
+const getConflictIcon = (type: string): string => {
   switch (type) {
     case 'concurrent_update':
       return '⚡';
@@ -516,7 +519,7 @@ const getConflictIcon = (type) => {
   }
 };
 
-const getConflictTitle = (type) => {
+const getConflictTitle = (type: string): string => {
   switch (type) {
     case 'concurrent_update':
       return '同時編集の競合';
@@ -533,7 +536,7 @@ const getConflictTitle = (type) => {
   }
 };
 
-const getResolutionMessage = (conflict) => {
+const getResolutionMessage = (conflict: Conflict): string => {
   const { resolutionType, metadata = {} } = conflict;
   
   switch (resolutionType) {
@@ -554,38 +557,5 @@ const getResolutionMessage = (conflict) => {
   }
 };
 
-ConflictNotification.propTypes = {
-  conflicts: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    type: PropTypes.string.isRequired,
-    resolutionType: PropTypes.string,
-    metadata: PropTypes.object,
-    affectedNodes: PropTypes.arrayOf(PropTypes.string),
-    involvedUsers: PropTypes.arrayOf(PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-      color: PropTypes.string
-    }))
-  })),
-  onDismiss: PropTypes.func,
-  position: PropTypes.oneOf(['top-center', 'top-right', 'bottom-right', 'bottom-center']),
-  autoHideDelay: PropTypes.number
-};
-
-ConflictItem.propTypes = {
-  conflict: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    type: PropTypes.string.isRequired,
-    resolutionType: PropTypes.string,
-    metadata: PropTypes.object,
-    affectedNodes: PropTypes.arrayOf(PropTypes.string),
-    involvedUsers: PropTypes.arrayOf(PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-      color: PropTypes.string
-    }))
-  }).isRequired,
-  onDismiss: PropTypes.func.isRequired
-};
 
 export default ConflictNotification;

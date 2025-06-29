@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager.js';
+import type { Dispatch, SetStateAction } from 'react';
+import { getAllMindMaps, getMindMap, deleteMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, storageManager } from '../../core/storage/StorageManager.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { getAppSettings } from '../../core/storage/storageUtils.js';
 import { authManager } from '../../features/auth/authManager.js';
@@ -27,7 +28,10 @@ export interface MindMapData {
   title: string;
   category?: string;
   rootNode: any;
-  settings?: any;
+  settings: {
+    autoSave: boolean;
+    autoLayout: boolean;
+  };
   updatedAt?: string;
   createdAt?: string;
   [key: string]: any;
@@ -36,7 +40,7 @@ export interface MindMapData {
 /**
  * Function types for state setters
  */
-export type SetDataFn = (data: MindMapData | ((prev: MindMapData) => MindMapData)) => void;
+export type SetDataFn = Dispatch<SetStateAction<MindMapData | null>>;
 export type UpdateDataFn = (data: Partial<MindMapData>, options?: any) => Promise<void>;
 export type SetSelectedNodeIdFn = (id: string | null) => void;
 export type SetEditingNodeIdFn = (id: string | null) => void;
@@ -89,7 +93,7 @@ export interface MultiMapUtils {
 export const useMindMapMulti = (
   data: MindMapData | null,
   setData: SetDataFn,
-  updateData: UpdateDataFn
+  _updateData: UpdateDataFn // Prefixed with underscore to indicate unused
 ): MultiMapUtils => {
   // マルチマップ管理用の状態
   const [allMindMaps, setAllMindMaps] = useState<MindMapMetadata[]>([]);
@@ -131,20 +135,20 @@ export const useMindMapMulti = (
       
       console.log('🆕 マップ作成開始:', title);
       
-      const result = await storageManager.createMap(newMap);
+      const result = await storageManager.createMap(newMap as any);
       
       if (!result.success) {
         throw new Error(result.error || 'マップ作成に失敗しました');
       }
       
-      console.log('✅ マップ作成完了:', result.data.title || title);
+      console.log('✅ マップ作成完了:', result.data?.title || title);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
       
       // クラウドモードの場合、作成されたマップがサーバーに反映されるまで待機
       if (isCloudStorageEnabled()) {
-        const mapId = result.data.id || newMap.id;
+        const mapId = result.data?.id || newMap.id;
         console.log('🔍 クラウドマップ作成後の検証開始:', mapId);
         
         // 最大3回、1秒間隔でマップの存在確認
@@ -158,7 +162,7 @@ export const useMindMapMulti = (
             }
             console.warn(`⚠️ マップ検証失敗 (${i + 1}/3):`, mapId);
           } catch (verifyError) {
-            console.warn(`⚠️ マップ検証エラー (${i + 1}/3):`, verifyError.message);
+            console.warn(`⚠️ マップ検証エラー (${i + 1}/3):`, (verifyError as Error).message);
             if (i === 2) {
               throw new Error('作成されたマップのサーバー検証に失敗しました');
             }
@@ -167,8 +171,8 @@ export const useMindMapMulti = (
       }
       
       // 新規作成したマップに切り替え
-      await switchToMap(result.data.id || newMap.id, true);
-      return result.data.id || newMap.id;
+      await switchToMap(result.data?.id || newMap.id, true);
+      return result.data?.id || newMap.id;
       
     } catch (error) {
       console.error('❌ マップ作成失敗:', error);
@@ -193,7 +197,7 @@ export const useMindMapMulti = (
         };
         
         // StorageManagerが内部でローカル/クラウドを判定して処理
-        await storageManager.updateMindMap(mapId, updatedMap);
+        await storageManager.updateMindMap(mapId, updatedMap as any);
         console.log('✅ マップタイトル更新完了:', newTitle);
       } else {
         throw new Error('マップが見つかりません');
@@ -204,7 +208,7 @@ export const useMindMapMulti = (
       
       // 現在編集中のマップの場合はタイトルを更新
       if (mapId === currentMapId) {
-        setData(prev => ({ ...prev, title: newTitle }));
+        setData(prev => prev ? ({ ...prev, title: newTitle }) : null);
       }
       
     } catch (error) {
@@ -264,7 +268,7 @@ export const useMindMapMulti = (
       
       // 現在編集中のマップの場合はデータを更新
       if (mapId === currentMapId) {
-        setData(prev => ({ ...prev, category: newCategory }));
+        setData(prev => prev ? ({ ...prev, category: newCategory }) : null);
       }
     }
   };
@@ -287,8 +291,8 @@ export const useMindMapMulti = (
     setSelectedNodeId: ((id: string | null) => void) | null = null, 
     setEditingNodeId: ((id: string | null) => void) | null = null, 
     setEditText: ((text: string) => void) | null = null, 
-    setHistory: ((history: any[]) => void) | null = null, 
-    setHistoryIndex: ((index: number) => void) | null = null, 
+    _setHistory: ((history: any[]) => void) | null = null, 
+    _setHistoryIndex: ((index: number) => void) | null = null, 
     finishEdit: ((nodeId: string, text: string) => void) | null = null
   ): Promise<void> => {
     console.log('📖 マップ切り替え開始:', mapId);
@@ -349,8 +353,8 @@ export const useMindMapMulti = (
           mapId: data.id,
           title: data.title,
           rootNodeChildren: data.rootNode?.children?.length || 0,
-          childrenIds: data.rootNode?.children?.map(c => c.id) || [],
-          childrenDetails: data.rootNode?.children?.map(c => ({
+          childrenIds: data.rootNode?.children?.map((c: any) => c.id) || [],
+          childrenDetails: data.rootNode?.children?.map((c: any) => ({
             id: c.id,
             text: c.text,
             isTemporary: c.isTemporary,
@@ -410,7 +414,7 @@ export const useMindMapMulti = (
       });
       
       // マップ表示（完全に独立したデータ）
-      const coloredMap = assignColorsToExistingNodes(targetMap);
+      const coloredMap = assignColorsToExistingNodes(targetMap as any);
       
       console.log('🎨 色付け後データ検証:', {
         hasRootNode: !!coloredMap.rootNode,
@@ -462,7 +466,7 @@ export const useMindMapMulti = (
         });
       }
       
-      setData(coloredMap);
+      setData(coloredMap as any);
       setCurrentMapId(mapId);
       
       // UI状態リセット
@@ -545,8 +549,8 @@ export const useMindMapMulti = (
       // 一時ノードでない子ノードのみをフィルタリング
       if (node.children && Array.isArray(node.children)) {
         node.children = node.children
-          .filter(child => !child.isTemporary) // 一時ノードを除外
-          .map(child => filterTemporaryNodes(child)); // 再帰的に処理
+          .filter((child: any) => !child.isTemporary) // 一時ノードを除外
+          .map((child: any) => filterTemporaryNodes(child)); // 再帰的に処理
       }
       
       return node;

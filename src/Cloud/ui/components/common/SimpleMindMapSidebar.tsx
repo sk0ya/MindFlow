@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
+import { MindMapListItem } from '../../../../shared/types/app';
 
-const SimpleMindMapSidebar = ({
+interface SimpleMindMapSidebarProps {
+  mindMaps: MindMapListItem[];
+  currentMapId: string | null;
+  onCreateMap: (title: string) => void;
+  onSelectMap: (mapId: string) => void;
+  onRenameMap: (mapId: string, newTitle: string) => void;
+  onDeleteMap: (mapId: string) => void;
+  onToggleCollapse?: () => void;
+}
+
+const SimpleMindMapSidebar: React.FC<SimpleMindMapSidebarProps> = ({
   mindMaps = [],
   currentMapId,
   onCreateMap,
@@ -9,15 +20,15 @@ const SimpleMindMapSidebar = ({
   onDeleteMap,
   onToggleCollapse
 }) => {
-  const [editingMapId, setEditingMapId] = useState(null);
+  const [editingMapId, setEditingMapId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 
-  const handleStartRename = (mapId, currentTitle) => {
+  const handleStartRename = (mapId: string, currentTitle: string) => {
     setEditingMapId(mapId);
     setEditingTitle(currentTitle);
   };
 
-  const handleFinishRename = (mapId) => {
+  const handleFinishRename = (mapId: string) => {
     if (editingTitle.trim() && editingTitle.trim() !== '') {
       onRenameMap(mapId, editingTitle.trim());
     }
@@ -30,7 +41,7 @@ const SimpleMindMapSidebar = ({
     setEditingTitle('');
   };
 
-  const handleKeyDown = (e, mapId) => {
+  const handleKeyDown = (e: React.KeyboardEvent, mapId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleFinishRename(mapId);
@@ -44,7 +55,7 @@ const SimpleMindMapSidebar = ({
     onCreateMap('新しいマインドマップ');
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('ja-JP', {
@@ -121,7 +132,7 @@ const SimpleMindMapSidebar = ({
                 
                 <div className="map-meta">
                   <span className="update-time">
-                    {formatDate(map.updatedAt || map.createdAt)}
+                    {formatDate(map.updatedAt || map.createdAt || '')}
                   </span>
                 </div>
               </div>
@@ -158,7 +169,7 @@ const SimpleMindMapSidebar = ({
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .simple-mindmap-sidebar {
           height: 100%;
           display: flex;

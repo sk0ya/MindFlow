@@ -5,11 +5,11 @@ export interface KeyboardShortcutsParams {
   selectedNodeId: string | null;
   editingNodeId: string | null;
   setEditingNodeId: (nodeId: string | null) => void;
-  setEditText: (text: string) => void;
+  _setEditText: (text: string) => void;
   startEdit: (nodeId: string, clearText?: boolean) => void;
   finishEdit: (nodeId: string, newText?: string, options?: any) => Promise<void>;
   editText: string;
-  updateNode: (nodeId: string, updates: any, options?: any) => Promise<void>;
+  _updateNode: (nodeId: string, updates: any, options?: any) => Promise<void>;
   addChildNode: (parentId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
   addSiblingNode: (nodeId: string, nodeText?: string, startEditing?: boolean) => Promise<string | null>;
   deleteNode: (nodeId: string) => Promise<boolean>;
@@ -34,11 +34,11 @@ export const useKeyboardShortcuts = ({
   selectedNodeId,
   editingNodeId,
   setEditingNodeId,
-  setEditText,
+  _setEditText,
   startEdit,
   finishEdit,
   editText,
-  updateNode,
+  _updateNode,
   addChildNode,
   addSiblingNode,
   deleteNode,

@@ -1,5 +1,6 @@
 // ローカルストレージ専用エンジン
-import { deepClone, createInitialData } from '../../shared/types/dataTypes';
+import { createInitialData } from '../../shared/types/dataTypes';
+// deepClone is imported for potential future deep cloning operations
 
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',

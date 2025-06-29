@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { authManager } from '../../../../features/auth/authManager.js';
+import type { User } from '../../../../../shared/types/app.js';
 // リアルタイム同期はクラウドエンジンに統合
 
 /**
  * 認証関連のステートとハンドラーを管理するカスタムフック
  */
-export const useAuthHandlers = (initState, refreshAllMindMaps, triggerCloudSync) => {
+export const useAuthHandlers = (
+  initState: { handleAuthSuccess: () => void },
+  refreshAllMindMaps: () => Promise<void>,
+  triggerCloudSync?: () => Promise<void>
+) => {
   const [authState, setAuthState] = useState({
     isAuthenticated: authManager.isAuthenticated(),
     user: authManager.getCurrentUser(),
@@ -49,7 +54,7 @@ export const useAuthHandlers = (initState, refreshAllMindMaps, triggerCloudSync)
     setShowAuthModal(false);
   };
   
-  const handleAuthSuccess = async (user) => {
+  const handleAuthSuccess = async (user: User) => {
     setAuthState({
       isAuthenticated: true,
       user: user,

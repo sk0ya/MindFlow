@@ -1,7 +1,20 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import type { Node, MindMapListItem, Position } from '../../../shared/types/app.js';
 
-const NodeMapLinksPanel = ({
+interface NodeMapLinksPanelProps {
+  isOpen: boolean;
+  position: Position;
+  selectedNode: Node;
+  currentMapId: string | null;
+  allMaps: MindMapListItem[];
+  onClose: () => void;
+  onAddLink: (nodeId: string, targetMapId: string, targetMapTitle: string, description?: string) => void;
+  onRemoveLink: (nodeId: string, linkId: string) => void;
+  onNavigateToMap: (mapId: string) => Promise<void>;
+}
+
+const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
   isOpen,
   position,
   selectedNode,
@@ -14,7 +27,7 @@ const NodeMapLinksPanel = ({
 }) => {
   const [selectedMapId, setSelectedMapId] = useState('');
   const [linkDescription, setLinkDescription] = useState('');
-  const panelRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const handleAddLink = useCallback(() => {
     if (selectedMapId && selectedMapId !== currentMapId) {
@@ -27,27 +40,27 @@ const NodeMapLinksPanel = ({
     }
   }, [selectedMapId, currentMapId, allMaps, linkDescription, onAddLink, selectedNode]);
 
-  const handleKeyDown = useCallback((e) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
       handleAddLink();
     }
   }, [handleAddLink]);
 
-  const availableMaps = allMaps.filter(map => 
+  const availableMaps = allMaps.filter((map: MindMapListItem) => 
     map.id !== currentMapId && 
     !selectedNode.mapLinks?.some(link => link.targetMapId === map.id)
   );
 
   // クリック外し検出でパネルを閉じる
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as any)) {
         onClose();
       }
     };
 
-    const handleEscapeKey = (event) => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
@@ -94,7 +107,7 @@ const NodeMapLinksPanel = ({
           <h4>既存のリンク</h4>
           {selectedNode.mapLinks && selectedNode.mapLinks.length > 0 ? (
             <div className="links-list">
-              {selectedNode.mapLinks.map((link) => (
+              {selectedNode.mapLinks.map((link: any, index: number) => (
                 <div key={link.id} className="link-item">
                   <div 
                     className="link-info"
@@ -142,7 +155,7 @@ const NodeMapLinksPanel = ({
                 className="map-select"
               >
                 <option value="">リンク先マップを選択...</option>
-                {availableMaps.map((map) => (
+                {availableMaps.map((map: MindMapListItem) => (
                   <option key={map.id} value={map.id}>
                     {map.title} ({map.category})
                   </option>

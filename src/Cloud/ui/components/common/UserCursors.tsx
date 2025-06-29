@@ -1,11 +1,42 @@
-import React, { memo, useMemo } from 'react';
-import PropTypes from 'prop-types';
+import { memo, useMemo } from 'react';
+import type { Node, UserCursor as UserCursorType, PanState } from '../../../../shared/types/app.js';
+
+interface CursorData {
+  nodeId: string;
+  offsetX?: number;
+  offsetY?: number;
+  type?: 'editing' | 'selecting' | 'dragging';
+  action?: string;
+  timestamp: number;
+}
+
+interface UserCursorInfo {
+  userId: string;
+  userName: string;
+  userColor?: string;
+  cursor?: CursorData;
+}
+
+interface UserCursorsProps {
+  userCursors: UserCursorInfo[] | Map<string, UserCursorInfo>;
+  currentUserId?: string;
+  zoom?: number;
+  pan?: PanState;
+  findNode?: (nodeId: string) => Node | null;
+}
+
+interface UserCursorProps {
+  cursor: UserCursorInfo;
+  zoom: number;
+  pan: PanState;
+  findNode?: (nodeId: string) => Node | null;
+}
 
 /**
  * リアルタイムユーザーカーソル表示コンポーネント
  * 他のユーザーのカーソル位置とノード操作状況を表示
  */
-const UserCursors = memo(({
+const UserCursors = memo<UserCursorsProps>(({
   userCursors,
   currentUserId,
   zoom = 1,
@@ -15,7 +46,7 @@ const UserCursors = memo(({
   // アクティブなカーソルのみをメモ化
   const activeCursors = useMemo(() => {
     // 緊急修正: userCursorsが未定義の場合の安全ガード
-    if (!userCursors || (typeof userCursors.size === 'number' && userCursors.size === 0)) {
+    if (!userCursors || (userCursors instanceof Map && userCursors.size === 0)) {
       return [];
     }
 
@@ -62,7 +93,7 @@ const UserCursors = memo(({
       ))}
     </div>
   );
-}, (prevProps, nextProps) => {
+}, (prevProps: UserCursorsProps, nextProps: UserCursorsProps) => {
   // カスタム比較関数でレンダリングを最適化
   if (prevProps.currentUserId !== nextProps.currentUserId ||
       prevProps.zoom !== nextProps.zoom ||
@@ -72,18 +103,29 @@ const UserCursors = memo(({
   }
 
   // userCursorsの詳細比較
-  if (prevProps.userCursors?.size !== nextProps.userCursors?.size) {
-    return false;
-  }
-
   if (prevProps.userCursors && nextProps.userCursors) {
-    for (const [userId, cursor] of nextProps.userCursors) {
-      const prevCursor = prevProps.userCursors.get(userId);
-      if (!prevCursor ||
-          prevCursor.cursor?.nodeId !== cursor.cursor?.nodeId ||
-          prevCursor.cursor?.timestamp !== cursor.cursor?.timestamp) {
+    // Map の場合
+    if (prevProps.userCursors instanceof Map && nextProps.userCursors instanceof Map) {
+      if (prevProps.userCursors.size !== nextProps.userCursors.size) {
         return false;
       }
+      
+      for (const [userId, cursor] of nextProps.userCursors) {
+        const prevCursor = prevProps.userCursors.get(userId);
+        if (!prevCursor ||
+            prevCursor.cursor?.nodeId !== cursor.cursor?.nodeId ||
+            prevCursor.cursor?.timestamp !== cursor.cursor?.timestamp) {
+          return false;
+        }
+      }
+    }
+    // Array の場合
+    else if (Array.isArray(prevProps.userCursors) && Array.isArray(nextProps.userCursors)) {
+      if (prevProps.userCursors.length !== nextProps.userCursors.length) {
+        return false;
+      }
+      // 簡単な比較 - より詳細な比較が必要な場合は改善
+      return JSON.stringify(prevProps.userCursors) === JSON.stringify(nextProps.userCursors);
     }
   }
 
@@ -93,8 +135,8 @@ const UserCursors = memo(({
 /**
  * 個別ユーザーカーソルコンポーネント
  */
-const UserCursor = memo(({ cursor, zoom, pan, findNode }) => {
-  const { userId, userName, userColor, cursor: cursorData } = cursor;
+const UserCursor = memo<UserCursorProps>(({ cursor, zoom, pan, findNode }) => {
+  const { _userId, userName, userColor, cursor: cursorData } = cursor;
   
   if (!cursorData || !cursorData.nodeId) {
     return null;
@@ -118,7 +160,7 @@ const UserCursor = memo(({ cursor, zoom, pan, findNode }) => {
   const finalY = screenY + cursorOffsetY;
 
   // カーソルタイプに基づく表示の決定
-  const getCursorIcon = (cursorType) => {
+  const getCursorIcon = (cursorType?: string) => {
     switch (cursorType) {
       case 'editing':
         return '✏️';
@@ -288,7 +330,7 @@ const UserCursor = memo(({ cursor, zoom, pan, findNode }) => {
       `}</style>
     </>
   );
-}, (prevProps, nextProps) => {
+}, (prevProps: UserCursorProps, nextProps: UserCursorProps) => {
   // UserCursorの最適化された比較
   return (
     prevProps.cursor.userId === nextProps.cursor.userId &&
@@ -299,38 +341,5 @@ const UserCursor = memo(({ cursor, zoom, pan, findNode }) => {
     prevProps.pan.y === nextProps.pan.y
   );
 });
-
-UserCursors.propTypes = {
-  userCursors: PropTypes.instanceOf(Map),
-  currentUserId: PropTypes.string,
-  zoom: PropTypes.number,
-  pan: PropTypes.shape({
-    x: PropTypes.number,
-    y: PropTypes.number
-  }),
-  findNode: PropTypes.func
-};
-
-UserCursor.propTypes = {
-  cursor: PropTypes.shape({
-    userId: PropTypes.string.isRequired,
-    userName: PropTypes.string.isRequired,
-    userColor: PropTypes.string,
-    cursor: PropTypes.shape({
-      nodeId: PropTypes.string,
-      offsetX: PropTypes.number,
-      offsetY: PropTypes.number,
-      type: PropTypes.string,
-      action: PropTypes.string,
-      timestamp: PropTypes.number
-    })
-  }).isRequired,
-  zoom: PropTypes.number.isRequired,
-  pan: PropTypes.shape({
-    x: PropTypes.number,
-    y: PropTypes.number
-  }).isRequired,
-  findNode: PropTypes.func
-};
 
 export default UserCursors;

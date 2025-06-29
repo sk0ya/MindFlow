@@ -11,6 +11,7 @@ import {
   AuthEventHandler, 
   AuthEvent,
   User,
+  AuthProvider,
   MagicLinkOptions,
   GoogleOAuthOptions,
   GitHubOAuthOptions,
@@ -123,15 +124,24 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       const result = await legacyAuthManager.handleAuthCallback(token);
       
       if (result.success && result.user) {
-        const userWithProvider = { ...result.user, provider: 'email' as const };
+        const userWithProvider = { ...result.user, provider: 'email' as AuthProvider };
         await this.setAuthData(userWithProvider, token);
         this.emit('login', { user: userWithProvider, method: 'token_verification' });
       }
 
-      return {
-        ...result,
-        user: result.user ? { ...result.user, provider: 'email' as const } : undefined
+      const returnResult: AuthResult = {
+        success: result.success
       };
+      if (result.token) {
+        returnResult.token = result.token;
+      }
+      if (result.error) {
+        returnResult.error = result.error;
+      }
+      if (result.user) {
+        returnResult.user = { ...result.user, provider: 'email' as AuthProvider };
+      }
+      return returnResult;
     } catch (error) {
       const authError = new AuthError((error as Error).message || 'Token verification failed', 'INVALID_TOKEN');
       this.setState({ error: authError.message });
@@ -149,15 +159,24 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       const result = await legacyAuthManager.verifyMagicLink(token);
       
       if (result.success && result.user) {
-        const userWithProvider = { ...result.user, provider: 'email' as const };
+        const userWithProvider = { ...result.user, provider: 'email' as AuthProvider };
         await this.setAuthData(userWithProvider, result.token || token);
         this.emit('login', { user: userWithProvider, method: 'magic_link' });
       }
 
-      return {
-        ...result,
-        user: result.user ? { ...result.user, provider: 'email' as const } : undefined
+      const returnResult: AuthResult = {
+        success: result.success
       };
+      if (result.token) {
+        returnResult.token = result.token;
+      }
+      if (result.error) {
+        returnResult.error = result.error;
+      }
+      if (result.user) {
+        returnResult.user = { ...result.user, provider: 'email' as AuthProvider };
+      }
+      return returnResult;
     } catch (error) {
       const authError = new AuthError((error as Error).message || 'Magic link verification failed', 'INVALID_TOKEN');
       this.setState({ error: authError.message });
@@ -269,7 +288,7 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
    * @returns アンサブスクライブ関数
    */
   onAuthStateChange(callback: (authState: AuthState) => void): () => void {
-    return this.addEventListener('state_change', (event) => {
+    return this.addEventListener('state_change', (_event) => {
       callback(this._state);
     });
   }
@@ -329,7 +348,8 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
       const token = legacyAuthManager.getAuthToken();
 
       if (isAuth && user && token) {
-        await this.setAuthData(user, token);
+        const userWithProvider = { ...user, provider: (user.provider || 'email') as AuthProvider };
+        await this.setAuthData(userWithProvider, token);
       }
 
       // 自動トークンリフレッシュを開始
@@ -358,12 +378,26 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
 
   private async loginWithEmail(options: MagicLinkOptions): Promise<AuthResult> {
     // レガシーマネージャーを使用
-    return await legacyAuthManager.sendMagicLink(options.email);
+    const result = await legacyAuthManager.sendMagicLink(options.email);
+    return {
+      success: result.success,
+      user: result.user,
+      token: result.token,
+      error: result.error,
+      redirectUrl: result.redirectUrl
+    };
   }
 
   private async loginWithGoogle(_options?: GoogleOAuthOptions): Promise<AuthResult> {
     // レガシーマネージャーを使用
-    return await legacyAuthManager.loginWithGoogle();
+    const result = await legacyAuthManager.loginWithGoogle();
+    return {
+      success: result.success,
+      user: result.user,
+      token: result.token,
+      error: result.error,
+      redirectUrl: result.redirectUrl
+    };
   }
 
   private async loginWithGitHub(_options?: GitHubOAuthOptions): Promise<AuthResult> {
@@ -375,8 +409,18 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     // JWTからexpを取得（簡易実装）
     let expiresAt: number | null = null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      expiresAt = payload.exp ? payload.exp * 1000 : null;
+      // atobの代わりにBufferを使用（Node.js環境対応）
+      const tokenParts = token.split('.');
+      if (tokenParts.length >= 2) {
+        const base64 = tokenParts[1];
+        if (base64) {
+          const decoded = typeof window !== 'undefined' 
+            ? atob(base64) 
+            : Buffer.from(base64, 'base64').toString('utf-8');
+          const payload = JSON.parse(decoded);
+          expiresAt = payload.exp ? payload.exp * 1000 : null;
+        }
+      }
     } catch (error) {
       console.warn('Failed to parse token expiration:', error);
     }
@@ -394,8 +438,8 @@ export class UnifiedAuthManager implements IUnifiedAuthManager {
     const legacyUser = {
       id: user.id,
       email: user.email,
-      name: user.name || undefined,
-      avatar: user.avatar
+      name: user.name || '',
+      provider: user.provider
     };
     await legacyAuthManager.setAuthData(token, legacyUser);
     

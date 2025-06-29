@@ -127,7 +127,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
+    if (!e.currentTarget.contains(e.relatedTarget as any)) {
       setDragOverCategory(null);
     }
   };

@@ -1,11 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { CollaborativeFeaturesProps } from '../../../../shared/types/app';
 
 /**
  * 共同編集用機能パネル
  * コメント、履歴、ユーザー活動などの管理UI
  */
-const CollaborativeFeatures = ({
+
+// Comment type definition
+interface Comment {
+  id: string;
+  nodeId: string;
+  userId: string;
+  userName: string;
+  userColor: string;
+  text: string;
+  timestamp: number;
+  resolved: boolean;
+}
+
+// Activity type definition
+interface Activity {
+  id: string;
+  type: 'node_created' | 'node_updated' | 'node_deleted' | 'comment_added' | 'user_joined' | 'user_left';
+  userId: string;
+  userName: string;
+  userColor: string;
+  nodeId?: string;
+  nodeText?: string;
+  timestamp: number;
+  changes?: any;
+  comment?: string;
+}
+
+const CollaborativeFeatures: React.FC<CollaborativeFeaturesProps> = ({
   isVisible,
   onClose,
   selectedNodeId,
@@ -15,8 +42,8 @@ const CollaborativeFeatures = ({
   realtimeClient
 }) => {
   const [activeTab, setActiveTab] = useState('comments');
-  const [comments, setComments] = useState([]);
-  const [activityHistory, setActivityHistory] = useState([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [activityHistory, setActivityHistory] = useState<Activity[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -51,7 +78,7 @@ const CollaborativeFeatures = ({
         resolved: true
       }
     ];
-    setComments(mockComments);
+    setComments(mockComments as any);
   };
 
   const loadActivityHistory = async () => {
@@ -88,7 +115,7 @@ const CollaborativeFeatures = ({
         timestamp: Date.now() - 300000
       }
     ];
-    setActivityHistory(mockHistory);
+    setActivityHistory(mockHistory as any);
   };
 
   const handleAddComment = async () => {
@@ -112,7 +139,7 @@ const CollaborativeFeatures = ({
         // realtimeClient.addComment(comment);
       }
 
-      setComments(prev => [...prev, comment]);
+      setComments(prev => [...prev, comment] as any);
       setNewComment('');
     } catch (error) {
       console.error('Failed to add comment:', error);
@@ -121,7 +148,7 @@ const CollaborativeFeatures = ({
     }
   };
 
-  const handleResolveComment = async (commentId) => {
+  const handleResolveComment = async (commentId: string) => {
     try {
       // TODO: サーバーで解決済みにマーク
       setComments(prev =>
@@ -134,7 +161,7 @@ const CollaborativeFeatures = ({
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async (commentId: string) => {
     try {
       // TODO: サーバーから削除
       setComments(prev => prev.filter(c => c.id !== commentId));
@@ -143,7 +170,7 @@ const CollaborativeFeatures = ({
     }
   };
 
-  const formatTimestamp = (timestamp) => {
+  const formatTimestamp = (timestamp: number): string => {
     const now = Date.now();
     const diff = now - timestamp;
     
@@ -153,7 +180,7 @@ const CollaborativeFeatures = ({
     return `${Math.floor(diff / 86400000)}d ago`;
   };
 
-  const getActivityIcon = (type) => {
+  const getActivityIcon = (type: Activity['type']): string => {
     switch (type) {
       case 'node_created': return '➕';
       case 'node_updated': return '✏️';
@@ -165,7 +192,7 @@ const CollaborativeFeatures = ({
     }
   };
 
-  const getActivityMessage = (activity) => {
+  const getActivityMessage = (activity: Activity): string => {
     switch (activity.type) {
       case 'node_created':
         return `${activity.userName}が「${activity.nodeText}」を作成`;
@@ -423,7 +450,20 @@ const CollaborativeFeatures = ({
 /**
  * コメントタブ
  */
-const CommentsTab = ({
+interface CommentsTabProps {
+  comments: Comment[];
+  newComment: string;
+  setNewComment: (text: string) => void;
+  onAddComment: () => void;
+  onResolveComment: (commentId: string) => void;
+  onDeleteComment: (commentId: string) => void;
+  isLoading: boolean;
+  formatTimestamp: (timestamp: number) => string;
+  currentUserId?: string;
+  selectedNodeId?: string | null;
+}
+
+const CommentsTab: React.FC<CommentsTabProps> = ({
   comments,
   newComment,
   setNewComment,
@@ -684,7 +724,14 @@ const CommentsTab = ({
 /**
  * 履歴タブ
  */
-const HistoryTab = ({
+interface HistoryTabProps {
+  activities: Activity[];
+  formatTimestamp: (timestamp: number) => string;
+  getActivityIcon: (type: Activity['type']) => string;
+  getActivityMessage: (activity: Activity) => string;
+}
+
+const HistoryTab: React.FC<HistoryTabProps> = ({
   activities,
   formatTimestamp,
   getActivityIcon,
@@ -796,7 +843,17 @@ const HistoryTab = ({
 /**
  * ユーザータブ
  */
-const UsersTab = ({ connectedUsers, currentUserId }) => {
+interface UsersTabProps {
+  connectedUsers: Array<{
+    id: string;
+    name: string;
+    color?: string;
+    isTyping?: boolean;
+  }>;
+  currentUserId?: string;
+}
+
+const UsersTab: React.FC<UsersTabProps> = ({ connectedUsers, currentUserId }) => {
   return (
     <div className="users-tab">
       <div className="users-list">
@@ -898,14 +955,5 @@ const UsersTab = ({ connectedUsers, currentUserId }) => {
   );
 };
 
-CollaborativeFeatures.propTypes = {
-  isVisible: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  selectedNodeId: PropTypes.string,
-  findNode: PropTypes.func.isRequired,
-  currentUserId: PropTypes.string,
-  connectedUsers: PropTypes.array,
-  realtimeClient: PropTypes.object
-};
 
 export default CollaborativeFeatures;

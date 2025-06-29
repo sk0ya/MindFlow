@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, updateMindMap as saveMindMap, getAllMindMaps, getMindMap } from '../../core/storage/LocalEngine';
-import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes';
+import { getCurrentMindMap, updateMindMap as saveMindMap } from '../../core/storage/LocalEngine';
+// getAllMindMaps and getMindMap are imported for potential future multi-map operations
+import { deepClone, assignColorsToExistingNodes, createInitialData, MindMapData } from '../../shared/types/dataTypes';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker';
 
 // データ管理専用のカスタムフック（ローカルモード専用）
 export const useMindMapData = (isAppReady = false) => {
-  const [data, setData] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [data, setData] = useState<MindMapData | null>(null);
+  const [history, setHistory] = useState<MindMapData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const autoSaveTimeoutRef = useRef(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   
   // ローカルストレージへの保存機能
-  const saveImmediately = async (dataToSave = data, options = {}) => {
+  const saveImmediately = async (dataToSave = data, _options = {}) => {
     if (!dataToSave) return;
 
     // データ整合性チェック
@@ -80,7 +81,7 @@ export const useMindMapData = (isAppReady = false) => {
 
 
   // 履歴に追加
-  const addToHistory = (newData) => {
+  const addToHistory = (newData: MindMapData) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push(deepClone(newData));
@@ -95,7 +96,7 @@ export const useMindMapData = (isAppReady = false) => {
     if (!newData) return;
     
     // 🔧 編集中の競合状態を検出・保護
-    const editingInput = document.querySelector('.node-input');
+    const editingInput = document.querySelector('.node-input') as HTMLInputElement | null;
     const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
     
     if (isCurrentlyEditing && !options.allowDuringEdit) {
@@ -147,7 +148,7 @@ export const useMindMapData = (isAppReady = false) => {
   const undo = async () => {
     if (historyIndex > 0) {
       const previousData = history[historyIndex - 1];
-      setData(previousData);
+      setData(previousData as any);
       setHistoryIndex(prev => prev - 1);
       await saveMindMap(previousData.id, previousData);
     }
@@ -157,14 +158,14 @@ export const useMindMapData = (isAppReady = false) => {
   const redo = async () => {
     if (historyIndex < history.length - 1) {
       const nextData = history[historyIndex + 1];
-      setData(nextData);
+      setData(nextData as any);
       setHistoryIndex(prev => prev + 1);
       await saveMindMap(nextData.id, nextData);
     }
   };
 
   // 設定を更新
-  const updateSettings = (newSettings) => {
+  const updateSettings = (newSettings: Partial<MindMapData['settings']>) => {
     updateData({
       ...data,
       settings: { ...data.settings, ...newSettings }
@@ -172,12 +173,12 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // マップタイトルを更新
-  const updateTitle = (newTitle) => {
+  const updateTitle = (newTitle: string) => {
     updateData({ ...data, title: newTitle });
   };
 
   // テーマを変更
-  const changeTheme = (themeName) => {
+  const changeTheme = (themeName: string) => {
     updateData({ ...data, theme: themeName });
   };
 

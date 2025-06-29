@@ -360,7 +360,7 @@ export class MessageManager {
       await this.sendMessageInternal(message);
       
       if (message.requiresAck) {
-        return await this.waitForAck(message.id, message.timeout);
+        return await this.waitForAck(message.id, message.timeout || 5000);
       }
       
       return { success: true, messageId: message.id };
@@ -435,7 +435,7 @@ export class MessageManager {
         
         if (message.requiresAck) {
           // ACK待ちリストに追加
-          this.waitForAck(message.id, message.timeout).catch(error => {
+          this.waitForAck(message.id, message.timeout || 5000).catch(error => {
             console.error(`Queued message ACK failed: ${message.id}`, error);
           });
         }
@@ -509,7 +509,7 @@ export class MessageManager {
 
     } catch (error) {
       console.error('Message handling error:', error);
-      this.syncStateManager.addError(error, 'message_handling');
+      this.syncStateManager.addError(error as any, 'message_handling');
     }
   }
 
@@ -755,7 +755,7 @@ export class MessageManager {
    */
   private simpleDecompress(str: string): string {
     // RLE解凍
-    return str.replace(/(.)(\d+)/g, (match, char, count) => {
+    return str.replace(/(.)(\d+)/g, (_match, char, count) => {
       return char.repeat(parseInt(count));
     });
   }
@@ -824,7 +824,7 @@ class RateLimiter {
   private limits: Record<string, RateLimitConfig>;
   private counters: Map<string, number[]>;
   private violations: number;
-  private lastViolation: string | null;
+  // private lastViolation: string | null; // Reserved for future rate limiting diagnostics
 
   constructor() {
     this.limits = {

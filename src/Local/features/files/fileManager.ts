@@ -3,7 +3,8 @@
  * フロントエンド側でのファイルアップロード・ダウンロード・管理機能
  */
 
-import { validateFile, createFileAttachment, FileAttachment } from '../../shared/types/dataTypes';
+import { validateFile, FileAttachment } from '../../shared/types/dataTypes';
+// createFileAttachment is imported for potential future file attachment operations
 
 // ===== Type Definitions =====
 
@@ -442,7 +443,7 @@ export class FileManager {
       const file = fileArray[i];
       
       try {
-        const result = await this.uploadFile(file, mindmapId, nodeId, (progress: UploadProgress) => {
+        const result = file ? await this.uploadFile(file, mindmapId, nodeId, (progress: UploadProgress) => {
           if (onProgress) {
             onProgress({
               currentFile: i + 1,
@@ -452,9 +453,11 @@ export class FileManager {
               overallProgress: Math.round(((i + progress.percentage / 100) / fileArray.length) * 100)
             });
           }
-        });
+        }) : null;
         
-        results.push(result);
+        if (result) {
+          results.push(result);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         errors.push({ file: file.name, error: errorMessage });

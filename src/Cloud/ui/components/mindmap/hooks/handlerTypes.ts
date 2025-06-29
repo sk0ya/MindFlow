@@ -1,4 +1,4 @@
-import { MindMapNode, MindMapData, FileAttachment, NodeMapLink, Position } from '../../../../shared/types/dataTypes';
+import { MindMapNode, MindMapData, FileAttachment, Position } from '../../../../shared/types/dataTypes';
 
 // React event types
 export type MouseEventHandler = React.MouseEventHandler<HTMLElement>;

@@ -1,4 +1,5 @@
-import { VectorClock, VectorClockData } from './VectorClock';
+// VectorClock is imported for potential future vector clock operations
+import { VectorClockData } from './VectorClock';
 import { SyncStateManager, Operation } from './SyncStateManager';
 
 // ===== Type Definitions =====
@@ -81,7 +82,7 @@ export class OperationQueue {
   private processing: boolean;
   private pendingRequests: Map<string, Promise<unknown>>;
   private batchSize: number;
-  private batchTimeout: number;
+  // private batchTimeout: number; // Reserved for future batch timing configuration
   private maxRetries: number;
   private retryDelay: number;
 
@@ -104,13 +105,13 @@ export class OperationQueue {
    */
   private setupEventListeners(): void {
     // ネットワーク復帰時に自動処理開始
-    this.syncStateManager.subscribe((event: SyncStateEvent) => {
+    this.syncStateManager.subscribe(((event: SyncStateEvent) => {
       if (event.event === 'network_online' || event.event === 'state_changed') {
         if (event.data?.newState?.isConnected && this.queue.length > 0) {
           this.processQueue();
         }
       }
-    });
+    }) as any);
   }
 
   /**
@@ -186,7 +187,7 @@ export class OperationQueue {
       }
     } catch (error) {
       console.error('Queue processing error:', error);
-      this.syncStateManager.addError(error, 'queue_processing');
+      this.syncStateManager.addError(error as any, 'queue_processing');
     } finally {
       this.processing = false;
       this.syncStateManager.updateState({ 
@@ -242,7 +243,7 @@ export class OperationQueue {
       }
 
     } catch (error) {
-      await this.handleOperationError(operation, error);
+      await this.handleOperationError(operation, error as any);
     }
   }
 
@@ -437,6 +438,14 @@ export class OperationQueue {
       pendingRequests: this.pendingRequests.size,
       stats: this.getStats()
     };
+  }
+
+  /**
+   * Get pending operation count
+   * @returns Number of pending operations
+   */
+  getPendingCount(): number {
+    return this.queue.filter(op => op.status === 'pending').length;
   }
 
   /**

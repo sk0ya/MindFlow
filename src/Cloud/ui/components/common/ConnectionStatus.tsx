@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import { ConnectionStatusProps } from '../../../../shared/types/app';
 
 /**
  * リアルタイム接続状態表示コンポーネント
  * 接続状況、エラー、再接続の管理UI
  */
-const ConnectionStatus = ({
+const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   realtimeStatus = 'disconnected',
   isRealtimeConnected = false,
   connectedUsers = [],
@@ -31,7 +31,7 @@ const ConnectionStatus = ({
     }
   }, [lastError]);
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): string => {
     switch (realtimeStatus) {
       case 'connected':
         return '🟢';
@@ -46,7 +46,7 @@ const ConnectionStatus = ({
     }
   };
 
-  const getStatusText = () => {
+  const getStatusText = (): string => {
     switch (realtimeStatus) {
       case 'connected':
         return `${connectedUsers.length}人が接続中`;
@@ -61,7 +61,7 @@ const ConnectionStatus = ({
     }
   };
 
-  const getStatusColor = () => {
+  const getStatusColor = (): string => {
     switch (realtimeStatus) {
       case 'connected':
         return '#28a745';
@@ -76,19 +76,19 @@ const ConnectionStatus = ({
     }
   };
 
-  const handleManualReconnect = () => {
+  const handleManualReconnect = (): void => {
     if (onReconnect) {
       onReconnect();
     }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = (): void => {
     if (onDisconnect) {
       onDisconnect();
     }
   };
 
-  const handleToggleRealtime = () => {
+  const handleToggleRealtime = (): void => {
     if (onToggleRealtime) {
       onToggleRealtime();
     }
@@ -470,17 +470,5 @@ const ConnectionStatus = ({
   );
 };
 
-ConnectionStatus.propTypes = {
-  realtimeStatus: PropTypes.oneOf(['connected', 'connecting', 'reconnecting', 'disconnected']),
-  isRealtimeConnected: PropTypes.bool,
-  connectedUsers: PropTypes.array,
-  pendingOperations: PropTypes.number,
-  reconnectAttempts: PropTypes.number,
-  lastError: PropTypes.string,
-  onReconnect: PropTypes.func,
-  onDisconnect: PropTypes.func,
-  onToggleRealtime: PropTypes.func,
-  onShowCollaborativeFeatures: PropTypes.func
-};
 
 export default ConnectionStatus;

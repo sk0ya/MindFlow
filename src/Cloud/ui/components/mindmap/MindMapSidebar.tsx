@@ -127,7 +127,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
+    if (!e.currentTarget.contains(e.relatedTarget as any)) {
       setDragOverCategory(null);
     }
   };
@@ -388,7 +388,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
                           
                           <div className="map-info">
                             <span className="node-count">{getNodeCount(map.rootNode)} ノード</span>
-                            <span className="update-date">{formatDate(map.updatedAt)}</span>
+                            <span className="update-date">{formatDate(map.updatedAt || '')}</span>
                           </div>
                         </div>
 

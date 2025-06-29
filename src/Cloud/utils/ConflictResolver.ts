@@ -1,5 +1,5 @@
 import { VectorClock } from './VectorClock';
-import { OperationTransformer, Operation, TransformResult, TransformLogEntry } from './OperationTransformer';
+import { OperationTransformer, Operation, TransformLogEntry } from './OperationTransformer';
 
 // ===== Type Definitions =====
 
@@ -176,6 +176,8 @@ export interface ConflictData {
   reviewers?: string[];
   deadline?: Date;
   escalationLevel?: number;
+  resolvedAt?: string;
+  resolutionStrategy?: ResolutionStrategy;
 }
 
 /**
@@ -258,10 +260,10 @@ export class ConflictResolver {
   private readonly resolutionStrategies: Map<string, ResolutionStrategy>;
   private readonly autoResolutionRules: Map<string, AutoResolutionRule[]>;
   private readonly conflictStats: PerformanceMetrics;
-  private readonly syncConfig: SyncConfiguration;
+  // private readonly syncConfig: SyncConfiguration; // Reserved for future sync configuration
   private readonly batchConfig: BatchResolutionConfig;
   private readonly mergeStrategies: Map<string, MergeStrategy>;
-  private readonly performanceMonitor: PerformanceMonitor;
+  // private readonly performanceMonitor: PerformanceMonitor; // Reserved for future performance monitoring
   private cleanupTimer?: NodeJS.Timeout;
 
   constructor(
@@ -407,12 +409,17 @@ export class ConflictResolver {
     const comparison = new VectorClock(localVectorClock).compare(incomingVectorClock);
     const hasConflict = comparison === 'concurrent';
     
-    return {
+    const result: ConflictDetectionResult = {
       hasConflict,
-      comparison,
-      conflictType: hasConflict ? this.classifyConflictType(incomingVectorClock, localVectorClock) : undefined,
-      severity: hasConflict ? this.determineSeverity(incomingVectorClock, localVectorClock) : undefined
+      comparison
     };
+    
+    if (hasConflict) {
+      result.conflictType = this.classifyConflictType(incomingVectorClock, localVectorClock);
+      result.severity = this.determineSeverity(incomingVectorClock, localVectorClock);
+    }
+    
+    return result;
   }
 
   /**
@@ -509,19 +516,23 @@ export class ConflictResolver {
 
     } catch (error) {
       console.error('Conflict resolution failed:', error);
-      this.syncStateManager.addError(error, 'conflict_resolution');
+      this.syncStateManager.addError(error instanceof Error ? error : new Error(String(error)), 'conflict_resolution');
       
       // エラー時は手動解決キューに追加
-      await this.addToManualResolutionQueue(incomingOperation, localOperations, error);
+      await this.addToManualResolutionQueue(incomingOperation, localOperations, error instanceof Error ? error : new Error(String(error)));
       
       return {
         resolvedOperation: null,
         shouldApply: false,
+        resolutionTime: Date.now() - conflictStartTime,
         conflictInfo: {
-          error: error.message,
-          requiresManualResolution: true
-        },
-        resolutionTime: Date.now() - conflictStartTime
+          conflictCount: localOperations.length,
+          resolutionStrategy: 'manual_resolution' as ResolutionStrategy,
+          hasSignificantConflict: true,
+          autoResolved: false,
+          requiresManualResolution: true,
+          error: error instanceof Error ? error.message : String(error)
+        }
       };
     }
   }
@@ -532,7 +543,8 @@ export class ConflictResolver {
    * @param {Array} conflictingOps - 競合する操作のリスト
    * @returns {Object} - 変換結果
    */
-  async performOperationTransformation(incomingOperation, conflictingOps) {
+  async performOperationTransformation(incomingOperation: any, conflictingOps: any[]) {
+    const startTime = Date.now();
     let resolvedOp = { ...incomingOperation };
     const transformLog = [];
     let hasSignificantConflict = false;
@@ -564,10 +576,11 @@ export class ConflictResolver {
     return {
       resolvedOperation: resolvedOp,
       shouldApply: resolvedOp.operation_type !== 'noop',
+      resolutionTime: Date.now() - startTime,
       conflictInfo: {
         conflictCount: conflictingOps.length,
         transformations: transformLog,
-        resolutionStrategy: 'operational_transformation',
+        resolutionStrategy: 'operational_transformation' as ResolutionStrategy,
         hasSignificantConflict,
         autoResolved: true
       }
@@ -580,7 +593,7 @@ export class ConflictResolver {
    * @param {Array} history - 操作履歴
    * @returns {Array} - 競合する操作のリスト
    */
-  findConflictingOperations(incomingOp, history) {
+  findConflictingOperations(incomingOp: any, history: any[]) {
     const incomingVC = new VectorClock(incomingOp.vector_clock);
     
     return history.filter(historyOp => {
@@ -603,7 +616,7 @@ export class ConflictResolver {
    * @param {Object} clock2 - 第2のクロック
    * @returns {Object} - 統合されたクロック
    */
-  mergeVectorClocks(clock1, clock2) {
+  mergeVectorClocks(clock1: Record<string, number>, clock2: Record<string, number>) {
     return VectorClock.merge(clock1, clock2);
   }
 
@@ -612,7 +625,7 @@ export class ConflictResolver {
    * @param {string} mindmapId - マインドマップID
    * @param {Object} operation - 操作
    */
-  addToHistory(mindmapId, operation) {
+  addToHistory(mindmapId: string, operation: Operation) {
     if (!this.operationHistory.has(mindmapId)) {
       this.operationHistory.set(mindmapId, []);
     }
@@ -634,7 +647,7 @@ export class ConflictResolver {
    * @param {string} operationId - 操作ID
    * @param {Object} updatedOperation - 更新された操作
    */
-  async updateLocalOperation(operationId, updatedOperation) {
+  async updateLocalOperation(operationId: string, updatedOperation: Partial<Operation>) {
     // ローカル状態の更新イベントを発行
     const event = new CustomEvent('local_operation_update', {
       detail: { operationId, updatedOperation }
@@ -655,7 +668,7 @@ export class ConflictResolver {
    * @param {Array} localOperations - ローカル操作
    * @param {Error} error - エラー
    */
-  async addToManualResolutionQueue(incomingOperation, localOperations, error) {
+  async addToManualResolutionQueue(incomingOperation: Operation, localOperations: Operation[], error?: Error) {
     const conflictId = `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const conflictData = {
@@ -668,7 +681,7 @@ export class ConflictResolver {
       attempts: 0
     };
 
-    this.pendingConflicts.set(conflictId, conflictData);
+    this.pendingConflicts.set(conflictId, conflictData as any);
     
     // UI通知
     this.syncStateManager.notifyListeners('manual_resolution_required', conflictData);
@@ -680,7 +693,7 @@ export class ConflictResolver {
    * @param {Object} userChoice - ユーザーの選択
    * @returns {Object} - 解決結果
    */
-  async resolveManually(conflictId, userChoice) {
+  async resolveManually(conflictId: string, userChoice: ManualResolutionChoice) {
     const conflict = this.pendingConflicts.get(conflictId);
     if (!conflict) {
       throw new Error('Conflict not found');
@@ -691,7 +704,7 @@ export class ConflictResolver {
     let resolvedOperation;
     switch (userChoice.strategy) {
       case 'accept_local':
-        resolvedOperation = this.selectLocalOperation(conflict, userChoice.operationId);
+        resolvedOperation = this.selectLocalOperation(conflict, userChoice.operationId || '');
         break;
       case 'accept_remote':
         resolvedOperation = conflict.incomingOperation;
@@ -709,7 +722,7 @@ export class ConflictResolver {
     // 解決済み操作を適用
     if (resolvedOperation) {
       await this.applyResolvedOperation(resolvedOperation);
-      this.addToHistory(conflict.incomingOperation.mindmap_id, resolvedOperation);
+      this.addToHistory(conflict.incomingOperation.mindmap_id || '', resolvedOperation);
     }
 
     // 競合を完了マーク
@@ -732,7 +745,7 @@ export class ConflictResolver {
    * @param {string} operationId - 選択された操作ID
    * @returns {Object} - 選択された操作
    */
-  selectLocalOperation(conflict, operationId) {
+  selectLocalOperation(conflict: ConflictData, operationId: string) {
     return conflict.localOperations.find(op => op.id === operationId) || null;
   }
 
@@ -742,7 +755,7 @@ export class ConflictResolver {
    * @param {Object} mergedData - マージされたデータ
    * @returns {Object} - カスタムマージ操作
    */
-  createCustomMerge(conflict, mergedData) {
+  createCustomMerge(conflict: ConflictData, mergedData: any) {
     return {
       ...conflict.incomingOperation,
       data: mergedData,
@@ -913,7 +926,7 @@ export class ConflictResolver {
   /**
    * プロパティ競合ハンドラー
    */
-  private handlePropertyConflict(leftValue: any, rightValue: any, context: MergeContext): MergeResult {
+  private handlePropertyConflict(leftValue: any, rightValue: any, _context: MergeContext): MergeResult {
     return {
       value: rightValue, // Latest wins
       confidence: 0.8,
@@ -1047,7 +1060,7 @@ export class ConflictResolver {
    * 単一バッチの解決
    */
   private async resolveBatch(batch: Operation[]): Promise<Operation[]> {
-    const startTime = Date.now();
+    const _startTime = Date.now(); // Reserved for future performance monitoring
     const timeout = this.batchConfig.timeoutPerBatch;
     
     return new Promise((resolve, reject) => {

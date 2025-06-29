@@ -1,11 +1,21 @@
 ﻿import React, { useState } from 'react';
 import { layoutPresets } from '../utils/autoLayout';
+import type { MindMapData, Position } from '../../../shared/types/app.js';
 
-const LayoutPanel = ({ onApplyLayout, onClose, visible, position, data, onToggleAutoLayout }) => {
+interface LayoutPanelProps {
+  onApplyLayout: (layoutKey: string) => Promise<void>;
+  onClose: () => void;
+  visible: boolean;
+  position: Position;
+  data: MindMapData | null;
+  onToggleAutoLayout?: (enabled: boolean) => void;
+}
+
+const LayoutPanel: React.FC<LayoutPanelProps> = ({ onApplyLayout, onClose, visible, position, data, onToggleAutoLayout }) => {
   const [selectedLayout, setSelectedLayout] = useState('auto');
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleApplyLayout = async (layoutKey) => {
+  const handleApplyLayout = async (layoutKey: string) => {
     setIsAnimating(true);
     setSelectedLayout(layoutKey);
     
@@ -22,7 +32,7 @@ const LayoutPanel = ({ onApplyLayout, onClose, visible, position, data, onToggle
     }
   };
 
-  const handleQuickApply = (layoutKey) => {
+  const handleQuickApply = (layoutKey: string) => {
     handleApplyLayout(layoutKey);
     // 素早い操作の場合はパネルを閉じない
   };

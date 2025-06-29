@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useMindMap } from '../../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
@@ -10,7 +10,7 @@ import FileActionMenu from '../files/FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from '../../panels/MapLinksPanel';
 // Localモードでは直接localStorageを使用
-import { getAppSettings } from '../../../core/storage/LocalEngine';
+// import { getAppSettings } from '../../../core/storage/LocalEngine';
 import './MindMapApp.css';
 
 // TutorialOverlayは不要（ローカルモード専用）
@@ -32,7 +32,7 @@ const MindMapApp: React.FC = () => {
   // ローカルモードでは認証不要
   
   // ローカルモードでは単純な初期化（認証やモード選択は不要）
-  const [isAppReady, setIsAppReady] = useState(true);
+  const [_isAppReady, _setIsAppReady] = useState(true);
   
   const {
     data,
@@ -70,26 +70,26 @@ const MindMapApp: React.FC = () => {
     renameMindMap,
     deleteMindMapById,
     switchToMap,
-    refreshAllMindMaps,
+    refreshAllMindMaps: _refreshAllMindMaps,
     changeMapCategory,
     getAvailableCategories,
-    addNodeMapLink,
-    removeNodeMapLink,
-    reinitializeAfterModeSelection
-  } = useMindMap(isAppReady);
+    // addNodeMapLink, // Not available in Local mode
+    // removeNodeMapLink, // Not available in Local mode
+    reinitializeAfterModeSelection: _reinitializeAfterModeSelection
+  } = useMindMap(_isAppReady);
   
   // ローカルモードではリアルタイム機能は無効
-  const realtimeClient = null;
-  const isRealtimeConnected = false;
-  const realtimeStatus = 'disconnected';
-  const connectedUsers = [];
-  const userCursors = [];
-  const initializeRealtime = () => {};
+  const _realtimeClient = null;
+  const _isRealtimeConnected = false;
+  const _realtimeStatus = 'disconnected';
+  const _connectedUsers = [];
+  const _userCursors = [];
+  const _initializeRealtime = () => {};
   const updateCursorPosition = () => {};
-  const triggerLocalSync = () => {};
+  const _triggerLocalSync = () => {};
   
   // ローカルモードでは認証不要（認証状態をダミーで提供）
-  const localAuth = { 
+  const _localAuth = { 
     authState: { isAuthenticated: false, user: null }, 
     isAuthVerification: false 
   };
@@ -105,7 +105,7 @@ const MindMapApp: React.FC = () => {
     handleShowAuthModal: () => {}
   };
   
-  const isAuthVerification = false;
+  const _isAuthVerification = false;
 
   // ローカルモードでは既にモード選択済みなので不要
 
@@ -139,15 +139,15 @@ const MindMapApp: React.FC = () => {
     addChildNode,
     addSiblingNode,
     updateNode,
-    addNodeMapLink,
-    removeNodeMapLink,
+    () => {}, // addNodeMapLink placeholder
+    () => {}, // removeNodeMapLink placeholder
     updateCursorPosition
   );
   
-  const appActions = useAppActions(data, saveMindMap, null, null); // Localでは直接exportMindMapAsJSONを使用
+  const appActions = useAppActions(data as any, ((data: any) => saveMindMap(data)) as any, (() => {}) as any, (() => {}) as any); // Localでは直接exportMindMapAsJSONを使用
   
   // ローカルモードではリアルタイムハンドラーは不要（ダミー）
-  const realtimeHandlers = {
+  const _realtimeHandlers = {
     handleRealtimeInit: () => {},
     handleRealtimeDisconnect: () => {},
     handleRealtimeReconnect: () => {},
@@ -190,24 +190,24 @@ const MindMapApp: React.FC = () => {
   // ローカルモードでは認証チェック不要
 
   // ファイルアクションメニューのハンドラーを拡張
-  const handleCloseAllPanels = () => {
+  const _handleCloseAllPanels = () => {
     uiState.handleCloseAllPanels();
     fileHandlers.handleCloseAllPanels();
   };
 
   // コンテキストメニューのハンドラー
-  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
-    nodeHandlers.handleRightClick(e, nodeId);
+  const handleRightClick = (e: React.MouseEvent<HTMLElement>, nodeId: string) => {
+    nodeHandlers.handleRightClick(e as any, nodeId);
     uiState.handleCloseAllPanels();
   };
 
   const handleCopyNode = (node: MindMapNode) => {
     const clipboard = nodeHandlers.handleCopyNode(node);
-    uiState.setClipboard(clipboard);
+    uiState.setClipboard(clipboard as any);
   };
 
   const handlePasteNode = (parentId: string) => {
-    nodeHandlers.handlePasteNode(parentId, uiState.clipboard);
+    nodeHandlers.handlePasteNode(parentId, uiState.clipboard as any);
   };
 
   // ノードマップリンクのハンドラー

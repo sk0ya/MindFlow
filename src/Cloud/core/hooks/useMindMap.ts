@@ -3,7 +3,7 @@ import { useMindMapData } from '../../features/mindmap/useMindMapData.js';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes.js';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles.js';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti.js';
-import type { MindMapData, MindMapNode } from '../../shared/types/index.js';
+import type { MindMapData, Node as MindMapNode, FileAttachment } from '../../../shared/types/app.js';
 
 type NavigationDirection = 'up' | 'down' | 'left' | 'right';
 
@@ -50,7 +50,7 @@ interface UseMindMapResult {
   attachFileToNode: (nodeId: string, file: File) => Promise<string>;
   removeFileFromNode: (nodeId: string, fileId: string) => void;
   renameFileInNode: (nodeId: string, fileId: string, newName: string) => void;
-  downloadFile: (file: File) => void;
+  downloadFile: (file: FileAttachment, nodeId?: string) => Promise<void>;
   isAppInitializing: () => boolean;
   
   // 履歴
@@ -115,7 +115,7 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
       return;
     }
     
-    const allNodes = nodeHook.flattenNodes(dataHook.data.rootNode);
+    const allNodes = nodeHook.flattenNodes(dataHook.data?.rootNode);
     const currentNode = nodeHook.findNode(nodeHook.selectedNodeId);
     if (!currentNode) {
       console.log('⚠️ Navigation cancelled: current node not found');
@@ -204,6 +204,38 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
   // ファイル添付
   const fileHook = useMindMapFiles(nodeHook.findNode, nodeHook.updateNode, multiHook.currentMapId);
 
+  // Type conversion utilities
+  const convertToSharedNode = (node: any): MindMapNode => {
+    if (!node) return node;
+    const { lastModified, syncStatus, ...sharedProps } = node;
+    return sharedProps as MindMapNode;
+  };
+
+  const convertToSharedNodeArray = (nodes: any[]): MindMapNode[] => {
+    return nodes.map(convertToSharedNode);
+  };
+
+  // Wrapper functions with proper type conversion
+  const wrappedUpdateNode = (nodeId: string, updates: Partial<MindMapNode>): void => {
+    // Convert updates and call the underlying function
+    nodeHook.updateNode(nodeId, updates as any, true);
+  };
+
+  const wrappedFindNode = (nodeId: string): MindMapNode | null => {
+    const node = nodeHook.findNode(nodeId);
+    return node ? convertToSharedNode(node) : null;
+  };
+
+  const wrappedFindParentNode = (nodeId: string): MindMapNode | null => {
+    const node = nodeHook.findParentNode(nodeId);
+    return node ? convertToSharedNode(node) : null;
+  };
+
+  const wrappedFlattenNodes = (rootNode: MindMapNode): MindMapNode[] => {
+    const nodes = nodeHook.flattenNodes(rootNode as any);
+    return convertToSharedNodeArray(nodes);
+  };
+
   return {
     // データ
     data: dataHook.data,
@@ -217,15 +249,15 @@ export const useMindMap = (isAppReady: boolean = false): UseMindMapResult => {
     setEditText: nodeHook.setEditText,
     
     // ノード操作
-    updateNode: nodeHook.updateNode,
+    updateNode: wrappedUpdateNode,
     addChildNode: nodeHook.addChildNode,
     addSiblingNode: nodeHook.addSiblingNode,
     deleteNode: nodeHook.deleteNode,
     dragNode: nodeHook.dragNode,
     changeParent: nodeHook.changeParent,
-    findNode: nodeHook.findNode,
-    findParentNode: nodeHook.findParentNode,
-    flattenNodes: nodeHook.flattenNodes,
+    findNode: wrappedFindNode,
+    findParentNode: wrappedFindParentNode,
+    flattenNodes: wrappedFlattenNodes,
     applyAutoLayout: nodeHook.applyAutoLayout,
     navigateToDirection,
     

@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { authManager } from '../../../../features/auth/authManager.js';
+import type { User } from '../../../../../shared/types/app.js';
 // ローカルモードでは認証不要
 
 /**
  * 認証関連のステートとハンドラーを管理するカスタムフック
  */
-export const useAuthHandlers = (initState, refreshAllMindMaps, triggerLocalSync) => {
+export const useAuthHandlers = (
+  initState: { handleAuthSuccess: () => void },
+  refreshAllMindMaps: () => Promise<void>,
+  triggerLocalSync?: () => Promise<void>
+) => {
   const [authState, setAuthState] = useState({
     isAuthenticated: authManager.isAuthenticated(),
     user: authManager.getCurrentUser(),
@@ -49,7 +54,7 @@ export const useAuthHandlers = (initState, refreshAllMindMaps, triggerLocalSync)
     setShowAuthModal(false);
   };
   
-  const handleAuthSuccess = async (user) => {
+  const handleAuthSuccess = async (user: User) => {
     setAuthState({
       isAuthenticated: true,
       user: user,

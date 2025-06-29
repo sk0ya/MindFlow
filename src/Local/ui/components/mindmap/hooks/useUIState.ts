@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Node, Position, Conflict } from '../../../../../shared/types/app.js';
 
 /**
  * UI状態管理のカスタムフック（パネル、モーダル、メニューなど）
@@ -11,7 +12,7 @@ export const useUIState = () => {
   const [customizationPosition, setCustomizationPosition] = useState({ x: 0, y: 0 });
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [clipboard, setClipboard] = useState(null);
+  const [clipboard, setClipboard] = useState<Node | null>(null);
   
   // キーボードショートカットヘルパー状態
   const [showShortcutHelper, setShowShortcutHelper] = useState(false);
@@ -22,7 +23,7 @@ export const useUIState = () => {
   // ノードマップリンクパネル状態
   const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState(false);
   const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState({ x: 0, y: 0 });
-  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState(null);
+  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState<Node | null>(null);
   
   // サイドバー状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -31,7 +32,7 @@ export const useUIState = () => {
   const [showLocalStoragePanel, setShowLocalStoragePanel] = useState(false);
   
   // 競合通知状態
-  const [conflicts, setConflicts] = useState([]);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
   
   // 共同編集機能パネル状態
   const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState(false);
@@ -53,7 +54,7 @@ export const useUIState = () => {
     setShowNodeMapLinksPanel(false);
   };
 
-  const handleShowCustomization = (node, position) => {
+  const handleShowCustomization = (node: Node, position?: Position) => {
     setCustomizationPosition(position || { x: 300, y: 200 });
     setShowCustomizationPanel(true);
     setShowContextMenu(false);
@@ -74,7 +75,7 @@ export const useUIState = () => {
   };
 
   // ノードマップリンク関連のハンドラー
-  const handleShowNodeMapLinks = (node, position) => {
+  const handleShowNodeMapLinks = (node: Node, position: Position) => {
     setSelectedNodeForLinks(node);
     setNodeMapLinksPanelPosition(position);
     setShowNodeMapLinksPanel(true);
@@ -88,21 +89,21 @@ export const useUIState = () => {
   };
 
   // 競合処理関連
-  const handleConflictResolved = (conflict) => {
+  const handleConflictResolved = (conflict: Omit<Conflict, 'id' | 'timestamp'>) => {
     setConflicts(prev => [...prev, {
       ...conflict,
       id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now()
-    }]);
+    }] as any);
   };
 
-  const handleDismissConflict = (conflictId) => {
+  const handleDismissConflict = (conflictId: string) => {
     setConflicts(prev => prev.filter(c => c.id !== conflictId));
   };
 
   // Escapeキーでパネルを閉じる
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         handleCloseAllPanels();
       }

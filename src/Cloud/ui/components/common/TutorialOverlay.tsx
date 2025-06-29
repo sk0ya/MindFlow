@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './TutorialOverlay.css';
 
 const TutorialOverlay = ({ isVisible, onComplete, onSkip }) => {

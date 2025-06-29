@@ -152,7 +152,7 @@ export type SaveStrategies = Record<OperationType, SaveStrategy>;
  */
 export class DataManager {
   private currentData: MindMapData | null;
-  private pendingOperations: Map<string, QueuedOperation>;
+  // private _pendingOperations: Map<string, QueuedOperation>; // Reserved for future operation tracking
   private syncQueue: QueuedOperation[];
   private isOnline: boolean;
   private saveTimers: Map<OperationType, NodeJS.Timeout>;
@@ -398,7 +398,7 @@ export class DataManager {
   
   // ノード移動の適用
   private applyNodeMove(data: MindMapData, payload: NodeMovePayload): MindMapData {
-    const { nodeId, newX, newY, newParentId } = payload;
+    const { nodeId, newX, newY, newParentId: _newParentId } = payload;
     // 実装詳細は既存のchangeParent関数を参考
     // ここでは簡略化
     const updateNode = (node: MindMapNode): MindMapNode => {

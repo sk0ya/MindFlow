@@ -370,7 +370,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
           <g className="connection-lines">
             {connections.filter(conn => !conn.hasToggleButton).map((conn, index) => (
               <Connection
-                key={`${conn.from.id || 'toggle'}-${conn.to.id || 'toggle'}-${index}`}
+                key={`${('id' in conn.from ? conn.from.id : 'pos')}-${('id' in conn.to ? conn.to.id : 'pos')}-${index}`}
                 from={conn.from}
                 to={conn.to}
                 hasToggleButton={false}

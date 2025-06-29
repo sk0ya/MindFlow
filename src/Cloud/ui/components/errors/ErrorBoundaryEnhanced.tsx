@@ -49,7 +49,7 @@ class ErrorBoundaryEnhanced extends Component<ErrorBoundaryEnhancedProps, ErrorB
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryEnhancedState> {
+  static getDerivedStateFromError(_error: Error): Partial<ErrorBoundaryEnhancedState> {
     // エラーが発生した際の状態更新
     return { 
       hasError: true,
@@ -82,7 +82,7 @@ class ErrorBoundaryEnhanced extends Component<ErrorBoundaryEnhancedProps, ErrorB
       errorId: this.state.errorId || 'unknown',
       message: error.message,
       stack: error.stack,
-      componentStack: errorInfo.componentStack,
+      componentStack: errorInfo.componentStack ?? '',
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: window.location.href,

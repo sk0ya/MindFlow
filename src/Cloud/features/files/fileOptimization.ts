@@ -1,6 +1,36 @@
 // ファイル最適化とBase64圧縮ユーティリティ
 
-// 型定義はすでに定義済み（先頭でexportされている）
+// 型定義
+export interface CompressionResult {
+  file: File;
+  originalSize: number;
+  compressedSize: number;
+  compressionRatio: number;
+  dataURL: string;
+  outputType: string;
+  dimensions: { width: number; height: number };
+}
+
+export interface Base64CompressionResult {
+  dataURL: string;
+  originalSize: number;
+  compressedSize: number;
+  compressionRatio: number;
+  compressed: string;
+  ratio: number;
+}
+
+export interface OptimizationResult {
+  file?: File;
+  originalSize: number;
+  optimizedSize: number;
+  compressionRatio: number;
+  format?: string;
+  dataURL: string;
+  isCompressed: boolean;
+  type: string;
+  dimensions?: { width: number; height: number };
+}
 
 // 画像圧縮用の設定
 const COMPRESSION_SETTINGS = {
@@ -41,7 +71,9 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
       canvas.height = height;
       
       // 画像を描画
-      ctx.drawImage(img, 0, 0, width, height);
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+      }
       
       // 出力形式を決定
       let outputType = 'image/jpeg';
@@ -57,7 +89,7 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
         
         if (hasTransparency) {
           outputType = 'image/png';
-          outputQuality = undefined; // PNGには品質設定なし
+          // PNGには品質設定なし
         }
       }
       
@@ -69,18 +101,24 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
       }
       
       // DataURLとして出力
-      const dataURL = canvas.toDataURL(outputType, outputQuality);
+      // const _dataURL = outputType === 'image/png' 
+      //   ? canvas.toDataURL(outputType) 
+      //   : canvas.toDataURL(outputType, outputQuality);
       
       // 圧縮結果をBlobとして取得
       canvas.toBlob(
         (blob: Blob | null) => {
           if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: outputType,
+              lastModified: file.lastModified
+            });
             resolve({
-              dataURL,
-              blob,
+              file: compressedFile,
               originalSize: file.size,
               compressedSize: blob.size,
-              compressionRatio: ((file.size - blob.size) / file.size * 100).toFixed(1),
+              compressionRatio: parseFloat(((file.size - blob.size) / file.size * 100).toFixed(1)),
+              dataURL: canvas.toDataURL(outputType, outputType === 'image/png' ? undefined : outputQuality),
               outputType,
               dimensions: { width, height }
             });
@@ -89,7 +127,7 @@ const resizeImage = (file: File, maxDimension: number = COMPRESSION_SETTINGS.MAX
           }
         },
         outputType,
-        outputQuality
+        outputType === 'image/png' ? undefined : outputQuality
       );
     };
     
@@ -125,7 +163,7 @@ const compressBase64 = (base64String: string): Base64CompressionResult => {
       compressed: header + compressed,
       originalSize: base64String.length,
       compressedSize: header.length + compressed.length,
-      ratio: ((base64String.length - (header.length + compressed.length)) / base64String.length * 100).toFixed(1)
+      ratio: Math.round(((base64String.length - (header.length + compressed.length)) / base64String.length * 100) * 10) / 10
     };
   } catch (error) {
     console.warn('Base64圧縮に失敗:', error);
@@ -133,13 +171,13 @@ const compressBase64 = (base64String: string): Base64CompressionResult => {
       compressed: base64String,
       originalSize: base64String.length,
       compressedSize: base64String.length,
-      ratio: '0'
+      ratio: 0
     };
   }
 };
 
 // Base64の展開
-const decompressBase64 = (compressedBase64) => {
+const decompressBase64 = (compressedBase64: string): string => {
   try {
     const commaIndex = compressedBase64.indexOf(',');
     const header = compressedBase64.substring(0, commaIndex + 1);
@@ -183,7 +221,7 @@ export const optimizeFile = async (file: File): Promise<OptimizationResult> => {
               dataURL: e.target?.result as string,
               originalSize: file.size,
               optimizedSize: file.size,
-              compressionRatio: '0',
+              compressionRatio: 0,
               isCompressed: false,
               type: file.type
             });

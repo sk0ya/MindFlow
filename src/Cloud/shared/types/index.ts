@@ -3,7 +3,7 @@ export interface MindMapNode {
   text: string;
   x: number;
   y: number;
-  children: MindMapNode[];
+  children?: MindMapNode[]; // Make optional for compatibility
   fontSize?: number;
   fontWeight?: string;
   fontStyle?: string;
@@ -13,6 +13,7 @@ export interface MindMapNode {
   attachments?: FileAttachment[];
   mapLinks?: MapLink[];
   color?: string;
+  isTemporary?: boolean; // Add for compatibility
 }
 
 export interface FileAttachment {
@@ -20,12 +21,24 @@ export interface FileAttachment {
   name: string;
   type: string;
   size: number;
-  data: string; // Base64 encoded
+  data?: string; // Base64 encoded - optional for compatibility
   dataURL?: string; // For backward compatibility
   thumbnail?: string;
   optimized?: boolean;
   originalSize?: number;
   isImage?: boolean;
+  // Additional fields for compatibility with other FileAttachment types
+  downloadUrl?: string;
+  storagePath?: string;
+  thumbnailUrl?: string;
+  r2FileId?: string;
+  isR2Storage?: boolean;
+  nodeId?: string;
+  createdAt?: string;
+  isOptimized?: boolean;
+  optimizedSize?: number;
+  compressionRatio?: string;
+  optimizedType?: string;
 }
 
 export interface MapLink {

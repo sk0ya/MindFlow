@@ -440,6 +440,8 @@ export class RealtimeClient implements RealtimeClientState {
    * WebSocketイベントハンドラー設定
    */
   setupWebSocketHandlers(): void {
+    if (!this.websocket) return;
+    
     this.websocket.onopen = () => {
       console.log('WebSocket connected');
       this.isConnected = true;
@@ -781,7 +783,7 @@ export class RealtimeClient implements RealtimeClientState {
     this.stopHeartbeat(); // 既存のタイマーをクリア
 
     this.heartbeatInterval = setInterval(() => {
-      if (this.isConnected) {
+      if (this.isConnected && this.websocket) {
         this.websocket.send(JSON.stringify({
           type: 'heartbeat',
           timestamp: Date.now()
@@ -820,7 +822,9 @@ export class RealtimeClient implements RealtimeClientState {
       this.reconnectAttempts++;
       
       try {
-        await this.connect(this.mindmapId);
+        if (this.mindmapId) {
+          await this.connect(this.mindmapId);
+        }
       } catch (error) {
         console.error('Reconnection failed:', error);
         

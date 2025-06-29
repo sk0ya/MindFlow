@@ -17,7 +17,7 @@ export interface FileAttachment {
   name: string;
   type: string;
   size: number;
-  data: string; // Base64 encoded - required for compatibility with shared types
+  data?: string; // Base64 encoded - optional for compatibility
   dataURL?: string; // For backward compatibility
   downloadUrl?: string;
   storagePath?: string;
@@ -29,6 +29,11 @@ export interface FileAttachment {
   isImage?: boolean;
   optimized?: boolean;
   originalSize?: number;
+  createdAt?: string;
+  isOptimized?: boolean;
+  optimizedSize?: number;
+  compressionRatio?: string;
+  optimizedType?: string;
 }
 
 export interface MapLink {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, updateMindMap as saveMindMap, isCloudStorageEnabled, getAllMindMaps, getMindMap } from '../../core/storage/StorageManager.js';
-import { getAppSettings } from '../../core/storage/storageUtils.js';
+import type { Dispatch, SetStateAction } from 'react';
+import { getCurrentMindMap, updateMindMap as saveMindMap } from '../../core/storage/StorageManager.js';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes.js';
 import { unifiedAuthManager } from '../auth/UnifiedAuthManager.js';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker.js';
@@ -12,15 +12,26 @@ interface SaveOptions {
   reason?: string;
 }
 
+interface UpdateDataOptions {
+  allowDuringEdit?: boolean;
+  reason?: string;
+  source?: string;
+  skipHistory?: boolean;
+  saveImmediately?: boolean;
+  immediate?: boolean;
+  skipRealtimeSync?: boolean;
+  onUpdate?: (data: MindMapData, options: UpdateDataOptions) => void;
+}
+
 interface UseMindMapDataResult {
   data: MindMapData | null;
   isLoadingFromCloud: boolean;
   history: MindMapData[];
   historyIndex: number;
-  setData: (data: MindMapData | null) => void;
+  setData: Dispatch<SetStateAction<MindMapData | null>>;
   setHistory: (history: MindMapData[]) => void;
   setHistoryIndex: (index: number) => void;
-  updateData: (updatedData: MindMapData, options?: { allowDuringEdit?: boolean; reason?: string }) => void;
+  updateData: (data: Partial<MindMapData>, options?: UpdateDataOptions) => Promise<void>;
   updateTitle: (title: string) => void;
   changeTheme: (theme: string) => void;
   updateSettings: (settings: any) => void;
@@ -31,16 +42,17 @@ interface UseMindMapDataResult {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  saveImmediately: (dataToSave?: MindMapData | null, options?: SaveOptions) => Promise<void>;
 }
 
 // データ管理専用のカスタムフック（統一同期サービス統合版）
 export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResult => {
   const [data, setData] = useState<MindMapData | null>(null);
-  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState<boolean>(false);
+  const [isLoadingFromCloud] = useState<boolean>(false);
   const [history, setHistory] = useState<MindMapData[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isSavingRef = useRef<boolean>(false); // 下位互換のため保持
+  // isSavingRef removed as it's no longer used
   const syncServiceInitialized = useRef<boolean>(false);
 
   // 統一同期サービス初期化
@@ -115,7 +127,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   
   // 統一同期サービスを使用した保存機能
   const saveImmediately = async (dataToSave: MindMapData | null = data, options: SaveOptions = {}): Promise<void> => {
-    if (!dataToSave || dataToSave.isPlaceholder) return;
+    if (!dataToSave || (dataToSave as any).isPlaceholder) return;
 
     // データ整合性チェック
     const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(dataToSave);
@@ -141,18 +153,18 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     try {
       // 統一同期サービスが利用可能かチェック
       if (unifiedSyncService && typeof unifiedSyncService.saveData === 'function') {
-        await unifiedSyncService.saveData(dataToSave, options);
+        await unifiedSyncService.saveData(dataToSave as any, options as any);
         console.log('💾 統一同期サービス保存完了:', dataToSave.title);
       } else {
         // フォールバック: 直接保存
-        await saveMindMap(dataToSave);
+        await saveMindMap(dataToSave.id, dataToSave as any);
         console.log('💾 直接保存完了:', dataToSave.title);
       }
     } catch (error) {
-      console.warn('⚠️ 統一同期サービス保存失敗:', error.message);
+      console.warn('⚠️ 統一同期サービス保存失敗:', (error as Error).message);
       // フォールバック: 直接保存
       try {
-        await saveMindMap(dataToSave);
+        await saveMindMap(dataToSave.id, dataToSave as any);
         console.log('💾 フォールバック保存完了:', dataToSave.title);
       } catch (fallbackError) {
         console.error('❌ フォールバック保存も失敗:', fallbackError);
@@ -182,10 +194,10 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
       const mindMap = await getCurrentMindMap();
       if (mindMap && mindMap.rootNode) {
         console.log('📊 既存データ読み込み');
-        setData(assignColorsToExistingNodes(mindMap));
+        setData(assignColorsToExistingNodes(mindMap as any) as any);
       } else {
         console.log('📊 新規マップ作成');
-        setData(createInitialData());
+        setData(createInitialData() as any);
       }
       console.log('✅ データ初期化完了');
     };
@@ -196,20 +208,20 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   // クラウド同期処理（統一）
   // 認証成功時のクラウド同期トリガー（統一インターフェース）
   const triggerCloudSync = async () => {
-    if (data?.isPlaceholder) {
+    if ((data as any)?.isPlaceholder) {
       console.log('🔑 認証成功: 同期をトリガー');
       // 統一インターフェースで再初期化
       const mindMap = await getCurrentMindMap();
       if (mindMap && mindMap.rootNode) {
-        const processedData = assignColorsToExistingNodes(mindMap);
-        setData(processedData);
+        const processedData = assignColorsToExistingNodes(mindMap as any);
+        setData(processedData as any);
         console.log('✅ 同期完了');
       }
     }
   };
 
   // 履歴に追加
-  const addToHistory = (newData) => {
+  const addToHistory = (newData: MindMapData) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push(deepClone(newData));
@@ -219,15 +231,15 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   };
 
   // データ更新の共通処理（リアルタイム同期対応・編集中保護強化）
-  const updateData = async (newData, options = {}) => {
+  const updateData = async (newData: Partial<MindMapData>, options: UpdateDataOptions = {}) => {
     // プレースホルダーデータの場合は更新を無視
-    if (data?.isPlaceholder) {
+    if ((data as any)?.isPlaceholder) {
       console.log('⏳ プレースホルダー中: データ更新をスキップ');
       return;
     }
     
     // 🔧 編集中の競合状態を検出・保護
-    const editingInput = document.querySelector('.node-input');
+    const editingInput = document.querySelector('.node-input') as HTMLInputElement;
     const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
     
     if (isCurrentlyEditing && !options.allowDuringEdit) {
@@ -242,17 +254,17 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
       return;
     }
     
-    setData(newData);
+    setData(newData as MindMapData);
     
     // リアルタイム操作の適用中でない場合のみ履歴に追加
     if (!options.skipHistory) {
-      addToHistory(newData);
+      addToHistory(newData as MindMapData);
     }
     
     // 保存処理
     if (options.saveImmediately) {
       // 即座保存（重要な操作用）
-      await saveImmediately(newData, { skipRealtimeSync: options.skipRealtimeSync });
+      await saveImmediately(newData as MindMapData, { skipRealtimeSync: options.skipRealtimeSync } as SaveOptions);
     } else if (options.immediate && !options.skipRealtimeSync) {
       // 通常の自動保存（2秒デバウンス）
       // skipRealtimeSyncが指定されている場合は自動保存もスキップ
@@ -260,7 +272,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     }
     
     console.log('🔄 データ更新完了:', {
-      id: newData.id,
+      id: (newData as MindMapData).id,
       immediate: options.immediate || false,
       saveImmediately: options.saveImmediately || false,
       skipHistory: options.skipHistory || false,
@@ -272,7 +284,7 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     
     // カスタムコールバックがあれば実行
     if (options.onUpdate) {
-      options.onUpdate(newData, options);
+      options.onUpdate(newData as MindMapData, options);
     }
   };
 
@@ -280,9 +292,11 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   const undo = async () => {
     if (historyIndex > 0) {
       const previousData = history[historyIndex - 1];
-      setData(previousData);
-      setHistoryIndex(prev => prev - 1);
-      await saveMindMap(previousData);
+      if (previousData) {
+        setData(previousData);
+        setHistoryIndex(prev => prev - 1);
+        await saveMindMap(previousData.id, previousData);
+      }
     }
   };
 
@@ -290,33 +304,41 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   const redo = async () => {
     if (historyIndex < history.length - 1) {
       const nextData = history[historyIndex + 1];
-      setData(nextData);
-      setHistoryIndex(prev => prev + 1);
-      await saveMindMap(nextData);
+      if (nextData) {
+        setData(nextData);
+        setHistoryIndex(prev => prev + 1);
+        await saveMindMap(nextData.id, nextData);
+      }
     }
   };
 
   // 設定を更新
-  const updateSettings = (newSettings) => {
-    updateData({
-      ...data,
-      settings: { ...data.settings, ...newSettings }
-    });
+  const updateSettings = (newSettings: any) => {
+    if (data) {
+      updateData({
+        ...data,
+        settings: { ...data.settings, ...newSettings }
+      });
+    }
   };
 
   // マップタイトルを更新
-  const updateTitle = (newTitle) => {
-    updateData({ ...data, title: newTitle });
+  const updateTitle = (newTitle: string) => {
+    if (data) {
+      updateData({ ...data, title: newTitle });
+    }
   };
 
   // テーマを変更
-  const changeTheme = (themeName) => {
-    updateData({ ...data, theme: themeName });
+  const changeTheme = (themeName: string) => {
+    if (data) {
+      updateData({ ...data, theme: themeName } as Partial<MindMapData>);
+    }
   };
 
   // 初期化時に履歴を設定
   useEffect(() => {
-    if (history.length === 0) {
+    if (history.length === 0 && data) {
       setHistory([deepClone(data)]);
       setHistoryIndex(0);
     }
@@ -344,9 +366,13 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     updateSettings,
     updateTitle,
     changeTheme,
-    saveMindMap: async () => await saveMindMap(data),
+    saveMindMap: async () => {
+      if (data) {
+        await saveMindMap(data.id, data);
+      }
+    },
     isLoadingFromCloud,
     triggerCloudSync,
-    // blockRealtimeSyncTemporarily // 削除
+    blockRealtimeSyncTemporarily: () => {}
   };
 };
