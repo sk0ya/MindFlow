@@ -180,6 +180,13 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   
   // アプリ準備完了時のデータ初期化
   useEffect(() => {
+    console.log('🔍 useMindMapData初期化チェック:', { 
+      isAppReady, 
+      hasData: data !== null, 
+      dataType: typeof data,
+      dataKeys: data ? Object.keys(data) : null 
+    });
+    
     if (!isAppReady || data !== null) return;
 
     const initializeData = async () => {
@@ -241,16 +248,58 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
   // クラウド同期処理（統一）
   // 認証成功時のクラウド同期トリガー（統一インターフェース）
   const triggerCloudSync = async () => {
-    if ((data as any)?.isPlaceholder) {
-      console.log('🔑 認証成功: 同期をトリガー');
-      // 統一インターフェースで再初期化
-      const mindMap = await getCurrentMindMap();
-      if (mindMap && mindMap.rootNode) {
-        const processedData = assignColorsToExistingNodes(mindMap as any);
-        setTimeout(() => setData(processedData as any), 0);
-        console.log('✅ 同期完了');
+    console.log('🔑 認証成功: クラウド同期をトリガー', { 
+      hasData: !!data, 
+      isPlaceholder: (data as any)?.isPlaceholder 
+    });
+    
+    // バックグラウンド同期完了を待機してからデータを再取得
+    const waitForSyncAndInitialize = async (retries = 5) => {
+      for (let i = 0; i < retries; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // 1秒, 2秒, 3秒...
+        
+        console.log(`🔄 同期後データ確認 (試行 ${i + 1}/${retries})`);
+        
+        // 統一インターフェースで再初期化
+        const { getAllMindMaps } = await import('../../core/storage/StorageManager.js');
+        const allMaps = await getAllMindMaps();
+        
+        if (allMaps && allMaps.length > 0) {
+          console.log('📊 同期後にマップ発見:', allMaps.length, '件');
+          // 最新のマップを使用
+          const latestMap = allMaps.sort((a, b) => 
+            new Date(b.updatedAt || b.createdAt || 0).getTime() - 
+            new Date(a.updatedAt || a.createdAt || 0).getTime()
+          )[0];
+          
+          const processedData = assignColorsToExistingNodes(latestMap as any);
+          setTimeout(() => setData(processedData as any), 0);
+          console.log('✅ 同期後マップ表示:', latestMap.title);
+          return;
+        }
       }
-    }
+      
+      // 同期後もマップが見つからない場合は新規作成
+      console.log('📊 同期後もマップなし、新規マップ作成');
+      const initialData = createInitialData() as any;
+      
+      try {
+        const { storageManager } = await import('../../core/storage/StorageManager.js');
+        await storageManager.createMap(initialData);
+        console.log('✅ 新規マップをクラウドに作成完了');
+      } catch (error) {
+        console.warn('⚠️ 新規マップ作成失敗:', error);
+      }
+      
+      setTimeout(() => setData(initialData), 0);
+    };
+    
+    // 非同期で実行（現在の処理をブロックしない）
+    waitForSyncAndInitialize().catch(error => {
+      console.error('❌ 同期後初期化エラー:', error);
+      // フォールバック: 即座に新規データを作成
+      setTimeout(() => setData(createInitialData() as any), 0);
+    });
   };
 
   // 履歴に追加
