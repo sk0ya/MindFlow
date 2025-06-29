@@ -1,52 +1,13 @@
-import { useState, useEffect } from 'react';
-
-interface Node {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  children: Node[];
-}
-
-interface MindMapData {
-  id: string;
-  title: string;
-  rootNode: Node;
-  updatedAt: string;
-}
-
-interface AuthUser {
-  id: string;
-  email: string;
-}
-
-interface AuthState {
-  isAuthenticated: boolean;
-  user: AuthUser | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
-type StorageMode = 'local' | 'cloud';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useMagicLink } from '../hooks/useMagicLink';
+import { useMindMap } from '../hooks/useMindMap';
+import { AuthModal } from './AuthModal';
+import type { StorageMode } from '../types';
 
 interface Props {
   onModeChange: (mode: StorageMode) => void;
 }
-
-const generateId = () => Math.random().toString(36).substring(2, 15);
-
-const createDefaultData = (): MindMapData => ({
-  id: generateId(),
-  title: 'クラウドマインドマップ',
-  rootNode: {
-    id: 'root',
-    text: 'メイントピック',
-    x: 400,
-    y: 300,
-    children: []
-  },
-  updatedAt: new Date().toISOString()
-});
 
 // Simple auth hook
 const useAuth = () => {
