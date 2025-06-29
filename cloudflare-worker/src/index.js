@@ -113,7 +113,7 @@ async function initializeDatabase(env) {
 
       CREATE INDEX idx_mindmaps_user_id ON mindmaps(user_id);
       CREATE INDEX idx_mindmaps_updated_at ON mindmaps(updated_at);
-      CREATE INDEX idx_auth_tokens_email ON auth_tokens(email);
+      CREATE INDEX idx_auth_tokens_user_id ON auth_tokens(user_id);
       CREATE INDEX idx_auth_tokens_expires ON auth_tokens(expires_at);
     `;
 

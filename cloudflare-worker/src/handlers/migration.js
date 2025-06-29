@@ -2,7 +2,7 @@
 
 import { corsHeaders } from '../utils/cors.js';
 import { requireAuth } from '../utils/auth.js';
-import { unifyUserIds, checkMigrationNeeded } from '../migrations/unifyUserIds.js';
+// Removed old migration imports
 import { cleanAllData, cleanR2Storage, getDataSummary, getDetailedData, fixStoragePaths } from '../migrations/cleanDatabase.js';
 
 export async function handleMigrationRequest(request, env) {
@@ -55,9 +55,7 @@ export async function handleMigrationRequest(request, env) {
     
     switch (method) {
       case 'GET':
-        if (action === 'check') {
-          response = await checkMigrationNeeded(env);
-        } else if (action === 'summary') {
+        if (action === 'summary') {
           response = await getDataSummary(env);
         } else if (action === 'detailed') {
           response = await getDetailedData(env);
@@ -67,9 +65,7 @@ export async function handleMigrationRequest(request, env) {
         break;
       
       case 'POST':
-        if (action === 'unify-userids') {
-          response = await unifyUserIds(env);
-        } else if (action === 'clean-database') {
+        if (action === 'clean-database') {
           response = await cleanAllData(env);
         } else if (action === 'clean-r2') {
           response = await cleanR2Storage(env);
