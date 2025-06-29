@@ -7,9 +7,13 @@ import MindMapCanvas from './MindMapCanvas';
 import './MindMapApp.css';
 
 export default function MindMapApp() {
-  const { isAuthenticated, user, logout, isLoading: authLoading, emailSent, clearEmailSent } = useAuth();
-  const { isVerifying, verificationError, clearError } = useMagicLink();
+  const authState = useAuth();
+  const magicLinkState = useMagicLink();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // 認証状態の分解代入を遅延させる
+  const { isAuthenticated, user, logout, isLoading: authLoading, emailSent, clearEmailSent } = authState;
+  const { isVerifying, verificationError, clearError } = magicLinkState;
   
   const {
     data,

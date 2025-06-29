@@ -1,15 +1,18 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
+
+// グローバルフラグで完全に重複処理を防止
+let magicLinkProcessed = false;
 
 export function useMagicLink() {
   const { verifyToken } = useAuth();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
-  const hasProcessedToken = useRef(false);
 
   useEffect(() => {
-    // 既に処理済みの場合は何もしない
-    if (hasProcessedToken.current) {
+    // 既に処理済みまたは現在処理中の場合は何もしない
+    if (magicLinkProcessed) {
+      console.log('🔗 Magic Link already processed, skipping');
       return;
     }
 
@@ -21,40 +24,38 @@ export function useMagicLink() {
       hasToken: !!token, 
       type, 
       tokenStart: token ? token.substring(0, 10) + '...' : null,
-      hasProcessed: hasProcessedToken.current
+      processed: magicLinkProcessed
     });
 
     if (token && (type === 'magic-link' || !type)) {
       console.log('✅ Magic Link detected, starting verification');
-      hasProcessedToken.current = true; // 処理済みフラグを設定
+      magicLinkProcessed = true; // グローバルフラグを設定
       setIsVerifying(true);
       setVerificationError(null);
+      
+      // URLからパラメータを即座に削除
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
       
       verifyToken(token)
         .then(() => {
           console.log('✅ Magic Link verification successful');
-          // URLからパラメータを即座に削除
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
-          
-          // 少し遅延を入れてページをリロード（確実にクリーンな状態にする）
-          setTimeout(() => {
-            window.location.href = newUrl;
-          }, 1000);
+          // 認証成功後は何もしない（リロードなし）
         })
         .catch((error) => {
           console.error('❌ Magic Link verification failed:', error);
           setVerificationError(error.message || 'Token verification failed');
-          hasProcessedToken.current = false; // エラー時はリセット
+          magicLinkProcessed = false; // エラー時のみリセット
         })
         .finally(() => {
           setIsVerifying(false);
         });
     }
-  }, []); // 依存配列を空にして初回のみ実行
+  }, []); // 依存配列を完全に空にする
 
   const clearError = () => {
     setVerificationError(null);
+    magicLinkProcessed = false; // エラークリア時にリセット
   };
 
   return {

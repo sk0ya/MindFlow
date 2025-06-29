@@ -10,15 +10,17 @@ export function useAuth() {
   });
   const [emailSent, setEmailSent] = useState<boolean>(false);
 
-  // 認証状態の初期化
+  // 認証状態の初期化（一度だけ実行）
   useEffect(() => {
     const checkAuth = () => {
+      console.log('🔐 Checking authentication state...');
       const token = sessionStorage.getItem('auth_token');
       const userStr = sessionStorage.getItem('auth_user');
       
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr) as AuthUser;
+          console.log('✅ Found valid auth data:', { email: user.email });
           setAuthState({
             isAuthenticated: true,
             user,
@@ -26,7 +28,7 @@ export function useAuth() {
             error: null
           });
         } catch (error) {
-          console.error('Auth parse error:', error);
+          console.error('❌ Auth parse error:', error);
           sessionStorage.removeItem('auth_token');
           sessionStorage.removeItem('auth_user');
           setAuthState({
@@ -37,6 +39,7 @@ export function useAuth() {
           });
         }
       } else {
+        console.log('❌ No auth data found');
         setAuthState({
           isAuthenticated: false,
           user: null,
@@ -46,7 +49,9 @@ export function useAuth() {
       }
     };
 
-    checkAuth();
+    // 少し遅延させて初期化
+    const timeoutId = setTimeout(checkAuth, 100);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const login = useCallback(async (email: string): Promise<void> => {
