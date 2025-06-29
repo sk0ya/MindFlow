@@ -47,10 +47,12 @@ interface UseMindMapDataResult {
 
 // データ管理専用のカスタムフック（統一同期サービス統合版）
 export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResult => {
-  const [data, setData] = useState<MindMapData | null>(null);
+  // 🔧 緊急修正: 初期データを直接設定してError #310を回避
+  const initialData = createInitialData() as any;
+  const [data, setData] = useState<MindMapData | null>(initialData);
   const [isLoadingFromCloud] = useState<boolean>(false);
-  const [history, setHistory] = useState<MindMapData[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [history, setHistory] = useState<MindMapData[]>([initialData]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // isSavingRef removed as it's no longer used
   const syncServiceInitialized = useRef<boolean>(false);
@@ -178,41 +180,13 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
     }, 2000); // 2秒後に保存
   };
   
-  // アプリ準備完了時のデータ初期化 - 完全に安全なバージョン
+  // 🔧 初期化useEffectを削除 - データは最初から設定済み
   useEffect(() => {
-    console.log('🔍 useMindMapData初期化チェック:', { 
-      isAppReady, 
-      hasData: data !== null, 
-      dataType: typeof data 
+    console.log('✅ useMindMapData: 初期データ既に設定済み', {
+      hasData: !!data,
+      title: data?.title
     });
-    
-    if (!isAppReady) {
-      console.log('⏳ アプリ未準備、初期化スキップ');
-      return;
-    }
-    
-    if (data !== null) {
-      console.log('📊 データ既存、初期化スキップ');
-      return;
-    }
-
-    // 最も安全な初期化：次のイベントループで実行
-    const timeoutId = setTimeout(() => {
-      try {
-        console.log('🚀 データ初期化開始（安全版）');
-        const initialData = createInitialData() as any;
-        setData(initialData);
-        console.log('✅ 初期データ設定完了');
-      } catch (error) {
-        console.error('❌ データ初期化エラー:', error);
-        setData(createInitialData() as any);
-      }
-    }, 0);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [isAppReady, data]);
+  }, []); // 一度だけ実行
 
   // クラウド同期処理（統一）
   // 認証成功時のクラウド同期トリガー（シンプル版）
