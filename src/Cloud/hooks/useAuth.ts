@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AuthState, AuthUser } from '../types';
 
 export function useAuth() {
@@ -49,7 +49,7 @@ export function useAuth() {
     checkAuth();
   }, []);
 
-  const login = async (email: string): Promise<void> => {
+  const login = useCallback(async (email: string): Promise<void> => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
@@ -83,9 +83,9 @@ export function useAuth() {
         error: error instanceof Error ? error.message : 'Login failed'
       }));
     }
-  };
+  }, []);
 
-  const verifyToken = async (token: string): Promise<void> => {
+  const verifyToken = useCallback(async (token: string): Promise<void> => {
     console.log('🔍 Token verification started:', { token: token.substring(0, 10) + '...' });
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
     
@@ -147,9 +147,9 @@ export function useAuth() {
         }));
       }
     }
-  };
+  }, []);
 
-  const logout = (): void => {
+  const logout = useCallback((): void => {
     sessionStorage.removeItem('auth_token');
     sessionStorage.removeItem('auth_user');
     setAuthState({
@@ -158,7 +158,7 @@ export function useAuth() {
       isLoading: false,
       error: null
     });
-  };
+  }, []);
 
   return {
     ...authState,
