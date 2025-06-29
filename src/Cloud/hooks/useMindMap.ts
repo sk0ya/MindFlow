@@ -162,12 +162,27 @@ export const useMindMap = () => {
     const currentNode = findNode(targetNodeId || '');
     const isRoot = targetNodeId === 'root';
     
-    // 簡素化された削除判定
-    if (isEmpty && !isRoot && currentNode && options.userInitiated && !currentNode.text) {
-      // 新規作成された空ノードを削除
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 finishEdit:', {
+        targetNodeId,
+        isEmpty,
+        isRoot,
+        hasCurrentNode: !!currentNode,
+        userInitiated: options.userInitiated
+      });
+    }
+    
+    // 空文字で確定した場合はノードを削除（ルート以外）
+    if (isEmpty && !isRoot && currentNode) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🗑️ 空文字確定でノード削除:', targetNodeId);
+      }
       deleteNode(targetNodeId || '');
     } else if (!isEmpty && targetNodeId) {
       // テキストを保存
+      if (process.env.NODE_ENV === 'development') {
+        console.log('💾 テキスト保存:', { targetNodeId, text: targetText.trim() });
+      }
       updateNode(targetNodeId, { text: targetText.trim() });
     }
     

@@ -392,132 +392,43 @@ export const useMindMapNodes = (data, updateData) => {
     const textToSave = newText !== undefined ? newText : editText;
     const currentNode = findNode(nodeId);
     
-    console.log('📝 finishEdit - 詳細入力:', { 
-      nodeId, 
-      newText, 
-      editText, 
-      textToSave,
-      isEmpty: !textToSave || textToSave.trim() === '',
-      currentNodeText: currentNode?.text,
-      isRoot: nodeId === 'root',
-      options
-    });
-    
     const isEmpty = !textToSave || textToSave.trim() === '';
     const isRoot = nodeId === 'root';
     
-    // 削除判定：明確な条件でのみ削除（マップ切り替え時は削除を無効化）
-    const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete && (
-      // 新規作成されたノード（元々空だった）で、テキストが空の場合のみ削除
-      (!currentNode.text || currentNode.text.trim() === '') ||
-      // または、明示的に削除を要求された場合
-      options.forceDelete === true
-    );
-    
-    if (shouldDelete) {
-      console.log('🗑️ ノード削除実行:', { 
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📝 finishEdit (Local):', { 
         nodeId, 
-        reason: '空の新規ノードまたは内容を削除したノード',
-        originalText: currentNode?.text,
+        isEmpty,
+        isRoot,
+        hasCurrentNode: !!currentNode,
         skipMapSwitchDelete: options.skipMapSwitchDelete
       });
+    }
+    
+    // 空文字で確定した場合はノードを削除（ルート以外、マップ切り替え時除く）
+    if (isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🗑️ 空文字確定でノード削除 (Local):', nodeId);
+      }
       setEditingNodeId(null);
       setEditText('');
       await deleteNode(nodeId);
       return;
     }
     
-    // マップ切り替え時の削除保護をログ出力
-    if (isEmpty && !isRoot && options.skipMapSwitchDelete) {
-      console.log('🛡️ マップ切り替え時削除保護:', { 
-        nodeId, 
-        text: textToSave,
-        reason: 'マップ切り替え時は空ノードでも削除しない'
-      });
-    }
-    
-    if (isEmpty && !isRoot) {
-      console.log('⚠️ 空のテキストだが削除しない:', { 
-        nodeId, 
-        reason: '既存の内容があったノード',
-        originalText: currentNode?.text
-      });
-      // 空でも既存の内容があった場合は削除せず、元の内容を復元
-      if (currentNode?.text) {
-        await updateNode(nodeId, { text: currentNode.text }, { allowDuringEdit: true, source: 'finishEdit-restore' });
+    // テキストを保存
+    if (!isEmpty) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('💾 テキスト保存 (Local):', { nodeId, text: textToSave.trim() });
       }
-    } else if (!isEmpty) {
-      console.log('📝 finishEdit - 保存するテキスト:', textToSave.trim());
-      
-      // ローカルストレージに直接保存
       await updateNode(nodeId, { text: textToSave.trim() }, { 
         allowDuringEdit: true, 
         source: 'finishEdit-local' 
       });
     }
     
-    // 編集状態をリセット（対象ノードが現在編集中の場合のみ）
-    console.log('🔄 finishEdit編集状態チェック:', { 
-      finishEditNodeId: nodeId, 
-      currentEditingNodeId: editingNodeId, 
-      shouldReset: editingNodeId === nodeId,
-      preserveCurrentEdit: options.preserveCurrentEdit
-    });
-    
-    // 編集状態のリセット制御
-    const { onlyResetIfCurrent = true, preserveCurrentEdit, onlyUpdateText = false, skipEditStateReset = false } = options;
-    
-    // テキストのみ更新モード（編集状態は変更しない）
-    if (onlyUpdateText) {
-      console.log('📝 finishEdit - テキストのみ更新モード:', { 
-        nodeId, 
-        textToSave: textToSave.trim(),
-        isEmpty
-      });
-      
-      if (!isEmpty) {
-        console.log('📝 finishEdit - テキストのみ保存:', textToSave.trim());
-        await updateNode(nodeId, { text: textToSave.trim() }, { allowDuringEdit: true, source: 'finishEdit-textOnly' });
-      }
-      // 編集状態は変更せずにreturn
-      return;
-    }
-    
-    // 新しいノードが編集中の場合は編集状態を保護
-    if (preserveCurrentEdit) {
-      console.log('✅ 編集状態保護: 新しいノード作成のため編集状態変更をスキップ', { 
-        preserveCurrentEdit, 
-        currentEditingNodeId: editingNodeId,
-        isNewNodeEditing: editingNodeId === preserveCurrentEdit,
-        nodeIdBeingFinished: nodeId
-      });
-      
-      // テキスト保存は実行するが、編集状態の変更はスキップ
-      if (!isEmpty) {
-        console.log('📝 finishEdit - 保護モード: テキストのみ保存:', textToSave.trim());
-        updateNode(nodeId, { text: textToSave.trim() }, { allowDuringEdit: true, source: 'finishEdit-protected' });
-      }
-      return;
-    }
-    
-    // 編集状態リセットをスキップ
-    if (skipEditStateReset) {
-      console.log('✅ 編集状態リセットをスキップ: 新しいノード作成のため');
-      return;
-    }
-    
-    if (onlyResetIfCurrent) {
-      // 対象ノードが現在編集中の場合のみリセット
-      if (editingNodeId === nodeId) {
-        console.log('⚠️ 編集状態リセット: 対象ノードが編集中のため');
-        setEditingNodeId(null);
-        setEditText('');
-      } else {
-        console.log('✅ 編集状態保持: 対象ノードが編集中ではないため');
-      }
-    } else {
-      // 強制的にリセット
-      console.log('⚠️ 編集状態強制リセット');
+    // 編集状態のリセット（簡素化）
+    if (!options.skipEditStateReset) {
       setEditingNodeId(null);
       setEditText('');
     }
