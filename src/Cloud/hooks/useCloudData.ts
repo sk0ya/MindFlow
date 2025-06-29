@@ -49,7 +49,7 @@ export function useCloudData(isAuthenticated: boolean) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒タイムアウト
 
-      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/maps', {
+      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -91,7 +91,14 @@ export function useCloudData(isAuthenticated: boolean) {
       }
 
       const result = await response.json();
-      const maps: MindMapData[] = result.maps || [];
+      const maps: MindMapData[] = result.mindmaps || [];
+      
+      // マップが一つもない場合、初期マップを作成
+      if (maps.length === 0) {
+        console.log('📝 No maps found, creating initial map...');
+        const initialMapId = await createInitialMap();
+        return; // createInitialMapが状態を更新するため、ここで終了
+      }
       
       setState(prev => ({
         ...prev,
@@ -159,7 +166,7 @@ export function useCloudData(isAuthenticated: boolean) {
         updatedAt: new Date().toISOString()
       };
 
-      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/maps', {
+      const response = await fetch('https://mindflow-api.shigekazukoya.workers.dev/api/mindmaps', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -173,7 +180,7 @@ export function useCloudData(isAuthenticated: boolean) {
       }
 
       const result = await response.json();
-      const createdMap = result.map;
+      const createdMap = result;
 
       setState(prev => ({
         ...prev,
@@ -196,6 +203,11 @@ export function useCloudData(isAuthenticated: boolean) {
     }
   };
 
+  const createInitialMap = async (): Promise<string | null> => {
+    console.log('🚀 Creating initial map for new user...');
+    return await createNewMap('最初のマインドマップ');
+  };
+
   const switchMap = (mapId: string): void => {
     setState(prev => ({
       ...prev,
@@ -212,6 +224,7 @@ export function useCloudData(isAuthenticated: boolean) {
     ...state,
     syncData,
     createNewMap,
+    createInitialMap,
     switchMap,
     getCurrentMap
   };
