@@ -194,10 +194,38 @@ export const useMindMapData = (isAppReady: boolean = false): UseMindMapDataResul
           // 非同期でsetDataを呼び出し
           setTimeout(() => setData(processedData), 0);
         } else {
-          console.log('📊 新規マップ作成');
-          const initialData = createInitialData() as any;
-          // 非同期でsetDataを呼び出し
-          setTimeout(() => setData(initialData), 0);
+          console.log('📊 getCurrentMapがnull、全マップを確認中...');
+          
+          // getCurrentMapがnullの場合、利用可能なマップを確認
+          const { getAllMindMaps, storageManager } = await import('../../core/storage/StorageManager.js');
+          const allMaps = await getAllMindMaps();
+          
+          if (allMaps && allMaps.length > 0) {
+            console.log('📊 利用可能なマップが見つかりました:', allMaps.length, '件');
+            // 最新のマップを使用
+            const latestMap = allMaps.sort((a, b) => 
+              new Date(b.updatedAt || b.createdAt || 0).getTime() - 
+              new Date(a.updatedAt || a.createdAt || 0).getTime()
+            )[0];
+            
+            const processedData = assignColorsToExistingNodes(latestMap as any) as any;
+            setTimeout(() => setData(processedData), 0);
+            console.log('✅ 最新マップ読み込み:', latestMap.title);
+          } else {
+            console.log('📊 マップが存在しない、新規マップ作成');
+            const initialData = createInitialData() as any;
+            
+            // 新規マップをストレージに保存
+            try {
+              await storageManager.createMap(initialData);
+              console.log('✅ 新規マップをストレージに保存完了');
+            } catch (saveError) {
+              console.warn('⚠️ 新規マップ保存失敗、メモリのみで続行:', saveError);
+            }
+            
+            // 非同期でsetDataを呼び出し
+            setTimeout(() => setData(initialData), 0);
+          }
         }
         console.log('✅ データ初期化完了');
       } catch (error) {
