@@ -1,31 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import CloudApp from './Cloud/components/MindMapApp';
-import LocalApp from './Local/components/MindMapApp';
+import React from 'react';
+import { useAppInitialization } from './StorageSelection/core/hooks/useAppInitialization';
+import { StorageModeSelector } from './StorageSelection/ui/components/storage/StorageModeSelector';
 
-type StorageMode = 'local' | 'cloud';
+// Dynamic import for Local MindMapApp only
+const LocalMindMapApp = React.lazy(() => import('./Local/ui/components/mindmap/MindMapApp'));
 
 const App: React.FC = () => {
-  const [storageMode, setStorageMode] = useState<StorageMode | null>(null);
+  const { storageMode, isInitialized, changeStorageMode } = useAppInitialization();
 
-  useEffect(() => {
-    const savedMode = localStorage.getItem('storage_mode') as StorageMode;
-    setStorageMode(savedMode || 'local');
-  }, []);
-
-  const handleModeChange = (mode: StorageMode) => {
-    localStorage.setItem('storage_mode', mode);
-    setStorageMode(mode);
-  };
-
-  if (!storageMode) {
+  if (!isInitialized) {
     return <div>Loading...</div>;
   }
 
-  if (storageMode === 'cloud') {
-    return <CloudApp onModeChange={handleModeChange} />;
+  // Show storage mode selector if no mode is set
+  if (!storageMode) {
+    return (
+      <StorageModeSelector
+        currentMode={'local'} // デフォルト選択
+        onModeChange={changeStorageMode}
+      />
+    );
   }
 
-  return <LocalApp onModeChange={handleModeChange} />;
+  // Only support local storage mode now
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <LocalMindMapApp />
+    </React.Suspense>
+  );
 };
 
 export default App;
