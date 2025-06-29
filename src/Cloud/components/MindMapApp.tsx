@@ -6,7 +6,7 @@ import { AuthModal } from './AuthModal';
 import type { StorageMode } from '../types';
 import MindMapCanvas from './MindMapCanvas';
 import Toolbar from './Toolbar';
-import ErrorBoundary from './ErrorBoundary';
+import { ErrorBoundary } from '../../shared/components';
 import './MindMapApp.css';
 
 interface Props {
@@ -24,10 +24,8 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     isLoading,
     error,
     setSelectedNodeId,
-    setEditingNodeId,
     setEditText,
     findNode,
-    updateNode,
     addChildNode,
     deleteNode,
     startEdit,
@@ -72,7 +70,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   };
 
   const handleNodeSelect = (nodeId: string | null) => {
-    setSelectedNodeId(nodeId);
+    setSelectedNodeId(nodeId || 'root');
   };
 
   const handleAddChild = React.useCallback((parentId: string, text: string = '', autoEdit: boolean = false) => {
@@ -176,7 +174,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
           if (process.env.NODE_ENV === 'development') {
             console.log('🔄 Escape: 選択解除');
           }
-          setSelectedNodeId(null);
+          setSelectedNodeId('root');
           break;
       }
     };
