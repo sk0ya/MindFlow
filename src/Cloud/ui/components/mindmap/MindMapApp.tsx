@@ -77,6 +77,19 @@ const MindMapApp: React.FC = () => {
       </div>
     );
   }
+
+  // 🚨 重要: 認証完了まで、useMindMapフックを呼び出さない
+  if (!auth.state.isAuthenticated || !initState.isReady) {
+    return (
+      <div className="mindmap-app loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <h2>アプリケーション準備中...</h2>
+          <p>認証とデータの初期化を行っています...</p>
+        </div>
+      </div>
+    );
+  }
   
   // クラウドモードで未認証の場合は認証モーダル表示
   if (settings.storageMode === 'cloud' && !auth.state.isAuthenticated) {
