@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useMagicLink } from '../hooks/useMagicLink';
 import { useMindMap } from '../hooks/useMindMap';
+import { useOfflineSync, OfflineIndicator } from '../hooks/useOfflineSync';
 import { AuthModal } from './AuthModal';
 import type { StorageMode } from '../types';
 import MindMapCanvas from './MindMapCanvas';
@@ -16,6 +17,7 @@ interface Props {
 const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   const { authState } = useAuth();
   const { isProcessing } = useMagicLink();
+  const { offlineState, markUnsyncedData } = useOfflineSync();
   const { 
     data, 
     selectedNodeId, 
@@ -344,6 +346,13 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
   return (
     <div className="mindmap-app">
       <ErrorBoundary>
+        {/* オフライン状態インジケーター */}
+        <OfflineIndicator 
+          isOnline={offlineState.isOnline}
+          hasUnsyncedData={offlineState.hasUnsyncedData}
+          syncRetryCount={offlineState.syncRetryCount}
+        />
+        
         <Toolbar
           title={data?.title || 'クラウドマップ'}
           onTitleChange={updateTitle}
