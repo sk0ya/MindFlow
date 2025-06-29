@@ -26,9 +26,7 @@ class CloudIndexedDB {
   private db: IDBDatabase | null = null;
   
   private readonly STORES = {
-    MINDMAPS: 'mindmaps',
-    METADATA: 'metadata',
-    SYNC_QUEUE: 'syncQueue'
+    MINDMAPS: 'mindmaps'
   } as const;
 
   // データベース初期化
@@ -55,21 +53,6 @@ class CloudIndexedDB {
           const mindmapsStore = db.createObjectStore(this.STORES.MINDMAPS, { keyPath: 'id' });
           mindmapsStore.createIndex('userId', 'userId', { unique: false });
           mindmapsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-        }
-
-        // メタデータストア
-        if (!db.objectStoreNames.contains(this.STORES.METADATA)) {
-          db.createObjectStore(this.STORES.METADATA, { keyPath: 'key' });
-        }
-
-        // 同期キューストア（オフライン対応）
-        if (!db.objectStoreNames.contains(this.STORES.SYNC_QUEUE)) {
-          const syncStore = db.createObjectStore(this.STORES.SYNC_QUEUE, { 
-            keyPath: 'id', 
-            autoIncrement: true 
-          });
-          syncStore.createIndex('timestamp', 'timestamp', { unique: false });
-          syncStore.createIndex('type', 'type', { unique: false });
         }
 
         console.log('📋 Cloud IndexedDB schema upgraded');
@@ -244,107 +227,7 @@ class CloudIndexedDB {
     });
   }
 
-  // 同期キューに操作を追加（オフライン対応）
-  async addToSyncQueue(operation: {
-    type: 'create' | 'update' | 'delete';
-    mindmapId: string;
-    data?: any;
-  }): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
 
-    const queueItem = {
-      ...operation,
-      timestamp: new Date().toISOString(),
-      retryCount: 0
-    };
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.SYNC_QUEUE], 'readwrite');
-      const store = transaction.objectStore(this.STORES.SYNC_QUEUE);
-      const request = store.add(queueItem);
-
-      request.onsuccess = () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📤 IndexedDB: 同期キューに追加', operation);
-        }
-        resolve();
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // データクリーンアップ（空文字ノード除去）
-  async cleanupEmptyNodes(): Promise<number> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.getAll();
-
-      request.onsuccess = async () => {
-        const allMaps = request.result || [];
-        let cleanedCount = 0;
-
-        for (const mapData of allMaps) {
-          let hasChanges = false;
-          
-          // 空文字ノードを再帰的に除去
-          const cleanNodes = (node: any): any => {
-            if (!node) return node;
-            
-            const cleanedChildren = node.children
-              ?.map(cleanNodes)
-              ?.filter((child: any) => child && child.text && child.text.trim() !== '') || [];
-            
-            if (cleanedChildren.length !== node.children?.length) {
-              hasChanges = true;
-            }
-            
-            return {
-              ...node,
-              children: cleanedChildren
-            };
-          };
-
-          const cleanedRootNode = cleanNodes(mapData.rootNode);
-          
-          if (hasChanges) {
-            const cleanedMapData = {
-              ...mapData,
-              rootNode: cleanedRootNode,
-              _metadata: {
-                ...mapData._metadata,
-                isDirty: true // クリーンアップ後は同期が必要
-              }
-            };
-
-            const putRequest = store.put(cleanedMapData);
-            await new Promise((putResolve, putReject) => {
-              putRequest.onsuccess = () => putResolve(void 0);
-              putRequest.onerror = () => putReject(putRequest.error);
-            });
-
-            cleanedCount++;
-            console.log('🧹 IndexedDB: 空文字ノードをクリーンアップ:', {
-              mapId: mapData.id,
-              title: mapData.title
-            });
-          }
-        }
-
-        console.log('✅ IndexedDB: クリーンアップ完了', { cleanedCount });
-        resolve(cleanedCount);
-      };
-
-      request.onerror = () => reject(request.error);
-    });
-  }
 
   // データベースクリア（開発用）
   async clearAll(): Promise<void> {
@@ -352,28 +235,17 @@ class CloudIndexedDB {
       await this.init();
     }
 
-    const storeNames = [this.STORES.MINDMAPS, this.STORES.METADATA, this.STORES.SYNC_QUEUE];
-    
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(storeNames, 'readwrite');
+      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
+      const store = transaction.objectStore(this.STORES.MINDMAPS);
+      const request = store.clear();
       
-      let completed = 0;
-      const total = storeNames.length;
+      request.onsuccess = () => {
+        console.log('🗑️ IndexedDB: 全データクリア完了');
+        resolve();
+      };
       
-      storeNames.forEach(storeName => {
-        const store = transaction.objectStore(storeName);
-        const request = store.clear();
-        
-        request.onsuccess = () => {
-          completed++;
-          if (completed === total) {
-            console.log('🗑️ IndexedDB: 全データクリア完了');
-            resolve();
-          }
-        };
-        
-        request.onerror = () => reject(request.error);
-      });
+      request.onerror = () => reject(request.error);
     });
   }
 
@@ -419,8 +291,5 @@ export async function clearCloudIndexedDB(): Promise<void> {
   return cloudIndexedDB.clearAll();
 }
 
-export async function cleanupEmptyNodesInIndexedDB(): Promise<number> {
-  return cloudIndexedDB.cleanupEmptyNodes();
-}
 
 export type { MindMapData, CachedMindMap, CacheMetadata };

@@ -6,9 +6,9 @@ import {
   getFromIndexedDB, 
   getAllFromIndexedDB,
   markAsSynced,
-  getDirtyData,
-  cleanupEmptyNodesInIndexedDB
+  getDirtyData
 } from '../utils/indexedDB';
+import { cleanEmptyNodesFromData, countNodes } from '../utils/dataUtils';
 
 interface Node {
   id: string;
@@ -42,55 +42,6 @@ const createDefaultData = (): MindMapData => ({
   updatedAt: new Date().toISOString()
 });
 
-// 空文字ノードをデータから除去する統一関数
-const cleanEmptyNodesFromData = (data: any): any => {
-  if (!data || !data.rootNode) return data;
-
-  const cleanNode = (node: any): any => {
-    if (!node) return node;
-    
-    // 子ノードを再帰的にクリーンアップし、空文字ノードを除去
-    const cleanedChildren = node.children
-      ?.map(cleanNode)
-      ?.filter((child: any) => {
-        // ルートノード以外で、テキストが空またはnullの場合は除去
-        const hasValidText = child && child.text && child.text.trim() !== '';
-        const isRoot = child && child.id === 'root';
-        return isRoot || hasValidText;
-      }) || [];
-
-    return {
-      ...node,
-      children: cleanedChildren
-    };
-  };
-
-  const cleanedData = {
-    ...data,
-    rootNode: cleanNode(data.rootNode),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (process.env.NODE_ENV === 'development') {
-    const originalNodeCount = countNodes(data.rootNode);
-    const cleanedNodeCount = countNodes(cleanedData.rootNode);
-    if (originalNodeCount !== cleanedNodeCount) {
-      console.log('🧹 空文字ノードをクリーンアップ:', {
-        original: originalNodeCount,
-        cleaned: cleanedNodeCount,
-        removed: originalNodeCount - cleanedNodeCount
-      });
-    }
-  }
-
-  return cleanedData;
-};
-
-// ノード数をカウントするヘルパー関数
-const countNodes = (node: any): number => {
-  if (!node) return 0;
-  return 1 + (node.children?.reduce((sum: number, child: any) => sum + countNodes(child), 0) || 0);
-};
 
 export const useCloudData = () => {
   const { authState, getAuthHeaders } = useAuth();
@@ -441,78 +392,44 @@ export const useCloudData = () => {
     saveNewData();
   }, [data?.id, authState.isAuthenticated, isLoading, saveMindMapData]);
 
-  // 自動保存（10秒ごと）
+  // デバウンス自動保存（5秒後）
   useEffect(() => {
     if (!data || !authState.isAuthenticated || !data.id) return;
 
-    const interval = setInterval(() => {
+    const timeoutId = setTimeout(() => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('⏰ 自動保存実行:', { hasId: !!data.id, title: data.title });
+        console.log('⏰ デバウンス自動保存実行:', { hasId: !!data.id, title: data.title });
       }
       updateMindMapData(data);
-    }, 10000); // 10秒間隔
+    }, 5000); // 5秒後に保存
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeoutId);
   }, [data, authState.isAuthenticated, updateMindMapData]);
 
-  // データ更新のラッパー関数（編集状態を考慮したIndexedDB保存）
+  // データ更新のラッパー関数（簡素化）
   const updateDataSafe = useCallback(async (newData: MindMapData, options: any = {}) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📝 データ更新実行:', { 
-        hasId: !!newData.id,
-        title: newData.title,
-        immediate: options.immediate,
-        skipIndexedDB: options.skipIndexedDB,
-        delayIndexedDB: options.delayIndexedDB,
-        cleanupEmptyNodes: options.cleanupEmptyNodes,
-        isIndexedDBReady
-      });
-    }
+    // 空ノードのクリーンアップ（必要に応じて）
+    const cleanedData = options.cleanupEmptyNodes ? cleanEmptyNodesFromData(newData) : newData;
     
-    // 1. 空ノードのクリーンアップ（必要に応じて）
-    let cleanedData = newData;
-    if (options.cleanupEmptyNodes) {
-      cleanedData = cleanEmptyNodesFromData(newData);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🧹 空ノードクリーンアップ実行');
-      }
-    }
-    
-    // 2. メモリ更新（即座のUI反映）
+    // UI更新（即座）
     setData(cleanedData);
     
-    // 3. IndexedDBに保存（編集中は遅延可能）
-    const shouldSaveToIndexedDB = isIndexedDBReady && authState.isAuthenticated && !options.skipIndexedDB;
-    
-    if (shouldSaveToIndexedDB) {
-      const saveToIndexedDBWithDelay = async () => {
-        try {
-          await saveToIndexedDB(cleanedData, authState.user?.email);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('💾 updateDataSafe: IndexedDB保存完了', {
-              delayed: !!options.delayIndexedDB,
-              cleaned: !!options.cleanupEmptyNodes
-            });
-          }
-        } catch (indexedDBError) {
-          console.warn('⚠️ updateDataSafe: IndexedDB保存警告:', indexedDBError);
-        }
-      };
-      
-      if (options.delayIndexedDB) {
-        // 編集中の場合は少し遅延させる（編集完了を待つ）
-        setTimeout(saveToIndexedDBWithDelay, 100);
-      } else {
-        // 通常は即座保存
-        await saveToIndexedDBWithDelay();
+    // IndexedDBに保存
+    if (isIndexedDBReady && authState.isAuthenticated) {
+      try {
+        await saveToIndexedDB(cleanedData, authState.user?.email);
+      } catch (error) {
+        console.warn('⚠️ IndexedDB保存警告:', error);
       }
     }
     
-    // 4. 即座API同期が必要な場合
-    if (options.immediate) {
-      updateMindMapData(cleanedData);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📝 データ更新完了:', { 
+        title: cleanedData.title,
+        cleaned: !!options.cleanupEmptyNodes
+      });
     }
-  }, [isIndexedDBReady, authState.isAuthenticated, authState.user?.email, updateMindMapData]);
+  }, [isIndexedDBReady, authState.isAuthenticated, authState.user?.email]);
 
   // バックグラウンド同期（未同期データをAPIに送信）
   const syncDirtyData = useCallback(async () => {
@@ -563,29 +480,12 @@ export const useCloudData = () => {
     }
   }, [isIndexedDBReady, authState.isAuthenticated, getAuthHeaders]);
 
-  // 定期的なバックグラウンド同期とクリーンアップ（30秒間隔）
+  // バックグラウンド同期（30秒間隔）
   useEffect(() => {
     if (!isIndexedDBReady || !authState.isAuthenticated) return;
 
-    const syncInterval = setInterval(async () => {
-      await syncDirtyData();
-      
-      // 5分に1回クリーンアップ実行
-      const now = Date.now();
-      const lastCleanup = localStorage.getItem('cloud_last_cleanup');
-      const shouldCleanup = !lastCleanup || (now - parseInt(lastCleanup)) > 300000; // 5分
-      
-      if (shouldCleanup) {
-        try {
-          const cleanedCount = await cleanupEmptyNodesInIndexedDB();
-          if (cleanedCount > 0) {
-            console.log('🧹 定期クリーンアップ完了:', { cleanedCount });
-          }
-          localStorage.setItem('cloud_last_cleanup', now.toString());
-        } catch (cleanupError) {
-          console.warn('⚠️ クリーンアップエラー:', cleanupError);
-        }
-      }
+    const syncInterval = setInterval(() => {
+      syncDirtyData();
     }, 30000); // 30秒間隔
 
     // 初回同期も実行
@@ -594,17 +494,6 @@ export const useCloudData = () => {
     return () => clearInterval(syncInterval);
   }, [isIndexedDBReady, authState.isAuthenticated, syncDirtyData]);
 
-  // ページ非表示時の同期（ページ切り替え時のデータ保護）
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        syncDirtyData();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [syncDirtyData]);
 
   return {
     data,

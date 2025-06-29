@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useCloudData } from './useCloudData';
+import { hasEmptyNodes } from '../utils/dataUtils';
 
 interface Node {
   id: string;
@@ -114,22 +115,12 @@ export const useMindMap = () => {
       updatedAt: new Date().toISOString()
     };
 
-    // 自動編集の場合はIndexedDB保存を遅延（編集完了後に保存）
-    const saveOptions = autoEdit ? { delayIndexedDB: true } : {};
-    setData(newData, saveOptions);
+    setData(newData);
     setSelectedNodeId(newNode.id);
 
     // 自動編集開始
     if (autoEdit) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🎯 autoEdit=true: 自動編集状態を設定（IndexedDB保存遅延）', {
-          newNodeId: newNode.id,
-          newNodeText: newNode.text
-        });
-      }
       setPendingAutoEdit(newNode.id);
-    } else if (process.env.NODE_ENV === 'development') {
-      console.log('🎯 autoEdit=false: 自動編集なし（即座保存）');
     }
   }, [data, setData, findNode]);
 
@@ -171,44 +162,12 @@ export const useMindMap = () => {
     const currentNode = findNode(targetNodeId || '');
     const isRoot = targetNodeId === 'root';
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 finishEdit開始:', {
-        targetNodeId,
-        targetText,
-        isEmpty,
-        isRoot,
-        originalText: currentNode?.text,
-        skipDelete: options.skipDelete
-      });
-    }
-    
-    // 削除判定の改善（ローカルモードと同等の判定）
-    // より厳格な空ノード削除ロジック
-    const wasNewlyCreated = currentNode && (!currentNode.text || currentNode.text.trim() === '');
-    const isIntentionalEdit = options.userInitiated !== false; // ユーザーが明示的に編集完了した場合
-    const shouldDelete = isEmpty && !isRoot && currentNode && !options.skipDelete && (
-      // 新規作成されたノード（元々空だった）で、テキストが空の場合
-      (wasNewlyCreated && isIntentionalEdit) ||
-      // または、明示的に削除を要求された場合
-      options.forceDelete === true
-    );
-    
-    if (shouldDelete) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🗑️ 空のノードを削除:', targetNodeId);
-      }
+    // 簡素化された削除判定
+    if (isEmpty && !isRoot && currentNode && options.userInitiated && !currentNode.text) {
+      // 新規作成された空ノードを削除
       deleteNode(targetNodeId || '');
-    } else if (isEmpty && !isRoot && currentNode?.text) {
-      // 空でも既存の内容があった場合は削除せず、元の内容を復元
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 元のテキストを復元:', { targetNodeId, originalText: currentNode.text });
-      }
-      updateNode(targetNodeId || '', { text: currentNode.text });
     } else if (!isEmpty && targetNodeId) {
       // テキストを保存
-      if (process.env.NODE_ENV === 'development') {
-        console.log('💾 テキストを保存:', { targetNodeId, text: targetText.trim() });
-      }
       updateNode(targetNodeId, { text: targetText.trim() });
     }
     
@@ -244,63 +203,20 @@ export const useMindMap = () => {
     }
   }, [pendingAutoEdit, data, findNode]);
 
-  // 編集完了時にIndexedDBに確実に保存するuseEffect
+  // 編集完了時の自動クリーンアップ
   useEffect(() => {
-    // 編集が終了した時点でデータを保存（editingNodeIdがnullになった時）
-    // ただし、ページロード直後の初期化は除外
-    const hasValidData = data && data.rootNode && data.id;
-    const wasActuallyEditing = document.hasFocus(); // ページがフォーカスされている場合のみ実際の編集
-    
-    if (!editingNodeId && hasValidData && wasActuallyEditing) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 編集完了 - IndexedDB同期実行', {
-          hasValidData,
-          wasActuallyEditing,
-          dataId: data.id
-        });
-      }
-      // 編集完了時は即座にIndexedDBに保存（ただし空ノードクリーンアップ付き）
-      setData(data, { immediate: false, cleanupEmptyNodes: true });
+    if (!editingNodeId && data && data.id && document.hasFocus()) {
+      // 編集完了時に空ノードをクリーンアップ
+      setData(data, { cleanupEmptyNodes: true });
     }
   }, [editingNodeId, data, setData]);
 
   // データ復元時のクリーンアップ（ページリロード対応）
   useEffect(() => {
-    if (data && data.rootNode && data.id) {
-      // データが設定された直後に空文字ノードをチェック
-      const hasEmptyNodes = checkForEmptyNodes(data.rootNode);
-      
-      if (hasEmptyNodes) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🧹 データ復元時: 空文字ノード検出、クリーンアップ実行');
-        }
-        
-        // useCloudDataのsetDataを通じてクリーンアップを実行
-        // これにより統一されたクリーンアップロジックが適用される
-        setData(data, { cleanupEmptyNodes: true, immediate: false });
-      }
+    if (data && data.rootNode && data.id && hasEmptyNodes(data.rootNode)) {
+      setData(data, { cleanupEmptyNodes: true });
     }
-  }, [data?.id, setData]); // data.idが変わった時（新しいデータが読み込まれた時）のみ実行
-
-  // 空文字ノードをチェックするヘルパー関数
-  const checkForEmptyNodes = (node: any): boolean => {
-    if (!node) return false;
-    
-    if (node.children) {
-      for (const child of node.children) {
-        // 空文字またはnullテキストのノードがあるかチェック
-        if (!child.text || child.text.trim() === '') {
-          return true;
-        }
-        // 再帰的にチェック
-        if (checkForEmptyNodes(child)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
+  }, [data?.id, setData]);
 
   return {
     data,
