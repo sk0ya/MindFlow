@@ -78,6 +78,8 @@ export async function handleAuthRequest(request, env) {
 async function handleSendMagicLink(request, env) {
   const { email } = await request.json();
   
+  console.log('🔍 Magic Link送信開始:', { email });
+  
   if (!email) {
     throw new Error('Email is required');
   }
@@ -89,17 +91,23 @@ async function handleSendMagicLink(request, env) {
   }
   
   try {
+    console.log('🔍 認証トークン生成開始');
     // 認証トークンを生成（許可チェック含む）
     const authToken = await createAuthToken(email, request, env);
+    console.log('✅ 認証トークン生成完了:', { tokenLength: authToken.token.length });
     
     // Magic Linkを生成
     const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}&type=magic-link`;
     
+    console.log('🔍 メール送信開始');
     // メール送信
     const emailResult = await sendMagicLinkEmail(email, magicLink, env);
+    console.log('✅ メール送信完了:', { messageId: emailResult.messageId });
     
+    console.log('🔍 期限切れトークンクリーンアップ開始');
     // 期限切れトークンのクリーンアップ
     await cleanupExpiredTokens(env);
+    console.log('✅ クリーンアップ完了');
     
     // メッセージを送信結果に応じて調整
     let message;

@@ -4,14 +4,18 @@ import { generateJWT } from './auth.js';
 
 // 認証トークンを生成してデータベースに保存
 export async function createAuthToken(email, request, env) {
+  console.log('🔍 createAuthToken開始:', { email });
+  
   // 許可されたメールアドレスかチェック
   const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
   if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
     throw new Error('Access denied: Email not authorized');
   }
 
+  console.log('🔍 既存トークン無効化開始');
   // 既存の未使用トークンを無効化
   await invalidateExistingTokens(email, env);
+  console.log('✅ 既存トークン無効化完了');
 
   // 新しいトークンを生成
   const tokenId = generateRandomToken();
@@ -21,6 +25,7 @@ export async function createAuthToken(email, request, env) {
   const ipAddress = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
   const userAgent = request.headers.get('User-Agent') || 'unknown';
 
+  console.log('🔍 データベース保存開始:', { tokenId: tokenId.substring(0, 8) + '...', email });
   // データベースに保存
   await env.DB.prepare(`
     INSERT INTO auth_tokens (id, user_id, expires_at, used_at, created_at)
@@ -32,6 +37,7 @@ export async function createAuthToken(email, request, env) {
     null,
     new Date().toISOString()
   ).run();
+  console.log('✅ データベース保存完了');
 
   return {
     tokenId,
@@ -84,11 +90,13 @@ export async function verifyAuthToken(token, env) {
 
 // ユーザーの既存トークンを無効化
 async function invalidateExistingTokens(email, env) {
+  console.log('🔍 SQL実行: 既存トークン無効化:', { email });
   await env.DB.prepare(`
     UPDATE auth_tokens 
     SET used_at = datetime('now') 
     WHERE user_id = ? AND used_at IS NULL
   `).bind(email).run();
+  console.log('✅ SQL完了: 既存トークン無効化');
 }
 
 // ユーザーを取得または作成
@@ -115,10 +123,12 @@ async function getOrCreateUser(email, env) {
 
 // 期限切れトークンをクリーンアップ
 export async function cleanupExpiredTokens(env) {
+  console.log('🔍 SQL実行: 期限切れトークンクリーンアップ');
   const result = await env.DB.prepare(`
     DELETE FROM auth_tokens 
     WHERE expires_at < datetime('now')
   `).run();
+  console.log('✅ SQL完了: クリーンアップ', { deleted: result.changes || 0 });
   
   return result.changes || 0;
 }
