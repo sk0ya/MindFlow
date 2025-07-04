@@ -18,6 +18,7 @@ interface ToolbarProps {
   onShowAuthModal?: () => void;
   onLogout?: () => void;
   onShowShortcutHelper: () => void;
+  onShowMapList?: () => void;
   isLocalMode?: boolean;
   onToggleSidebar: () => void;
   showSidebar?: boolean;
@@ -39,6 +40,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onShowAuthModal,
   onLogout,
   onShowShortcutHelper,
+  onShowMapList,
   isLocalMode = false,
   onToggleSidebar,
   showSidebar = true
@@ -77,16 +79,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="toolbar">
       <div className="toolbar-content">
         <div className="toolbar-left">
-          {/* サイドバー切り替えボタン */}
-          <button
-            onClick={onToggleSidebar}
-            className="btn btn-icon"
-            title={showSidebar ? 'マップ一覧を非表示' : 'マップ一覧を表示'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-          </button>
+          {/* マップ一覧ボタン */}
+          {onShowMapList && (
+            <button
+              onClick={onShowMapList}
+              className="btn btn-icon"
+              title="マップ一覧を表示"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+            </button>
+          )}
 
           <div className="logo">
             <div className="logo-icon">
