@@ -52,9 +52,9 @@ export const useMindMapData = (isAppReady = false) => {
       }
       
       return { success: true, timestamp };
-    } catch (error: unknown) {
-      error('ローカル保存失敗', { error });
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    } catch (err: unknown) {
+      error('ローカル保存失敗', { error: err });
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   };
 

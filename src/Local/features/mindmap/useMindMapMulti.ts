@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAllMindMapsWithFullData, deleteMindMap, updateMindMap as saveMindMap, storageManager, getMindMap } from '../../core/storage/LocalEngine';
 import { deepClone, assignColorsToExistingNodes, createInitialData, MindMapData, MindMapNode } from '../../shared/types/dataTypes';
-import { debug, warn, info, error } from '../../shared/utils/logger';
+import { debug, error } from '../../shared/utils/logger';
 // ローカルモード専用：リアルタイム同期不要
 
 // マルチマップ管理専用のカスタムフック（ローカルモード専用）
@@ -25,8 +25,8 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
       setAllMindMaps(validMaps);
       console.log('✅ マップ一覧取得完了:', validMaps.length, '件');
       
-    } catch (error) {
-      error('マップ一覧取得失敗', { error });
+    } catch (err: unknown) {
+      error('マップ一覧取得失敗', { error: err });
       setAllMindMaps([]);
     }
   };

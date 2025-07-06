@@ -1,7 +1,7 @@
 // ローカルストレージ専用エンジン
 import { createInitialData } from '../../shared/types/dataTypes';
 import type { MindMapData, MindMapNode, MindMapSettings } from '../../shared/types/dataTypes';
-import { debug, warn, info, error } from '../../shared/utils/logger';
+import { debug, error } from '../../shared/utils/logger';
 
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',

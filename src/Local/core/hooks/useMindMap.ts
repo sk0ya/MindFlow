@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+// React hooks
 import { useMindMapData } from '../../features/mindmap/useMindMapData';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles';

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import type { MindMapNode, MindMapData, NodeMapLink } from '../../../shared/types';
+import type { MindMapNode, MindMapData, MapLink } from '../shared/types';
 
 // Type definitions
 interface Position {
@@ -54,7 +54,7 @@ const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
 
   const availableMaps = allMaps.filter((map: MindMapData) => 
     map.id !== currentMapId && 
-    !selectedNode!.mapLinks?.some((link: NodeMapLink) => link.targetMapId === map.id)
+    !selectedNode!.mapLinks?.some((link: MapLink) => link.targetMapId === map.id)
   );
 
   // クリック外し検出でパネルを閉じる
@@ -114,7 +114,7 @@ const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
           <h4>既存のリンク</h4>
           {selectedNode.mapLinks && selectedNode.mapLinks.length > 0 ? (
             <div className="links-list">
-              {selectedNode.mapLinks.map((link: NodeMapLink) => (
+              {selectedNode.mapLinks.map((link: MapLink) => (
                 <div key={link.id} className="link-item">
                   <div 
                     className="link-info"
