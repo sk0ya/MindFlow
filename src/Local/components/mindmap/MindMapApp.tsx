@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useMindMap } from '../../../core/hooks/useMindMap';
+import { useMindMap } from '../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
 import ContextMenu from '../common/ContextMenu';
-import { ErrorBoundary } from '../../../../shared/components';
+import { ErrorBoundary } from '../../../shared/components';
 import ImageModal from '../files/ImageModal';
 import FileActionMenu from '../files/FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
@@ -12,7 +12,7 @@ import NodeMapLinksPanel from '../../panels/MapLinksPanel';
 import './MindMapApp.css';
 
 import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper';
-import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts';
+import { useKeyboardShortcuts } from '../../core/hooks/useKeyboardShortcuts';
 
 // カスタムフックのインポート
 import { useFileHandlers } from './hooks/useFileHandlers';
@@ -22,7 +22,7 @@ import { useNodeHandlers } from './hooks/useNodeHandlers';
 import { useAppActions } from './hooks/useAppActions';
 
 // Types
-import type { MindMapNode, Position } from '../../../shared/types';
+import type { MindMapNode, Position } from '../../shared/types';
 
 const MindMapApp: React.FC = () => {
   // ローカルモードでは認証不要
