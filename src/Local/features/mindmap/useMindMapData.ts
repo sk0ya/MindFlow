@@ -65,12 +65,29 @@ export const useMindMapData = (isAppReady = false) => {
       
       // ローカルストレージからデータ取得
       const mindMap = await getCurrentMindMap();
+      console.log('📊 getCurrentMindMap result:', { 
+        hasData: !!mindMap, 
+        hasRootNode: !!(mindMap?.rootNode),
+        id: mindMap?.id,
+        title: mindMap?.title
+      });
+      
       if (mindMap && mindMap.rootNode) {
         console.log('📊 ローカルストレージから既存データ読み込み');
-        setData(assignColorsToExistingNodes(mindMap));
+        const dataWithColors = assignColorsToExistingNodes(mindMap);
+        setData(dataWithColors);
+        // 初期化時の履歴を設定
+        setHistory([deepClone(dataWithColors)]);
+        setHistoryIndex(0);
       } else {
         console.log('📊 新規マップ作成');
-        setData(createInitialData());
+        const newData = createInitialData();
+        setData(newData);
+        // 新規作成時は即座に保存
+        await saveMindMap(newData.id, newData);
+        // 初期化時の履歴を設定
+        setHistory([deepClone(newData)]);
+        setHistoryIndex(0);
       }
       console.log('✅ データ初期化完了');
     };
@@ -121,8 +138,8 @@ export const useMindMapData = (isAppReady = false) => {
     if (options.saveImmediately) {
       // 即座保存（重要な操作用）
       await saveImmediately(newData);
-    } else if (options.immediate) {
-      // 通常の自動保存（2秒デバウンス）
+    } else {
+      // 通常の自動保存（2秒デバウンス）- デフォルトで自動保存を有効に
       startAutoSave();
     }
     
@@ -183,7 +200,8 @@ export const useMindMapData = (isAppReady = false) => {
 
   // 初期化時に履歴を設定
   useEffect(() => {
-    if (history.length === 0) {
+    if (data && history.length === 0) {
+      console.log('📝 Setting initial history for data:', data.id);
       setHistory([deepClone(data)]);
       setHistoryIndex(0);
     }
@@ -194,7 +212,7 @@ export const useMindMapData = (isAppReady = false) => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, []);
+  }, [data]); // dataを依存配列に追加
 
   // ローカルモードでは追加の同期処理は不要
 

@@ -15,18 +15,56 @@ class LocalEngine {
 
   private initializeStorage() {
     // 初回起動時の初期化
-    if (!localStorage.getItem(STORAGE_KEYS.MAP_LIST)) {
+    console.log('🔧 LocalEngine: Initializing storage...');
+    
+    const mapList = localStorage.getItem(STORAGE_KEYS.MAP_LIST);
+    const currentMapId = localStorage.getItem(STORAGE_KEYS.CURRENT_MAP_ID);
+    
+    console.log('🔧 LocalEngine: Storage state:', {
+      hasMapList: !!mapList,
+      hasCurrentMapId: !!currentMapId,
+      mapListContent: mapList
+    });
+    
+    if (!mapList) {
+      console.log('🔧 LocalEngine: No map list found, creating initial map...');
       const initialMap = createInitialData();
-      this.createMindMap(initialMap);
-      localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, initialMap.id);
+      const createResult = this.createMindMap(initialMap);
+      
+      if (createResult.success) {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, initialMap.id);
+        console.log('🔧 LocalEngine: Initial map created:', initialMap.id);
+      } else {
+        console.error('🔧 LocalEngine: Failed to create initial map:', createResult.error);
+      }
+    } else if (!currentMapId) {
+      // マップリストはあるが現在のマップIDがない場合
+      const mapIds = JSON.parse(mapList);
+      if (mapIds.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, mapIds[0]);
+        console.log('🔧 LocalEngine: Set current map ID to first available:', mapIds[0]);
+      }
     }
   }
 
   // 現在のマインドマップを取得
   getCurrentMindMap() {
     const currentId = localStorage.getItem(STORAGE_KEYS.CURRENT_MAP_ID);
-    if (!currentId) return null;
-    return this.getMindMap(currentId);
+    console.log('🔍 LocalEngine.getCurrentMindMap: Current ID:', currentId);
+    
+    if (!currentId) {
+      console.log('🔍 LocalEngine.getCurrentMindMap: No current ID found');
+      return null;
+    }
+    
+    const mindMap = this.getMindMap(currentId);
+    console.log('🔍 LocalEngine.getCurrentMindMap: Retrieved map:', {
+      found: !!mindMap,
+      hasRootNode: !!(mindMap?.rootNode),
+      title: mindMap?.title
+    });
+    
+    return mindMap;
   }
 
   // すべてのマインドマップを取得
@@ -60,15 +98,44 @@ class LocalEngine {
   // 特定のマインドマップを取得
   getMindMap(id: string) {
     try {
-      const dataStr = localStorage.getItem(STORAGE_KEYS.MAP_PREFIX + id);
-      if (!dataStr) return null;
+      const key = STORAGE_KEYS.MAP_PREFIX + id;
+      const dataStr = localStorage.getItem(key);
+      
+      console.log('🔍 LocalEngine.getMindMap:', {
+        id,
+        key,
+        hasData: !!dataStr,
+        dataLength: dataStr?.length
+      });
+      
+      if (!dataStr) {
+        console.log('🔍 LocalEngine.getMindMap: No data found for key:', key);
+        return null;
+      }
       
       const data = JSON.parse(dataStr);
+      console.log('🔍 LocalEngine.getMindMap: Parsed data:', {
+        hasRootNode: !!data.rootNode,
+        nodeCount: data.rootNode ? this.countNodes(data.rootNode) : 0
+      });
+      
       return data;
     } catch (error) {
       console.error('Failed to get mind map:', error);
       return null;
     }
+  }
+  
+  // ヘルパーメソッド: ノード数をカウント
+  private countNodes(node: any): number {
+    if (!node) return 0;
+    let count = 1;
+    if (node.children && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        count += this.countNodes(child);
+      }
+    }
+    return count;
   }
 
   // 新しいマインドマップを作成
@@ -109,7 +176,27 @@ class LocalEngine {
         updatedAt: new Date().toISOString()
       };
       
-      localStorage.setItem(STORAGE_KEYS.MAP_PREFIX + id, JSON.stringify(updatedData));
+      const key = STORAGE_KEYS.MAP_PREFIX + id;
+      const dataStr = JSON.stringify(updatedData);
+      
+      console.log('💾 LocalEngine.updateMindMap:', {
+        id,
+        key,
+        dataSize: dataStr.length,
+        hasRootNode: !!updatedData.rootNode,
+        nodeCount: updatedData.rootNode ? this.countNodes(updatedData.rootNode) : 0
+      });
+      
+      localStorage.setItem(key, dataStr);
+      
+      // 保存後の確認
+      const savedData = localStorage.getItem(key);
+      if (savedData) {
+        console.log('✅ LocalEngine.updateMindMap: Data saved successfully, size:', savedData.length);
+      } else {
+        console.error('❌ LocalEngine.updateMindMap: Failed to verify saved data');
+      }
+      
       return { success: true, data: updatedData };
     } catch (error) {
       console.error('Failed to update mind map:', error);

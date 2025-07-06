@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LocalStorage Debug</title>
+    <script>
+        function debugLocalStorage() {
+            console.log('=== LocalStorage Debug ===');
+            
+            // Check all mindmap related keys
+            const keys = Object.keys(localStorage).filter(key => key.includes('mindmap'));
+            console.log('Mindmap keys found:', keys);
+            
+            // Check specific keys
+            const currentId = localStorage.getItem('mindmap_current_id');
+            console.log('Current map ID:', currentId);
+            
+            const mapList = localStorage.getItem('mindmap_list');
+            console.log('Map list:', mapList);
+            
+            if (currentId) {
+                const mapData = localStorage.getItem('mindmap_' + currentId);
+                console.log('Current map data:', mapData);
+                
+                if (mapData) {
+                    try {
+                        const parsed = JSON.parse(mapData);
+                        console.log('Parsed map data:', parsed);
+                        console.log('Has rootNode:', !!parsed.rootNode);
+                        console.log('RootNode:', parsed.rootNode);
+                    } catch (e) {
+                        console.error('Failed to parse map data:', e);
+                    }
+                }
+            }
+            
+            // Display results
+            document.getElementById('results').innerHTML = `
+                <h2>LocalStorage Debug Results</h2>
+                <p>Found ${keys.length} mindmap keys</p>
+                <p>Current map ID: ${currentId || 'None'}</p>
+                <p>Map list: ${mapList || 'None'}</p>
+                <p>Check browser console for detailed information</p>
+            `;
+        }
+        
+        window.onload = debugLocalStorage;
+    </script>
+</head>
+<body>
+    <h1>LocalStorage Debug Tool</h1>
+    <div id="results"></div>
+    <button onclick="debugLocalStorage()">Refresh Debug Info</button>
+    <button onclick="localStorage.clear(); alert('LocalStorage cleared!')">Clear LocalStorage</button>
+</body>
+</html>
