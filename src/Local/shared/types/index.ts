@@ -10,10 +10,7 @@ export type {
   MindMapSettings,
   FileAttachment,
   NodeMapLink as MapLink, // Backward compatibility alias
-  AuthUser as User, // Backward compatibility alias
-  AuthState,
   UIState,
-  CloudStorageState,
   Position,
   Theme,
   ValidationResult,
@@ -21,14 +18,10 @@ export type {
   PerformanceMetrics,
   KeyboardShortcut,
   LayoutAlgorithm,
-  StorageMode,
-  SyncStatus,
-  ConnectionStatus,
   NodeEvent,
   MapEvent,
   AppError,
   MindMapHookReturn,
-  AuthHookReturn
 } from '../../../shared/types';
 
 // Re-export constants for convenience
@@ -50,5 +43,4 @@ export {
   isValidMindMapNode,
   isValidMindMapData,
   isValidFileAttachment,
-  isValidAuthUser
 } from '../../../shared/types';

@@ -76,7 +76,6 @@ export const STORAGE = {
   // ストレージキー
   MAPS_KEY: 'mindflow_maps',
   SETTINGS_KEY: 'mindflow_settings',
-  AUTH_KEY: 'mindflow_auth',
   
   // 履歴管理
   MAX_HISTORY_SIZE: 50,
@@ -107,24 +106,6 @@ export const UI = {
   DRAG_THRESHOLD: 5,
 };
 
-// ========================================
-// ネットワーク・API関連
-// ========================================
-export const NETWORK = {
-  // タイムアウト
-  API_TIMEOUT: 10000, // 10秒
-  RETRY_INTERVAL: 1000, // 1秒
-  MAX_RETRIES: 3,
-  
-  // リアルタイム同期
-  SYNC_INTERVAL: 5000, // 5秒
-  HEARTBEAT_INTERVAL: 30000, // 30秒
-  RECONNECT_DELAY: 2000, // 2秒
-  
-  // 圧縮・最適化
-  COMPRESSION_THRESHOLD: 1024, // 1KB
-  BATCH_SIZE: 10,
-};
 
 // ========================================
 // カラーパレット
@@ -207,12 +188,8 @@ export const DEFAULTS = {
   SHOW_GRID: false,
   ANIMATION_ENABLED: true,
   
-  // ストレージ設定
-  STORAGE_MODE: 'local', // 'local' | 'cloud'
-  
   // UI設定
   SIDEBAR_VISIBLE: false,
-  CLOUD_PANEL_VISIBLE: false,
   PERFORMANCE_DASH_VISIBLE: false,
   
   // 新規マップのタイトル

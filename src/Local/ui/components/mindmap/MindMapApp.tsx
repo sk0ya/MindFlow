@@ -26,7 +26,7 @@ import { useNodeHandlers } from './hooks/useNodeHandlers';
 import { useAppActions } from './hooks/useAppActions';
 
 // Types
-import type { MindMapNode, MindMapData, User } from '../../../shared/types';
+import type { MindMapNode, MindMapData } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
   // ローカルモードでは認証不要
@@ -78,34 +78,7 @@ const MindMapApp: React.FC = () => {
     reinitializeAfterModeSelection
   } = useMindMap(isAppReady);
   
-  // ローカルモードではリアルタイム機能は無効
-  const realtimeClient = null;
-  const isRealtimeConnected = false;
-  const realtimeStatus = 'disconnected';
-  const connectedUsers = [];
-  const userCursors = [];
-  const initializeRealtime = () => {};
-  const updateCursorPosition = () => {};
-  const triggerLocalSync = () => {};
   
-  // ローカルモードでは認証不要（認証状態をダミーで提供）
-  const localAuth = { 
-    authState: { isAuthenticated: false, user: null }, 
-    isAuthVerification: false 
-  };
-  
-  // ローカルモードでは認証ハンドラーもダミー
-  const authHandlers = {
-    authState: { isAuthenticated: false, user: null, isLoading: false },
-    setAuthState: () => {},
-    handleGoogleAuth: () => {},
-    handleGitHubAuth: () => {},
-    handleMagicLinkAuth: () => {},
-    handleLogout: () => {},
-    handleShowAuthModal: () => {}
-  };
-  
-  const isAuthVerification = false;
 
   // ローカルモードでは既にモード選択済みなので不要
 
@@ -141,20 +114,11 @@ const MindMapApp: React.FC = () => {
     updateNode,
     addNodeMapLink,
     removeNodeMapLink,
-    updateCursorPosition
+    () => {} // No cursor update in local mode
   );
   
-  const appActions = useAppActions(data, saveMindMap, null, null); // Localでは直接exportMindMapAsJSONを使用
+  const appActions = useAppActions(data, saveMindMap);
   
-  // ローカルモードではリアルタイムハンドラーは不要（ダミー）
-  const realtimeHandlers = {
-    handleRealtimeInit: () => {},
-    handleRealtimeDisconnect: () => {},
-    handleRealtimeReconnect: () => {},
-    handleConnectionToggle: () => {},
-    handleToggleRealtime: () => {},
-    handleUserClick: () => {}
-  };
 
   // キーボードショートカットの統合
   useKeyboardShortcuts({
@@ -273,9 +237,6 @@ const MindMapApp: React.FC = () => {
               zoom={uiState.zoom}
               onZoomReset={uiState.handleZoomReset}
               onShowLocalStoragePanel={() => uiState.setShowLocalStoragePanel(true)}
-              authState={authHandlers.authState}
-              onShowAuthModal={authHandlers.handleShowAuthModal}
-              onLogout={authHandlers.handleLogout}
               onShowShortcutHelper={() => uiState.setShowShortcutHelper(true)}
             />
 

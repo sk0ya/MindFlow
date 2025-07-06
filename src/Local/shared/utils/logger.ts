@@ -103,12 +103,8 @@ class Logger {
   getSessionId() {
     if (typeof window === 'undefined') return 'server';
     
-    let sessionId = sessionStorage.getItem('mindflow_session_id');
-    if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      sessionStorage.setItem('mindflow_session_id', sessionId);
-    }
-    return sessionId;
+    // Local mode uses simple session ID generation
+    return `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
   
   // ログIDの生成
@@ -258,40 +254,6 @@ class Logger {
     this.logBuffer = [];
   }
   
-  // リモートバッファのフラッシュ
-  async flushRemoteBuffer() {
-    if (!this.remoteBuffer || this.remoteBuffer.length === 0) return;
-    
-    const logsToSend = [...this.remoteBuffer];
-    this.remoteBuffer = [];
-    
-    try {
-      const response = await fetch(this.remoteEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          logs: logsToSend,
-          source: 'mindflow-client'
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      // リモート送信に失敗した場合は console.warn で記録
-      console.warn('Failed to send logs to remote endpoint:', error);
-      
-      // 重要なログの場合は localStorage にフォールバック
-      logsToSend.forEach(log => {
-        if (log.levelNumber >= LOG_LEVELS.ERROR) {
-          this.outputToStorage(log);
-        }
-      });
-    }
-  }
   
   // 定期的なフラッシュ
   startPeriodicFlush() {
@@ -299,7 +261,6 @@ class Logger {
     
     setInterval(() => {
       this.flushBuffer();
-      this.flushRemoteBuffer();
     }, this.flushInterval);
   }
   
@@ -398,7 +359,7 @@ const getEnvironment = () => {
 const getLogOutputs = () => {
   const env = getEnvironment();
   return env === 'production' 
-    ? [LOG_OUTPUTS.STORAGE, LOG_OUTPUTS.REMOTE]
+    ? [LOG_OUTPUTS.STORAGE]
     : [LOG_OUTPUTS.CONSOLE, LOG_OUTPUTS.STORAGE];
 };
 
@@ -406,7 +367,7 @@ const getLogOutputs = () => {
 export const logger = new Logger({
   level: getDefaultLogLevel(),
   outputs: getLogOutputs(),
-  remoteEndpoint: undefined, // Remove Vite env dependency
+  // No remote endpoint for local mode
   context: {
     app: 'MindFlow',
     version: '1.0.0',

@@ -1,5 +1,33 @@
 import { useEffect } from 'react';
 
+interface KeyboardShortcutsProps {
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  setEditingNodeId: (id: string | null) => void;
+  setEditText: (text: string) => void;
+  startEdit: (nodeId: string) => void;
+  finishEdit: (nodeId: string, text: string) => void;
+  editText: string;
+  updateNode: (nodeId: string, updates: any) => void;
+  addChildNode: (parentId: string, text?: string, shouldEdit?: boolean) => void;
+  addSiblingNode: (nodeId: string, text?: string, shouldEdit?: boolean) => void;
+  deleteNode: (nodeId: string) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  navigateToDirection: (direction: string) => void;
+  saveMindMap: () => void;
+  showMapList: boolean;
+  setShowMapList: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showLocalStorage: boolean;
+  setShowLocalStorage: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showTutorial: boolean;
+  setShowTutorial: (show: boolean | ((prev: boolean) => boolean)) => void;
+  showKeyboardHelper: boolean;
+  setShowKeyboardHelper: (show: boolean | ((prev: boolean) => boolean)) => void;
+}
+
 // キーボードショートカット管理専用のカスタムフック
 export const useKeyboardShortcuts = ({
   selectedNodeId,
@@ -27,10 +55,10 @@ export const useKeyboardShortcuts = ({
   setShowTutorial,
   showKeyboardHelper,
   setShowKeyboardHelper
-}) => {
+}: KeyboardShortcutsProps) => {
   
   useEffect(() => {
-    const handleKeyDown = async (e) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // デバッグ用：キーイベントをログ出力
       console.log('🎹 キーイベント:', {
         key: e.key,
