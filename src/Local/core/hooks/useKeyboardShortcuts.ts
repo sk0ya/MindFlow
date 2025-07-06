@@ -33,11 +33,11 @@ export const useKeyboardShortcuts = ({
   selectedNodeId,
   editingNodeId,
   setEditingNodeId,
-  setEditText,
+  setEditText: _setEditText,
   startEdit,
   finishEdit,
   editText,
-  updateNode,
+  updateNode: _updateNode,
   addChildNode,
   addSiblingNode,
   deleteNode,
@@ -62,7 +62,7 @@ export const useKeyboardShortcuts = ({
       // デバッグ用：キーイベントをログ出力
       console.log('🎹 キーイベント:', {
         key: e.key,
-        target: e.target.tagName,
+        target: (e.target as Element)?.tagName,
         editingNodeId,
         selectedNodeId,
         ctrlKey: e.ctrlKey,
@@ -71,9 +71,10 @@ export const useKeyboardShortcuts = ({
       });
       
       // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
-      const isInputFocused = document.activeElement?.tagName === 'INPUT' || 
-                           document.activeElement?.tagName === 'TEXTAREA' || 
-                           document.activeElement?.contentEditable === 'true';
+      const activeElement = e.target as Element | null;
+      const isInputFocused = activeElement?.tagName === 'INPUT' || 
+                           activeElement?.tagName === 'TEXTAREA' || 
+                           (activeElement as HTMLElement)?.contentEditable === 'true';
 
       // エスケープキーの処理（最優先）
       if (e.key === 'Escape') {

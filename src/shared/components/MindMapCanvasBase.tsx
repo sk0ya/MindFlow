@@ -118,10 +118,10 @@ const Node: React.FC<{
   onRightClick,
   showFileAttachments = false,
   showMapLinks = false,
-  onFileUpload,
-  onRemoveFile,
-  onShowImageModal,
-  onShowFileActionMenu,
+  onFileUpload: _onFileUpload,
+  onRemoveFile: _onRemoveFile,
+  onShowImageModal: _onShowImageModal,
+  onShowFileActionMenu: _onShowFileActionMenu,
   onShowNodeMapLinks
 }) => {
   const nodeRef = useRef<SVGGElement>(null);
@@ -158,6 +158,7 @@ const Node: React.FC<{
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
+    return () => {};
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleDoubleClick = useCallback(() => {
@@ -244,30 +245,34 @@ const Node: React.FC<{
       
       {/* File attachments indicator */}
       {hasAttachments && (
-        <circle
-          cx="45"
-          cy="-10"
-          r="5"
-          fill="#e74c3c"
-          className="attachment-indicator"
-          title={`${node.attachments!.length} attachment(s)`}
-        />
+        <g>
+          <circle
+            cx="45"
+            cy="-10"
+            r="5"
+            fill="#e74c3c"
+            className="attachment-indicator"
+          />
+          <title>{`${node.attachments!.length} attachment(s)`}</title>
+        </g>
       )}
       
       {/* Map links indicator */}
       {hasMapLinks && (
-        <circle
-          cx="45"
-          cy="10"
-          r="5"
-          fill="#3498db"
-          className="maplink-indicator"
-          title={`${node.mapLinks!.length} link(s)`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onShowNodeMapLinks?.(node, { x: node.x + 45, y: node.y + 10 });
-          }}
-        />
+        <g>
+          <circle
+            cx="45"
+            cy="10"
+            r="5"
+            fill="#3498db"
+            className="maplink-indicator"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowNodeMapLinks?.(node, { x: node.x + 45, y: node.y + 10 });
+            }}
+          />
+          <title>{`${node.mapLinks!.length} link(s)`}</title>
+        </g>
       )}
       
       {/* Collapsed indicator */}
@@ -299,17 +304,17 @@ export const MindMapCanvasBase: React.FC<MindMapCanvasBaseProps> = ({
   onStartEdit,
   onFinishEdit,
   onDragNode,
-  onChangeParent,
-  onAddChild,
-  onAddSibling,
-  onDeleteNode,
+  onChangeParent: _onChangeParent,
+  onAddChild: _onAddChild,
+  onAddSibling: _onAddSibling,
+  onDeleteNode: _onDeleteNode,
   onRightClick,
-  onToggleCollapse,
+  onToggleCollapse: _onToggleCollapse,
   setZoom,
   setPan,
   showFileAttachments = false,
   showMapLinks = false,
-  showCollapsedIndicators = true,
+  showCollapsedIndicators: _showCollapsedIndicators = true,
   onFileUpload,
   onRemoveFile,
   onShowImageModal,
@@ -392,6 +397,7 @@ export const MindMapCanvasBase: React.FC<MindMapCanvasBaseProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
+    return () => {};
   }, [isPanning, handleMouseMove, handleMouseUp]);
 
   return (

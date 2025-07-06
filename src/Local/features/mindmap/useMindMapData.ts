@@ -1,34 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
-import { getCurrentMindMap, updateMindMap as saveMindMap, getAllMindMaps, getMindMap } from '../../core/storage/LocalEngine';
-import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes';
+import { getCurrentMindMap, updateMindMap as saveMindMap } from '../../core/storage/LocalEngine';
+import { deepClone, assignColorsToExistingNodes, createInitialData, MindMapData, MindMapSettings } from '../../shared/types/dataTypes';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker';
 
 // データ管理専用のカスタムフック（ローカルモード専用）
 export const useMindMapData = (isAppReady = false) => {
-  const [data, setData] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [data, setData] = useState<MindMapData | null>(null);
+  const [history, setHistory] = useState<MindMapData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const autoSaveTimeoutRef = useRef(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   
   // ローカルストレージへの保存機能
-  const saveImmediately = async (dataToSave = data, options = {}) => {
+  const saveImmediately = async (dataToSave: MindMapData | null = data, options: { isManualSave?: boolean } = {}) => {
     if (!dataToSave) return { success: false, error: 'No data to save' };
+    
+    // TypeScript type assertion after null check
+    let safeDataToSave: MindMapData = dataToSave;
 
     // データ整合性チェック
-    const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(dataToSave);
+    const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(safeDataToSave);
     if (!integrityResult.isValid) {
       console.warn('⚠️ 保存前データ整合性チェック失敗');
-      DataIntegrityChecker.logIntegrityReport(integrityResult, dataToSave);
+      DataIntegrityChecker.logIntegrityReport(integrityResult, safeDataToSave);
       
       const criticalIssues = integrityResult.issues.filter(issue => issue.severity === 'critical');
       if (criticalIssues.length > 0) {
         console.warn('🔧 重要な問題を検出、自動修復を試行...');
-        const { repaired, issues } = DataIntegrityChecker.repairMindMapData(dataToSave);
+        const { repaired, issues } = DataIntegrityChecker.repairMindMapData(safeDataToSave);
         if (repaired) {
           console.log('✅ データ修復完了', { repairedIssues: issues.length });
-          dataToSave = repaired;
+          safeDataToSave = repaired;
         } else {
           console.error('❌ データ修復失敗、保存を中止');
           return { success: false, error: 'Data integrity check failed' };
@@ -38,9 +41,9 @@ export const useMindMapData = (isAppReady = false) => {
     
     // ローカルストレージに直接保存
     try {
-      const result = await saveMindMap(dataToSave.id, dataToSave);
+      await saveMindMap(safeDataToSave.id, safeDataToSave);
       const timestamp = new Date().toLocaleTimeString();
-      console.log(`💾 保存完了 (${timestamp}):`, dataToSave.title);
+      console.log(`💾 保存完了 (${timestamp}):`, safeDataToSave.title);
       
       // 手動保存の場合は特別なメッセージを表示
       if (options.isManualSave) {
@@ -48,9 +51,9 @@ export const useMindMapData = (isAppReady = false) => {
       }
       
       return { success: true, timestamp };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ ローカル保存失敗:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   };
 
@@ -106,7 +109,7 @@ export const useMindMapData = (isAppReady = false) => {
 
 
   // 履歴に追加
-  const addToHistory = (newData) => {
+  const addToHistory = (newData: MindMapData) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push(deepClone(newData));
@@ -116,12 +119,19 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // データ更新の共通処理（編集中保護強化）
-  const updateData = async (newData, options = {}) => {
+  const updateData = async (newData: MindMapData, options: {
+    allowDuringEdit?: boolean;
+    source?: string;
+    skipHistory?: boolean;
+    saveImmediately?: boolean;
+    immediate?: boolean;
+    onUpdate?: (data: MindMapData, options: any) => void;
+  } = {}) => {
     // ローカルモードでは常にデータ更新を処理
     if (!newData) return;
     
     // 🔧 編集中の競合状態を検出・保護
-    const editingInput = document.querySelector('.node-input');
+    const editingInput = document.querySelector('.node-input') as HTMLInputElement | null;
     const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
     
     if (isCurrentlyEditing && !options.allowDuringEdit) {
@@ -190,7 +200,8 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // 設定を更新
-  const updateSettings = (newSettings) => {
+  const updateSettings = (newSettings: Partial<MindMapSettings>) => {
+    if (!data) return;
     updateData({
       ...data,
       settings: { ...data.settings, ...newSettings }
@@ -198,12 +209,14 @@ export const useMindMapData = (isAppReady = false) => {
   };
 
   // マップタイトルを更新
-  const updateTitle = (newTitle) => {
+  const updateTitle = (newTitle: string) => {
+    if (!data) return;
     updateData({ ...data, title: newTitle });
   };
 
   // テーマを変更
-  const changeTheme = (themeName) => {
+  const changeTheme = (themeName: string) => {
+    if (!data) return;
     updateData({ ...data, theme: themeName });
   };
 

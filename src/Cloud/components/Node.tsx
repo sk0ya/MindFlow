@@ -34,7 +34,7 @@ const Node: React.FC<NodeProps> = ({
   onSelect,
   onStartEdit,
   onFinishEdit,
-  onDrag,
+  onDrag: _onDrag,
   onRightClick,
   onDoubleClick,
   scale = 1

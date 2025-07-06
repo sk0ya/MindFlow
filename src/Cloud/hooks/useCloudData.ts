@@ -459,7 +459,7 @@ export const useCloudData = () => {
     }
     
     // createdAt と updatedAt が一致していて、データベースに保存されていない新規データかチェック
-    const isNewUnsavedData = data.id && !data.createdAt && !data.updatedAt;
+    const isNewUnsavedData = data.id && (!('createdAt' in data) || !data.createdAt) && (!('updatedAt' in data) || !data.updatedAt);
 
     if (isNewUnsavedData) {
       if (process.env.NODE_ENV === 'development') {
@@ -477,7 +477,7 @@ export const useCloudData = () => {
       
       saveNewData();
     }
-  }, [data?.id, data?.createdAt, data?.updatedAt, authState.isAuthenticated, isLoading, saveMindMapData, allMaps.length]);
+  }, [data?.id, data && 'createdAt' in data ? data.createdAt : undefined, data && 'updatedAt' in data ? data.updatedAt : undefined, authState.isAuthenticated, isLoading, saveMindMapData, allMaps.length]);
 
   // デバウンス自動保存（5秒後）
   useEffect(() => {

@@ -88,7 +88,7 @@ export class EditProtectionManager {
   /**
    * 編集セッション終了
    */
-  finishEdit(nodeId: string, finalValue: string, options: EditSessionOptions = {}): void {
+  finishEdit(nodeId: string, finalValue: string, _options: EditSessionOptions = {}): void {
     const session = this.activeEdits.get(nodeId);
     if (!session) {
       console.warn(`⚠️ 編集セッション終了: セッションが見つかりません ${nodeId}`);

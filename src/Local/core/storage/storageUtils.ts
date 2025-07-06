@@ -3,6 +3,8 @@ interface AppSettings {
   autoSave: boolean;
   autoLayout: boolean;
   theme: string;
+  storageMode?: string;
+  showWelcome?: boolean;
 }
 
 export const getAppSettings = (): AppSettings => {
@@ -10,7 +12,9 @@ export const getAppSettings = (): AppSettings => {
   return settings ? JSON.parse(settings) : {
     autoSave: true,
     autoLayout: true,
-    theme: 'light'
+    theme: 'light',
+    storageMode: undefined,
+    showWelcome: true
   };
 };
 

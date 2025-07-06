@@ -104,7 +104,9 @@ export class LRUCache<K, V> {
     } else if (this.cache.size >= this.maxSize) {
       // Remove least recently used (first item)
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
     }
     this.cache.set(key, value);
   }
@@ -129,8 +131,8 @@ export const memoizeFunction = <Args extends any[], Return>(
 ) => {
   const { 
     cacheSize = 50, 
-    keyGenerator = (...args) => JSON.stringify(args),
-    equalityCheck = arrayEqual
+    keyGenerator = (...args: Args) => JSON.stringify(args),
+    equalityCheck: _equalityCheck = arrayEqual
   } = options || {};
   
   const cache = new LRUCache<string, Return>(cacheSize);
@@ -161,7 +163,7 @@ export const memoizeAsync = <Args extends any[], Return>(
 ) => {
   const { 
     cacheSize = 50, 
-    keyGenerator = (...args) => JSON.stringify(args),
+    keyGenerator = (...args: Args) => JSON.stringify(args),
     ttl = 5 * 60 * 1000 // 5 minutes default
   } = options || {};
   

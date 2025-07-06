@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import Node from './Node';
 import Connection from './Connection';
 
@@ -61,11 +61,6 @@ interface MindMapCanvasProps {
   setPan: (pan: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void;
 }
 
-interface DragState {
-  isDragging: boolean;
-  draggedNodeId: string | null;
-  dropTargetId: string | null;
-}
 
 interface Connection {
   from: MindMapNode | { x: number; y: number };
@@ -87,18 +82,18 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onStartEdit,
   onFinishEdit,
   onDragNode,
-  onChangeParent,
-  onAddChild,
-  onAddSibling,
-  onDeleteNode,
+  onChangeParent: _onChangeParent,
+  onAddChild: _onAddChild,
+  onAddSibling: _onAddSibling,
+  onDeleteNode: _onDeleteNode,
   onRightClick,
   onToggleCollapse,
   onNavigateToDirection,
-  onFileUpload,
-  onRemoveFile,
-  onShowImageModal,
-  onShowFileActionMenu,
-  onShowNodeMapLinks,
+  onFileUpload: _onFileUpload,
+  onRemoveFile: _onRemoveFile,
+  onShowImageModal: _onShowImageModal,
+  onShowFileActionMenu: _onShowFileActionMenu,
+  onShowNodeMapLinks: _onShowNodeMapLinks,
   zoom,
   setZoom,
   pan,
@@ -122,11 +117,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
-    draggedNodeId: null,
-    dropTargetId: null
-  });
 
   const flattenVisibleNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
@@ -156,75 +146,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     });
   }
   
-  // ドロップターゲット検出のためのヘルパー関数
-  const getNodeAtPosition = useCallback((x: number, y: number): MindMapNode | null => {
-    // SVG座標系での位置を取得
-    const svgRect = svgRef.current?.getBoundingClientRect();
-    if (!svgRect) return null;
-    
-    // マウス座標をSVG内座標に変換（zoom, panを考慮）
-    const svgX = ((x - svgRect.left) / zoom) - pan.x;
-    const svgY = ((y - svgRect.top) / zoom) - pan.y;
-    
-    // 各ノードとの距離を計算して最も近いものを見つける
-    let closestNode = null;
-    let minDistance = Infinity;
-    const maxDropDistance = 80; // ドロップ可能な最大距離を増加
-    
-    allNodes.forEach(node => {
-      if (node.id === dragState.draggedNodeId) return; // 自分自身は除外
-      
-      const distance = Math.sqrt(
-        Math.pow(node.x - svgX, 2) + Math.pow(node.y - svgY, 2)
-      );
-      
-      if (distance < maxDropDistance && distance < minDistance) {
-        minDistance = distance;
-        closestNode = node;
-      }
-    });
-    
-    return closestNode;
-  }, [allNodes, zoom, pan, dragState.draggedNodeId]);
 
-  // ドラッグ開始時の処理
-  const handleDragStart = useCallback((nodeId: string) => {
-    setDragState({
-      isDragging: true,
-      draggedNodeId: nodeId,
-      dropTargetId: null
-    });
-  }, []);
 
-  // ドラッグ中の処理
-  const handleDragMove = useCallback((x: number, y: number) => {
-    if (!dragState.isDragging) return;
-    
-    const targetNode = getNodeAtPosition(x, y);
-    setDragState(prev => ({
-      ...prev,
-      dropTargetId: targetNode?.id || null
-    }));
-  }, [dragState.isDragging, getNodeAtPosition]);
 
-  // ドラッグ終了時の処理
-  const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
-    if (dragState.dropTargetId && dragState.dropTargetId !== nodeId) {
-      // 親要素を変更
-      if (onChangeParent) {
-        onChangeParent(nodeId, dragState.dropTargetId);
-      }
-    } else {
-      // 通常の位置移動
-      onDragNode(nodeId, x, y);
-    }
-    
-    setDragState({
-      isDragging: false,
-      draggedNodeId: null,
-      dropTargetId: null
-    });
-  }, [dragState.dropTargetId, onChangeParent, onDragNode]);
   
   const connections: Connection[] = [];
   allNodes.forEach(node => {
@@ -438,7 +362,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
           <g className="connection-lines">
             {connections.filter(conn => !conn.hasToggleButton).map((conn, index) => (
               <Connection
-                key={`${conn.from.id || 'toggle'}-${conn.to.id || 'toggle'}-${index}`}
+                key={`${('id' in conn.from ? conn.from.id : 'toggle')}-${('id' in conn.to ? conn.to.id : 'toggle')}-${index}`}
                 from={conn.from}
                 to={conn.to}
                 hasToggleButton={false}

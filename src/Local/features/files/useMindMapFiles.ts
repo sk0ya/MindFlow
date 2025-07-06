@@ -1,12 +1,11 @@
 // ファイル添付機能専用のカスタムフック (ローカルモード専用)
-import { createFileAttachment } from '../../shared/types/dataTypes';
+import { createFileAttachment, FileAttachment } from '../../shared/types/dataTypes';
 import { optimizeFile, formatFileSize } from './fileOptimization';
 import { validateFile } from './fileValidation';
 import { logger } from '../../shared/utils/logger';
 import { getCurrentMindMap } from '../../core/storage/LocalEngine';
-import { getAppSettings } from '../../core/storage/LocalEngine';
 
-export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
+export const useMindMapFiles = (findNode: (nodeId: string) => any, updateNode: (nodeId: string, updates: any) => void, currentMapId: string | null = null) => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
     const initializing = !currentMapId;
@@ -22,7 +21,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル添付機能（ローカルストレージ専用）
-  const attachFileToNode = async (nodeId, file) => {
+  const attachFileToNode = async (nodeId: string, file: File): Promise<FileAttachment> => {
     // アプリ初期化中はファイルアップロードを無効化
     if (isAppInitializing()) {
       throw new Error('アプリケーションを初期化中です。数秒お待ちいただいてからもう一度お試しください。');
@@ -58,28 +57,45 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       console.log('💾 ローカルモード: Base64エンコードで保存');
       
       // ファイル最適化
-      const optimizationResult = await optimizeFile(file);
+      const optimizationResult = await optimizeFile(file) as {
+        file: File;
+        dataURL: string;
+        originalSize: number;
+        optimizedSize: number;
+        compressionRatio: string;
+        optimizationApplied: boolean;
+        type: string;
+        dimensions?: { width: number; height: number };
+      };
       
       // Base64エンコード
       const reader = new FileReader();
       const base64Data = await new Promise((resolve, reject) => {
-        reader.onload = e => resolve(e.target.result);
+        reader.onload = e => {
+          if (!e.target?.result) {
+            reject(new Error('Failed to read file'));
+            return;
+          }
+          resolve(e.target.result);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(optimizationResult.file);
       });
       
       // ファイル添付データ作成
       const fileAttachment = createFileAttachment(
-        optimizationResult.file.name,
-        optimizationResult.file.type,
-        optimizationResult.file.size,
-        base64Data
+        optimizationResult.file,
+        base64Data as string,
+        null,
+        null
       );
       
-      // 最適化情報を追加
+      // 最適化情報をファイル添付に追加（後から設定）
+      fileAttachment.isOptimized = optimizationResult.optimizationApplied;
       fileAttachment.originalSize = file.size;
-      fileAttachment.optimizationApplied = optimizationResult.optimizationApplied;
+      fileAttachment.optimizedSize = optimizationResult.optimizedSize;
       fileAttachment.compressionRatio = optimizationResult.compressionRatio;
+      fileAttachment.optimizedType = optimizationResult.type;
       
       // ノードに添付
       const node = findNode(nodeId);
@@ -100,7 +116,7 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
       
       return fileAttachment;
       
-    } catch (error) {
+    } catch (error: any) {
       logger.error(`❌ ファイル添付失敗: ${error.message}`, {
         nodeId,
         fileName: file.name,
@@ -111,12 +127,12 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // ファイル削除
-  const removeFileFromNode = async (nodeId, fileId) => {
+  const removeFileFromNode = async (nodeId: string, fileId: string): Promise<void> => {
     const node = findNode(nodeId);
     if (!node) return;
     
     const updatedAttachments = (node.attachments || []).filter(
-      attachment => attachment.id !== fileId
+      (attachment: FileAttachment) => attachment.id !== fileId
     );
     
     await updateNode(nodeId, { attachments: updatedAttachments });
@@ -128,14 +144,14 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
   };
 
   // 画像プレビュー取得（ローカルモード）
-  const getImagePreview = (attachment) => {
+  const getImagePreview = (attachment: FileAttachment) => {
     if (!attachment || !attachment.type?.startsWith('image/')) {
       return null;
     }
     
     // Base64データがある場合はそのまま返す
-    if (attachment.data) {
-      return attachment.data;
+    if (attachment.dataURL) {
+      return attachment.dataURL;
     }
     
     return null;
@@ -147,9 +163,9 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
     if (!mindMap) return { used: 0, percentage: 0 };
     
     let totalSize = 0;
-    const countFiles = (node) => {
+    const countFiles = (node: any) => {
       if (node.attachments) {
-        node.attachments.forEach(attachment => {
+        node.attachments.forEach((attachment: FileAttachment) => {
           totalSize += attachment.size || 0;
         });
       }
@@ -169,10 +185,58 @@ export const useMindMapFiles = (findNode, updateNode, currentMapId = null) => {
     };
   };
 
+  // ファイル名変更（現在は未実装）
+  const renameFileInNode = async (nodeId: string, fileId: string, newName: string): Promise<void> => {
+    const node = findNode(nodeId);
+    if (!node) return;
+    
+    const updatedAttachments = (node.attachments || []).map((attachment: FileAttachment) => {
+      if (attachment.id === fileId) {
+        return { ...attachment, name: newName };
+      }
+      return attachment;
+    });
+    
+    await updateNode(nodeId, { attachments: updatedAttachments });
+    
+    logger.info('✏️ ファイル名変更完了', {
+      nodeId,
+      fileId,
+      newName
+    });
+  };
+
+  // ファイルダウンロード（ローカルモード）
+  const downloadFile = (attachment: FileAttachment): void => {
+    if (!attachment || !attachment.dataURL) return;
+    
+    try {
+      const link = document.createElement('a');
+      link.href = attachment.dataURL;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      logger.info('📥 ファイルダウンロード開始', {
+        fileName: attachment.name,
+        fileSize: attachment.size
+      });
+    } catch (error: any) {
+      logger.error('❌ ファイルダウンロード失敗', {
+        fileName: attachment.name,
+        error: error.message
+      });
+    }
+  };
+
   return {
     attachFileToNode,
     removeFileFromNode,
+    renameFileInNode,
+    downloadFile,
     getImagePreview,
-    calculateStorageUsage
+    calculateStorageUsage,
+    isAppInitializing
   };
 };

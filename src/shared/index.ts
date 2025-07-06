@@ -3,14 +3,38 @@
  * Central export point for all shared functionality
  */
 
-// Export all types
-export * from './types';
+// Export core types only to avoid conflicts
+export type {
+  MindMapNode,
+  MindMapData,
+  MindMapSettings,
+  FileAttachment,
+  NodeMapLink,
+  AuthUser,
+  AuthState,
+  UIState,
+  Position,
+  MindMapHookReturn,
+  AuthHookReturn
+} from './types';
 
-// Export all shared components
+// Export constants
+export {
+  FILE_CONSTANTS,
+  LAYOUT_CONSTANTS,
+  TYPOGRAPHY_CONSTANTS,
+  COLOR_CONSTANTS,
+  DEFAULT_VALUES,
+  STORAGE_CONSTANTS,
+  VALIDATION_CONSTANTS
+} from './types';
+
+// Export shared components
 export * from './components';
 
-// Export all shared utilities
-export * from './utils';
+// Export shared utilities (selective to avoid conflicts)
+export { logger } from './utils/logger';
+export { deepClone } from './utils/dataUtils';
 
-// Export all shared hooks
+// Export shared hooks
 export * from './hooks';

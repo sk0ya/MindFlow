@@ -241,7 +241,7 @@ class PerformanceCollector {
       renderCount: totals.renderCount / metrics.length,
       averageRenderTime: totals.averageRenderTime / metrics.length,
       slowRenders: totals.slowRenders / metrics.length,
-      memoryUsage: totals.memoryUsage / metrics.length,
+      memoryUsage: (totals.memoryUsage || 0) / metrics.length,
       componentName
     };
   }
@@ -250,6 +250,7 @@ class PerformanceCollector {
     const results: Array<{ name: string; averageRenderTime: number }> = [];
 
     for (const [name, metrics] of this.metrics) {
+      const _metrics = metrics; // avoid unused variable warning
       const average = this.getAverageMetrics(name);
       if (average) {
         results.push({ name, averageRenderTime: average.averageRenderTime });
@@ -280,7 +281,7 @@ class PerformanceCollector {
     let totalComponents = 0;
     let totalWarnings = 0;
 
-    for (const [name, metrics] of this.metrics) {
+    for (const [_name, metrics] of this.metrics) {
       totalComponents++;
       const recent = metrics[metrics.length - 1];
       if (recent && recent.renderTime > PERFORMANCE_CONSTANTS.RENDER_TIME_WARNING) {

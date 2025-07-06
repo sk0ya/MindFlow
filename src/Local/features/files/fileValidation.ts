@@ -46,8 +46,8 @@ export const FILE_SIZE_LIMITS = {
 };
 
 // ファイル名の検証
-export const validateFileName = (fileName) => {
-  const errors = [];
+export const validateFileName = (fileName: string) => {
+  const errors: string[] = [];
   
   // 基本的な文字チェック
   const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
@@ -84,8 +84,8 @@ export const validateFileName = (fileName) => {
 };
 
 // MIMEタイプの検証
-export const validateMimeType = (file) => {
-  const errors = [];
+export const validateMimeType = (file: File) => {
+  const errors: string[] = [];
   
   // 危険なMIMEタイプチェック
   if (DANGEROUS_FILE_TYPES.includes(file.type)) {
@@ -109,14 +109,14 @@ export const validateMimeType = (file) => {
 };
 
 // ファイル拡張子とMIMEタイプの整合性チェック
-export const validateFileConsistency = (file) => {
-  const errors = [];
+export const validateFileConsistency = (file: File) => {
+  const errors: string[] = [];
   
   const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
   const mimeType = file.type;
   
   // 拡張子とMIMEタイプの対応チェック
-  let expectedMimeTypes = [];
+  let expectedMimeTypes: string[] = [];
   
   Object.entries(ALLOWED_FILE_TYPES.images).forEach(([mime, config]) => {
     if (config.extensions.includes(extension)) {
@@ -141,8 +141,8 @@ export const validateFileConsistency = (file) => {
 };
 
 // ファイルサイズの検証
-export const validateFileSize = (file) => {
-  const errors = [];
+export const validateFileSize = (file: File) => {
+  const errors: string[] = [];
   
   // 単一ファイルサイズチェック
   if (file.size > FILE_SIZE_LIMITS.single) {
@@ -151,7 +151,7 @@ export const validateFileSize = (file) => {
   
   // ファイルタイプ別サイズチェック
   const allAllowedTypes = { ...ALLOWED_FILE_TYPES.images, ...ALLOWED_FILE_TYPES.documents };
-  const typeConfig = allAllowedTypes[file.type];
+  const typeConfig = allAllowedTypes[file.type as keyof typeof allAllowedTypes];
   
   if (typeConfig && file.size > typeConfig.maxSize) {
     errors.push(`このファイルタイプのサイズ制限を超えています: ${(file.size / 1024 / 1024).toFixed(1)}MB > ${typeConfig.maxSize / 1024 / 1024}MB`);
@@ -164,9 +164,9 @@ export const validateFileSize = (file) => {
 };
 
 // ファイル内容の基本チェック（マジックナンバー）
-export const validateFileContent = async (file) => {
+export const validateFileContent = async (file: File) => {
   return new Promise((resolve) => {
-    const errors = [];
+    const errors: string[] = [];
     
     // ファイルサイズが0の場合
     if (file.size === 0) {
@@ -178,11 +178,16 @@ export const validateFileContent = async (file) => {
     // ファイルの最初の数バイトを読み取ってマジックナンバーをチェック
     const reader = new FileReader();
     reader.onload = (e) => {
-      const arrayBuffer = e.target.result;
+      if (!e.target?.result) {
+        errors.push('ファイルの読み取りに失敗しました');
+        resolve({ isValid: false, errors });
+        return;
+      }
+      const arrayBuffer = e.target.result as ArrayBuffer;
       const uint8Array = new Uint8Array(arrayBuffer);
       
       // 基本的なマジックナンバーチェック
-      const magicNumbers = {
+      const magicNumbers: Record<string, number[]> = {
         'image/jpeg': [0xFF, 0xD8, 0xFF],
         'image/png': [0x89, 0x50, 0x4E, 0x47],
         'image/gif': [0x47, 0x49, 0x46],
@@ -192,7 +197,7 @@ export const validateFileContent = async (file) => {
       const expectedMagic = magicNumbers[file.type];
       if (expectedMagic) {
         const actualMagic = Array.from(uint8Array.slice(0, expectedMagic.length));
-        const matches = expectedMagic.every((byte, index) => byte === actualMagic[index]);
+        const matches = expectedMagic.every((byte: number, index: number) => byte === actualMagic[index]);
         
         if (!matches) {
           errors.push(`ファイルの内容がファイルタイプと一致しません: ${file.type}`);
@@ -217,9 +222,9 @@ export const validateFileContent = async (file) => {
 };
 
 // 総合的なファイル検証
-export const validateFile = async (file) => {
-  const allErrors = [];
-  const warnings = [];
+export const validateFile = async (file: File) => {
+  const allErrors: string[] = [];
+  const warnings: string[] = [];
   
   try {
     // 1. ファイル名検証
@@ -247,7 +252,7 @@ export const validateFile = async (file) => {
     }
     
     // 5. ファイル内容検証（非同期）
-    const contentValidation = await validateFileContent(file);
+    const contentValidation = await validateFileContent(file) as { isValid: boolean; errors: string[] };
     if (!contentValidation.isValid) {
       allErrors.push(...contentValidation.errors);
     }
@@ -302,8 +307,8 @@ export const validateFile = async (file) => {
 };
 
 // 複数ファイルの検証
-export const validateMultipleFiles = async (files) => {
-  const results = [];
+export const validateMultipleFiles = async (files: File[]) => {
+  const results: any[] = [];
   let totalSize = 0;
   
   for (const file of files) {
@@ -335,12 +340,12 @@ export const validateMultipleFiles = async (files) => {
 };
 
 // セキュリティレポートの生成
-export const generateSecurityReport = (validationResults) => {
+export const generateSecurityReport = (validationResults: any[]) => {
   const report = {
     timestamp: new Date().toISOString(),
     totalFiles: validationResults.length,
-    securityIssues: [],
-    recommendations: []
+    securityIssues: [] as any[],
+    recommendations: [] as any[]
   };
   
   validationResults.forEach((result, index) => {

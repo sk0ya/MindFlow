@@ -42,8 +42,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onShowShortcutHelper,
   onShowMapList,
   isLocalMode = false,
-  onToggleSidebar,
-  showSidebar = true
+  onToggleSidebar: _onToggleSidebar,
+  showSidebar: _showSidebar = true
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
   const [tempTitle, setTempTitle] = useState<string>(title);

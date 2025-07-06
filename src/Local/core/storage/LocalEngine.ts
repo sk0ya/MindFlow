@@ -1,5 +1,5 @@
 // ローカルストレージ専用エンジン
-import { deepClone, createInitialData } from '../../shared/types/dataTypes';
+import { createInitialData } from '../../shared/types/dataTypes';
 
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',
@@ -192,7 +192,7 @@ class LocalEngine {
       return { success: true, data: mapData };
     } catch (error) {
       console.error('Failed to create mind map:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
   }
 
@@ -229,7 +229,7 @@ class LocalEngine {
       return { success: true, data: updatedData };
     } catch (error) {
       console.error('Failed to update mind map:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
   }
 
@@ -345,7 +345,7 @@ export const addNode = async (mapId: string, nodeData: any) => {
     };
   } catch (error) {
     console.error('Failed to add node:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 };
 

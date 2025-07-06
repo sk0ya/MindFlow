@@ -1,4 +1,3 @@
-import React from 'react';
 import { StorageMode } from '../../../core/storage/types';
 import './StorageModeSelector.css';
 

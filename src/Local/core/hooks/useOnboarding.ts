@@ -27,7 +27,7 @@ export const useOnboarding = () => {
         });
         
         // 初回ローカル利用時のみオンボーディングを表示
-        const shouldShow = isFirstTime || (isLocalMode && welcomeEnabled);
+        const shouldShow = isFirstTime || (isLocalMode && (welcomeEnabled ?? false));
         setShouldShowOnboarding(shouldShow);
         
       } catch (error) {

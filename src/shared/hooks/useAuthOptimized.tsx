@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, createContext, useContext, ReactNode, useRef, useCallback } from 'react';
-import { safeAsync, withRetry, errorHandler, ERROR_CODES } from '../utils/errorHandling';
+import { safeAsync, withRetry, errorHandler } from '../utils/errorHandling';
 
 interface AuthUser {
   id: string;

@@ -14,12 +14,12 @@ export const useMindMap = (isAppReady = false) => {
   
   // デバッグログ（初回または状態変化時のみ）
   useEffect(() => {
-    if (!debugLogged || (dataHook.data?.id && !debugLogged)) {
+    if (dataHook.data && (!debugLogged || (dataHook.data.id && !debugLogged))) {
       console.log('🔧 useMindMap called with isAppReady:', isAppReady);
-      console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data?.title });
+      console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data.title });
       setDebugLogged(true);
     }
-  }, [isAppReady, dataHook.data?.id, debugLogged]);
+  }, [isAppReady, dataHook.data, debugLogged]);
   
   // マルチマップ管理
   const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
@@ -31,7 +31,7 @@ export const useMindMap = (isAppReady = false) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   
-  const navigateToDirection = useCallback((direction) => {
+  const navigateToDirection = useCallback((direction: string) => {
     console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
     
     if (!nodeHook.selectedNodeId || !dataHook.data?.rootNode) {
@@ -40,7 +40,7 @@ export const useMindMap = (isAppReady = false) => {
     }
     
     const allNodes = nodeHook.flattenNodes(dataHook.data.rootNode);
-    const currentNode = nodeHook.findNode(nodeHook.selectedNodeId);
+    const currentNode = nodeHook.findNode(nodeHook.selectedNodeId) as any;
     if (!currentNode) {
       console.log('⚠️ Navigation cancelled: current node not found');
       return;
@@ -50,7 +50,7 @@ export const useMindMap = (isAppReady = false) => {
     let minDistance = Infinity;
     
     // 座標ベースで方向にあるノードを探す
-    allNodes.forEach(node => {
+    allNodes.forEach((node: any) => {
       if (node.id === nodeHook.selectedNodeId) return;
       
       const dx = node.x - currentNode.x;
@@ -98,7 +98,7 @@ export const useMindMap = (isAppReady = false) => {
           // 左方向: 前の兄弟ノードを選択
           const leftParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
           if (leftParent && leftParent.children) {
-            const currentIndex = leftParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
+            const currentIndex = leftParent.children.findIndex((child: any) => child.id === nodeHook.selectedNodeId);
             targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
           }
           break;
@@ -106,7 +106,7 @@ export const useMindMap = (isAppReady = false) => {
           // 右方向: 次の兄弟ノードを選択
           const rightParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
           if (rightParent && rightParent.children) {
-            const currentIndex = rightParent.children.findIndex(child => child.id === nodeHook.selectedNodeId);
+            const currentIndex = rightParent.children.findIndex((child: any) => child.id === nodeHook.selectedNodeId);
             targetNode = currentIndex < rightParent.children.length - 1 
               ? rightParent.children[currentIndex + 1] : null;
           }
@@ -193,7 +193,7 @@ export const useMindMap = (isAppReady = false) => {
     createMindMap: multiHook.createMindMap,
     renameMindMap: multiHook.renameMindMap,
     deleteMindMapById: multiHook.deleteMindMapById,
-    switchToMap: (mapId, selectRoot = false) => {
+    switchToMap: (mapId: string, selectRoot = false) => {
       return multiHook.switchToMap(
         mapId, 
         selectRoot, 

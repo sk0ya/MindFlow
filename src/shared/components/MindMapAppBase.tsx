@@ -5,7 +5,6 @@
 
 import React, { useState, useCallback } from 'react';
 import type { 
-  MindMapData, 
   MindMapNode, 
   AuthState,
   MindMapHookReturn 
@@ -28,6 +27,7 @@ export interface MindMapAppBaseProps {
   // Event handlers that modes can customize
   onModeChange?: (mode: 'local' | 'cloud') => void;
   onAuthModalShow?: () => void;
+  children?: React.ReactNode;
   onLogout?: () => void;
   
   // UI customization
@@ -135,19 +135,19 @@ export const useSharedKeyboardShortcuts = (
 // Main base component
 export const MindMapAppBase: React.FC<MindMapAppBaseProps> = ({
   mindMapHook,
-  authState,
+  authState: _authState,
   isLoading,
   error,
   mode,
-  showSidebar = false,
-  showFileHandling = false,
-  showRealtime = false,
-  onModeChange,
-  onAuthModalShow,
-  onLogout,
-  additionalToolbarItems,
-  additionalPanels,
-  customFooter,
+  showSidebar: _showSidebar = false,
+  showFileHandling: _showFileHandling = false,
+  showRealtime: _showRealtime = false,
+  onModeChange: _onModeChange,
+  onAuthModalShow: _onAuthModalShow,
+  onLogout: _onLogout,
+  additionalToolbarItems: _additionalToolbarItems,
+  additionalPanels: _additionalPanels,
+  customFooter: _customFooter,
   children
 }) => {
   const {
@@ -157,7 +157,7 @@ export const MindMapAppBase: React.FC<MindMapAppBaseProps> = ({
     editText,
     setSelectedNodeId,
     findNode,
-    updateTitle,
+    updateTitle: _updateTitle,
     addChildNode,
     deleteNode,
     startEdit,
@@ -165,13 +165,9 @@ export const MindMapAppBase: React.FC<MindMapAppBaseProps> = ({
   } = mindMapHook;
 
   // Shared UI state
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [_zoom, _setZoom] = useState(1);
+  const [_pan, _setPan] = useState({ x: 0, y: 0 });
 
-  // Shared handlers
-  const handleNodeSelect = useCallback((nodeId: string | null) => {
-    setSelectedNodeId(nodeId);
-  }, [setSelectedNodeId]);
 
   const handleAddChild = useCallback((parentId: string, text: string = '', autoEdit: boolean = false) => {
     addChildNode(parentId, text, autoEdit);
@@ -230,7 +226,7 @@ export const MindMapAppBase: React.FC<MindMapAppBaseProps> = ({
       {children}
       
       {/* Shared footer */}
-      {customFooter || (
+      {_customFooter || (
         <footer className="footer">
           <div>
             <span className="footer-brand">© 2024 MindFlow</span>
@@ -246,7 +242,7 @@ export const MindMapAppBase: React.FC<MindMapAppBaseProps> = ({
       )}
       
       {/* Additional panels from specific modes */}
-      {additionalPanels}
+      {_additionalPanels}
     </div>
   );
 };

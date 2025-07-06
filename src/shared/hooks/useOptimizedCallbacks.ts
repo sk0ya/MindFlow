@@ -3,7 +3,7 @@
  * Provides memoized callbacks with dependency tracking
  */
 
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 
 // Hook to create stable callbacks that only change when dependencies change
 export const useStableCallback = <T extends (...args: any[]) => any>(
@@ -170,7 +170,9 @@ export const useExpensiveValue = <T>(
     // Limit cache size
     if (cacheRef.current.size > maxCacheSize) {
       const firstKey = cacheRef.current.keys().next().value;
-      cacheRef.current.delete(firstKey);
+      if (firstKey !== undefined) {
+        cacheRef.current.delete(firstKey);
+      }
     }
     
     return newValue;
@@ -224,7 +226,7 @@ export const useCallbackGroup = <T extends Record<string, (...args: any[]) => an
     const memoizedCallbacks = {} as T;
     
     for (const [key, callback] of Object.entries(callbacks)) {
-      memoizedCallbacks[key as keyof T] = callback;
+      (memoizedCallbacks as any)[key] = callback;
     }
     
     return memoizedCallbacks;

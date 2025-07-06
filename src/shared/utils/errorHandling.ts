@@ -292,11 +292,12 @@ class GlobalErrorHandler {
 export const globalErrorHandler = new GlobalErrorHandler();
 
 // Setup default error handlers
-globalErrorHandler.addHandler((error: AppError) => {
+globalErrorHandler.addHandler((error: Error | AppError) => {
+  const appError = isAppError(error) ? error : classifyError(error);
   // Show user notification for high/critical errors
-  if (error.severity === 'high' || error.severity === 'critical') {
+  if (appError.severity === 'high' || appError.severity === 'critical') {
     // TODO: Integrate with notification system
-    console.log('Would show user notification for:', error.message);
+    console.log('Would show user notification for:', appError.message);
   }
 });
 
