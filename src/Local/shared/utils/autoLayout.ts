@@ -173,12 +173,21 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         const leftChildren: MindMapNode[] = [];
         const rightChildren: MindMapNode[] = [];
 
-        // 子ノードを左右に振り分け（偶数インデックスは右、奇数は左）
+        // 子ノードを左右に振り分け（最初の4つは右、次の4つは左、その後は交互）
         node.children.forEach((child: MindMapNode, index: number) => {
-          if (index % 2 === 0) {
+          if (index < 4) {
+            // 最初の4つは右側
             rightChildren.push(child);
-          } else {
+          } else if (index < 8) {
+            // 次の4つは左側
             leftChildren.push(child);
+          } else {
+            // 8つ以降は交互配置
+            if ((index - 8) % 2 === 0) {
+              rightChildren.push(child);
+            } else {
+              leftChildren.push(child);
+            }
           }
         });
 

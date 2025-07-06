@@ -52,6 +52,7 @@ export const useMindMap = (isAppReady = false) => {
     deleteNode: nodeHook.deleteNode,
     dragNode: nodeHook.dragNode,
     changeParent: nodeHook.changeParent,
+    changeSiblingOrder: nodeHook.changeSiblingOrder,
     findNode: nodeHook.findNode,
     findParentNode: nodeHook.findParentNode,
     flattenNodes: nodeHook.flattenNodes,

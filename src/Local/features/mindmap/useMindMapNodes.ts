@@ -329,6 +329,102 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     updateNode(nodeId, { x, y });
   };
 
+  // 兄弟ノードの順序を変更（Local版）
+  const changeSiblingOrder = async (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true): Promise<boolean> => {
+    console.log('🔄 兄弟順序変更開始:', { draggedNodeId, targetNodeId, insertBefore });
+    
+    if (draggedNodeId === 'root' || targetNodeId === 'root' || draggedNodeId === targetNodeId) {
+      console.log('🚫 ルートノードまたは同一ノードの順序変更をスキップ');
+      return false;
+    }
+    
+    // 両方のノードの親を確認
+    const draggedParent = findParentNode(draggedNodeId);
+    const targetParent = findParentNode(targetNodeId);
+    
+    if (!draggedParent || !targetParent || draggedParent.id !== targetParent.id) {
+      console.log('🚫 異なる親を持つノード同士の順序変更はできません');
+      return false;
+    }
+    
+    const currentData = dataRef.current;
+    if (!currentData || !draggedParent.children) return false;
+    
+    const clonedData = deepClone(currentData);
+    
+    // 親ノード内での順序変更処理
+    const reorderSiblings = (node: MindMapNode): MindMapNode => {
+      if (node.id === draggedParent.id && node.children) {
+        const children = [...node.children];
+        
+        // ドラッグされたノードとターゲットノードのインデックスを取得
+        const draggedIndex = children.findIndex(child => child.id === draggedNodeId);
+        const targetIndex = children.findIndex(child => child.id === targetNodeId);
+        
+        if (draggedIndex === -1 || targetIndex === -1) {
+          console.error('❌ ノードのインデックスが見つかりません');
+          return node;
+        }
+        
+        // ドラッグされたノードを削除
+        const draggedNode = children.splice(draggedIndex, 1)[0];
+        
+        // 新しい挿入位置を計算（削除後のインデックスを考慮）
+        let newTargetIndex = targetIndex;
+        if (draggedIndex < targetIndex) {
+          newTargetIndex--; // ドラッグノードが前にあった場合、削除でインデックスが1つ減る
+        }
+        
+        // 挿入位置を決定
+        const insertIndex = insertBefore ? newTargetIndex : newTargetIndex + 1;
+        
+        // 新しい位置に挿入
+        children.splice(insertIndex, 0, draggedNode);
+        
+        console.log('🔄 順序変更完了:', { 
+          draggedIndex, 
+          targetIndex: newTargetIndex, 
+          insertIndex,
+          newOrder: children.map(c => c.id)
+        });
+        
+        return { ...node, children };
+      }
+      
+      return {
+        ...node,
+        children: node.children?.map(child => reorderSiblings(child)) || []
+      };
+    };
+    
+    let newRootNode = reorderSiblings(clonedData.rootNode);
+    
+    if (clonedData.settings?.autoLayout !== false) {
+      newRootNode = applyAutoLayout(newRootNode);
+    }
+    
+    const newData = { ...clonedData, rootNode: newRootNode, updatedAt: new Date().toISOString() };
+    
+    try {
+      await updateData(newData, {
+        skipHistory: false,
+        immediate: true,
+        operationType: 'sibling_reorder',
+        operationData: {
+          draggedNodeId,
+          targetNodeId,
+          insertBefore,
+          parentId: draggedParent.id
+        }
+      });
+      console.log('✅ 兄弟順序変更完了:', { draggedNodeId, targetNodeId });
+      return true;
+    } catch (error) {
+      console.error('❌ 兄弟順序変更エラー:', error);
+      return false;
+    }
+  };
+
   // ノードの親を変更（Local版）
   const changeParent = async (nodeId: string, newParentId: string): Promise<boolean> => {
     console.log('🔄 changeParent関数開始:', { nodeId, newParentId });
@@ -570,6 +666,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     deleteNode,
     dragNode,
     changeParent,
+    changeSiblingOrder,
     findNode,
     findParentNode,
     flattenNodes,

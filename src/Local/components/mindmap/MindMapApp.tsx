@@ -40,6 +40,7 @@ const MindMapApp: React.FC = () => {
     addSiblingNode,
     deleteNode,
     changeParent,
+    changeSiblingOrder,
     findNode,
     flattenNodes,
     applyFullLayout,
@@ -218,6 +219,7 @@ const MindMapApp: React.FC = () => {
                 onStartEdit={startEdit}
                 onFinishEdit={finishEdit}
                 onChangeParent={changeParent}
+                onChangeSiblingOrder={changeSiblingOrder}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}
                 onDeleteNode={deleteNode}

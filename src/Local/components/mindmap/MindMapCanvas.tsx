@@ -13,6 +13,7 @@ interface MindMapCanvasProps {
   onStartEdit: (nodeId: string) => void;
   onFinishEdit: (nodeId: string, text: string) => void;
   onChangeParent?: (nodeId: string, newParentId: string) => void;
+  onChangeSiblingOrder?: (draggedNodeId: string, targetNodeId: string, insertBefore: boolean) => void;
   onAddChild: (parentId: string) => void;
   onAddSibling: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
@@ -56,6 +57,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onStartEdit,
   onFinishEdit,
   onChangeParent,
+  onChangeSiblingOrder,
   onAddChild,
   onAddSibling,
   onDeleteNode,
@@ -175,26 +177,67 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     });
   }, [getNodeAtPosition]);
 
-  // ドラッグ終了時の処理（親変更のみ）
+  // ドラッグ終了時の処理（親変更または兄弟順序変更）
   const handleDragEnd = useCallback((nodeId: string, _x: number, _y: number) => {
     setDragState(prevState => {
       console.log('🎯 handleDragEnd 実行:', { 
         nodeId, 
         dropTargetId: prevState.dropTargetId, 
-        hasOnChangeParent: !!onChangeParent 
+        hasOnChangeParent: !!onChangeParent,
+        hasOnChangeSiblingOrder: !!onChangeSiblingOrder
       });
       
       if (prevState.dropTargetId && prevState.dropTargetId !== nodeId) {
-        // 親要素を変更
-        console.log('🎯 ドロップターゲット検出、親変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
-        if (onChangeParent) {
-          console.log('🔄 changeParent関数呼び出し');
-          onChangeParent(nodeId, prevState.dropTargetId);
-        } else {
-          console.error('❌ onChangeParent関数が未定義');
+        // ドラッグしたノードと対象ノードの親を確認
+        const draggedNode = allNodes.find(n => n.id === nodeId);
+        const targetNode = allNodes.find(n => n.id === prevState.dropTargetId);
+        
+        if (draggedNode && targetNode) {
+          // 親を特定するためのヘルパー関数
+          const findParent = (childId: string): MindMapNode | null => {
+            const findParentRecursive = (node: MindMapNode): MindMapNode | null => {
+              if (node.children) {
+                for (const child of node.children) {
+                  if (child.id === childId) return node;
+                  const found = findParentRecursive(child);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+            return findParentRecursive(data.rootNode);
+          };
+          
+          const draggedParent = findParent(nodeId);
+          const targetParent = findParent(prevState.dropTargetId);
+          
+          console.log('🔍 親要素確認:', {
+            draggedParentId: draggedParent?.id,
+            targetParentId: targetParent?.id,
+            areSameParent: draggedParent?.id === targetParent?.id
+          });
+          
+          if (draggedParent && targetParent && draggedParent.id === targetParent.id) {
+            // 同じ親を持つ場合は兄弟順序変更
+            console.log('🔄 兄弟順序変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
+            if (onChangeSiblingOrder) {
+              // デフォルトでは対象ノードの前に挿入
+              onChangeSiblingOrder(nodeId, prevState.dropTargetId, true);
+            } else {
+              console.error('❌ onChangeSiblingOrder関数が未定義');
+            }
+          } else {
+            // 異なる親を持つ場合は親変更
+            console.log('🔄 親変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
+            if (onChangeParent) {
+              onChangeParent(nodeId, prevState.dropTargetId);
+            } else {
+              console.error('❌ onChangeParent関数が未定義');
+            }
+          }
         }
       } else {
-        console.log('🚫 ドロップターゲットなし、親変更をスキップ');
+        console.log('🚫 ドロップターゲットなし、操作をスキップ');
       }
       
       return {
@@ -203,7 +246,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         dropTargetId: null
       };
     });
-  }, [onChangeParent]);
+  }, [onChangeParent, onChangeSiblingOrder, allNodes, data.rootNode]);
   
   const connections: Connection[] = [];
   allNodes.forEach(node => {
