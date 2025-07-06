@@ -1,6 +1,7 @@
 // ローカルストレージ専用エンジン
 import { createInitialData } from '../../shared/types/dataTypes';
 import type { MindMapData, MindMapNode, MindMapSettings } from '../../shared/types/dataTypes';
+import { debug, warn, info, error } from '../../shared/utils/logger';
 
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',
@@ -16,34 +17,34 @@ class LocalEngine {
 
   private initializeStorage() {
     // 初回起動時の初期化
-    console.log('🔧 LocalEngine: Initializing storage...');
+    debug('LocalEngine: Initializing storage...');
     
     const mapList = localStorage.getItem(STORAGE_KEYS.MAP_LIST);
     const currentMapId = localStorage.getItem(STORAGE_KEYS.CURRENT_MAP_ID);
     
-    console.log('🔧 LocalEngine: Storage state:', {
+    debug('LocalEngine: Storage state', {
       hasMapList: !!mapList,
       hasCurrentMapId: !!currentMapId,
       mapListContent: mapList
     });
     
     if (!mapList) {
-      console.log('🔧 LocalEngine: No map list found, creating initial map...');
+      debug('LocalEngine: No map list found, creating initial map...');
       const initialMap = createInitialData();
       const createResult = this.createMindMap(initialMap);
       
       if (createResult.success) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, initialMap.id);
-        console.log('🔧 LocalEngine: Initial map created:', initialMap.id);
+        debug('LocalEngine: Initial map created', { mapId: initialMap.id });
       } else {
-        console.error('🔧 LocalEngine: Failed to create initial map:', createResult.error);
+        error('LocalEngine: Failed to create initial map', { error: createResult.error });
       }
     } else if (!currentMapId) {
       // マップリストはあるが現在のマップIDがない場合
       const mapIds = JSON.parse(mapList);
       if (mapIds.length > 0) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, mapIds[0]);
-        console.log('🔧 LocalEngine: Set current map ID to first available:', mapIds[0]);
+        debug('LocalEngine: Set current map ID to first available', { mapId: mapIds[0] });
       }
     }
   }

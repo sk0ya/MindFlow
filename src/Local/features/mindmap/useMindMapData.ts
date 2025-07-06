@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getCurrentMindMap, updateMindMap as saveMindMap } from '../../core/storage/LocalEngine';
 import { deepClone, assignColorsToExistingNodes, createInitialData, MindMapData, MindMapSettings } from '../../shared/types/dataTypes';
 import { DataIntegrityChecker } from '../../shared/utils/dataIntegrityChecker';
+import { debug, warn, info, error } from '../../shared/utils/logger';
 
 // データ管理専用のカスタムフック（ローカルモード専用）
 export const useMindMapData = (isAppReady = false) => {
@@ -22,18 +23,18 @@ export const useMindMapData = (isAppReady = false) => {
     // データ整合性チェック
     const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(safeDataToSave);
     if (!integrityResult.isValid) {
-      console.warn('⚠️ 保存前データ整合性チェック失敗');
+      warn('保存前データ整合性チェック失敗');
       DataIntegrityChecker.logIntegrityReport(integrityResult, safeDataToSave);
       
       const criticalIssues = integrityResult.issues.filter(issue => issue.severity === 'critical');
       if (criticalIssues.length > 0) {
-        console.warn('🔧 重要な問題を検出、自動修復を試行...');
+        warn('重要な問題を検出、自動修復を試行...');
         const { repaired, issues } = DataIntegrityChecker.repairMindMapData(safeDataToSave);
         if (repaired) {
-          console.log('✅ データ修復完了', { repairedIssues: issues.length });
+          info('データ修復完了', { repairedIssues: issues.length });
           safeDataToSave = repaired;
         } else {
-          console.error('❌ データ修復失敗、保存を中止');
+          error('データ修復失敗、保存を中止');
           return { success: false, error: 'Data integrity check failed' };
         }
       }
@@ -43,16 +44,16 @@ export const useMindMapData = (isAppReady = false) => {
     try {
       await saveMindMap(safeDataToSave.id, safeDataToSave);
       const timestamp = new Date().toLocaleTimeString();
-      console.log(`💾 保存完了 (${timestamp}):`, safeDataToSave.title);
+      debug(`保存完了 (${timestamp}): ${safeDataToSave.title}`);
       
       // 手動保存の場合は特別なメッセージを表示
       if (options.isManualSave) {
-        console.log('✨ 手動保存が正常に完了しました');
+        info('手動保存が正常に完了しました');
       }
       
       return { success: true, timestamp };
     } catch (error: unknown) {
-      console.error('❌ ローカル保存失敗:', error);
+      error('ローカル保存失敗', { error });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   };
@@ -73,11 +74,11 @@ export const useMindMapData = (isAppReady = false) => {
     if (!isAppReady || data !== null) return;
 
     const initializeData = async () => {
-      console.log('🚀 データ初期化開始 (isAppReady: true)');
+      debug('データ初期化開始', { isAppReady });
       
       // ローカルストレージからデータ取得
       const mindMap = await getCurrentMindMap();
-      console.log('📊 getCurrentMindMap result:', { 
+      debug('getCurrentMindMap result', { 
         hasData: !!mindMap, 
         hasRootNode: !!(mindMap?.rootNode),
         id: mindMap?.id,
@@ -85,14 +86,14 @@ export const useMindMapData = (isAppReady = false) => {
       });
       
       if (mindMap && mindMap.rootNode) {
-        console.log('📊 ローカルストレージから既存データ読み込み');
+        debug('ローカルストレージから既存データ読み込み');
         const dataWithColors = assignColorsToExistingNodes(mindMap);
         setData(dataWithColors);
         // 初期化時の履歴を設定
         setHistory([deepClone(dataWithColors)]);
         setHistoryIndex(0);
       } else {
-        console.log('📊 新規マップ作成');
+        debug('新規マップ作成');
         const newData = createInitialData();
         setData(newData);
         // 新規作成時は即座に保存
@@ -101,7 +102,7 @@ export const useMindMapData = (isAppReady = false) => {
         setHistory([deepClone(newData)]);
         setHistoryIndex(0);
       }
-      console.log('✅ データ初期化完了');
+      debug('データ初期化完了');
     };
 
     initializeData();
@@ -135,7 +136,7 @@ export const useMindMapData = (isAppReady = false) => {
     const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
     
     if (isCurrentlyEditing && !options.allowDuringEdit) {
-      console.log('✋ データ更新スキップ: ノード編集中のため保護', {
+      debug('データ更新スキップ: ノード編集中のため保護', {
         editingValue: editingInput.value,
         updateSource: options.source || 'unknown',
         isExternal: options.skipHistory || false
@@ -162,7 +163,7 @@ export const useMindMapData = (isAppReady = false) => {
       startAutoSave();
     }
     
-    console.log('🔄 データ更新完了:', {
+    debug('データ更新完了', {
       id: newData.id,
       immediate: options.immediate || false,
       saveImmediately: options.saveImmediately || false,
@@ -223,7 +224,7 @@ export const useMindMapData = (isAppReady = false) => {
   // 初期化時に履歴を設定
   useEffect(() => {
     if (data && history.length === 0) {
-      console.log('📝 Setting initial history for data:', data.id);
+      debug('Setting initial history for data', { dataId: data.id });
       setHistory([deepClone(data)]);
       setHistoryIndex(0);
     }
