@@ -99,7 +99,7 @@ export const useMindMapNodes = (data, updateData) => {
       immediate: true
     };
     
-    await updateData(clonedData, updateOptions);
+    await updateData(clonedData, { ...updateOptions, saveImmediately: true });
     
     console.log('✅ ローカル状態更新完了:', nodeId);
   };
@@ -147,7 +147,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, immediate: true });
+    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
     console.log('✅ 子ノード作成完了:', newChild.id);
     
@@ -210,7 +210,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, immediate: true });
+    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
     console.log('✅ 兄弟ノード作成完了:', newSibling.id);
     
@@ -274,7 +274,7 @@ export const useMindMapNodes = (data, updateData) => {
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, { skipHistory: false, immediate: true });
+    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
     console.log('✅ ローカル状態更新完了:', nodeId);
     

@@ -14,7 +14,7 @@ export const useMindMapData = (isAppReady = false) => {
   
   // ローカルストレージへの保存機能
   const saveImmediately = async (dataToSave = data, options = {}) => {
-    if (!dataToSave) return;
+    if (!dataToSave) return { success: false, error: 'No data to save' };
 
     // データ整合性チェック
     const integrityResult = DataIntegrityChecker.checkMindMapIntegrity(dataToSave);
@@ -31,17 +31,26 @@ export const useMindMapData = (isAppReady = false) => {
           dataToSave = repaired;
         } else {
           console.error('❌ データ修復失敗、保存を中止');
-          return;
+          return { success: false, error: 'Data integrity check failed' };
         }
       }
     }
     
     // ローカルストレージに直接保存
     try {
-      await saveMindMap(dataToSave.id, dataToSave);
-      console.log('💾 ローカル保存完了:', dataToSave.title);
+      const result = await saveMindMap(dataToSave.id, dataToSave);
+      const timestamp = new Date().toLocaleTimeString();
+      console.log(`💾 保存完了 (${timestamp}):`, dataToSave.title);
+      
+      // 手動保存の場合は特別なメッセージを表示
+      if (options.isManualSave) {
+        console.log('✨ 手動保存が正常に完了しました');
+      }
+      
+      return { success: true, timestamp };
     } catch (error) {
       console.error('❌ ローカル保存失敗:', error);
+      return { success: false, error: error.message };
     }
   };
 
@@ -138,8 +147,8 @@ export const useMindMapData = (isAppReady = false) => {
     if (options.saveImmediately) {
       // 即座保存（重要な操作用）
       await saveImmediately(newData);
-    } else {
-      // 通常の自動保存（2秒デバウンス）- デフォルトで自動保存を有効に
+    } else if (newData.settings?.autoSave !== false) {
+      // 自動保存が有効な場合のみ自動保存を開始（デフォルトは有効）
       startAutoSave();
     }
     
@@ -166,7 +175,7 @@ export const useMindMapData = (isAppReady = false) => {
       const previousData = history[historyIndex - 1];
       setData(previousData);
       setHistoryIndex(prev => prev - 1);
-      await saveMindMap(previousData.id, previousData);
+      await saveImmediately(previousData, { isManualSave: true });
     }
   };
 
@@ -176,7 +185,7 @@ export const useMindMapData = (isAppReady = false) => {
       const nextData = history[historyIndex + 1];
       setData(nextData);
       setHistoryIndex(prev => prev + 1);
-      await saveMindMap(nextData.id, nextData);
+      await saveImmediately(nextData, { isManualSave: true });
     }
   };
 
@@ -228,7 +237,7 @@ export const useMindMapData = (isAppReady = false) => {
     updateSettings,
     updateTitle,
     changeTheme,
-    saveMindMap: async () => await saveMindMap(data.id, data),
+    saveMindMap: async () => await saveImmediately(data, { isManualSave: true }),
     setHistory,
     setHistoryIndex,
     triggerLocalSync: async () => await saveImmediately()
