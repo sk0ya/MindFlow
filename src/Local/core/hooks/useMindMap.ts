@@ -1,25 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useMindMapData } from '../../features/mindmap/useMindMapData';
 import { useMindMapNodes } from '../../features/mindmap/useMindMapNodes';
 import { useMindMapFiles } from '../../features/files/useMindMapFiles';
 import { useMindMapMulti } from '../../features/mindmap/useMindMapMulti';
+import { useMindMapNavigation } from './useMindMapNavigation';
 
-// 緊急復旧: 完全に簡略化されたuseMindMap（常に同じフック数）
+// メインのマインドマップ管理hook
 export const useMindMap = (isAppReady = false) => {
-  // デバッグログを制限（初回のみ）
-  const [debugLogged, setDebugLogged] = useState(false);
-  
   // 🚨 重要: isAppReadyに関係なく、常に同じ順序でフックを呼び出す
   const dataHook = useMindMapData(isAppReady);
-  
-  // デバッグログ（初回または状態変化時のみ）
-  useEffect(() => {
-    if (dataHook.data && (!debugLogged || (dataHook.data.id && !debugLogged))) {
-      console.log('🔧 useMindMap called with isAppReady:', isAppReady);
-      console.log('📊 Data hook result:', { hasData: !!dataHook.data, title: dataHook.data.title });
-      setDebugLogged(true);
-    }
-  }, [isAppReady, dataHook.data, debugLogged]);
   
   // マルチマップ管理
   const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
@@ -27,100 +16,15 @@ export const useMindMap = (isAppReady = false) => {
   // ノード操作（dataがある場合のみ、refreshAllMindMapsを渡す）
   const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData, multiHook.refreshAllMindMaps);
   
-  // ナビゲーション（簡略化版）
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  
-  const navigateToDirection = useCallback((direction: string) => {
-    console.log('🧭 Navigate to direction:', direction, { selectedNodeId: nodeHook.selectedNodeId });
-    
-    if (!nodeHook.selectedNodeId || !dataHook.data?.rootNode) {
-      console.log('⚠️ Navigation cancelled: no selected node or data');
-      return;
-    }
-    
-    const allNodes = nodeHook.flattenNodes(dataHook.data.rootNode);
-    const currentNode = nodeHook.findNode(nodeHook.selectedNodeId);
-    if (!currentNode) {
-      console.log('⚠️ Navigation cancelled: current node not found');
-      return;
-    }
-    
-    let targetNode = null;
-    let minDistance = Infinity;
-    
-    // 座標ベースで方向にあるノードを探す
-    allNodes.forEach((node) => {
-      if (node.id === nodeHook.selectedNodeId) return;
-      
-      const dx = node.x - currentNode.x;
-      const dy = node.y - currentNode.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      let isInDirection = false;
-      
-      switch (direction) {
-        case 'up':
-          isInDirection = dy < -20 && Math.abs(dx) < Math.abs(dy);
-          break;
-        case 'down':
-          isInDirection = dy > 20 && Math.abs(dx) < Math.abs(dy);
-          break;
-        case 'left':
-          isInDirection = dx < -20 && Math.abs(dy) < Math.abs(dx);
-          break;
-        case 'right':
-          isInDirection = dx > 20 && Math.abs(dy) < Math.abs(dx);
-          break;
-      }
-      
-      if (isInDirection && distance < minDistance) {
-        minDistance = distance;
-        targetNode = node;
-      }
-    });
-    
-    // 方向にノードが見つからない場合は階層関係で代替
-    if (!targetNode) {
-      console.log('🔄 No node found in direction, trying hierarchical fallback');
-      
-      switch (direction) {
-        case 'up':
-          // 上方向: 親ノードを選択
-          targetNode = nodeHook.findParentNode(nodeHook.selectedNodeId);
-          break;
-        case 'down':
-          // 下方向: 最初の子ノードを選択
-          targetNode = currentNode.children && currentNode.children.length > 0 
-            ? currentNode.children[0] : null;
-          break;
-        case 'left':
-          // 左方向: 前の兄弟ノードを選択
-          const leftParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
-          if (leftParent && leftParent.children) {
-            const currentIndex = leftParent.children.findIndex((child) => child.id === nodeHook.selectedNodeId);
-            targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
-          }
-          break;
-        case 'right':
-          // 右方向: 次の兄弟ノードを選択
-          const rightParent = nodeHook.findParentNode(nodeHook.selectedNodeId);
-          if (rightParent && rightParent.children) {
-            const currentIndex = rightParent.children.findIndex((child) => child.id === nodeHook.selectedNodeId);
-            targetNode = currentIndex < rightParent.children.length - 1 
-              ? rightParent.children[currentIndex + 1] : null;
-          }
-          break;
-      }
-    }
-    
-    if (targetNode) {
-      console.log('✅ Navigation successful:', { from: nodeHook.selectedNodeId, to: targetNode.id, direction });
-      nodeHook.setSelectedNodeId(targetNode.id);
-    } else {
-      console.log('⚠️ No target node found for direction:', direction);
-    }
-  }, [nodeHook.selectedNodeId, dataHook.data, nodeHook.flattenNodes, nodeHook.findNode, nodeHook.findParentNode, nodeHook.setSelectedNodeId]);
+  // ナビゲーション
+  const navigation = useMindMapNavigation({
+    selectedNodeId: nodeHook.selectedNodeId,
+    data: dataHook.data,
+    findNode: nodeHook.findNode,
+    flattenNodes: nodeHook.flattenNodes,
+    findParentNode: nodeHook.findParentNode,
+    setSelectedNodeId: nodeHook.setSelectedNodeId
+  });
 
   // ファイル添付
   const fileHook = useMindMapFiles(
@@ -152,7 +56,7 @@ export const useMindMap = (isAppReady = false) => {
     findParentNode: nodeHook.findParentNode,
     flattenNodes: nodeHook.flattenNodes,
     applyAutoLayout: nodeHook.applyAutoLayout,
-    navigateToDirection,
+    navigateToDirection: navigation.navigateToDirection,
     
     // 編集
     startEdit: nodeHook.startEdit,
@@ -161,15 +65,12 @@ export const useMindMap = (isAppReady = false) => {
     // 折りたたみ
     toggleCollapse: nodeHook.toggleCollapse,
     
-    // ナビゲーション (簡略化)
-    zoom,
-    setZoom,
-    pan,
-    setPan,
-    resetView: () => {
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-    },
+    // ナビゲーション
+    zoom: navigation.zoom,
+    setZoom: navigation.setZoom,
+    pan: navigation.pan,
+    setPan: navigation.setPan,
+    resetView: navigation.resetView,
     
     // ファイル添付
     attachFileToNode: fileHook.attachFileToNode,
