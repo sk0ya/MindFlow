@@ -61,8 +61,29 @@ const Node: React.FC<NodeProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [mouseDownPos, setMouseDownPos] = useState<MousePosition | null>(null);
   const [isComposing, setIsComposing] = useState(false);
+  const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previousPosition = useRef({ x: node.x, y: node.y });
+  
+  // 位置変更を検出してレイアウトトランジション状態を管理
+  useEffect(() => {
+    const positionChanged = previousPosition.current.x !== node.x || previousPosition.current.y !== node.y;
+    if (positionChanged && !isDragging) {
+      setIsLayoutTransitioning(true);
+      previousPosition.current = { x: node.x, y: node.y };
+      
+      // 少し遅延してからトランジションを再有効化
+      const timeoutId = setTimeout(() => {
+        setIsLayoutTransitioning(false);
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      previousPosition.current = { x: node.x, y: node.y };
+    }
+    return undefined;
+  }, [node.x, node.y, isDragging]);
   
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -349,7 +370,7 @@ const Node: React.FC<NodeProps> = ({
             : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))'),
           opacity: isDragging ? 0.8 : 1,
           transform: isDragging ? 'scale(1.05)' : 'scale(1)',
-          transition: isDragging ? 'none' : 'all 0.2s ease'
+          transition: (isDragging || isLayoutTransitioning) ? 'none' : 'filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease'
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}

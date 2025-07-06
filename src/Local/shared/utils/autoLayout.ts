@@ -138,7 +138,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
     centerY = COORDINATES.DEFAULT_CENTER_Y,
     baseRadius = LAYOUT.RADIAL_BASE_RADIUS + 30, // 少し大きめ
     levelSpacing = LAYOUT.LEVEL_SPACING,
-    minVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN - 20,
+    minVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN,
     preserveRootPosition = false
   } = options;
 

@@ -60,7 +60,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     
     return mindMapLayoutPreserveRoot(rootNode, {
       centerX, centerY, baseRadius: 180, levelSpacing: 200,
-      minVerticalSpacing: 80, maxVerticalSpacing: 130
+      minVerticalSpacing: 40, maxVerticalSpacing: 65
     });
   };
 
@@ -496,7 +496,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     }
   };
 
-  // 折りたたみ状態をトグル（レイアウト最適化付き）
+  // 折りたたみ状態をトグル（スムーズなアニメーション付き）
   const toggleCollapse = async (nodeId: string): Promise<void> => {
     const currentData = dataRef.current;
     if (!currentData) return;
@@ -510,19 +510,33 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     
     const updatedRootNode = toggleNodeRecursive(clonedData.rootNode);
     
-    // 折りたたみ状態変更後に自動レイアウトを適用（設定が有効な場合）
-    let finalRootNode = updatedRootNode;
-    if (clonedData.settings?.autoLayout !== false) {
-      finalRootNode = applyAutoLayout(updatedRootNode);
-    }
-    
-    const newData: MindMapData = { 
+    // まず折りたたみ状態のみを更新（レイアウトは後で適用）
+    const intermediateData: MindMapData = { 
       ...clonedData, 
-      rootNode: finalRootNode,
+      rootNode: updatedRootNode,
       updatedAt: new Date().toISOString()
     };
     
-    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
+    await updateData(intermediateData, { skipHistory: false, immediate: true, saveImmediately: false });
+    
+    // 少し遅延を入れてからレイアウトを適用（自然なアニメーション）
+    if (clonedData.settings?.autoLayout !== false) {
+      setTimeout(async () => {
+        const currentDataForLayout = dataRef.current;
+        if (!currentDataForLayout) return;
+        
+        const layoutData = deepClone(currentDataForLayout);
+        const finalRootNode = applyAutoLayout(layoutData.rootNode);
+        
+        const finalData: MindMapData = { 
+          ...layoutData, 
+          rootNode: finalRootNode,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await updateData(finalData, { skipHistory: false, immediate: true, saveImmediately: true });
+      }, 30); // 30ms の遅延
+    }
   };
 
 
