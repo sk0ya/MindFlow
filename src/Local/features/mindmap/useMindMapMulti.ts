@@ -4,7 +4,7 @@ import { deepClone, assignColorsToExistingNodes, createInitialData, MindMapData,
 // ローカルモード専用：リアルタイム同期不要
 
 // マルチマップ管理専用のカスタムフック（ローカルモード専用）
-export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMapData) => void, _updateData: (data: MindMapData, options?: any) => void) => {
+export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMapData) => void, _updateData: (data: MindMapData, options?: { [key: string]: unknown }) => void) => {
   // マルチマップ管理用の状態
   const [allMindMaps, setAllMindMaps] = useState<MindMapData[]>([]);
   
@@ -184,7 +184,7 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
   };
 
   // マップ切り替え（完全分離版）
-  const switchToMap = async (mapId: string, selectRoot = false, setSelectedNodeId: ((id: string | null) => void) | null = null, setEditingNodeId: ((id: string | null) => void) | null = null, setEditText: ((text: string) => void) | null = null, _setHistory: any = null, _setHistoryIndex: any = null, finishEdit: ((nodeId: string, text: string) => void) | null = null) => {
+  const switchToMap = async (mapId: string, selectRoot = false, setSelectedNodeId: ((id: string | null) => void) | null = null, setEditingNodeId: ((id: string | null) => void) | null = null, setEditText: ((text: string) => void) | null = null, _setHistory: unknown = null, _setHistoryIndex: unknown = null, finishEdit: ((nodeId: string, text: string) => void) | null = null) => {
     console.log('📖 マップ切り替え開始:', mapId);
     
     try {

@@ -4,7 +4,7 @@ import { useMagicLink } from '../hooks/useMagicLink';
 import { useMindMap } from '../hooks/useMindMap';
 import { useOfflineSync, OfflineIndicator } from '../hooks/useOfflineSync';
 import { AuthModal } from './AuthModal';
-import type { StorageMode } from '../types';
+import type { StorageMode, MindMapNode } from '../types';
 import MindMapCanvas from './MindMapCanvas';
 import Toolbar from './Toolbar';
 import { ErrorBoundary } from '../../shared/components';
@@ -102,7 +102,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     if (!node || nodeId === 'root') return;
     
     // 親ノードを見つける
-    const findParent = (searchNode: any, targetId: string): any => {
+    const findParent = (searchNode: MindMapNode, targetId: string): MindMapNode | null => {
       if (!searchNode.children) return null;
       for (const child of searchNode.children) {
         if (child.id === targetId) return searchNode;
@@ -255,15 +255,15 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
     }
   }, [data, selectedNodeId, setSelectedNodeId]);
 
-  const flattenNodes = (node: any): any[] => {
+  const flattenNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
     if (node.children) {
-      node.children.forEach((child: any) => result.push(...flattenNodes(child)));
+      node.children.forEach((child: MindMapNode) => result.push(...flattenNodes(child)));
     }
     return result;
   };
 
-  const findParentNode = (root: any, targetId: string): any | null => {
+  const findParentNode = (root: MindMapNode, targetId: string): MindMapNode | null => {
     if (root.children) {
       for (const child of root.children) {
         if (child.id === targetId) return root;

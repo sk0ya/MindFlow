@@ -1,17 +1,8 @@
 import React from 'react';
+import { MindMapNode } from '../../shared/types/core';
 
 interface NodeProps {
-  node: {
-    id: string;
-    text: string;
-    x: number;
-    y: number;
-    children: any[];
-    fontSize?: number;
-    fontWeight?: string;
-    collapsed?: boolean;
-    color?: string;
-  };
+  node: MindMapNode;
   isSelected: boolean;
   isEditing: boolean;
   editText: string;

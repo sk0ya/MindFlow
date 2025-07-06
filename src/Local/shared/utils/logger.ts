@@ -11,7 +11,7 @@ interface LogEntry {
   level: LogLevelName;
   levelNumber: LogLevel;
   message: string;
-  meta: Record<string, any>;
+  meta: Record<string, unknown>;
   url: string;
   userAgent: string;
   sessionId: string;
@@ -23,7 +23,7 @@ interface LoggerOptions {
   outputs?: LogOutput[];
   maxStorageEntries?: number;
   remoteEndpoint?: string | null;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   filters?: Array<(logEntry: LogEntry) => boolean>;
   formatter?: (logEntry: LogEntry) => string;
   bufferSize?: number;
@@ -102,7 +102,7 @@ class Logger {
   public enabledOutputs: LogOutput[];
   public maxStorageEntries: number;
   public remoteEndpoint: string | null;
-  public context: Record<string, any>;
+  public context: Record<string, unknown>;
   public storageKey: string;
   public filters: Array<(logEntry: LogEntry) => boolean>;
   public formatter: (logEntry: LogEntry) => string;
@@ -141,7 +141,7 @@ class Logger {
   }
   
   // コンテキストの追加
-  addContext(key: string, value: any): void {
+  addContext(key: string, value: unknown): void {
     this.context[key] = value;
   }
   
@@ -151,7 +151,7 @@ class Logger {
   }
   
   // ログエントリーの作成
-  createLogEntry(level: LogLevel, message: string, meta: Record<string, any> = {}): LogEntry {
+  createLogEntry(level: LogLevel, message: string, meta: Record<string, unknown> = {}): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level: LOG_LEVEL_NAMES[level] as LogLevelName,
@@ -194,7 +194,7 @@ class Logger {
   }
   
   // ログの出力
-  log(level: LogLevel, message: string, meta: Record<string, any> = {}): void {
+  log(level: LogLevel, message: string, meta: Record<string, unknown> = {}): void {
     // レベルチェック
     if (level < this.level) return;
     
@@ -353,11 +353,11 @@ class Logger {
   }
   
   // 便利メソッド
-  debug(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.DEBUG, message, meta); }
-  info(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.INFO, message, meta); }
-  warn(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.WARN, message, meta); }
-  error(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.ERROR, message, meta); }
-  fatal(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.FATAL, message, meta); }
+  debug(message: string, meta?: Record<string, unknown>): void { this.log(LOG_LEVELS.DEBUG, message, meta); }
+  info(message: string, meta?: Record<string, unknown>): void { this.log(LOG_LEVELS.INFO, message, meta); }
+  warn(message: string, meta?: Record<string, unknown>): void { this.log(LOG_LEVELS.WARN, message, meta); }
+  error(message: string, meta?: Record<string, unknown>): void { this.log(LOG_LEVELS.ERROR, message, meta); }
+  fatal(message: string, meta?: Record<string, unknown>): void { this.log(LOG_LEVELS.FATAL, message, meta); }
   
   // ログの取得
   getLogs(filter: LogFilter = {}): LogEntry[] {
@@ -450,11 +450,11 @@ export const logger = new Logger({
 });
 
 // 便利な関数をエクスポート
-export const debug = (message: string, meta?: Record<string, any>): void => logger.debug(message, meta);
-export const info = (message: string, meta?: Record<string, any>): void => logger.info(message, meta);
-export const warn = (message: string, meta?: Record<string, any>): void => logger.warn(message, meta);
-export const error = (message: string, meta?: Record<string, any>): void => logger.error(message, meta);
-export const fatal = (message: string, meta?: Record<string, any>): void => logger.fatal(message, meta);
+export const debug = (message: string, meta?: Record<string, unknown>): void => logger.debug(message, meta);
+export const info = (message: string, meta?: Record<string, unknown>): void => logger.info(message, meta);
+export const warn = (message: string, meta?: Record<string, unknown>): void => logger.warn(message, meta);
+export const error = (message: string, meta?: Record<string, unknown>): void => logger.error(message, meta);
+export const fatal = (message: string, meta?: Record<string, unknown>): void => logger.fatal(message, meta);
 
 // カスタムロガーの作成
 export const createLogger = (options: LoggerOptions): Logger => new Logger(options);

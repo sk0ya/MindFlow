@@ -54,9 +54,9 @@ export const useNodeHandlers = (
 
   const handleCopyNode = (node: MindMapNode): MindMapNode => {
     const nodeCopy = JSON.parse(JSON.stringify(node));
-    const removeIds = (n: any): void => {
-      delete n.id;
-      if (n.children) n.children.forEach((child: any) => removeIds(child));
+    const removeIds = (n: MindMapNode): void => {
+      delete (n as { id?: string }).id;
+      if (n.children) n.children.forEach((child) => removeIds(child));
     };
     removeIds(nodeCopy);
     return nodeCopy;

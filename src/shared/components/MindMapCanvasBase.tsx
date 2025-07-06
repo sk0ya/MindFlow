@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import type { MindMapData, MindMapNode, Position } from '../types';
+import type { MindMapData, MindMapNode, Position, FileAttachment } from '../types';
 
 export interface MindMapCanvasBaseProps {
   data: MindMapData;
@@ -39,8 +39,8 @@ export interface MindMapCanvasBaseProps {
   // File handling (optional)
   onFileUpload?: (nodeId: string, file: File) => void;
   onRemoveFile?: (nodeId: string, fileId: string) => void;
-  onShowImageModal?: (file: any) => void;
-  onShowFileActionMenu?: (file: any, position: Position) => void;
+  onShowImageModal?: (file: FileAttachment) => void;
+  onShowFileActionMenu?: (file: FileAttachment, position: Position) => void;
   onShowNodeMapLinks?: (node: MindMapNode, position: Position) => void;
 }
 
@@ -102,8 +102,8 @@ const Node: React.FC<{
   showMapLinks?: boolean;
   onFileUpload?: (nodeId: string, file: File) => void;
   onRemoveFile?: (nodeId: string, fileId: string) => void;
-  onShowImageModal?: (file: any) => void;
-  onShowFileActionMenu?: (file: any, position: Position) => void;
+  onShowImageModal?: (file: FileAttachment) => void;
+  onShowFileActionMenu?: (file: FileAttachment, position: Position) => void;
   onShowNodeMapLinks?: (node: MindMapNode, position: Position) => void;
 }> = ({
   node,

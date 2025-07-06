@@ -1,10 +1,12 @@
 // Cloud Mode IndexedDB Utility
 // ローカルキャッシュとオフライン対応のためのIndexedDB管理
 
+import { MindMapNode } from '../../shared/types/core';
+
 interface MindMapData {
   id: string;
   title: string;
-  rootNode: any;
+  rootNode: MindMapNode;
   createdAt?: string;
   updatedAt: string;
   userId?: string;

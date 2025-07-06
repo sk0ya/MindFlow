@@ -64,7 +64,7 @@ class ErrorReporter {
     return errorId;
   }
 
-  // static async sendToRemoteService(errorReport: any): Promise<void> {
+  // static async sendToRemoteService(errorReport: unknown): Promise<void> {
   //   try {
   //     await fetch('/api/errors', {
   //       method: 'POST',

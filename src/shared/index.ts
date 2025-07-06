@@ -34,7 +34,6 @@ export * from './components';
 
 // Export shared utilities (selective to avoid conflicts)
 export { logger } from './utils/logger';
-export { deepClone } from './utils/dataUtils';
 
 // Export shared hooks
 export * from './hooks';

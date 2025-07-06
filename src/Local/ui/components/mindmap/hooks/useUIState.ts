@@ -10,7 +10,7 @@ interface Position {
 interface ConflictInfo {
   id: string;
   timestamp: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

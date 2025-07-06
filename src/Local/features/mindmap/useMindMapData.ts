@@ -125,7 +125,7 @@ export const useMindMapData = (isAppReady = false) => {
     skipHistory?: boolean;
     saveImmediately?: boolean;
     immediate?: boolean;
-    onUpdate?: (data: MindMapData, options: any) => void;
+    onUpdate?: (data: MindMapData, options: { [key: string]: unknown }) => void;
   } = {}) => {
     // ローカルモードでは常にデータ更新を処理
     if (!newData) return;

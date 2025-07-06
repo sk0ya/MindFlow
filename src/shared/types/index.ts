@@ -76,46 +76,51 @@ export type WithTimestamps<T> = T & {
 };
 
 // Type guards for runtime type checking
-export const isValidMindMapNode = (obj: any): obj is MindMapNode => {
+export const isValidMindMapNode = (obj: unknown): obj is MindMapNode => {
+  if (!obj || typeof obj !== 'object') return false;
+  const node = obj as Record<string, unknown>;
   return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.text === 'string' &&
-    typeof obj.x === 'number' &&
-    typeof obj.y === 'number' &&
-    Array.isArray(obj.children)
+    typeof node.id === 'string' &&
+    typeof node.text === 'string' &&
+    typeof node.x === 'number' &&
+    typeof node.y === 'number' &&
+    Array.isArray(node.children)
   );
 };
 
-export const isValidMindMapData = (obj: any): obj is MindMapData => {
+export const isValidMindMapData = (obj: unknown): obj is MindMapData => {
+  if (!obj || typeof obj !== 'object') return false;
+  const data = obj as Record<string, unknown>;
   return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.title === 'string' &&
-    isValidMindMapNode(obj.rootNode) &&
-    typeof obj.createdAt === 'string' &&
-    typeof obj.updatedAt === 'string' &&
-    obj.settings &&
-    typeof obj.settings.autoSave === 'boolean' &&
-    typeof obj.settings.autoLayout === 'boolean'
+    typeof data.id === 'string' &&
+    typeof data.title === 'string' &&
+    isValidMindMapNode(data.rootNode) &&
+    typeof data.createdAt === 'string' &&
+    typeof data.updatedAt === 'string' &&
+    data.settings !== null &&
+    typeof data.settings === 'object' &&
+    typeof (data.settings as Record<string, unknown>).autoSave === 'boolean' &&
+    typeof (data.settings as Record<string, unknown>).autoLayout === 'boolean'
   );
 };
 
-export const isValidFileAttachment = (obj: any): obj is FileAttachment => {
+export const isValidFileAttachment = (obj: unknown): obj is FileAttachment => {
+  if (!obj || typeof obj !== 'object') return false;
+  const file = obj as Record<string, unknown>;
   return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.name === 'string' &&
-    typeof obj.type === 'string' &&
-    typeof obj.size === 'number' &&
-    typeof obj.isImage === 'boolean'
+    typeof file.id === 'string' &&
+    typeof file.name === 'string' &&
+    typeof file.type === 'string' &&
+    typeof file.size === 'number' &&
+    typeof file.isImage === 'boolean'
   );
 };
 
-export const isValidAuthUser = (obj: any): obj is AuthUser => {
+export const isValidAuthUser = (obj: unknown): obj is AuthUser => {
+  if (!obj || typeof obj !== 'object') return false;
+  const user = obj as Record<string, unknown>;
   return (
-    obj &&
-    typeof obj.id === 'string' &&
-    typeof obj.email === 'string'
+    typeof user.id === 'string' &&
+    typeof user.email === 'string'
   );
 };

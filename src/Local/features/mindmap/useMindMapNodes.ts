@@ -4,7 +4,7 @@ import type { MindMapNode } from '../../../shared/types';
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout';
 
 // ノード操作専用のカスタムフック（Local版）
-export const useMindMapNodes = (data: MindMapData | null, updateData: (data: MindMapData, options?: any) => void, refreshAllMindMaps: (() => void) | null = null) => {
+export const useMindMapNodes = (data: MindMapData | null, updateData: (data: MindMapData, options?: { [key: string]: unknown }) => void, refreshAllMindMaps: (() => void) | null = null) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');

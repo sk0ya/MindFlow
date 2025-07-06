@@ -201,7 +201,15 @@ export const optimizeFile = async (file: File) => {
       }
       
       // 大きい画像は圧縮
-      const compressed = await resizeImage(file) as any;
+      const compressed = await resizeImage(file) as {
+        dataURL: string;
+        blob: Blob;
+        originalSize: number;
+        compressedSize: number;
+        compressionRatio: string;
+        outputType: string;
+        dimensions: { width: number; height: number };
+      };
       
       // Blobを新しいFileオブジェクトに変換
       const optimizedFile = new File([compressed.blob], file.name, {
@@ -255,7 +263,17 @@ export const optimizeFile = async (file: File) => {
 };
 
 // 最適化されたファイルの復元
-export const restoreOptimizedFile = (optimizedData: any) => {
+interface OptimizedFileData {
+  dataURL: string;
+  optimizationApplied?: boolean;
+  type: string;
+  file?: File;
+  originalSize?: number;
+  optimizedSize?: number;
+  compressionRatio?: string;
+}
+
+export const restoreOptimizedFile = (optimizedData: OptimizedFileData) => {
   if (optimizedData.optimizationApplied && !optimizedData.type.startsWith('image/')) {
     // Base64圧縮の場合は展開
     return {
@@ -280,9 +298,15 @@ export const formatFileSize = (bytes: number): string => {
 };
 
 // 圧縮統計の計算
-export const calculateCompressionStats = (files: any[]) => {
-  const totalOriginal = files.reduce((sum: number, file: any) => sum + (file.originalSize || 0), 0);
-  const totalOptimized = files.reduce((sum: number, file: any) => sum + (file.optimizedSize || file.originalSize || 0), 0);
+interface FileWithOptimization {
+  originalSize?: number;
+  optimizedSize?: number;
+  optimizationApplied?: boolean;
+}
+
+export const calculateCompressionStats = (files: FileWithOptimization[]) => {
+  const totalOriginal = files.reduce((sum: number, file: FileWithOptimization) => sum + (file.originalSize || 0), 0);
+  const totalOptimized = files.reduce((sum: number, file: FileWithOptimization) => sum + (file.optimizedSize || file.originalSize || 0), 0);
   const totalSaved = totalOriginal - totalOptimized;
   
   return {
@@ -291,6 +315,6 @@ export const calculateCompressionStats = (files: any[]) => {
     totalSaved,
     totalSavedPercentage: totalOriginal > 0 ? ((totalSaved / totalOriginal) * 100).toFixed(1) : '0',
     fileCount: files.length,
-    compressedCount: files.filter((f: any) => f.optimizationApplied).length
+    compressedCount: files.filter((f: FileWithOptimization) => f.optimizationApplied).length
   };
 };

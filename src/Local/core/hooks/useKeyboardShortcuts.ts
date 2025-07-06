@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { MindMapNode } from '../../../shared/types/core';
 
 interface KeyboardShortcutsProps {
   selectedNodeId: string | null;
@@ -8,7 +9,7 @@ interface KeyboardShortcutsProps {
   startEdit: (nodeId: string) => void;
   finishEdit: (nodeId: string, text: string) => void;
   editText: string;
-  updateNode: (nodeId: string, updates: any) => void;
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   addChildNode: (parentId: string, text?: string, shouldEdit?: boolean) => void;
   addSiblingNode: (nodeId: string, text?: string, shouldEdit?: boolean) => void;
   deleteNode: (nodeId: string) => void;

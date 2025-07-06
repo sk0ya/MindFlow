@@ -8,20 +8,18 @@ import {
   getDirtyData
 } from '../utils/indexedDB';
 import { cleanEmptyNodesFromData, countNodes } from '../utils/dataUtils';
-
-interface Node {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  children: Node[];
-}
+import { MindMapNode } from '../../shared/types/core';
 
 interface MindMapData {
   id: string;
   title: string;
-  rootNode: Node;
+  rootNode: MindMapNode;
   updatedAt: string;
+  createdAt?: string;
+  _metadata?: {
+    lastSync: string;
+    isDirty: boolean;
+  };
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev';
@@ -153,7 +151,7 @@ export const useCloudData = () => {
       
       if (result.mindmaps && result.mindmaps.length > 0) {
         // 全マップのリストを保存（rootNodeが存在しない場合はデフォルトを作成）
-        const allServerMaps = result.mindmaps.map((mapData: any) => {
+        const allServerMaps = result.mindmaps.map((mapData: MindMapData) => {
           // rootNodeが存在しない場合はデフォルトrootNodeを追加
           if (!mapData.rootNode) {
             if (process.env.NODE_ENV === 'development') {
@@ -494,7 +492,7 @@ export const useCloudData = () => {
   }, [data, authState.isAuthenticated, updateMindMapData]);
 
   // データ更新のラッパー関数（簡素化）
-  const updateDataSafe = useCallback(async (newData: MindMapData, options: any = {}) => {
+  const updateDataSafe = useCallback(async (newData: MindMapData, options: { cleanupEmptyNodes?: boolean } = {}) => {
     // 空ノードのクリーンアップ（必要に応じて）
     const cleanedData = options.cleanupEmptyNodes ? cleanEmptyNodesFromData(newData) : newData;
     

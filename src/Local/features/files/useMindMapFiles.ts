@@ -5,7 +5,19 @@ import { validateFile } from './fileValidation';
 import { logger } from '../../shared/utils/logger';
 import { getCurrentMindMap } from '../../core/storage/LocalEngine';
 
-export const useMindMapFiles = (findNode: (nodeId: string) => any, updateNode: (nodeId: string, updates: any) => void, currentMapId: string | null = null) => {
+interface MindMapNode {
+  id: string;
+  attachments?: FileAttachment[];
+  children?: MindMapNode[];
+  [key: string]: unknown;
+}
+
+interface NodeUpdates {
+  attachments?: FileAttachment[];
+  [key: string]: unknown;
+}
+
+export const useMindMapFiles = (findNode: (nodeId: string) => MindMapNode | null, updateNode: (nodeId: string, updates: NodeUpdates) => void, currentMapId: string | null = null) => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
     const initializing = !currentMapId;
@@ -116,11 +128,12 @@ export const useMindMapFiles = (findNode: (nodeId: string) => any, updateNode: (
       
       return fileAttachment;
       
-    } catch (error: any) {
-      logger.error(`❌ ファイル添付失敗: ${error.message}`, {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`❌ ファイル添付失敗: ${errorMessage}`, {
         nodeId,
         fileName: file.name,
-        error: error.message
+        error: errorMessage
       });
       throw error;
     }
@@ -163,7 +176,7 @@ export const useMindMapFiles = (findNode: (nodeId: string) => any, updateNode: (
     if (!mindMap) return { used: 0, percentage: 0 };
     
     let totalSize = 0;
-    const countFiles = (node: any) => {
+    const countFiles = (node: MindMapNode) => {
       if (node.attachments) {
         node.attachments.forEach((attachment: FileAttachment) => {
           totalSize += attachment.size || 0;
@@ -222,10 +235,10 @@ export const useMindMapFiles = (findNode: (nodeId: string) => any, updateNode: (
         fileName: attachment.name,
         fileSize: attachment.size
       });
-    } catch (error: any) {
+    } catch (error) {
       logger.error('❌ ファイルダウンロード失敗', {
         fileName: attachment.name,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   };

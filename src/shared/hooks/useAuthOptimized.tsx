@@ -50,7 +50,10 @@ type AuthActionType =
 
 interface AuthAction {
   type: AuthActionType;
-  payload?: any;
+  payload?: {
+    user?: AuthUser;
+    error?: string;
+  };
 }
 
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {

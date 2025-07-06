@@ -41,7 +41,7 @@ export const useUIState = () => {
 
   // パネル表示の切り替え関数
   const togglePanel = (panelName: string) => {
-    const setters: Record<string, any> = {
+    const setters: Record<string, React.Dispatch<React.SetStateAction<boolean>>> = {
       nodeCustomization: setShowNodeCustomization,
       layoutPanel: setShowLayoutPanel,
       imageModal: setShowImageModal,
@@ -57,7 +57,7 @@ export const useUIState = () => {
 
     const setter = setters[panelName];
     if (setter) {
-      setter((prev: any) => !prev);
+      setter((prev) => !prev);
     }
   };
 

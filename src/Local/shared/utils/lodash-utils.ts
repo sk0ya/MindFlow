@@ -5,16 +5,16 @@
 
 export const cloneDeep = <T>(obj: T): T => {
   if (obj === null || typeof obj !== "object") return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as any;
-  if (obj instanceof Array) return obj.map(item => cloneDeep(item)) as any;
+  if (obj instanceof Date) return new Date(obj.getTime()) as T;
+  if (obj instanceof Array) return obj.map(item => cloneDeep(item)) as T;
   if (typeof obj === "object") {
-    const clonedObj = {} as any;
+    const clonedObj = {} as Record<string, unknown>;
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
-        clonedObj[key] = cloneDeep((obj as any)[key]);
+        clonedObj[key] = cloneDeep((obj as Record<string, unknown>)[key]);
       }
     }
-    return clonedObj;
+    return clonedObj as T;
   }
   return obj;
 };

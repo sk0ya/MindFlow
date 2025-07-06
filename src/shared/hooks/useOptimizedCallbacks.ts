@@ -6,7 +6,7 @@
 import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 
 // Hook to create stable callbacks that only change when dependencies change
-export const useStableCallback = <T extends (...args: any[]) => any>(
+export const useStableCallback = <T extends (...args: never[]) => unknown>(
   callback: T,
   deps: React.DependencyList
 ): T => {
@@ -44,7 +44,7 @@ export const useEventHandler = <T extends Event>(
 };
 
 // Hook for debounced callbacks
-export const useDebouncedCallback = <T extends (...args: any[]) => any>(
+export const useDebouncedCallback = <T extends (...args: never[]) => unknown>(
   callback: T,
   delay: number,
   deps: React.DependencyList = []
@@ -76,7 +76,7 @@ export const useDebouncedCallback = <T extends (...args: any[]) => any>(
 };
 
 // Hook for throttled callbacks
-export const useThrottledCallback = <T extends (...args: any[]) => any>(
+export const useThrottledCallback = <T extends (...args: never[]) => unknown>(
   callback: T,
   delay: number,
   deps: React.DependencyList = []
@@ -118,7 +118,7 @@ export const useThrottledCallback = <T extends (...args: any[]) => any>(
 };
 
 // Hook for memoized objects
-export const useStableObject = <T extends Record<string, any>>(
+export const useStableObject = <T extends Record<string, unknown>>(
   factory: () => T,
   deps: React.DependencyList
 ): T => {
@@ -218,7 +218,7 @@ export const useOptimizedState = <T>(
 };
 
 // Hook for managing multiple callbacks efficiently
-export const useCallbackGroup = <T extends Record<string, (...args: any[]) => any>>(
+export const useCallbackGroup = <T extends Record<string, (...args: never[]) => unknown>>(
   callbacks: T,
   deps: React.DependencyList
 ): T => {
@@ -226,7 +226,7 @@ export const useCallbackGroup = <T extends Record<string, (...args: any[]) => an
     const memoizedCallbacks = {} as T;
     
     for (const [key, callback] of Object.entries(callbacks)) {
-      (memoizedCallbacks as any)[key] = callback;
+      (memoizedCallbacks as Record<string, unknown>)[key] = callback;
     }
     
     return memoizedCallbacks;

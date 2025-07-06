@@ -55,8 +55,8 @@ export const usePerformanceMonitor = (componentName?: string, enableLogging: boo
 
     // Get memory usage if available
     let memoryUsage: number | undefined;
-    if ('memory' in performance && (performance as any).memory) {
-      memoryUsage = (performance as any).memory.usedJSHeapSize;
+    if ('memory' in performance && (performance as { memory?: { usedJSHeapSize: number } }).memory) {
+      memoryUsage = (performance as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize;
     }
 
     const newMetrics: PerformanceMetrics = {
@@ -249,8 +249,7 @@ class PerformanceCollector {
   getSlowestComponents(limit: number = 5): Array<{ name: string; averageRenderTime: number }> {
     const results: Array<{ name: string; averageRenderTime: number }> = [];
 
-    for (const [name, metrics] of this.metrics) {
-      const _metrics = metrics; // avoid unused variable warning
+    for (const [name] of this.metrics) {
       const average = this.getAverageMetrics(name);
       if (average) {
         results.push({ name, averageRenderTime: average.averageRenderTime });

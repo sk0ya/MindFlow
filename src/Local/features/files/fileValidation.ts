@@ -307,8 +307,21 @@ export const validateFile = async (file: File) => {
 };
 
 // 複数ファイルの検証
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  fileInfo: {
+    name: string;
+    type: string;
+    size: number;
+    sizeFormatted?: string;
+    lastModified?: string;
+  };
+}
+
 export const validateMultipleFiles = async (files: File[]) => {
-  const results: any[] = [];
+  const results: ValidationResult[] = [];
   let totalSize = 0;
   
   for (const file of files) {
@@ -340,12 +353,20 @@ export const validateMultipleFiles = async (files: File[]) => {
 };
 
 // セキュリティレポートの生成
-export const generateSecurityReport = (validationResults: any[]) => {
+export const generateSecurityReport = (validationResults: ValidationResult[]) => {
   const report = {
     timestamp: new Date().toISOString(),
     totalFiles: validationResults.length,
-    securityIssues: [] as any[],
-    recommendations: [] as any[]
+    securityIssues: [] as {
+      fileIndex: number;
+      fileName: string;
+      issues: string[];
+    }[],
+    recommendations: [] as {
+      fileIndex: number;
+      fileName: string;
+      warnings: string[];
+    }[]
   };
   
   validationResults.forEach((result, index) => {

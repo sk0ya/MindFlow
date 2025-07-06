@@ -176,13 +176,13 @@ export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'er
 export interface NodeEvent {
   nodeId: string;
   action: 'select' | 'edit' | 'create' | 'delete' | 'move';
-  data?: any;
+  data?: unknown;
 }
 
 export interface MapEvent {
   mapId: string;
   action: 'create' | 'delete' | 'rename' | 'switch';
-  data?: any;
+  data?: unknown;
 }
 
 // Error types
@@ -190,7 +190,7 @@ export interface AppError {
   code: string;
   message: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   timestamp: string;
 }
 

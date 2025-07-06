@@ -3,11 +3,13 @@
  * ルートノード消失などの問題を検出・修復
  */
 
+import type { MindMapData, MindMapNode } from '../types/dataTypes';
+
 export interface DataIntegrityIssue {
   type: 'missing_root' | 'orphaned_nodes' | 'circular_reference' | 'invalid_structure';
   description: string;
   severity: 'critical' | 'warning' | 'info';
-  data?: any;
+  data?: unknown;
 }
 
 export interface IntegrityCheckResult {
@@ -20,7 +22,7 @@ export class DataIntegrityChecker {
   /**
    * マインドマップデータの整合性をチェック
    */
-  static checkMindMapIntegrity(mapData: any): IntegrityCheckResult {
+  static checkMindMapIntegrity(mapData: MindMapData | null | undefined): IntegrityCheckResult {
     const issues: DataIntegrityIssue[] = [];
     const repairSuggestions: string[] = [];
 
@@ -109,7 +111,7 @@ export class DataIntegrityChecker {
    * ノード構造の再帰的チェック
    */
   private static checkNodeStructure(
-    node: any, 
+    node: MindMapNode | null | undefined, 
     visitedIds: Set<string>, 
     path: string
   ): { issues: DataIntegrityIssue[], repairSuggestions: string[] } {
@@ -170,7 +172,7 @@ export class DataIntegrityChecker {
 
     // 子ノードの再帰的チェック
     if (node.children && Array.isArray(node.children)) {
-      node.children.forEach((child: any, index: number) => {
+      node.children.forEach((child: MindMapNode, index: number) => {
         const childResult = this.checkNodeStructure(
           child, 
           visitedIds, 
@@ -194,7 +196,7 @@ export class DataIntegrityChecker {
   /**
    * データ修復を試行
    */
-  static repairMindMapData(mapData: any): { repaired: any, issues: DataIntegrityIssue[] } {
+  static repairMindMapData(mapData: MindMapData | null | undefined): { repaired: MindMapData | null, issues: DataIntegrityIssue[] } {
     if (!mapData) {
       console.error('❌ 修復不可: データがnullまたはundefined');
       return { repaired: null, issues: [] };
@@ -256,7 +258,7 @@ export class DataIntegrityChecker {
   /**
    * 操作前のデータ検証
    */
-  static validateBeforeOperation(mapData: any, operation: string): boolean {
+  static validateBeforeOperation(mapData: MindMapData | null | undefined, operation: string): boolean {
     const result = this.checkMindMapIntegrity(mapData);
     
     if (!result.isValid) {
@@ -274,7 +276,7 @@ export class DataIntegrityChecker {
   /**
    * 詳細ログ出力
    */
-  static logIntegrityReport(result: IntegrityCheckResult, mapData: any): void {
+  static logIntegrityReport(result: IntegrityCheckResult, mapData: MindMapData | null | undefined): void {
     console.group(`📊 データ整合性レポート: ${mapData?.title || 'Unknown Map'}`);
     
     console.log(`🎯 全体評価: ${result.isValid ? '✅ 正常' : '❌ 問題あり'}`);

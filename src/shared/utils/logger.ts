@@ -16,7 +16,7 @@ export interface LogEntry {
   level: LogLevel;
   category: string;
   message: string;
-  data?: any;
+  data?: unknown;
   context?: {
     component?: string;
     function?: string;
@@ -147,7 +147,7 @@ class Logger {
     level: LogLevel,
     category: string,
     message: string,
-    data?: any,
+    data?: unknown,
     context?: Partial<LogEntry['context']>
   ): LogEntry {
     return {
@@ -231,7 +231,7 @@ class Logger {
   }
 
   // Public logging methods
-  public log(level: LogLevel, category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public log(level: LogLevel, category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     if (!this.shouldLog(level, category)) return;
 
     const entry = this.createLogEntry(level, category, message, data, context);
@@ -244,28 +244,28 @@ class Logger {
     }
   }
 
-  public debug(category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public debug(category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     this.log(LogLevel.DEBUG, category, message, data, context);
   }
 
-  public info(category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public info(category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     this.log(LogLevel.INFO, category, message, data, context);
   }
 
-  public warn(category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public warn(category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     this.log(LogLevel.WARN, category, message, data, context);
   }
 
-  public error(category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public error(category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     this.log(LogLevel.ERROR, category, message, data, context);
   }
 
-  public critical(category: string, message: string, data?: any, context?: Partial<LogEntry['context']>): void {
+  public critical(category: string, message: string, data?: unknown, context?: Partial<LogEntry['context']>): void {
     this.log(LogLevel.CRITICAL, category, message, data, context);
   }
 
   // Specialized logging methods
-  public api(method: string, url: string, status?: number, duration?: number, data?: any): void {
+  public api(method: string, url: string, status?: number, duration?: number, data?: Record<string, unknown>): void {
     this.info('api', `${method} ${url}`, {
       method,
       url,
@@ -275,12 +275,12 @@ class Logger {
     });
   }
 
-  public auth(action: string, success: boolean, details?: any): void {
+  public auth(action: string, success: boolean, details?: Record<string, unknown>): void {
     const level = success ? LogLevel.INFO : LogLevel.WARN;
     this.log(level, 'auth', `Auth ${action}: ${success ? 'success' : 'failed'}`, details);
   }
 
-  public performance(metric: string, value: number, unit: string = 'ms', data?: any): void {
+  public performance(metric: string, value: number, unit: string = 'ms', data?: Record<string, unknown>): void {
     this.info('performance', `${metric}: ${value}${unit}`, {
       metric,
       value,
@@ -289,11 +289,11 @@ class Logger {
     });
   }
 
-  public ui(component: string, action: string, data?: any): void {
+  public ui(component: string, action: string, data?: unknown): void {
     this.debug('ui', `${component}: ${action}`, data, { component });
   }
 
-  public data(operation: string, result: 'success' | 'error', details?: any): void {
+  public data(operation: string, result: 'success' | 'error', details?: unknown): void {
     const level = result === 'success' ? LogLevel.INFO : LogLevel.ERROR;
     this.log(level, 'data', `Data ${operation}: ${result}`, details);
   }
@@ -372,7 +372,7 @@ export const logger = new Logger();
 // Development helpers
 if (process.env.NODE_ENV === 'development') {
   // Expose logger globally for debugging
-  (window as any).mindflowLogger = logger;
+  (window as { mindflowLogger?: Logger }).mindflowLogger = logger;
   
   // Log initialization
   logger.info('debug', 'Logger initialized', {

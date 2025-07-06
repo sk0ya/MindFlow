@@ -7,13 +7,13 @@ export interface AppError {
   code: string;
   message: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   timestamp: string;
   stack?: string;
 }
 
 export interface ErrorHandler {
-  (error: Error | AppError, context?: Record<string, any>): void;
+  (error: Error | AppError, context?: Record<string, unknown>): void;
 }
 
 export interface AsyncResult<T> {
@@ -66,7 +66,7 @@ export const createAppError = (
   code: string,
   message: string,
   severity: AppError['severity'] = 'medium',
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): AppError => ({
   code,
   message,
@@ -146,7 +146,7 @@ export const isAppError = (error: unknown): error is AppError => {
 // Safe async wrapper
 export const safeAsync = async <T>(
   operation: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<AsyncResult<T>> => {
   try {
     const data = await operation();
@@ -169,7 +169,7 @@ export const withRetry = async <T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
   baseDelay: number = 1000,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<AsyncResult<T>> => {
   let lastError: AppError | undefined;
 
@@ -220,7 +220,7 @@ class GlobalErrorHandler {
     }
   }
 
-  handle(error: unknown, context?: Record<string, any>): void {
+  handle(error: unknown, context?: Record<string, unknown>): void {
     const appError = classifyError(error);
     if (context) {
       appError.context = { ...appError.context, ...context };

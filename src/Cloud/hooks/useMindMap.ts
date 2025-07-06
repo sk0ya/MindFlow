@@ -1,15 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useCloudData } from './useCloudData';
 import { hasEmptyNodes } from '../utils/dataUtils';
-
-interface Node {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  children: Node[];
-  collapsed?: boolean;
-}
+import { MindMapNode } from '../../shared/types/core';
 
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -21,7 +13,7 @@ export const useMindMap = () => {
   const [editText, setEditText] = useState<string>('');
   const [pendingAutoEdit, setPendingAutoEdit] = useState<string | null>(null);
 
-  const findNode = useCallback((id: string, node?: Node): Node | null => {
+  const findNode = useCallback((id: string, node?: MindMapNode): MindMapNode | null => {
     if (!data) return null;
     const searchRoot = node || data.rootNode;
     if (searchRoot.id === id) return searchRoot;
@@ -32,10 +24,10 @@ export const useMindMap = () => {
     return null;
   }, [data]);
 
-  const updateNode = useCallback((id: string, updates: Partial<Node>) => {
+  const updateNode = useCallback((id: string, updates: Partial<MindMapNode>) => {
     if (!data) return;
 
-    const updateNodeInTree = (node: Node): Node => {
+    const updateNodeInTree = (node: MindMapNode): MindMapNode => {
       if (node.id === id) {
         return { ...node, ...updates };
       }
@@ -83,7 +75,7 @@ export const useMindMap = () => {
       newY = parentNode.y + (childCount * verticalSpacing) - ((parentNode.children.length - 1) * verticalSpacing / 2);
     }
 
-    const newNode: Node = {
+    const newNode: MindMapNode = {
       id: generateId(),
       text,
       x: newX,
@@ -91,7 +83,7 @@ export const useMindMap = () => {
       children: []
     };
 
-    const addToNode = (node: Node): Node => {
+    const addToNode = (node: MindMapNode): MindMapNode => {
       if (node.id === parentId) {
         return {
           ...node,
@@ -122,7 +114,7 @@ export const useMindMap = () => {
   const deleteNode = useCallback((id: string) => {
     if (id === 'root' || !data) return;
 
-    const removeFromNode = (node: Node): Node => ({
+    const removeFromNode = (node: MindMapNode): MindMapNode => ({
       ...node,
       children: node.children
         .filter(child => child.id !== id)
@@ -150,7 +142,7 @@ export const useMindMap = () => {
     }
   }, [findNode]);
 
-  const finishEdit = useCallback((nodeId?: string, text?: string, options: any = {}) => {
+  const finishEdit = useCallback((nodeId?: string, text?: string, options: { userInitiated?: boolean } = {}) => {
     const targetNodeId = nodeId || editingNodeId;
     const targetText = text !== undefined ? text : editText;
     const isEmpty = !targetText || targetText.trim() === '';

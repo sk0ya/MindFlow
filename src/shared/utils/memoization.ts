@@ -5,7 +5,7 @@
 import React from 'react';
 
 // Deep comparison function for complex objects
-export const deepEqual = (a: any, b: any): boolean => {
+export const deepEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   
   if (a == null || b == null) return a === b;
@@ -21,14 +21,14 @@ export const deepEqual = (a: any, b: any): boolean => {
   
   for (const key of keysA) {
     if (!keysB.includes(key)) return false;
-    if (!deepEqual(a[key], b[key])) return false;
+    if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false;
   }
   
   return true;
 };
 
 // Shallow comparison function for simple objects
-export const shallowEqual = (a: any, b: any): boolean => {
+export const shallowEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   
   if (a == null || b == null) return a === b;
@@ -41,14 +41,14 @@ export const shallowEqual = (a: any, b: any): boolean => {
   if (keysA.length !== keysB.length) return false;
   
   for (const key of keysA) {
-    if (a[key] !== b[key]) return false;
+    if ((a as Record<string, unknown>)[key] !== (b as Record<string, unknown>)[key]) return false;
   }
   
   return true;
 };
 
 // Array comparison for dependency arrays
-export const arrayEqual = (a: any[], b: any[]): boolean => {
+export const arrayEqual = (a: unknown[], b: unknown[]): boolean => {
   if (a.length !== b.length) return false;
   return a.every((item, index) => item === b[index]);
 };
@@ -121,7 +121,7 @@ export class LRUCache<K, V> {
 }
 
 // Memoize function with LRU cache
-export const memoizeFunction = <Args extends any[], Return>(
+export const memoizeFunction = <Args extends unknown[], Return>(
   fn: (...args: Args) => Return,
   options?: {
     cacheSize?: number;
@@ -153,7 +153,7 @@ export const memoizeFunction = <Args extends any[], Return>(
 };
 
 // Memoize async function
-export const memoizeAsync = <Args extends any[], Return>(
+export const memoizeAsync = <Args extends unknown[], Return>(
   fn: (...args: Args) => Promise<Return>,
   options?: {
     cacheSize?: number;
@@ -230,7 +230,7 @@ export const createSelector = <State, Result>(
 };
 
 // Create multiple selectors with shared memoization
-export const createStructuredSelector = <State, Selectors extends Record<string, (state: State) => any>>(
+export const createStructuredSelector = <State, Selectors extends Record<string, (state: State) => unknown>>(
   selectors: Selectors
 ): (state: State) => { [K in keyof Selectors]: ReturnType<Selectors[K]> } => {
   const selectorKeys = Object.keys(selectors) as Array<keyof Selectors>;

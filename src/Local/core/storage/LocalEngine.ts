@@ -1,5 +1,6 @@
 // ローカルストレージ専用エンジン
 import { createInitialData } from '../../shared/types/dataTypes';
+import type { MindMapData, MindMapNode, MindMapSettings } from '../../shared/types/dataTypes';
 
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',
@@ -156,7 +157,7 @@ class LocalEngine {
   }
   
   // ヘルパーメソッド: ノード数をカウント
-  private countNodes(node: any): number {
+  private countNodes(node: MindMapNode): number {
     if (!node) return 0;
     let count = 1;
     if (node.children && Array.isArray(node.children)) {
@@ -168,7 +169,7 @@ class LocalEngine {
   }
 
   // 新しいマインドマップを作成
-  createMindMap(data: any) {
+  createMindMap(data: Partial<MindMapData>) {
     try {
       const id = data.id || `map_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const mapData = {
@@ -197,7 +198,7 @@ class LocalEngine {
   }
 
   // マインドマップを更新
-  updateMindMap(id: string, data: any) {
+  updateMindMap(id: string, data: Partial<MindMapData>) {
     try {
       const updatedData = {
         ...data,
@@ -278,7 +279,7 @@ class LocalEngine {
   }
 
   // アプリ設定を保存
-  saveAppSettings(settings: any) {
+  saveAppSettings(settings: MindMapSettings) {
     try {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
       return true;
@@ -320,14 +321,14 @@ export const getCurrentMindMap = () => localEngine.getCurrentMindMap();
 export const getAllMindMaps = () => localEngine.getAllMindMaps();
 export const getAllMindMapsWithFullData = () => localEngine.getAllMindMapsWithFullData();
 export const getMindMap = (id: string) => localEngine.getMindMap(id);
-export const createMindMap = (data: any) => localEngine.createMindMap(data);
-export const updateMindMap = (id: string, data: any) => localEngine.updateMindMap(id, data);
+export const createMindMap = (data: Partial<MindMapData>) => localEngine.createMindMap(data);
+export const updateMindMap = (id: string, data: Partial<MindMapData>) => localEngine.updateMindMap(id, data);
 export const deleteMindMap = (id: string) => localEngine.deleteMindMap(id);
 export const getAppSettings = () => localEngine.getAppSettings();
-export const saveAppSettings = (settings: any) => localEngine.saveAppSettings(settings);
+export const saveAppSettings = (settings: MindMapSettings) => localEngine.saveAppSettings(settings);
 
 // ノード操作用メソッド
-export const addNode = async (mapId: string, nodeData: any) => {
+export const addNode = async (mapId: string, nodeData: MindMapNode) => {
   try {
     // 現在のマップデータを取得
     const currentMap = localEngine.getMindMap(mapId);
@@ -351,13 +352,13 @@ export const addNode = async (mapId: string, nodeData: any) => {
 
 // storageManagerとの互換性のため
 export const storageManager = {
-  createMap: (data: any) => localEngine.createMindMap(data),
-  updateMindMap: (id: string, data: any) => localEngine.updateMindMap(id, data),
+  createMap: (data: Partial<MindMapData>) => localEngine.createMindMap(data),
+  updateMindMap: (id: string, data: Partial<MindMapData>) => localEngine.updateMindMap(id, data),
   getMap: (id: string) => localEngine.getMindMap(id),
   getMindMap: (id: string) => localEngine.getMindMap(id),
   getAllMindMaps: () => localEngine.getAllMindMaps(),
   deleteMindMap: (id: string) => localEngine.deleteMindMap(id),
   getCurrentMindMap: () => localEngine.getCurrentMindMap(),
   getAppSettings: () => localEngine.getAppSettings(),
-  saveAppSettings: (settings: any) => localEngine.saveAppSettings(settings)
+  saveAppSettings: (settings: MindMapSettings) => localEngine.saveAppSettings(settings)
 };
