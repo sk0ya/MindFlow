@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCurrentMindMap, getAllMindMaps, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, storageManager } from '../../core/storage/LocalEngine';
+import { getCurrentMindMap, getAllMindMaps, getAllMindMapsWithFullData, getMindMap, createMindMap, deleteMindMap, updateMindMap as saveMindMap, storageManager } from '../../core/storage/LocalEngine';
 import { deepClone, assignColorsToExistingNodes, createInitialData } from '../../shared/types/dataTypes';
 // ローカルモード専用：リアルタイム同期不要
 
@@ -17,7 +17,7 @@ export const useMindMapMulti = (data, setData, updateData) => {
     try {
       console.log('📋 マップ一覧取得開始');
       
-      const maps = await getAllMindMaps();
+      const maps = await getAllMindMapsWithFullData();
       
       // データ整合性チェック
       const validMaps = maps.filter(map => map && map.id);

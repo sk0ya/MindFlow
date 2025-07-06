@@ -21,8 +21,11 @@ export const useMindMap = (isAppReady = false) => {
     }
   }, [isAppReady, dataHook.data?.id, debugLogged]);
   
-  // ノード操作（dataがある場合のみ）
-  const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData);
+  // マルチマップ管理
+  const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
+  
+  // ノード操作（dataがある場合のみ、refreshAllMindMapsを渡す）
+  const nodeHook = useMindMapNodes(dataHook.data, dataHook.updateData, multiHook.refreshAllMindMaps);
   
   // ナビゲーション（簡略化版）
   const [zoom, setZoom] = useState(1);
@@ -119,9 +122,6 @@ export const useMindMap = (isAppReady = false) => {
     }
   }, [nodeHook.selectedNodeId, dataHook.data, nodeHook.flattenNodes, nodeHook.findNode, nodeHook.findParentNode, nodeHook.setSelectedNodeId]);
 
-  // マルチマップ管理
-  const multiHook = useMindMapMulti(dataHook.data, dataHook.setData, dataHook.updateData);
-  
   // ファイル添付
   const fileHook = useMindMapFiles(nodeHook.findNode, nodeHook.updateNode, multiHook.currentMapId);
 

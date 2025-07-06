@@ -3,7 +3,7 @@ import { createNewNode, calculateNodePosition, COLORS, deepClone } from '../../s
 import { mindMapLayoutPreserveRoot } from '../../shared/utils/autoLayout';
 
 // ノード操作専用のカスタムフック（Local版）
-export const useMindMapNodes = (data, updateData) => {
+export const useMindMapNodes = (data, updateData, refreshAllMindMaps = null) => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -151,6 +151,11 @@ export const useMindMapNodes = (data, updateData) => {
     
     console.log('✅ 子ノード作成完了:', newChild.id);
     
+    // マップ一覧のノード数を更新
+    if (refreshAllMindMaps) {
+      await refreshAllMindMaps();
+    }
+    
     // 編集状態を設定
     if (startEditing) {
       setSelectedNodeId(newChild.id);
@@ -213,6 +218,11 @@ export const useMindMapNodes = (data, updateData) => {
     await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
     console.log('✅ 兄弟ノード作成完了:', newSibling.id);
+    
+    // マップ一覧のノード数を更新
+    if (refreshAllMindMaps) {
+      await refreshAllMindMaps();
+    }
     
     // 編集状態を設定
     if (startEditing) {
@@ -277,6 +287,11 @@ export const useMindMapNodes = (data, updateData) => {
     await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
     console.log('✅ ローカル状態更新完了:', nodeId);
+    
+    // マップ一覧のノード数を更新
+    if (refreshAllMindMaps) {
+      await refreshAllMindMaps();
+    }
     
     // 削除されたノードが選択されていた場合、決定されたノードを選択
     if (selectedNodeId === nodeId) {

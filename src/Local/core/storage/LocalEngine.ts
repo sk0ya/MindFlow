@@ -95,6 +95,35 @@ class LocalEngine {
     }
   }
 
+  // すべてのマインドマップを完全データで取得（rootNode含む）
+  getAllMindMapsWithFullData() {
+    try {
+      const mapListStr = localStorage.getItem(STORAGE_KEYS.MAP_LIST);
+      if (!mapListStr) return [];
+      
+      const mapIds = JSON.parse(mapListStr);
+      const maps = [];
+      
+      for (const id of mapIds) {
+        const map = this.getMindMap(id);
+        if (map) {
+          maps.push({
+            id: map.id,
+            title: map.title,
+            category: map.category || '未分類',
+            updatedAt: map.updatedAt || new Date().toISOString(),
+            rootNode: map.rootNode // rootNodeを含める
+          });
+        }
+      }
+      
+      return maps;
+    } catch (error) {
+      console.error('Failed to get all mind maps with full data:', error);
+      return [];
+    }
+  }
+
   // 特定のマインドマップを取得
   getMindMap(id: string) {
     try {
@@ -289,6 +318,7 @@ export const localEngine = new LocalEngine();
 // 互換性のための関数エクスポート
 export const getCurrentMindMap = () => localEngine.getCurrentMindMap();
 export const getAllMindMaps = () => localEngine.getAllMindMaps();
+export const getAllMindMapsWithFullData = () => localEngine.getAllMindMapsWithFullData();
 export const getMindMap = (id: string) => localEngine.getMindMap(id);
 export const createMindMap = (data: any) => localEngine.createMindMap(data);
 export const updateMindMap = (id: string, data: any) => localEngine.updateMindMap(id, data);
