@@ -19,6 +19,7 @@ interface KeyboardShortcutsProps {
   canRedo: boolean;
   navigateToDirection: (direction: string) => void;
   saveMindMap: () => void;
+  applyFullLayout?: () => Promise<void>;
   showMapList: boolean;
   setShowMapList: (show: boolean | ((prev: boolean) => boolean)) => void;
   showLocalStorage: boolean;
@@ -48,6 +49,7 @@ export const useKeyboardShortcuts = ({
   canRedo,
   navigateToDirection,
   saveMindMap,
+  applyFullLayout,
   showMapList,
   setShowMapList,
   showLocalStorage,
@@ -212,6 +214,13 @@ export const useKeyboardShortcuts = ({
           case 'k':
             e.preventDefault();
             setShowLocalStorage(prev => !prev);
+            break;
+          
+          case 'l':
+            e.preventDefault();
+            if (applyFullLayout) {
+              applyFullLayout();
+            }
             break;
         }
         return;

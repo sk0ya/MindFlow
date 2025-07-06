@@ -52,7 +52,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     return null;
   }, [data?.rootNode]);
 
-  // オートレイアウトを適用
+  // 元の自動レイアウトロジックを保持（後方互換性のため）
   const applyAutoLayout = (rootNode: MindMapNode): MindMapNode => {
     const svg = document.querySelector('.mindmap-canvas-container svg') as SVGSVGElement | null;
     const centerX = rootNode.x || (svg?.clientWidth ? svg.clientWidth / 2 : 400);
@@ -63,6 +63,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
       minVerticalSpacing: 80, maxVerticalSpacing: 130
     });
   };
+
 
   // ノードの色を取得する（親から継承または新規割り当て）
   const getNodeColor = (parentNode: MindMapNode, childIndex: number): string => {
@@ -495,18 +496,52 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     }
   };
 
-  // 折りたたみ状態をトグル
-  const toggleCollapse = (nodeId: string): void => {
+  // 折りたたみ状態をトグル（レイアウト最適化付き）
+  const toggleCollapse = async (nodeId: string): Promise<void> => {
+    const currentData = dataRef.current;
+    if (!currentData) return;
+    
+    const clonedData = deepClone(currentData);
+    
     const toggleNodeRecursive = (node: MindMapNode): MindMapNode => {
       if (node.id === nodeId) return { ...node, collapsed: !node.collapsed };
       return { ...node, children: node.children?.map((child: MindMapNode) => toggleNodeRecursive(child)) || [] };
     };
     
-    if (data) {
-      updateData({ ...data, rootNode: toggleNodeRecursive(data.rootNode) });
+    const updatedRootNode = toggleNodeRecursive(clonedData.rootNode);
+    
+    // 折りたたみ状態変更後に自動レイアウトを適用（設定が有効な場合）
+    let finalRootNode = updatedRootNode;
+    if (clonedData.settings?.autoLayout !== false) {
+      finalRootNode = applyAutoLayout(updatedRootNode);
     }
+    
+    const newData: MindMapData = { 
+      ...clonedData, 
+      rootNode: finalRootNode,
+      updatedAt: new Date().toISOString()
+    };
+    
+    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
   };
 
+
+  // 全体レイアウトを適用する関数
+  const applyFullLayout = async (): Promise<void> => {
+    const currentData = dataRef.current;
+    if (!currentData) return;
+    
+    const clonedData = deepClone(currentData);
+    const newRootNode = applyAutoLayout(clonedData.rootNode);
+    
+    const newData: MindMapData = { 
+      ...clonedData, 
+      rootNode: newRootNode,
+      updatedAt: new Date().toISOString()
+    };
+    
+    await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
+  };
 
   return {
     selectedNodeId,
@@ -525,6 +560,7 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     findParentNode,
     flattenNodes,
     applyAutoLayout,
+    applyFullLayout,
     startEdit,
     finishEdit,
     toggleCollapse

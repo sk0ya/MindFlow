@@ -54,7 +54,7 @@ export const radialLayout = (rootNode: MindMapNode, options: LayoutOptions = {})
       node.y = centerY;
     }
 
-    if (node.children && node.children.length > 0) {
+    if (!node.collapsed && node.children && node.children.length > 0) {
       const radius = baseRadius + (depth * radiusIncrement);
       const angleStep = angleSpan / node.children.length;
       const startAngle = parentAngle - angleSpan / 2 + angleStep / 2;
@@ -64,8 +64,8 @@ export const radialLayout = (rootNode: MindMapNode, options: LayoutOptions = {})
         child.x = node.x + Math.cos(angle) * radius;
         child.y = node.y + Math.sin(angle) * radius;
 
-        // 子ノードが存在する場合は再帰的に処理
-        if (child.children && child.children.length > 0) {
+        // 子ノードが存在する場合は再帰的に処理（折りたたまれていない場合のみ）
+        if (!child.collapsed && child.children && child.children.length > 0) {
           const childAngleSpan = angleStep * 0.8; // 子の角度範囲を少し狭める
           updateNodePositions(child, depth + 1, angle, childAngleSpan);
         }
@@ -91,7 +91,7 @@ export const hierarchicalLayout = (rootNode: MindMapNode, options: LayoutOptions
   } = options;
 
   const calculateSubtreeSize = (node: MindMapNode): number => {
-    if (!node.children || node.children.length === 0) {
+    if (node.collapsed || !node.children || node.children.length === 0) {
       return 1;
     }
     return node.children.reduce((sum, child) => sum + calculateSubtreeSize(child), 0);
@@ -111,7 +111,7 @@ export const hierarchicalLayout = (rootNode: MindMapNode, options: LayoutOptions
       }
     }
 
-    if (node.children && node.children.length > 0) {
+    if (!node.collapsed && node.children && node.children.length > 0) {
       let currentOffset = 0;
       const totalChildren = node.children.reduce((sum, child) => sum + calculateSubtreeSize(child), 0);
 
@@ -143,7 +143,8 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
   } = options;
 
   const calculateSubtreeHeight = (node: MindMapNode): number => {
-    if (!node.children || node.children.length === 0) {
+    // 折りたたまれた場合は、そのノード自体の高さのみカウント
+    if (node.collapsed || !node.children || node.children.length === 0) {
       return 1;
     }
     
@@ -168,7 +169,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         node.y = centerY;
       }
 
-      if (node.children && node.children.length > 0) {
+      if (!node.collapsed && node.children && node.children.length > 0) {
         const leftChildren: MindMapNode[] = [];
         const rightChildren: MindMapNode[] = [];
 
@@ -217,8 +218,8 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
       node.x = centerX + (xDistance * sideMultiplier);
       node.y = centerY + yOffset;
 
-      // 子ノードがある場合の再帰処理
-      if (node.children && node.children.length > 0) {
+      // 子ノードがある場合の再帰処理（折りたたまれていない場合のみ）
+      if (!node.collapsed && node.children && node.children.length > 0) {
         const totalChildHeight = node.children.reduce((sum, child) => 
           sum + calculateSubtreeHeight(child), 0);
         

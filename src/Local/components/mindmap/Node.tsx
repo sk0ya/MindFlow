@@ -155,6 +155,7 @@ const Node: React.FC<NodeProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
+    return undefined;
   }, [isDragging, mouseDownPos, handleMouseMove, handleMouseUp]);
 
   // 編集モードの状態管理を最適化
@@ -165,6 +166,7 @@ const Node: React.FC<NodeProps> = ({
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
       }
+      return undefined;
     } else if (inputRef.current) {
       // 編集開始時のフォーカスを最適化
       const timeoutId = setTimeout(() => {
@@ -176,6 +178,7 @@ const Node: React.FC<NodeProps> = ({
       
       return () => clearTimeout(timeoutId);
     }
+    return undefined;
   }, [isEditing]);
 
   // コンポーネントアンマウント時のクリーンアップ

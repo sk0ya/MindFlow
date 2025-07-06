@@ -61,7 +61,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onDeleteNode,
   onRightClick,
   onToggleCollapse,
-  onNavigateToDirection,
+  onNavigateToDirection: _onNavigateToDirection,
   onFileUpload,
   onRemoveFile,
   onShowImageModal,
@@ -118,7 +118,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     });
     
     // 各ノードとの距離を計算して最も近いものを見つける
-    let closestNode = null;
+    let closestNode: MindMapNode | null = null;
     let minDistance = Infinity;
     const maxDropDistance = 120; // ドロップ可能な最大距離を増加
     
@@ -142,7 +142,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       }
     });
     
-    console.log('🎯 最終結果:', { closestNodeId: closestNode?.id, minDistance });
+    console.log('🎯 最終結果:', { closestNodeId: (closestNode as MindMapNode | null)?.id, minDistance });
     return closestNode;
   }, [allNodes, zoom, pan, dragState.draggedNodeId]);
 
@@ -176,7 +176,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   }, [getNodeAtPosition]);
 
   // ドラッグ終了時の処理（親変更のみ）
-  const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
+  const handleDragEnd = useCallback((nodeId: string, _x: number, _y: number) => {
     setDragState(prevState => {
       console.log('🎯 handleDragEnd 実行:', { 
         nodeId, 

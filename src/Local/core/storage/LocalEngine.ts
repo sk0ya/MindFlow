@@ -52,7 +52,7 @@ class LocalEngine {
   // 現在のマインドマップを取得
   getCurrentMindMap() {
     const currentId = localStorage.getItem(STORAGE_KEYS.CURRENT_MAP_ID);
-    debug('LocalEngine.getCurrentMindMap: Current ID:', currentId);
+    debug('LocalEngine.getCurrentMindMap: Current ID:', { currentId: currentId || 'null' });
     
     if (!currentId) {
       debug('LocalEngine.getCurrentMindMap: No current ID found');
@@ -140,7 +140,7 @@ class LocalEngine {
       });
       
       if (!dataStr) {
-        debug('LocalEngine.getMindMap: No data found for key:', key);
+        debug('LocalEngine.getMindMap: No data found for key:', { key });
         return null;
       }
       
@@ -151,8 +151,8 @@ class LocalEngine {
       });
       
       return data;
-    } catch (error) {
-      error('Failed to get mind map:', error);
+    } catch (err) {
+      error('Failed to get mind map:', { error: err });
       return null;
     }
   }
@@ -223,14 +223,14 @@ class LocalEngine {
       // 保存後の確認
       const savedData = localStorage.getItem(key);
       if (savedData) {
-        debug('LocalEngine.updateMindMap: Data saved successfully, size:', savedData.length);
+        debug('LocalEngine.updateMindMap: Data saved successfully, size:', { size: savedData.length });
       } else {
         error('LocalEngine.updateMindMap: Failed to verify saved data');
       }
       
       return { success: true, data: updatedData };
     } catch (err) {
-      error('Failed to update mind map:', err);
+      error('Failed to update mind map:', { error: err });
       return { success: false, error: (err as Error).message };
     }
   }

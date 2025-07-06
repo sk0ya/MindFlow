@@ -56,6 +56,7 @@ export const useMindMap = (isAppReady = false) => {
     findParentNode: nodeHook.findParentNode,
     flattenNodes: nodeHook.flattenNodes,
     applyAutoLayout: nodeHook.applyAutoLayout,
+    applyFullLayout: nodeHook.applyFullLayout,
     navigateToDirection: navigation.navigateToDirection,
     
     // 編集

@@ -46,7 +46,8 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
         { keys: ['Ctrl', 'S'], description: 'マインドマップを保存', context: 'いつでも' },
         { keys: ['Ctrl', 'Z'], description: '元に戻す', context: 'いつでも' },
         { keys: ['Ctrl', 'Y'], description: 'やり直し', context: 'いつでも' },
-        { keys: ['Ctrl', 'Shift', 'Z'], description: 'やり直し', context: 'いつでも' }
+        { keys: ['Ctrl', 'Shift', 'Z'], description: 'やり直し', context: 'いつでも' },
+        { keys: ['Ctrl', 'L'], description: '全体レイアウトを整列', context: 'いつでも' }
       ]
     },
     {
