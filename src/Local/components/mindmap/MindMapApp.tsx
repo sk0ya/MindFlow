@@ -216,7 +216,6 @@ const MindMapApp: React.FC = () => {
                 onSelectNode={nodeHandlers.handleNodeSelect}
                 onStartEdit={startEdit}
                 onFinishEdit={finishEdit}
-                onDragNode={dragNode}
                 onChangeParent={changeParent}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}

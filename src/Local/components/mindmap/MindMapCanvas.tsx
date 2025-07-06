@@ -12,7 +12,6 @@ interface MindMapCanvasProps {
   onSelectNode: (nodeId: string | null) => void;
   onStartEdit: (nodeId: string) => void;
   onFinishEdit: (nodeId: string, text: string) => void;
-  onDragNode: (nodeId: string, x: number, y: number) => void;
   onChangeParent?: (nodeId: string, newParentId: string) => void;
   onAddChild: (parentId: string) => void;
   onAddSibling: (nodeId: string) => void;
@@ -56,7 +55,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onSelectNode,
   onStartEdit,
   onFinishEdit,
-  onDragNode,
   onChangeParent,
   onAddChild,
   onAddSibling,
@@ -82,6 +80,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     draggedNodeId: null,
     dropTargetId: null
   });
+  
+  // dragStateのrefも作成してNodeからアクセスできるようにする
+  const dragStateRef = useRef(dragState);
+  useEffect(() => {
+    dragStateRef.current = dragState;
+  }, [dragState]);
 
   const flattenVisibleNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
@@ -102,13 +106,21 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     if (!svgRect) return null;
     
     // マウス座標をSVG内座標に変換（zoom, panを考慮）
-    const svgX = ((x - svgRect.left) / zoom) - pan.x;
-    const svgY = ((y - svgRect.top) / zoom) - pan.y;
+    // 正しい変換: (クライアント座標 - SVG位置) / zoom - pan
+    const svgX = (x - svgRect.left) / zoom - pan.x;
+    const svgY = (y - svgRect.top) / zoom - pan.y;
+    
+    console.log('🎯 座標変換:', { 
+      clientX: x, clientY: y, 
+      svgLeft: svgRect.left, svgTop: svgRect.top,
+      zoom, panX: pan.x, panY: pan.y,
+      svgX, svgY 
+    });
     
     // 各ノードとの距離を計算して最も近いものを見つける
     let closestNode = null;
     let minDistance = Infinity;
-    const maxDropDistance = 80; // ドロップ可能な最大距離を増加
+    const maxDropDistance = 120; // ドロップ可能な最大距離を増加
     
     allNodes.forEach(node => {
       if (node.id === dragState.draggedNodeId) return; // 自分自身は除外
@@ -117,17 +129,26 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         Math.pow(node.x - svgX, 2) + Math.pow(node.y - svgY, 2)
       );
       
+      console.log('📏 ノード距離計算:', { 
+        nodeId: node.id, 
+        nodeX: node.x, nodeY: node.y, 
+        distance, 
+        maxDropDistance 
+      });
+      
       if (distance < maxDropDistance && distance < minDistance) {
         minDistance = distance;
         closestNode = node;
       }
     });
     
+    console.log('🎯 最終結果:', { closestNodeId: closestNode?.id, minDistance });
     return closestNode;
   }, [allNodes, zoom, pan, dragState.draggedNodeId]);
 
   // ドラッグ開始時の処理
   const handleDragStart = useCallback((nodeId: string) => {
+    console.log('🔥 ドラッグ開始:', { nodeId });
     setDragState({
       isDragging: true,
       draggedNodeId: nodeId,
@@ -137,35 +158,52 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
   // ドラッグ中の処理
   const handleDragMove = useCallback((x: number, y: number) => {
-    if (!dragState.isDragging) return;
-    
-    const targetNode = getNodeAtPosition(x, y);
-    setDragState(prev => ({
-      ...prev,
-      dropTargetId: targetNode?.id || null
-    }));
-  }, [dragState.isDragging, getNodeAtPosition]);
-
-  // ドラッグ終了時の処理
-  const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
-    if (dragState.dropTargetId && dragState.dropTargetId !== nodeId) {
-      // 親要素を変更
-      console.log('🎯 ドロップターゲット検出:', { nodeId, dropTargetId: dragState.dropTargetId });
-      if (onChangeParent) {
-        onChangeParent(nodeId, dragState.dropTargetId);
+    console.log('🎯 handleDragMove 呼び出し:', { x, y });
+    setDragState(prev => {
+      console.log('🎯 ドラッグ状態確認:', { isDragging: prev.isDragging });
+      if (!prev.isDragging) {
+        console.log('🚫 ドラッグ中でないため処理をスキップ');
+        return prev;
       }
-    } else {
-      // 通常の位置移動
-      console.log('📍 位置移動:', { nodeId, x, y });
-      onDragNode(nodeId, x, y);
-    }
-    
-    setDragState({
-      isDragging: false,
-      draggedNodeId: null,
-      dropTargetId: null
+      
+      const targetNode = getNodeAtPosition(x, y);
+      console.log('🎯 ドラッグ移動:', { x, y, targetNodeId: targetNode?.id });
+      return {
+        ...prev,
+        dropTargetId: targetNode?.id || null
+      };
     });
-  }, [dragState.dropTargetId, onChangeParent, onDragNode]);
+  }, [getNodeAtPosition]);
+
+  // ドラッグ終了時の処理（親変更のみ）
+  const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
+    setDragState(prevState => {
+      console.log('🎯 handleDragEnd 実行:', { 
+        nodeId, 
+        dropTargetId: prevState.dropTargetId, 
+        hasOnChangeParent: !!onChangeParent 
+      });
+      
+      if (prevState.dropTargetId && prevState.dropTargetId !== nodeId) {
+        // 親要素を変更
+        console.log('🎯 ドロップターゲット検出、親変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
+        if (onChangeParent) {
+          console.log('🔄 changeParent関数呼び出し');
+          onChangeParent(nodeId, prevState.dropTargetId);
+        } else {
+          console.error('❌ onChangeParent関数が未定義');
+        }
+      } else {
+        console.log('🚫 ドロップターゲットなし、親変更をスキップ');
+      }
+      
+      return {
+        isDragging: false,
+        draggedNodeId: null,
+        dropTargetId: null
+      };
+    });
+  }, [onChangeParent]);
   
   const connections: Connection[] = [];
   allNodes.forEach(node => {
@@ -268,7 +306,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (isPanningRef.current) {
+    // ドラッグ中はパン操作を無効化してドラッグ操作を優先
+    if (isPanningRef.current && !dragState.isDragging) {
       const deltaX = e.clientX - lastPanPointRef.current.x;
       const deltaY = e.clientY - lastPanPointRef.current.y;
       
@@ -282,7 +321,10 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   };
 
   const handleMouseUp = () => {
-    isPanningRef.current = false;
+    // ドラッグ中でない場合のみパン終了
+    if (!dragState.isDragging) {
+      isPanningRef.current = false;
+    }
   };
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
@@ -307,45 +349,15 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     onSelectNode(nodeId);
   }, [editingNodeId, onSelectNode]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    console.log('🖱️ Canvas handleKeyDown:', { key: e.key, selectedNodeId, editingNodeId });
-    if (selectedNodeId && !editingNodeId) {
-      // 基本的なナビゲーションのみ処理（Tab/Enter/削除はuseKeyboardShortcutsに委任）
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          onNavigateToDirection('up');
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          onNavigateToDirection('down');
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          onNavigateToDirection('left');
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          onNavigateToDirection('right');
-          break;
-        default:
-          // 他のキーはuseKeyboardShortcutsで統一処理
-          break;
-      }
-    }
-  }, [selectedNodeId, editingNodeId, onNavigateToDirection]);
-
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, [dragState.isDragging]);
 
   return (
     <div className="mindmap-canvas-container">
@@ -371,12 +383,19 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       >
         <g transform={`scale(${zoom}) translate(${pan.x}, ${pan.y})`}>
           {/* ドラッグ中のドロップガイドライン */}
-          {dragState.isDragging && dragState.dropTargetId && (
+          {dragState.isDragging && (
             <g className="drop-guide">
               {(() => {
                 const draggedNode = allNodes.find(n => n.id === dragState.draggedNodeId);
                 const targetNode = allNodes.find(n => n.id === dragState.dropTargetId);
-                if (draggedNode && targetNode) {
+                console.log('🎨 ガイドライン表示:', { 
+                  isDragging: dragState.isDragging, 
+                  dropTargetId: dragState.dropTargetId,
+                  draggedNode: !!draggedNode,
+                  targetNode: !!targetNode
+                });
+                // ドラッグ中は最低限のエフェクトを表示
+                if (draggedNode) {
                   return (
                     <>
                       <defs>
@@ -385,27 +404,57 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
                           <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800" />
                         </marker>
                       </defs>
-                      <line
-                        x1={draggedNode.x}
-                        y1={draggedNode.y}
-                        x2={targetNode.x}
-                        y2={targetNode.y}
-                        stroke="#ff9800"
-                        strokeWidth="3"
-                        strokeDasharray="8,4"
-                        markerEnd="url(#arrowhead)"
-                        opacity="0.8"
-                      />
+                      
+                      {/* ドラッグ中ノードの強調表示 */}
                       <circle
-                        cx={targetNode.x}
-                        cy={targetNode.y}
-                        r="60"
+                        cx={draggedNode.x}
+                        cy={draggedNode.y}
+                        r="50"
                         fill="none"
                         stroke="#ff9800"
                         strokeWidth="2"
-                        strokeDasharray="4,4"
-                        opacity="0.5"
+                        strokeDasharray="6,6"
+                        opacity="0.6"
                       />
+                      
+                      {/* ドロップ検出範囲の表示 */}
+                      <circle
+                        cx={draggedNode.x}
+                        cy={draggedNode.y}
+                        r="120"
+                        fill="none"
+                        stroke="#ff9800"
+                        strokeWidth="1"
+                        strokeDasharray="2,8"
+                        opacity="0.3"
+                      />
+                      
+                      {/* ドロップターゲットがある場合の接続線 */}
+                      {targetNode && (
+                        <>
+                          <line
+                            x1={draggedNode.x}
+                            y1={draggedNode.y}
+                            x2={targetNode.x}
+                            y2={targetNode.y}
+                            stroke="#ff9800"
+                            strokeWidth="3"
+                            strokeDasharray="8,4"
+                            markerEnd="url(#arrowhead)"
+                            opacity="0.8"
+                          />
+                          <circle
+                            cx={targetNode.x}
+                            cy={targetNode.y}
+                            r="60"
+                            fill="none"
+                            stroke="#ff9800"
+                            strokeWidth="2"
+                            strokeDasharray="4,4"
+                            opacity="0.5"
+                          />
+                        </>
+                      )}
                     </>
                   );
                 }
@@ -481,7 +530,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         <p>
           <strong>操作方法:</strong> 
           クリック=選択 | ダブルクリック=編集 | Tab=子追加 | Enter=兄弟追加 | Delete=削除 | 
-          Space=編集 | マウスホイール=ズーム | ドラッグ=パン/移動 | 
+          Space=編集 | マウスホイール=ズーム | 背景ドラッグ=パン | 
           <span style={{color: '#ff9800', fontWeight: 'bold'}}>ノードドラッグ=親変更</span> | 
           接続線のボタン=開閉
         </p>

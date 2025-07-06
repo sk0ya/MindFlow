@@ -105,6 +105,7 @@ const Node: React.FC<NodeProps> = ({
       );
       
       if (distance > 5) {
+        console.log('📱 Node ドラッグ開始:', { nodeId: node.id, distance });
         setIsDragging(true);
         // ドラッグ開始を通知
         if (onDragStart) {
@@ -113,13 +114,18 @@ const Node: React.FC<NodeProps> = ({
       }
     } else if (isDragging) {
       // ドラッグ中の位置を通知（ドロップターゲット検出用）
+      console.log('📱 Node ドラッグ中:', { nodeId: node.id, clientX: e.clientX, clientY: e.clientY, hasOnDragMove: !!onDragMove });
       if (onDragMove) {
+        console.log('📱 Node: onDragMove呼び出し');
         onDragMove(e.clientX, e.clientY);
+      } else {
+        console.log('❌ Node: onDragMoveが未定義');
       }
     }
   }, [isDragging, mouseDownPos, onDragMove, onDragStart, node.id]);
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
+    console.log('📱 Node マウスアップ:', { nodeId: node.id, isDragging });
     if (isDragging && svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
       const svgX = (e.clientX - svgRect.left) / zoom;
@@ -128,6 +134,7 @@ const Node: React.FC<NodeProps> = ({
       const newX = svgX - dragStart.x;
       const newY = svgY - dragStart.y;
       
+      console.log('📱 Node ドラッグ終了通知:', { nodeId: node.id, newX, newY, clientX: e.clientX, clientY: e.clientY });
       // ドラッグ終了を通知（親要素変更またはノード移動）
       if (onDragEnd) {
         onDragEnd(node.id, newX, newY);
@@ -148,35 +155,35 @@ const Node: React.FC<NodeProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-    
-    return undefined;
   }, [isDragging, mouseDownPos, handleMouseMove, handleMouseUp]);
 
-  // 編集モードが終了した時にIME状態をリセット
+  // 編集モードの状態管理を最適化
   useEffect(() => {
     if (!isEditing) {
       setIsComposing(false);
-      // タイマーもクリア
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
       }
-    } else if (isEditing && inputRef.current) {
-      // 編集モード開始時に確実にフォーカス
-      setTimeout(() => {
+    } else if (inputRef.current) {
+      // 編集開始時のフォーカスを最適化
+      const timeoutId = setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
-          inputRef.current.select(); // テキストを選択状態にする
+          inputRef.current.select();
         }
       }, 10);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [isEditing]);
 
-  // コンポーネントのアンマウント時のクリーンアップ
+  // コンポーネントアンマウント時のクリーンアップ
   useEffect(() => {
     return () => {
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
       }
     };
   }, []);

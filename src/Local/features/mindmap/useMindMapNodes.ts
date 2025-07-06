@@ -330,7 +330,12 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
 
   // ノードの親を変更（Local版）
   const changeParent = async (nodeId: string, newParentId: string): Promise<boolean> => {
-    if (nodeId === 'root' || nodeId === newParentId) return false;
+    console.log('🔄 changeParent関数開始:', { nodeId, newParentId });
+    
+    if (nodeId === 'root' || nodeId === newParentId) {
+      console.log('🚫 ルートノードまたは自分自身への変更をスキップ');
+      return false;
+    }
     
     // 循環参照防止
     const isDescendant = (parentId: string, childId: string): boolean => {
@@ -343,14 +348,24 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     };
     
     if (isDescendant(nodeId, newParentId)) {
-      console.warn('循環参照が発生するため、親要素を変更できません');
+      console.warn('🚫 循環参照が発生するため、親要素を変更できません');
       return false;
     }
     
     const nodeToMove = findNode(nodeId);
     const newParent = findNode(newParentId);
     
-    if (!nodeToMove || !newParent) return false;
+    console.log('🔍 ノード検索結果:', { 
+      nodeToMove: !!nodeToMove, 
+      newParent: !!newParent,
+      nodeToMoveTitle: nodeToMove?.text,
+      newParentTitle: newParent?.text 
+    });
+    
+    if (!nodeToMove || !newParent) {
+      console.error('❌ ノードまたは新しい親が見つからない');
+      return false;
+    }
     
     console.log('🔄 ノード親変更開始:', { nodeId, newParentId });
     
@@ -398,19 +413,28 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    await updateData(newData, {
-      skipHistory: false,
-      immediate: true,
-      operationType: 'node_move',
-      operationData: {
-        nodeId,
-        newPosition: { x: nodeToMove.x, y: nodeToMove.y },
-        newParentId
-      }
+    console.log('📝 updateData実行前の状態:', { 
+      hasNewData: !!newData, 
+      hasRootNode: !!newData.rootNode 
     });
     
-    console.log('✅ ローカル状態更新完了:', nodeId);
-    return true;
+    try {
+      await updateData(newData, {
+        skipHistory: false,
+        immediate: true,
+        operationType: 'node_move',
+        operationData: {
+          nodeId,
+          newPosition: { x: nodeToMove.x, y: nodeToMove.y },
+          newParentId
+        }
+      });
+      console.log('✅ ローカル状態更新完了:', nodeId);
+      return true;
+    } catch (error) {
+      console.error('❌ updateData実行エラー:', error);
+      return false;
+    }
   };
 
   // 編集開始
