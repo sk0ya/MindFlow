@@ -112,7 +112,7 @@ const CloudMindMapApp: React.FC<Props> = ({ onModeChange }) => {
       return null;
     };
     
-    const parentNode = findParent(data?.rootNode, nodeId);
+    const parentNode = data?.rootNode ? findParent(data.rootNode, nodeId) : null;
     if (parentNode) {
       addChildNode(parentNode.id, text, autoEdit);
     }

@@ -235,7 +235,7 @@ export const createStructuredSelector = <State, Selectors extends Record<string,
 ): (state: State) => { [K in keyof Selectors]: ReturnType<Selectors[K]> } => {
   const selectorKeys = Object.keys(selectors) as Array<keyof Selectors>;
   const memoizedSelectors = selectorKeys.reduce((acc, key) => {
-    acc[key] = createSelector(selectors[key]);
+    acc[key] = createSelector(selectors[key]) as (state: State) => ReturnType<Selectors[typeof key]>;
     return acc;
   }, {} as { [K in keyof Selectors]: (state: State) => ReturnType<Selectors[K]> });
   

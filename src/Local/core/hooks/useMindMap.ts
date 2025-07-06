@@ -123,7 +123,11 @@ export const useMindMap = (isAppReady = false) => {
   }, [nodeHook.selectedNodeId, dataHook.data, nodeHook.flattenNodes, nodeHook.findNode, nodeHook.findParentNode, nodeHook.setSelectedNodeId]);
 
   // ファイル添付
-  const fileHook = useMindMapFiles(nodeHook.findNode, nodeHook.updateNode, multiHook.currentMapId);
+  const fileHook = useMindMapFiles(
+    (nodeId: string) => nodeHook.findNode(nodeId), 
+    nodeHook.updateNode, 
+    multiHook.currentMapId
+  );
 
   return {
     // データ

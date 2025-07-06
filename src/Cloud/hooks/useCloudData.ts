@@ -5,22 +5,11 @@ import {
   saveToIndexedDB, 
   getAllFromIndexedDB,
   markAsSynced,
-  getDirtyData
+  getDirtyData,
+  MindMapData,
+  CachedMindMap
 } from '../utils/indexedDB';
 import { cleanEmptyNodesFromData, countNodes } from '../utils/dataUtils';
-import { MindMapNode } from '../../shared/types/core';
-
-interface MindMapData {
-  id: string;
-  title: string;
-  rootNode: MindMapNode;
-  updatedAt: string;
-  createdAt?: string;
-  _metadata?: {
-    lastSync: string;
-    isDirty: boolean;
-  };
-}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev';
 
@@ -36,7 +25,15 @@ const createDefaultData = (): MindMapData => ({
     y: 300,
     children: []
   },
-  updatedAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  settings: {
+    autoSave: true,
+    autoLayout: false,
+    snapToGrid: false,
+    showGrid: false,
+    animationEnabled: true
+  }
 });
 
 
@@ -89,21 +86,22 @@ export const useCloudData = () => {
 
     try {
       // 1. まずIndexedDBからローカルキャッシュを確認
-      let localData = null;
+      let localData: MindMapData | null = null;
+      let rawLocalData: CachedMindMap | null = null;
       if (isIndexedDBReady) {
         try {
           const allLocalData = await getAllFromIndexedDB(authState.user?.email);
           if (allLocalData.length > 0) {
-            const rawLocalData = allLocalData[0]; // 最初のマップを使用
+            rawLocalData = allLocalData[0]; // 最初のマップを使用
             
             // ローカルデータもクリーンアップ
             localData = cleanEmptyNodesFromData(rawLocalData);
             
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.NODE_ENV === 'development' && localData) {
               console.log('📱 IndexedDB: ローカルキャッシュ発見・クリーンアップ:', {
                 id: localData.id,
                 title: localData.title,
-                isDirty: localData._metadata?.isDirty
+                isDirty: rawLocalData?._metadata?.isDirty
               });
             }
             // クリーンアップ済みローカルデータを即座に表示
@@ -139,7 +137,7 @@ export const useCloudData = () => {
           if (process.env.NODE_ENV === 'development') {
             console.log('📱 API失敗、ローカルデータを使用');
           }
-          setLastSyncTime(new Date(localData._metadata?.lastSync || Date.now()));
+          setLastSyncTime(new Date(rawLocalData?._metadata?.lastSync || Date.now()));
           return;
         }
         const errorText = await response.text();
@@ -175,7 +173,7 @@ export const useCloudData = () => {
         const cleanedServerData = cleanEmptyNodesFromData(serverData);
         
         // 4. クリーンアップ済みデータをIndexedDBに保存
-        if (isIndexedDBReady) {
+        if (isIndexedDBReady && cleanedServerData) {
           try {
             await saveToIndexedDB(cleanedServerData, authState.user?.email);
             // 同期済みとしてマーク
@@ -185,7 +183,7 @@ export const useCloudData = () => {
           }
         }
 
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development' && cleanedServerData) {
           console.log('✅ サーバーデータ取得・クリーンアップ・保存完了:', { 
             id: cleanedServerData.id, 
             title: cleanedServerData.title,
@@ -197,7 +195,7 @@ export const useCloudData = () => {
         
         // rootNodeが追加された場合は、修正されたデータを保存
         const originalData = result.mindmaps[0];
-        if (!originalData.rootNode && cleanedServerData.rootNode) {
+        if (!originalData.rootNode && cleanedServerData?.rootNode) {
           if (process.env.NODE_ENV === 'development') {
             console.log('💾 rootNode追加後のデータを保存:', { id: cleanedServerData.id });
           }
@@ -500,7 +498,7 @@ export const useCloudData = () => {
     setData(cleanedData);
     
     // IndexedDBに保存
-    if (isIndexedDBReady && authState.isAuthenticated) {
+    if (isIndexedDBReady && authState.isAuthenticated && cleanedData) {
       try {
         await saveToIndexedDB(cleanedData, authState.user?.email);
       } catch (error) {
@@ -508,7 +506,7 @@ export const useCloudData = () => {
       }
     }
     
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && cleanedData) {
       console.log('📝 データ更新完了:', { 
         title: cleanedData.title,
         cleaned: !!options.cleanupEmptyNodes

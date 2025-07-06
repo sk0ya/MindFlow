@@ -1,37 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import Node from './Node';
 import Connection from './Connection';
-
-// Cloud モード用の型定義
-interface FileAttachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url?: string;
-  data?: string;
-}
-
-interface MindMapNode {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  children: MindMapNode[];
-  fontSize?: number;
-  fontWeight?: string;
-  collapsed?: boolean;
-  color?: string;
-  attachments?: FileAttachment[];
-}
-
-interface MindMapData {
-  id: string;
-  title: string;
-  rootNode: MindMapNode;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { MindMapNode, FileAttachment, MindMapData } from '../../shared/types/core';
 
 interface MindMapCanvasProps {
   data: MindMapData;

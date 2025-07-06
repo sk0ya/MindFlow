@@ -51,17 +51,17 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
         throw new Error(result.error || 'マップ作成に失敗しました');
       }
       
-      console.log('✅ マップ作成完了:', result.data.title || title);
+      console.log('✅ マップ作成完了:', result.data?.title || title);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
       
       // ローカルモードでは即座作成完了
-      console.log('✅ ローカルマップ作成完了:', result.data.title || title);
+      console.log('✅ ローカルマップ作成完了:', result.data?.title || title);
       
       // 新規作成したマップに切り替え
-      await switchToMap(result.data.id || newMap.id, true);
-      return result.data.id || newMap.id;
+      await switchToMap(result.data?.id || newMap.id, true);
+      return result.data?.id || newMap.id;
       
     } catch (error) {
       console.error('❌ マップ作成失敗:', error);

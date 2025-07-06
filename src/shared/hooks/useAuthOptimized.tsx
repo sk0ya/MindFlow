@@ -71,7 +71,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'REFRESH_SUCCESS':
       return {
         isAuthenticated: true,
-        user: action.payload.user,
+        user: action.payload?.user || null,
         isLoading: false,
         error: null
       };

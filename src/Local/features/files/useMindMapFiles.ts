@@ -4,13 +4,7 @@ import { optimizeFile, formatFileSize } from './fileOptimization';
 import { validateFile } from './fileValidation';
 import { logger } from '../../shared/utils/logger';
 import { getCurrentMindMap } from '../../core/storage/LocalEngine';
-
-interface MindMapNode {
-  id: string;
-  attachments?: FileAttachment[];
-  children?: MindMapNode[];
-  [key: string]: unknown;
-}
+import { MindMapNode } from '../../../shared/types/core';
 
 interface NodeUpdates {
   attachments?: FileAttachment[];
