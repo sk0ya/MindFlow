@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { MindMapNode } from '../../shared/types/dataTypes';
+import type { MindMapNode } from '../../../shared/types';
 
 interface NodeCustomizationPanelProps {
   selectedNode: MindMapNode | null;
@@ -155,13 +155,19 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
             <button
               onClick={() => {
                 const preset = {
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  fontStyle: 'normal',
+                  borderStyle: 'solid',
+                  borderWidth: 2
+                };
+                setCustomizations({
                   fontSize: '14px',
                   fontWeight: 'bold',
                   fontStyle: 'normal',
                   borderStyle: 'solid',
                   borderWidth: '2px'
-                };
-                setCustomizations(preset);
+                });
                 onUpdateNode(selectedNode.id, preset);
               }}
               className="preset-btn"
@@ -171,13 +177,19 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
             <button
               onClick={() => {
                 const preset = {
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                  fontStyle: 'normal',
+                  borderStyle: 'solid',
+                  borderWidth: 3
+                };
+                setCustomizations({
                   fontSize: '16px',
                   fontWeight: 'bold',
                   fontStyle: 'normal',
                   borderStyle: 'solid',
                   borderWidth: '3px'
-                };
-                setCustomizations(preset);
+                });
                 onUpdateNode(selectedNode.id, preset);
               }}
               className="preset-btn"
@@ -187,13 +199,19 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
             <button
               onClick={() => {
                 const preset = {
+                  fontSize: 14,
+                  fontWeight: 'normal',
+                  fontStyle: 'italic',
+                  borderStyle: 'dashed',
+                  borderWidth: 2
+                };
+                setCustomizations({
                   fontSize: '14px',
                   fontWeight: 'normal',
                   fontStyle: 'italic',
                   borderStyle: 'dashed',
                   borderWidth: '2px'
-                };
-                setCustomizations(preset);
+                });
                 onUpdateNode(selectedNode.id, preset);
               }}
               className="preset-btn"

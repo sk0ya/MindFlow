@@ -1,14 +1,9 @@
 import React, { useEffect, useCallback } from 'react';
-
-interface ImageFile {
-  dataURL: string;
-  name: string;
-  size: number;
-}
+import type { FileAttachment } from '../../../shared/types';
 
 interface ImageModalProps {
   isOpen: boolean;
-  image: ImageFile | null;
+  image: FileAttachment | null;
   onClose: () => void;
 }
 
@@ -34,6 +29,8 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
         document.body.style.overflow = 'unset';
       };
     }
+    
+    return undefined;
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen || !image) {
@@ -51,7 +48,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
           ×
         </button>
         <img 
-          src={image.dataURL} 
+          src={image.dataURL || image.data} 
           alt={image.name}
           className="image-modal-image"
         />

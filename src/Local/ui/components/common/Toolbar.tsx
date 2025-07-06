@@ -5,16 +5,17 @@ interface ToolbarProps {
   title: string;
   onTitleChange: (title: string) => void;
   onExport: () => void;
-  onImport: (file: File) => void;
-  onUndo: () => void;
-  onRedo: () => void;
+  onImport: (file: File) => Promise<void>;
+  onUndo: () => Promise<void>;
+  onRedo: () => Promise<void>;
   canUndo: boolean;
   canRedo: boolean;
   zoom: number;
   onZoomReset: () => void;
   onShowShortcutHelper: () => void;
+  onShowLocalStoragePanel?: () => void;
   isLocalMode?: boolean;
-  onToggleSidebar: () => void;
+  onToggleSidebar?: () => void;
   showSidebar?: boolean;
 }
 
@@ -30,7 +31,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   zoom,
   onZoomReset,
   onShowShortcutHelper,
-  isLocalMode = false,
   onToggleSidebar,
   showSidebar = true
 }) => {

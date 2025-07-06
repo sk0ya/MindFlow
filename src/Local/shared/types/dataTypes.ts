@@ -1,77 +1,23 @@
 import { cloneDeep } from '../utils/lodash-utils';
 import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
 
-// 基本的な型定義
-export interface MindMapNode {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  fontSize?: number;
-  fontWeight?: string;
-  fontStyle?: string;
-  color?: string;
-  borderStyle?: string;
-  borderWidth?: number;
-  backgroundColor?: string;
-  collapsed?: boolean;
-  children: MindMapNode[];
-  attachments: FileAttachment[];
-  mapLinks: NodeMapLink[];
-}
+// Import shared types to ensure compatibility
+import type { 
+  MindMapNode as SharedMindMapNode, 
+  MindMapData as SharedMindMapData,
+  MindMapSettings as SharedMindMapSettings,
+  FileAttachment as SharedFileAttachment,
+  NodeMapLink as SharedNodeMapLink,
+  Position as SharedPosition
+} from '../../../shared/types';
 
-export interface MindMapData {
-  id: string;
-  title: string;
-  category?: string;
-  theme?: string;
-  createdAt: string;
-  updatedAt: string;
-  rootNode: MindMapNode;
-  settings: MindMapSettings;
-}
-
-export interface MindMapSettings {
-  autoSave: boolean;
-  autoLayout: boolean;
-  snapToGrid?: boolean;
-  showGrid?: boolean;
-  animationEnabled?: boolean;
-}
-
-export interface FileAttachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  dataURL?: string;
-  downloadUrl?: string;
-  storagePath?: string;
-  thumbnailUrl?: string;
-  r2FileId?: string;
-  isR2Storage?: boolean;
-  nodeId?: string;
-  isImage: boolean;
-  createdAt: string;
-  isOptimized?: boolean;
-  originalSize?: number;
-  optimizedSize?: number;
-  compressionRatio?: string;
-  optimizedType?: string;
-}
-
-export interface NodeMapLink {
-  id: string;
-  targetMapId: string;
-  targetMapTitle: string;
-  description: string;
-  createdAt: string;
-}
-
-export interface Position {
-  x: number;
-  y: number;
-}
+// Re-export shared types for compatibility
+export type MindMapNode = SharedMindMapNode;
+export type FileAttachment = SharedFileAttachment;
+export type NodeMapLink = SharedNodeMapLink;
+export type MindMapSettings = SharedMindMapSettings;
+export type MindMapData = SharedMindMapData;
+export type Position = SharedPosition;
 
 export interface Theme {
   name: string;
@@ -209,7 +155,7 @@ export const STORAGE_KEYS = {
 
 // ファイル関連のユーティリティ
 export const isImageFile = (file: File): boolean => {
-  return file && file.type && file.type.startsWith('image/');
+  return Boolean(file && file.type && file.type.startsWith('image/'));
 };
 
 export const getFileIcon = (file: File): string => {
@@ -244,11 +190,17 @@ export interface UploadedFileInfo {
   downloadUrl?: string;
   storagePath?: string;
   thumbnailUrl?: string;
+  uploadedAt?: string;
 }
 
 export interface FileOptimizationInfo {
   isR2Storage?: boolean;
   nodeId?: string;
+  isOptimized?: boolean;
+  originalSize?: number;
+  optimizedSize?: number;
+  compressionRatio?: string;
+  optimizedType?: string;
 }
 
 export const createFileAttachment = (
@@ -262,7 +214,7 @@ export const createFileAttachment = (
     name: file.name,
     type: file.type,
     size: file.size,
-    dataURL: dataURL, // レガシー対応
+    dataURL: dataURL || undefined, // レガシー対応
     downloadUrl: uploadedFileInfo?.downloadUrl, // R2からのダウンロードURL
     storagePath: uploadedFileInfo?.storagePath, // R2のストレージパス
     thumbnailUrl: uploadedFileInfo?.thumbnailUrl, // サムネイルURL
@@ -292,7 +244,7 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
   console.log('🎨 assignColorsToExistingNodes: ディープクローンを実行中...');
   const clonedData = deepClone(mindMapData);
   
-  const assignColors = (node: MindMapNode, parentColor: string | null = null, isRootChild: boolean = false, childIndex: number = 0) => {
+  const assignColors = (node: MindMapNode, parentColor: string | null = null, isRootChild: boolean = false, childIndex: number = 0): void => {
     if (node.id === 'root') {
       // ルートノードには色を設定しない
       node.color = undefined;
@@ -308,7 +260,7 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
     
     // 子ノードも再帰的に処理（インプレース変更）
     if (node.children) {
-      node.children.forEach((child, index) =>
+      node.children.forEach((child: MindMapNode, index: number) =>
         assignColors(child, node.color, node.id === 'root', index)
       );
     }
@@ -322,7 +274,7 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
 };
 
 export const validateFile = (file: File): string[] => {
-  const errors = [];
+  const errors: string[] = [];
   
   if (!file) {
     errors.push('ファイルが選択されていません');

@@ -1,5 +1,58 @@
 // 本番環境用のログレベル制御システム
 
+// Type definitions
+type LogLevel = number;
+type LogLevelName = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL' | 'OFF';
+type LogOutput = 'console' | 'storage' | 'remote';
+type Environment = 'development' | 'production' | 'test';
+
+interface LogEntry {
+  timestamp: string;
+  level: LogLevelName;
+  levelNumber: LogLevel;
+  message: string;
+  meta: Record<string, any>;
+  url: string;
+  userAgent: string;
+  sessionId: string;
+  id: string;
+}
+
+interface LoggerOptions {
+  level?: LogLevel;
+  outputs?: LogOutput[];
+  maxStorageEntries?: number;
+  remoteEndpoint?: string | null;
+  context?: Record<string, any>;
+  filters?: Array<(logEntry: LogEntry) => boolean>;
+  formatter?: (logEntry: LogEntry) => string;
+  bufferSize?: number;
+  flushInterval?: number;
+}
+
+interface LogFilter {
+  level?: LogLevel;
+  since?: string;
+  until?: string;
+  message?: string;
+}
+
+interface LogStats {
+  total: number;
+  byLevel: Record<string, number>;
+  lastHour: number;
+  last24Hours: number;
+}
+
+// Extend Window interface for development utilities
+declare global {
+  interface Window {
+    mindflowLogger?: Logger;
+    logStats?: () => void;
+    clearLogs?: () => void;
+  }
+}
+
 // ログレベル定義
 export const LOG_LEVELS = {
   DEBUG: 0,
@@ -21,7 +74,7 @@ export const LOG_LEVEL_NAMES = {
 };
 
 // 環境別デフォルトログレベル
-const getDefaultLogLevel = () => {
+const getDefaultLogLevel = (): LogLevel => {
   // Jest環境のチェック
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return LOG_LEVELS.WARN;
@@ -45,9 +98,22 @@ const LOG_OUTPUTS = {
 
 // カスタムロガークラス
 class Logger {
-  constructor(options = {}) {
+  public level: LogLevel;
+  public enabledOutputs: LogOutput[];
+  public maxStorageEntries: number;
+  public remoteEndpoint: string | null;
+  public context: Record<string, any>;
+  public storageKey: string;
+  public filters: Array<(logEntry: LogEntry) => boolean>;
+  public formatter: (logEntry: LogEntry) => string;
+  public logBuffer: LogEntry[];
+  public bufferSize: number;
+  public flushInterval: number;
+  public remoteBuffer?: LogEntry[];
+
+  constructor(options: LoggerOptions = {}) {
     this.level = options.level || getDefaultLogLevel();
-    this.enabledOutputs = options.outputs || [LOG_OUTPUTS.CONSOLE];
+    this.enabledOutputs = options.outputs || [LOG_OUTPUTS.CONSOLE as LogOutput];
     this.maxStorageEntries = options.maxStorageEntries || 1000;
     this.remoteEndpoint = options.remoteEndpoint || null;
     this.context = options.context || {};
@@ -69,26 +135,26 @@ class Logger {
   }
   
   // ログレベルの設定
-  setLevel(level) {
+  setLevel(level: LogLevel): void {
     this.level = level;
     this.info(`Log level changed to: ${LOG_LEVEL_NAMES[level]}`);
   }
   
   // コンテキストの追加
-  addContext(key, value) {
+  addContext(key: string, value: any): void {
     this.context[key] = value;
   }
   
   // コンテキストの削除
-  removeContext(key) {
+  removeContext(key: string): void {
     delete this.context[key];
   }
   
   // ログエントリーの作成
-  createLogEntry(level, message, meta = {}) {
+  createLogEntry(level: LogLevel, message: string, meta: Record<string, any> = {}): LogEntry {
     return {
       timestamp: new Date().toISOString(),
-      level: LOG_LEVEL_NAMES[level],
+      level: LOG_LEVEL_NAMES[level] as LogLevelName,
       levelNumber: level,
       message,
       meta: { ...this.context, ...meta },
@@ -100,7 +166,7 @@ class Logger {
   }
   
   // セッションIDの取得/生成
-  getSessionId() {
+  getSessionId(): string {
     if (typeof window === 'undefined') return 'server';
     
     // Local mode uses simple session ID generation
@@ -108,17 +174,17 @@ class Logger {
   }
   
   // ログIDの生成
-  generateLogId() {
+  generateLogId(): string {
     return `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
   
   // フィルター適用
-  applyFilters(logEntry) {
+  applyFilters(logEntry: LogEntry): boolean {
     return this.filters.every(filter => filter(logEntry));
   }
   
   // デフォルトフォーマッター
-  defaultFormatter(logEntry) {
+  defaultFormatter(logEntry: LogEntry): string {
     const timestamp = new Date(logEntry.timestamp).toLocaleString();
     const level = logEntry.level.padEnd(5);
     const metaStr = Object.keys(logEntry.meta).length > 0 ? 
@@ -128,7 +194,7 @@ class Logger {
   }
   
   // ログの出力
-  log(level, message, meta = {}) {
+  log(level: LogLevel, message: string, meta: Record<string, any> = {}): void {
     // レベルチェック
     if (level < this.level) return;
     
@@ -138,7 +204,7 @@ class Logger {
     if (!this.applyFilters(logEntry)) return;
     
     // 各出力先に送信
-    this.enabledOutputs.forEach(output => {
+    this.enabledOutputs.forEach((output: LogOutput) => {
       this.outputToDestination(output, logEntry);
     });
     
@@ -147,7 +213,7 @@ class Logger {
   }
   
   // 出力先別の処理
-  outputToDestination(output, logEntry) {
+  outputToDestination(output: LogOutput, logEntry: LogEntry): void {
     switch (output) {
       case LOG_OUTPUTS.CONSOLE:
         this.outputToConsole(logEntry);
@@ -162,7 +228,7 @@ class Logger {
   }
   
   // コンソール出力
-  outputToConsole(logEntry) {
+  outputToConsole(logEntry: LogEntry): void {
     if (typeof console === 'undefined') return;
     
     const formattedMessage = this.formatter(logEntry);
@@ -188,7 +254,7 @@ class Logger {
   }
   
   // コンソールスタイル
-  getConsoleStyle(level) {
+  getConsoleStyle(level: LogLevel): string {
     const styles = {
       [LOG_LEVELS.DEBUG]: 'color: #666; font-size: 11px;',
       [LOG_LEVELS.INFO]: 'color: #2196F3; font-weight: normal;',
@@ -200,7 +266,7 @@ class Logger {
   }
   
   // ローカルストレージ出力
-  outputToStorage(logEntry) {
+  outputToStorage(logEntry: LogEntry): void {
     if (typeof localStorage === 'undefined') return;
     
     try {
@@ -219,7 +285,7 @@ class Logger {
   }
   
   // リモート出力
-  outputToRemote(logEntry) {
+  outputToRemote(logEntry: LogEntry): void {
     if (!this.remoteEndpoint) return;
     
     // バッチ送信のためにバッファに追加
@@ -227,7 +293,7 @@ class Logger {
   }
   
   // バッファ管理
-  addToBuffer(logEntry) {
+  addToBuffer(logEntry: LogEntry): void {
     this.logBuffer.push(logEntry);
     
     if (this.logBuffer.length >= this.bufferSize) {
@@ -236,7 +302,7 @@ class Logger {
   }
   
   // リモートバッファの管理
-  addToRemoteBuffer(logEntry) {
+  addToRemoteBuffer(logEntry: LogEntry): void {
     if (!this.remoteBuffer) this.remoteBuffer = [];
     this.remoteBuffer.push(logEntry);
     
@@ -247,16 +313,24 @@ class Logger {
   }
   
   // バッファのフラッシュ
-  flushBuffer() {
+  flushBuffer(): void {
     if (this.logBuffer.length === 0) return;
     
     // ここでバッファのログに対して追加処理を実行可能
     this.logBuffer = [];
   }
+
+  // リモートバッファのフラッシュ
+  flushRemoteBuffer(): void {
+    if (!this.remoteBuffer || this.remoteBuffer.length === 0) return;
+    
+    // リモートエンドポイントに送信する処理をここに実装
+    this.remoteBuffer = [];
+  }
   
   
   // 定期的なフラッシュ
-  startPeriodicFlush() {
+  startPeriodicFlush(): void {
     if (typeof setInterval === 'undefined') return;
     
     setInterval(() => {
@@ -265,7 +339,7 @@ class Logger {
   }
   
   // ストレージの初期化
-  initializeStorage() {
+  initializeStorage(): void {
     if (typeof localStorage === 'undefined') return;
     
     try {
@@ -279,20 +353,20 @@ class Logger {
   }
   
   // 便利メソッド
-  debug(message, meta) { this.log(LOG_LEVELS.DEBUG, message, meta); }
-  info(message, meta) { this.log(LOG_LEVELS.INFO, message, meta); }
-  warn(message, meta) { this.log(LOG_LEVELS.WARN, message, meta); }
-  error(message, meta) { this.log(LOG_LEVELS.ERROR, message, meta); }
-  fatal(message, meta) { this.log(LOG_LEVELS.FATAL, message, meta); }
+  debug(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.DEBUG, message, meta); }
+  info(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.INFO, message, meta); }
+  warn(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.WARN, message, meta); }
+  error(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.ERROR, message, meta); }
+  fatal(message: string, meta?: Record<string, any>): void { this.log(LOG_LEVELS.FATAL, message, meta); }
   
   // ログの取得
-  getLogs(filter = {}) {
+  getLogs(filter: LogFilter = {}): LogEntry[] {
     if (typeof localStorage === 'undefined') return [];
     
     try {
       const logs = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
       
-      return logs.filter(log => {
+      return logs.filter((log: LogEntry) => {
         if (filter.level && log.levelNumber < filter.level) return false;
         if (filter.since && new Date(log.timestamp) < new Date(filter.since)) return false;
         if (filter.until && new Date(log.timestamp) > new Date(filter.until)) return false;
@@ -306,7 +380,7 @@ class Logger {
   }
   
   // ログのクリア
-  clearLogs() {
+  clearLogs(): void {
     if (typeof localStorage === 'undefined') return;
     
     try {
@@ -318,11 +392,11 @@ class Logger {
   }
   
   // ログの統計
-  getLogStats() {
+  getLogStats(): LogStats {
     const logs = this.getLogs();
     const stats = {
       total: logs.length,
-      byLevel: {},
+      byLevel: {} as Record<LogLevelName, number>,
       lastHour: 0,
       last24Hours: 0
     };
@@ -331,7 +405,7 @@ class Logger {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     
-    logs.forEach(log => {
+    logs.forEach((log: LogEntry) => {
       // レベル別カウント
       stats.byLevel[log.level] = (stats.byLevel[log.level] || 0) + 1;
       
@@ -346,7 +420,7 @@ class Logger {
 }
 
 // 環境判定ヘルパー
-const getEnvironment = () => {
+const getEnvironment = (): Environment => {
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
     return 'test';
   }
@@ -356,11 +430,11 @@ const getEnvironment = () => {
   return 'development';
 };
 
-const getLogOutputs = () => {
+const getLogOutputs = (): LogOutput[] => {
   const env = getEnvironment();
   return env === 'production' 
-    ? [LOG_OUTPUTS.STORAGE]
-    : [LOG_OUTPUTS.CONSOLE, LOG_OUTPUTS.STORAGE];
+    ? [LOG_OUTPUTS.STORAGE as LogOutput]
+    : [LOG_OUTPUTS.CONSOLE as LogOutput, LOG_OUTPUTS.STORAGE as LogOutput];
 };
 
 // グローバルロガーインスタンス
@@ -376,31 +450,31 @@ export const logger = new Logger({
 });
 
 // 便利な関数をエクスポート
-export const debug = (message, meta) => logger.debug(message, meta);
-export const info = (message, meta) => logger.info(message, meta);
-export const warn = (message, meta) => logger.warn(message, meta);
-export const error = (message, meta) => logger.error(message, meta);
-export const fatal = (message, meta) => logger.fatal(message, meta);
+export const debug = (message: string, meta?: Record<string, any>): void => logger.debug(message, meta);
+export const info = (message: string, meta?: Record<string, any>): void => logger.info(message, meta);
+export const warn = (message: string, meta?: Record<string, any>): void => logger.warn(message, meta);
+export const error = (message: string, meta?: Record<string, any>): void => logger.error(message, meta);
+export const fatal = (message: string, meta?: Record<string, any>): void => logger.fatal(message, meta);
 
 // カスタムロガーの作成
-export const createLogger = (options) => new Logger(options);
+export const createLogger = (options: LoggerOptions): Logger => new Logger(options);
 
 // 一般的なフィルター
 export const commonFilters = {
   // デバッグメッセージを除外
-  excludeDebug: (logEntry) => logEntry.levelNumber > LOG_LEVELS.DEBUG,
+  excludeDebug: (logEntry: LogEntry): boolean => logEntry.levelNumber > LOG_LEVELS.DEBUG,
   
   // 特定のメッセージパターンを除外
-  excludePattern: (pattern) => (logEntry) => !pattern.test(logEntry.message),
+  excludePattern: (pattern: RegExp) => (logEntry: LogEntry): boolean => !pattern.test(logEntry.message),
   
   // 特定のメタデータを持つログのみ通す
-  includeMetaKey: (key) => (logEntry) => key in logEntry.meta,
+  includeMetaKey: (key: string) => (logEntry: LogEntry): boolean => key in logEntry.meta,
   
   // レート制限（同じメッセージを短時間で大量に出力しない）
   rateLimit: (windowMs = 60000, maxCount = 10) => {
-    const messageLog = new Map();
+    const messageLog = new Map<string, number[]>();
     
-    return (logEntry) => {
+    return (logEntry: LogEntry): boolean => {
       const now = Date.now();
       const key = logEntry.message;
       
@@ -408,11 +482,11 @@ export const commonFilters = {
         messageLog.set(key, []);
       }
       
-      const timestamps = messageLog.get(key);
+      const timestamps = messageLog.get(key) as number[];
       
       // 古いタイムスタンプを削除
       const cutoff = now - windowMs;
-      const recentTimestamps = timestamps.filter(ts => ts > cutoff);
+      const recentTimestamps = timestamps.filter((ts: number) => ts > cutoff);
       
       if (recentTimestamps.length >= maxCount) {
         return false; // レート制限に引っかかった

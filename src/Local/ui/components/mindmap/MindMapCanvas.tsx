@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import Node from './Node';
 import Connection from '../common/Connection';
-import type { MindMapData, MindMapNode, FileAttachment } from '../../shared/types';
+import type { MindMapData, MindMapNode, FileAttachment } from '../../../shared/types';
 
 interface MindMapCanvasProps {
   data: MindMapData;
@@ -20,10 +20,10 @@ interface MindMapCanvasProps {
   onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
   onToggleCollapse: (nodeId: string) => void;
   onNavigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
-  onFileUpload: (nodeId: string, file: File) => void;
+  onFileUpload: (nodeId: string, files: FileList) => void;
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
-  onShowFileActionMenu: (file: FileAttachment, position: { x: number; y: number }) => void;
+  onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
   onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
   zoom: number;
   setZoom: (zoom: number) => void;
@@ -86,7 +86,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   const flattenVisibleNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
     if (!node?.collapsed && node?.children) {
-      node.children.forEach(child => 
+      node.children.forEach((child: MindMapNode) => 
         result.push(...flattenVisibleNodes(child))
       );
     }
@@ -173,7 +173,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       if (!node.collapsed) {
         if (isRootNode) {
           // ルートノードの場合は直接接続
-          node.children.forEach(child => {
+          node.children.forEach((child: MindMapNode) => {
             connections.push({ 
               from: node, 
               to: child, 
@@ -209,7 +209,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
           });
           
           // トグルボタンから各子要素への線
-          node.children.forEach(child => {
+          node.children.forEach((child: MindMapNode) => {
             connections.push({
               from: { x: toggleX, y: toggleY },
               to: child,
@@ -370,10 +370,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
           <g className="connection-lines">
             {connections.filter(conn => !conn.hasToggleButton).map((conn, index) => (
               <Connection
-                key={`${conn.from.id || 'toggle'}-${conn.to.id || 'toggle'}-${index}`}
+                key={`${'id' in conn.from ? conn.from.id : 'toggle'}-${'id' in conn.to ? conn.to.id : 'toggle'}-${index}`}
                 from={conn.from}
                 to={conn.to}
                 hasToggleButton={false}
+                onToggleCollapse={onToggleCollapse}
+                nodeId={conn.nodeId || ''}
                 isToggleConnection={conn.isToggleConnection}
                 color={conn.color}
               />
@@ -420,7 +422,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
                 to={conn.to}
                 hasToggleButton={true}
                 onToggleCollapse={onToggleCollapse}
-                nodeId={conn.nodeId}
+                nodeId={conn.nodeId || ''}
                 isCollapsed={conn.isCollapsed}
               />
             ))}

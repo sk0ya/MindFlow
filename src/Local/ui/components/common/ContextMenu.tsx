@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { MindMapNode } from '../../shared/types';
+import { MindMapNode } from '../../../shared/types';
 
 interface Position {
   x: number;
@@ -73,6 +73,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
+    
+    return undefined;
   }, [visible, onClose]);
 
   // ESCキーで閉じる
@@ -87,6 +89,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
+    
+    return undefined;
   }, [visible, onClose]);
 
   if (!visible || !selectedNode) return null;
@@ -173,7 +177,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   };
 
   const renderMenuItem = (item: MenuItem, index: number): React.ReactNode => {
-    if (item.type === 'separator') {
+    if ('type' in item && item.type === 'separator') {
       return <div key={index} className="menu-separator" />;
     }
 
@@ -204,17 +208,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       );
     }
 
+    // Type assertion since we know it's a MenuItemAction at this point
+    const actionItem = item as MenuItemAction;
+    
     return (
       <div
         key={index}
-        className={`menu-item ${item.disabled ? 'disabled' : ''} ${item.danger ? 'danger' : ''}`}
-        onClick={item.disabled ? undefined : item.action}
+        className={`menu-item ${actionItem.disabled ? 'disabled' : ''} ${actionItem.danger ? 'danger' : ''}`}
+        onClick={actionItem.disabled ? undefined : actionItem.action}
       >
         <div className="menu-item-content">
-          <span className="menu-icon">{item.icon}</span>
-          <span className="menu-label">{item.label}</span>
-          {item.shortcut && (
-            <span className="menu-shortcut">{item.shortcut}</span>
+          <span className="menu-icon">{actionItem.icon}</span>
+          <span className="menu-label">{actionItem.label}</span>
+          {actionItem.shortcut && (
+            <span className="menu-shortcut">{actionItem.shortcut}</span>
           )}
         </div>
       </div>

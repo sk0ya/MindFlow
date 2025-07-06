@@ -1,4 +1,17 @@
 import { useState, useEffect } from 'react';
+import type { MindMapNode } from '../../../../shared/types';
+
+// Type definitions
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface ConflictInfo {
+  id: string;
+  timestamp: number;
+  [key: string]: any;
+}
 
 /**
  * UI状態管理のカスタムフック（パネル、モーダル、メニューなど）
@@ -6,75 +19,78 @@ import { useState, useEffect } from 'react';
 export const useUIState = () => {
   // 基本UI状態
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
-  const [customizationPosition, setCustomizationPosition] = useState({ x: 0, y: 0 });
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [clipboard, setClipboard] = useState(null);
+  const [pan, setPan] = useState<Position>({ x: 0, y: 0 });
+  const [showCustomizationPanel, setShowCustomizationPanel] = useState<boolean>(false);
+  const [customizationPosition, setCustomizationPosition] = useState<Position>({ x: 0, y: 0 });
+  const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<Position>({ x: 0, y: 0 });
+  const [clipboard, setClipboard] = useState<MindMapNode | null>(null);
   
   // キーボードショートカットヘルパー状態
-  const [showShortcutHelper, setShowShortcutHelper] = useState(false);
+  const [showShortcutHelper, setShowShortcutHelper] = useState<boolean>(false);
   
   // マップリスト状態
-  const [showMapList, setShowMapList] = useState(false);
+  const [showMapList, setShowMapList] = useState<boolean>(false);
   
   // ノードマップリンクパネル状態
-  const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState(false);
-  const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState({ x: 0, y: 0 });
-  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState(null);
+  const [showNodeMapLinksPanel, setShowNodeMapLinksPanel] = useState<boolean>(false);
+  const [nodeMapLinksPanelPosition, setNodeMapLinksPanelPosition] = useState<Position>({ x: 0, y: 0 });
+  const [selectedNodeForLinks, setSelectedNodeForLinks] = useState<MindMapNode | null>(null);
   
   // サイドバー状態
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   
   // クラウドストレージパネル状態
-  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState(false);
+  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState<boolean>(false);
+  
+  // ローカルストレージパネル状態
+  const [showLocalStoragePanel, setShowLocalStoragePanel] = useState<boolean>(false);
   
   // 競合通知状態
-  const [conflicts, setConflicts] = useState([]);
+  const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
   
   // 共同編集機能パネル状態
-  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState(false);
+  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState<boolean>(false);
   
   // パフォーマンスダッシュボード状態（開発環境のみ）
-  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState<boolean>(false);
   
   // チュートリアル状態
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState<boolean>(false);
 
-  const handleZoomReset = () => {
+  const handleZoomReset = (): void => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
 
-  const handleCloseAllPanels = () => {
+  const handleCloseAllPanels = (): void => {
     setShowCustomizationPanel(false);
     setShowContextMenu(false);
     setShowNodeMapLinksPanel(false);
   };
 
-  const handleShowCustomization = (node, position) => {
+  const handleShowCustomization = (_node?: MindMapNode, position?: Position): void => {
     setCustomizationPosition(position || { x: 300, y: 200 });
     setShowCustomizationPanel(true);
     setShowContextMenu(false);
   };
 
-  const handleToggleSidebar = () => {
+  const handleToggleSidebar = (): void => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  const handleToggleCollaborativeFeatures = () => {
+  const handleToggleCollaborativeFeatures = (): void => {
     setShowCollaborativeFeatures(!showCollaborativeFeatures);
   };
 
-  const handleTogglePerformanceDashboard = () => {
+  const handleTogglePerformanceDashboard = (): void => {
     if (process.env.NODE_ENV === 'development') {
       setShowPerformanceDashboard(!showPerformanceDashboard);
     }
   };
 
   // ノードマップリンク関連のハンドラー
-  const handleShowNodeMapLinks = (node, position) => {
+  const handleShowNodeMapLinks = (node: MindMapNode, position: Position): void => {
     setSelectedNodeForLinks(node);
     setNodeMapLinksPanelPosition(position);
     setShowNodeMapLinksPanel(true);
@@ -82,27 +98,27 @@ export const useUIState = () => {
     setShowNodeMapLinksPanel(true);
   };
 
-  const handleCloseNodeMapLinksPanel = () => {
+  const handleCloseNodeMapLinksPanel = (): void => {
     setShowNodeMapLinksPanel(false);
     setSelectedNodeForLinks(null);
   };
 
   // 競合処理関連
-  const handleConflictResolved = (conflict) => {
+  const handleConflictResolved = (conflict: Partial<ConflictInfo>): void => {
     setConflicts(prev => [...prev, {
       ...conflict,
       id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now()
-    }]);
+    } as ConflictInfo]);
   };
 
-  const handleDismissConflict = (conflictId) => {
-    setConflicts(prev => prev.filter(c => c.id !== conflictId));
+  const handleDismissConflict = (conflictId: string): void => {
+    setConflicts(prev => prev.filter((c: ConflictInfo) => c.id !== conflictId));
   };
 
   // Escapeキーでパネルを閉じる
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         handleCloseAllPanels();
       }
@@ -125,9 +141,12 @@ export const useUIState = () => {
     pan,
     setPan,
     showCustomizationPanel,
+    setShowCustomizationPanel,
     customizationPosition,
     showContextMenu,
+    setShowContextMenu,
     contextMenuPosition,
+    setContextMenuPosition,
     clipboard,
     setClipboard,
     
@@ -142,6 +161,8 @@ export const useUIState = () => {
     sidebarCollapsed,
     showCloudStoragePanel,
     setShowCloudStoragePanel,
+    showLocalStoragePanel,
+    setShowLocalStoragePanel,
     conflicts,
     showCollaborativeFeatures,
     setShowCollaborativeFeatures,

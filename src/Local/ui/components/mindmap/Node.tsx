@@ -1,5 +1,5 @@
-import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
-import type { MindMapNode, FileAttachment } from '../../shared/types';
+import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
+import type { MindMapNode, FileAttachment } from '../../../shared/types';
 
 interface NodeProps {
   node: MindMapNode;
@@ -45,11 +45,9 @@ const Node: React.FC<NodeProps> = ({
   onDragMove,
   onDragEnd,
   onAddChild,
-  onAddSibling,
   onDelete,
   onRightClick,
   onFileUpload,
-  onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
   onShowNodeMapLinks,
@@ -150,6 +148,8 @@ const Node: React.FC<NodeProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
+    
+    return undefined;
   }, [isDragging, mouseDownPos, handleMouseMove, handleMouseUp]);
 
   // 編集モードが終了した時にIME状態をリセット
@@ -211,14 +211,6 @@ const Node: React.FC<NodeProps> = ({
     }
   }, [node.id, onRightClick]);
 
-  // 編集終了を即座に実行する関数（blur用）
-  const finishEditImmediately = useCallback(() => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
-    onFinishEdit(node.id, editText);
-  }, [node.id, editText, onFinishEdit]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     console.log('🎹 Node.jsx handleKeyDown:', { key: e.key, isComposing, editText });
@@ -280,21 +272,6 @@ const Node: React.FC<NodeProps> = ({
     }
   }, [node.id, node.text, editText, onFinishEdit, isComposing]);
 
-  // ファイルアップロードのハンドラ
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0 && onFileUpload) {
-      onFileUpload(node.id, files);
-    }
-    // ファイル入力をリセット
-    e.target.value = '';
-  }, [node.id, onFileUpload]);
-  
-  const handleRemoveFile = useCallback((fileId: string) => {
-    if (onRemoveFile) {
-      onRemoveFile(node.id, fileId);
-    }
-  }, [node.id, onRemoveFile]);
 
   const handleImageDoubleClick = useCallback((e: React.MouseEvent, file: FileAttachment & { isImage?: boolean }) => {
     e.stopPropagation();
@@ -309,8 +286,8 @@ const Node: React.FC<NodeProps> = ({
     e.preventDefault();
     if (onShowFileActionMenu) {
       // SVGイベントの場合は座標を適切に取得
-      const clientX = e.clientX || (e.nativeEvent && e.nativeEvent.clientX) || 0;
-      const clientY = e.clientY || (e.nativeEvent && e.nativeEvent.clientY) || 0;
+      const clientX = e.clientX || 0;
+      const clientY = e.clientY || 0;
       
       onShowFileActionMenu(file, node.id, {
         x: clientX,
@@ -331,7 +308,7 @@ const Node: React.FC<NodeProps> = ({
   }, [onShowNodeMapLinks, node]);
   
   // ノードのサイズ計算（画像を考慮）
-  const hasImages = node.attachments && node.attachments.some(file => file.isImage);
+  const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
   const imageHeight = hasImages ? 60 : 0; // 画像表示エリアの高さ
   const nodeWidth = Math.max(120, node.text.length * 8, hasImages ? 150 : 0);
   const nodeHeight = 40 + imageHeight;
@@ -366,7 +343,7 @@ const Node: React.FC<NodeProps> = ({
       />
       
       {/* 画像添付ファイルの表示 */}
-      {node.attachments && node.attachments.filter(file => file.isImage).map((file, index) => (
+      {node.attachments && node.attachments.filter((file: FileAttachment) => file.isImage).map((file: FileAttachment) => (
         <g key={file.id}>
           <foreignObject 
             x={node.x - nodeWidth / 2 + 5} 
@@ -401,7 +378,7 @@ const Node: React.FC<NodeProps> = ({
       ))}
       
       {/* 非画像ファイルの表示 */}
-      {node.attachments && node.attachments.filter(file => !file.isImage).map((file, index) => {
+      {node.attachments && node.attachments.filter((file: FileAttachment) => !file.isImage).map((file: FileAttachment, index: number) => {
         const yOffset = node.y - 15 + (index * 20);
         return (
           <g key={file.id}>
@@ -565,7 +542,14 @@ const Node: React.FC<NodeProps> = ({
               const fileInput = document.createElement('input');
               fileInput.type = 'file';
               fileInput.accept = 'image/*,text/plain,application/pdf,application/json';
-              fileInput.onchange = handleFileUpload;
+              fileInput.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                const files = target.files;
+                if (files && files.length > 0 && onFileUpload) {
+                  onFileUpload(node.id, files);
+                }
+                target.value = '';
+              });
               fileInput.click();
             }}
           />

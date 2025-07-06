@@ -1,39 +1,65 @@
 import { useState } from 'react';
+import type { FileAttachment } from '../../../../shared/types';
+
+// Type definitions
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface FileHandlersReturn {
+  showImageModal: boolean;
+  modalImage: FileAttachment | null;
+  showFileActionMenu: boolean;
+  fileActionMenuPosition: Position;
+  actionMenuFile: FileAttachment | null;
+  actionMenuNodeId: string | null;
+  handleShowImageModal: (image: FileAttachment) => void;
+  handleCloseImageModal: () => void;
+  handleShowFileActionMenu: (file: FileAttachment, nodeId: string, position: Position) => void;
+  handleCloseFileActionMenu: () => void;
+  handleFileDownload: (file: FileAttachment) => void;
+  handleFileRename: (fileId: string, newName: string) => void;
+  handleFileDelete: (fileId: string) => void;
+  handleFileUpload: (nodeId: string, files: FileList) => Promise<void>;
+  handleRemoveFile: (nodeId: string, fileId: string) => void;
+  handleCloseAllPanels: () => void;
+}
 
 /**
  * ファイル関連のステートとハンドラーを管理するカスタムフック
  */
 export const useFileHandlers = (
-  attachFileToNode,
-  removeFileFromNode,
-  renameFileInNode,
-  downloadFile
-) => {
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [modalImage, setModalImage] = useState(null);
-  const [showFileActionMenu, setShowFileActionMenu] = useState(false);
-  const [fileActionMenuPosition, setFileActionMenuPosition] = useState({ x: 0, y: 0 });
-  const [actionMenuFile, setActionMenuFile] = useState(null);
-  const [actionMenuNodeId, setActionMenuNodeId] = useState(null);
+  attachFileToNode: (nodeId: string, file: File) => Promise<FileAttachment>,
+  removeFileFromNode: (nodeId: string, fileId: string) => void,
+  renameFileInNode: (nodeId: string, fileId: string, newName: string) => void,
+  downloadFile: (file: FileAttachment) => void
+): FileHandlersReturn => {
+  const [showImageModal, setShowImageModal] = useState<boolean>(false);
+  const [modalImage, setModalImage] = useState<FileAttachment | null>(null);
+  const [showFileActionMenu, setShowFileActionMenu] = useState<boolean>(false);
+  const [fileActionMenuPosition, setFileActionMenuPosition] = useState<Position>({ x: 0, y: 0 });
+  const [actionMenuFile, setActionMenuFile] = useState<FileAttachment | null>(null);
+  const [actionMenuNodeId, setActionMenuNodeId] = useState<string | null>(null);
 
-  const handleCloseAllPanels = () => {
+  const handleCloseAllPanels = (): void => {
     setShowImageModal(false);
     setShowFileActionMenu(false);
   };
 
-  const handleShowImageModal = (image) => {
+  const handleShowImageModal = (image: FileAttachment): void => {
     setModalImage(image);
     setShowImageModal(true);
     handleCloseAllPanels();
     setShowImageModal(true); // 再度trueにして画像モーダルだけ表示
   };
 
-  const handleCloseImageModal = () => {
+  const handleCloseImageModal = (): void => {
     setShowImageModal(false);
     setModalImage(null);
   };
 
-  const handleShowFileActionMenu = (file, nodeId, position) => {
+  const handleShowFileActionMenu = (file: FileAttachment, nodeId: string, position: Position): void => {
     setActionMenuFile(file);
     setActionMenuNodeId(nodeId);
     setFileActionMenuPosition(position);
@@ -42,40 +68,44 @@ export const useFileHandlers = (
     setShowFileActionMenu(true); // 再度trueにしてファイルアクションメニューだけ表示
   };
 
-  const handleCloseFileActionMenu = () => {
+  const handleCloseFileActionMenu = (): void => {
     setShowFileActionMenu(false);
     setActionMenuFile(null);
     setActionMenuNodeId(null);
   };
 
-  const handleFileDownload = async (file) => {
+  const handleFileDownload = (file: FileAttachment): void => {
     try {
-      await downloadFile(file);
+      downloadFile(file);
     } catch (error) {
       console.error('ファイルダウンロードエラー:', error);
-      alert('ファイルのダウンロードに失敗しました: ' + error.message);
+      alert('ファイルのダウンロードに失敗しました: ' + (error as Error).message);
     }
   };
 
-  const handleFileRename = (fileId, newName) => {
+  const handleFileRename = (fileId: string, newName: string): void => {
     try {
-      renameFileInNode(actionMenuNodeId, fileId, newName);
+      if (actionMenuNodeId) {
+        renameFileInNode(actionMenuNodeId, fileId, newName);
+      }
     } catch (error) {
       console.error('ファイル名変更エラー:', error);
-      alert('ファイル名の変更に失敗しました: ' + error.message);
+      alert('ファイル名の変更に失敗しました: ' + (error as Error).message);
     }
   };
 
-  const handleFileDelete = (fileId) => {
+  const handleFileDelete = (fileId: string): void => {
     try {
-      removeFileFromNode(actionMenuNodeId, fileId);
+      if (actionMenuNodeId) {
+        removeFileFromNode(actionMenuNodeId, fileId);
+      }
     } catch (error) {
       console.error('ファイル削除エラー:', error);
-      alert('ファイルの削除に失敗しました: ' + error.message);
+      alert('ファイルの削除に失敗しました: ' + (error as Error).message);
     }
   };
 
-  const handleFileUpload = async (nodeId, files) => {
+  const handleFileUpload = async (nodeId: string, files: FileList): Promise<void> => {
     if (!files || files.length === 0) return;
     
     try {
@@ -83,16 +113,16 @@ export const useFileHandlers = (
       await attachFileToNode(nodeId, file);
     } catch (error) {
       console.error('ファイルアップロードエラー:', error);
-      alert('ファイルのアップロードに失敗しました: ' + error.message);
+      alert('ファイルのアップロードに失敗しました: ' + (error as Error).message);
     }
   };
   
-  const handleRemoveFile = (nodeId, fileId) => {
+  const handleRemoveFile = (nodeId: string, fileId: string): void => {
     try {
       removeFileFromNode(nodeId, fileId);
     } catch (error) {
       console.error('ファイル削除エラー:', error);
-      alert('ファイルの削除に失敗しました: ' + error.message);
+      alert('ファイルの削除に失敗しました: ' + (error as Error).message);
     }
   };
 

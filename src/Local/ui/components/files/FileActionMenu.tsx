@@ -1,13 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-interface FileItem {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  dataURL?: string;
-  isImage: boolean;
-}
+import type { FileAttachment } from '../../../shared/types';
 
 interface Position {
   x: number;
@@ -16,13 +8,13 @@ interface Position {
 
 interface FileActionMenuProps {
   isOpen: boolean;
-  file: FileItem | null;
+  file: FileAttachment | null;
   position: Position;
   onClose: () => void;
-  onDownload: (file: FileItem) => void;
+  onDownload: (file: FileAttachment) => void;
   onRename: (fileId: string, newName: string) => void;
   onDelete: (fileId: string) => void;
-  onView: (file: FileItem) => void;
+  onView: (file: FileAttachment) => void;
 }
 
 const FileActionMenu: React.FC<FileActionMenuProps> = ({ 
@@ -80,6 +72,8 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
+    
+    return undefined;
   }, [isOpen]);
 
   const handleClose = () => {

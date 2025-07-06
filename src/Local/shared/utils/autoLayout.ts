@@ -1,11 +1,44 @@
 // 自動レイアウト機能のユーティリティ
 import { cloneDeep } from './lodash-utils';
 import { COORDINATES, LAYOUT } from '../constants/index';
+import type { MindMapNode } from '../types';
+
+// Layout options interfaces
+interface LayoutOptions {
+  centerX?: number;
+  centerY?: number;
+  baseRadius?: number;
+  radiusIncrement?: number;
+  angleOffset?: number;
+  levelSpacing?: number;
+  nodeSpacing?: number;
+  direction?: 'horizontal' | 'vertical';
+  minVerticalSpacing?: number;
+  maxVerticalSpacing?: number;
+  preserveRootPosition?: boolean;
+  radiusVariation?: number;
+  angleVariation?: number;
+  repulsionForce?: number;
+  iterations?: number;
+  gridSpacing?: number;
+  columns?: number;
+  radius?: number;
+}
+
+interface NodeBounds {
+  width: number;
+  height: number;
+}
+
+interface NodeWithDepth extends MindMapNode {
+  _depth?: number;
+  _parent?: MindMapNode | null;
+}
 
 /**
  * 放射状レイアウト - ルートノードを中心に子ノードを円形に配置
  */
-export const radialLayout = (rootNode, options = {}) => {
+export const radialLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
@@ -14,7 +47,7 @@ export const radialLayout = (rootNode, options = {}) => {
     angleOffset = 0
   } = options;
 
-  const updateNodePositions = (node, depth = 0, parentAngle = 0, angleSpan = 2 * Math.PI) => {
+  const updateNodePositions = (node: MindMapNode, depth = 0, parentAngle = 0, angleSpan = 2 * Math.PI): void => {
     if (depth === 0) {
       // ルートノードは中心に配置
       node.x = centerX;
@@ -26,7 +59,7 @@ export const radialLayout = (rootNode, options = {}) => {
       const angleStep = angleSpan / node.children.length;
       const startAngle = parentAngle - angleSpan / 2 + angleStep / 2;
 
-      node.children.forEach((child, index) => {
+      node.children.forEach((child: MindMapNode, index: number) => {
         const angle = startAngle + (index * angleStep) + angleOffset;
         child.x = node.x + Math.cos(angle) * radius;
         child.y = node.y + Math.sin(angle) * radius;
@@ -48,7 +81,7 @@ export const radialLayout = (rootNode, options = {}) => {
 /**
  * 階層レイアウト - ツリー構造に基づいて左右に配置
  */
-export const hierarchicalLayout = (rootNode, options = {}) => {
+export const hierarchicalLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
@@ -57,14 +90,14 @@ export const hierarchicalLayout = (rootNode, options = {}) => {
     direction = 'horizontal' // 'horizontal' or 'vertical'
   } = options;
 
-  const calculateSubtreeSize = (node) => {
+  const calculateSubtreeSize = (node: MindMapNode): number => {
     if (!node.children || node.children.length === 0) {
       return 1;
     }
     return node.children.reduce((sum, child) => sum + calculateSubtreeSize(child), 0);
   };
 
-  const updateNodePositions = (node, depth = 0, offset = 0, totalSiblings = 1) => {
+  const updateNodePositions = (node: MindMapNode, depth = 0, offset = 0, totalSiblings = 1): void => {
     if (depth === 0) {
       node.x = centerX;
       node.y = centerY;
@@ -82,7 +115,7 @@ export const hierarchicalLayout = (rootNode, options = {}) => {
       let currentOffset = 0;
       const totalChildren = node.children.reduce((sum, child) => sum + calculateSubtreeSize(child), 0);
 
-      node.children.forEach(child => {
+      node.children.forEach((child: MindMapNode) => {
         const childSubtreeSize = calculateSubtreeSize(child);
         const childOffset = currentOffset + childSubtreeSize / 2;
         updateNodePositions(child, depth + 1, childOffset, totalChildren);
@@ -99,37 +132,36 @@ export const hierarchicalLayout = (rootNode, options = {}) => {
 /**
  * マインドマップレイアウト - MindMeisterスタイルの左右分散配置
  */
-export const improvedMindMapLayout = (rootNode, options = {}) => {
+export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
     baseRadius = LAYOUT.RADIAL_BASE_RADIUS + 30, // 少し大きめ
     levelSpacing = LAYOUT.LEVEL_SPACING,
     minVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN - 20,
-    maxVerticalSpacing = LAYOUT.VERTICAL_SPACING_MIN + 40,
     preserveRootPosition = false
   } = options;
 
-  const calculateSubtreeHeight = (node) => {
+  const calculateSubtreeHeight = (node: MindMapNode): number => {
     if (!node.children || node.children.length === 0) {
       return 1;
     }
     
     let totalHeight = 0;
-    node.children.forEach(child => {
+    node.children.forEach((child: MindMapNode) => {
       totalHeight += calculateSubtreeHeight(child);
     });
     
     return totalHeight;
   };
 
-  const calculateNodeBounds = (text) => {
+  const calculateNodeBounds = (text: string): NodeBounds => {
     const width = Math.max(120, text.length * 8);
     const height = 40;
     return { width, height };
   };
 
-  const updateNodePositions = (node, depth = 0, side = 'center', yOffset = 0, availableHeight = 0) => {
+  const updateNodePositions = (node: MindMapNode, depth = 0, side: 'center' | 'left' | 'right' = 'center', yOffset = 0, _availableHeight = 0): void => {
     if (depth === 0) {
       if (!preserveRootPosition) {
         node.x = centerX;
@@ -137,11 +169,11 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
       }
 
       if (node.children && node.children.length > 0) {
-        const leftChildren = [];
-        const rightChildren = [];
+        const leftChildren: MindMapNode[] = [];
+        const rightChildren: MindMapNode[] = [];
 
         // 子ノードを左右に振り分け（偶数インデックスは右、奇数は左）
-        node.children.forEach((child, index) => {
+        node.children.forEach((child: MindMapNode, index: number) => {
           if (index % 2 === 0) {
             rightChildren.push(child);
           } else {
@@ -155,7 +187,7 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
             sum + calculateSubtreeHeight(child), 0);
           
           let currentOffset = 0;
-          rightChildren.forEach(child => {
+          rightChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
             const childYOffset = (currentOffset + childHeight / 2 - rightTotalHeight / 2) * minVerticalSpacing;
             updateNodePositions(child, 1, 'right', childYOffset, childHeight);
@@ -169,7 +201,7 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
             sum + calculateSubtreeHeight(child), 0);
           
           let currentOffset = 0;
-          leftChildren.forEach(child => {
+          leftChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
             const childYOffset = (currentOffset + childHeight / 2 - leftTotalHeight / 2) * minVerticalSpacing;
             updateNodePositions(child, 1, 'left', childYOffset, childHeight);
@@ -193,7 +225,7 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
         const spacing = minVerticalSpacing;
         
         let currentOffset = 0;
-        node.children.forEach(child => {
+        node.children.forEach((child: MindMapNode) => {
           const childHeight = calculateSubtreeHeight(child);
           const childYOffset = yOffset + (currentOffset + childHeight / 2 - totalChildHeight / 2) * spacing;
           updateNodePositions(child, depth + 1, side, childYOffset, childHeight);
@@ -204,39 +236,39 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
   };
 
   // 衝突検出と調整
-  const adjustForCollisions = (rootNode) => {
-    const allNodes = [];
+  const adjustForCollisions = (rootNode: MindMapNode): void => {
+    const allNodes: NodeWithDepth[] = [];
     
-    const collectNodes = (node) => {
+    const collectNodes = (node: MindMapNode): void => {
       allNodes.push(node);
       if (node.children) {
-        node.children.forEach(collectNodes);
+        node.children.forEach((child: MindMapNode) => collectNodes(child));
       }
     };
     
     collectNodes(rootNode);
     
     // 同じ深度のノード同士の衝突をチェック
-    const nodesByDepth = {};
-    const calculateDepth = (node, depth = 0, parent = null) => {
+    const nodesByDepth: { [key: number]: NodeWithDepth[] } = {};
+    const calculateDepth = (node: NodeWithDepth, depth = 0, parent: NodeWithDepth | null = null): void => {
       node._depth = depth;
       node._parent = parent;
       if (!nodesByDepth[depth]) nodesByDepth[depth] = [];
       nodesByDepth[depth].push(node);
       
       if (node.children) {
-        node.children.forEach(child => calculateDepth(child, depth + 1, node));
+        node.children.forEach((child: MindMapNode) => calculateDepth(child as NodeWithDepth, depth + 1, node));
       }
     };
     
     calculateDepth(rootNode);
     
     // 各深度で衝突調整
-    Object.values(nodesByDepth).forEach(nodesAtDepth => {
+    Object.values(nodesByDepth).forEach((nodesAtDepth: NodeWithDepth[]) => {
       if (nodesAtDepth.length <= 1) return;
       
       // Y座標でソート
-      nodesAtDepth.sort((a, b) => a.y - b.y);
+      nodesAtDepth.sort((a: NodeWithDepth, b: NodeWithDepth) => a.y - b.y);
       
       // 最小間隔を確保
       for (let i = 1; i < nodesAtDepth.length; i++) {
@@ -253,22 +285,22 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
           currentNode.y += adjustment;
           
           // 子ノードも一緒に移動
-          const moveSubtree = (node, deltaY) => {
+          const moveSubtree = (node: MindMapNode, deltaY: number): void => {
             node.y += deltaY;
             if (node.children) {
-              node.children.forEach(child => moveSubtree(child, deltaY));
+              node.children.forEach((child: MindMapNode) => moveSubtree(child, deltaY));
             }
           };
           
           if (currentNode.children) {
-            currentNode.children.forEach(child => moveSubtree(child, adjustment));
+            currentNode.children.forEach((child: MindMapNode) => moveSubtree(child, adjustment));
           }
         }
       }
     });
     
     // 一時的なプロパティを削除
-    allNodes.forEach(node => {
+    allNodes.forEach((node: NodeWithDepth) => {
       delete node._depth;
       delete node._parent;
     });
@@ -283,20 +315,19 @@ export const improvedMindMapLayout = (rootNode, options = {}) => {
 
 export const mindMapLayout = improvedMindMapLayout;
 
-export const mindMapLayoutPreserveRoot = (rootNode, options = {}) => {
+export const mindMapLayoutPreserveRoot = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   return improvedMindMapLayout(rootNode, { ...options, preserveRootPosition: true });
 };
 
 /**
  * 有機的レイアウト - 自然な形状での配置
  */
-export const organicLayout = (rootNode, options = {}) => {
+export const organicLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = 400,
     centerY = 300,
     baseRadius = 120,
     radiusVariation = 40,
-    angleVariation = 30,
     repulsionForce = 1000,
     iterations = 50
   } = options;
@@ -305,10 +336,10 @@ export const organicLayout = (rootNode, options = {}) => {
   let layoutNode = radialLayout(rootNode, { centerX, centerY, baseRadius: baseRadius + Math.random() * radiusVariation });
 
   // 全ノードを平坦化
-  const flattenNodes = (node, nodes = []) => {
+  const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
     nodes.push(node);
     if (node.children) {
-      node.children.forEach(child => flattenNodes(child, nodes));
+      node.children.forEach((child: MindMapNode) => flattenNodes(child, nodes));
     }
     return nodes;
   };
@@ -317,14 +348,14 @@ export const organicLayout = (rootNode, options = {}) => {
 
   // 力学系シミュレーションで自然な配置に調整
   for (let iter = 0; iter < iterations; iter++) {
-    allNodes.forEach(node => {
+    allNodes.forEach((node: MindMapNode) => {
       if (node.id === 'root') return; // ルートは固定
 
       let forceX = 0;
       let forceY = 0;
 
       // 他のノードからの反発力
-      allNodes.forEach(otherNode => {
+      allNodes.forEach((otherNode: MindMapNode) => {
         if (node.id === otherNode.id) return;
 
         const dx = node.x - otherNode.x;
@@ -355,7 +386,7 @@ export const organicLayout = (rootNode, options = {}) => {
 /**
  * グリッドレイアウト - 規則正しい格子状配置
  */
-export const gridLayout = (rootNode, options = {}) => {
+export const gridLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = 400,
     centerY = 300,
@@ -363,10 +394,10 @@ export const gridLayout = (rootNode, options = {}) => {
     columns = 5
   } = options;
 
-  const flattenNodes = (node, nodes = []) => {
+  const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
     nodes.push(node);
     if (node.children) {
-      node.children.forEach(child => flattenNodes(child, nodes));
+      node.children.forEach((child: MindMapNode) => flattenNodes(child, nodes));
     }
     return nodes;
   };
@@ -379,7 +410,7 @@ export const gridLayout = (rootNode, options = {}) => {
   allNodes[0].y = centerY;
 
   // 他のノードをグリッド状に配置
-  allNodes.slice(1).forEach((node, index) => {
+  allNodes.slice(1).forEach((node: MindMapNode, index: number) => {
     const row = Math.floor(index / columns);
     const col = index % columns;
     
@@ -396,17 +427,17 @@ export const gridLayout = (rootNode, options = {}) => {
 /**
  * 円形レイアウト - 全ノードを円形に配置
  */
-export const circularLayout = (rootNode, options = {}) => {
+export const circularLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   const {
     centerX = 400,
     centerY = 300,
     radius = 200
   } = options;
 
-  const flattenNodes = (node, nodes = []) => {
+  const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
     nodes.push(node);
     if (node.children) {
-      node.children.forEach(child => flattenNodes(child, nodes));
+      node.children.forEach((child: MindMapNode) => flattenNodes(child, nodes));
     }
     return nodes;
   };
@@ -422,7 +453,7 @@ export const circularLayout = (rootNode, options = {}) => {
   if (allNodes.length > 1) {
     const angleStep = (2 * Math.PI) / (allNodes.length - 1);
     
-    allNodes.slice(1).forEach((node, index) => {
+    allNodes.slice(1).forEach((node: MindMapNode, index: number) => {
       const angle = index * angleStep;
       node.x = centerX + Math.cos(angle) * radius;
       node.y = centerY + Math.sin(angle) * radius;
@@ -435,11 +466,11 @@ export const circularLayout = (rootNode, options = {}) => {
 /**
  * 自動レイアウト選択 - ノード数に基づいて最適なレイアウトを選択
  */
-export const autoSelectLayout = (rootNode, options = {}) => {
-  const flattenNodes = (node, nodes = []) => {
+export const autoSelectLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
+  const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
     nodes.push(node);
     if (node.children) {
-      node.children.forEach(child => flattenNodes(child, nodes));
+      node.children.forEach((child: MindMapNode) => flattenNodes(child, nodes));
     }
     return nodes;
   };
@@ -461,7 +492,14 @@ export const autoSelectLayout = (rootNode, options = {}) => {
 /**
  * レイアウトプリセット
  */
-export const layoutPresets = {
+interface LayoutPreset {
+  name: string;
+  description: string;
+  icon: string;
+  func: (rootNode: MindMapNode, options?: LayoutOptions) => MindMapNode;
+}
+
+export const layoutPresets: { [key: string]: LayoutPreset } = {
   radial: {
     name: '放射状',
     description: 'ルートを中心とした円形配置',

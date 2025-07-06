@@ -1,7 +1,32 @@
-﻿import React from 'react';
+import React from 'react';
 
-const Connection = ({ from, to, hasToggleButton = false, onToggleCollapse, nodeId, isCollapsed = false, isToggleConnection = false, color = '#666' }) => {
-  const createPath = (from, to) => {
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface ConnectionProps {
+  from: Position;
+  to: Position;
+  hasToggleButton?: boolean;
+  onToggleCollapse: (nodeId: string) => void;
+  nodeId: string;
+  isCollapsed?: boolean;
+  isToggleConnection?: boolean;
+  color?: string;
+}
+
+const Connection: React.FC<ConnectionProps> = ({ 
+  from, 
+  to, 
+  hasToggleButton = false, 
+  onToggleCollapse, 
+  nodeId, 
+  isCollapsed = false, 
+  isToggleConnection = false, 
+  color = '#666' 
+}) => {
+  const createPath = (from: Position, to: Position): string => {
     if (hasToggleButton && from.x === to.x && from.y === to.y) {
       return '';
     }

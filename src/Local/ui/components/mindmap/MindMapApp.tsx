@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useMindMap } from '../../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
@@ -9,13 +9,9 @@ import ImageModal from '../files/ImageModal';
 import FileActionMenu from '../files/FileActionMenu';
 import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from '../../panels/MapLinksPanel';
-// Localモードでは直接localStorageを使用
-import { getAppSettings } from '../../../core/storage/LocalEngine';
 import './MindMapApp.css';
 
-// TutorialOverlayは不要（ローカルモード専用）
 import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper';
-// useAppInitializationは不要（ローカルモード専用）
 import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts';
 
 // カスタムフックのインポート
@@ -26,13 +22,13 @@ import { useNodeHandlers } from './hooks/useNodeHandlers';
 import { useAppActions } from './hooks/useAppActions';
 
 // Types
-import type { MindMapNode, MindMapData } from '../../../shared/types';
+import type { MindMapNode, Position } from '../../../shared/types';
 
 const MindMapApp: React.FC = () => {
   // ローカルモードでは認証不要
   
   // ローカルモードでは単純な初期化（認証やモード選択は不要）
-  const [isAppReady, setIsAppReady] = useState(true);
+  const [isAppReady] = useState(true);
   
   const {
     data,
@@ -70,12 +66,8 @@ const MindMapApp: React.FC = () => {
     renameMindMap,
     deleteMindMapById,
     switchToMap,
-    refreshAllMindMaps,
     changeMapCategory,
-    getAvailableCategories,
-    addNodeMapLink,
-    removeNodeMapLink,
-    reinitializeAfterModeSelection
+    getAvailableCategories
   } = useMindMap(isAppReady);
   
   
@@ -106,14 +98,14 @@ const MindMapApp: React.FC = () => {
   
   const nodeHandlers = useNodeHandlers(
     setSelectedNodeId,
-    uiState.setContextMenuPosition,
+    (position: Position | null) => uiState.setContextMenuPosition(position || { x: 0, y: 0 }),
     uiState.setShowContextMenu,
     uiState.setShowCustomizationPanel,
     addChildNode,
     addSiblingNode,
     updateNode,
-    addNodeMapLink,
-    removeNodeMapLink,
+    () => Promise.resolve(), // Placeholder for addNodeMapLink
+    () => Promise.resolve(), // Placeholder for removeNodeMapLink  
     () => {} // No cursor update in local mode
   );
   
@@ -154,32 +146,28 @@ const MindMapApp: React.FC = () => {
   // ローカルモードでは認証チェック不要
 
   // ファイルアクションメニューのハンドラーを拡張
-  const handleCloseAllPanels = () => {
-    uiState.handleCloseAllPanels();
-    fileHandlers.handleCloseAllPanels();
-  };
 
   // コンテキストメニューのハンドラー
-  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
+  const handleRightClick = (e: React.MouseEvent, nodeId: string): void => {
     nodeHandlers.handleRightClick(e, nodeId);
     uiState.handleCloseAllPanels();
   };
 
-  const handleCopyNode = (node: MindMapNode) => {
+  const handleCopyNode = (node: MindMapNode): void => {
     const clipboard = nodeHandlers.handleCopyNode(node);
     uiState.setClipboard(clipboard);
   };
 
-  const handlePasteNode = (parentId: string) => {
+  const handlePasteNode = (parentId: string): void => {
     nodeHandlers.handlePasteNode(parentId, uiState.clipboard);
   };
 
   // ノードマップリンクのハンドラー
-  const handleShowNodeMapLinks = (node: MindMapNode, position: { x: number; y: number }) => {
+  const handleShowNodeMapLinks = (node: MindMapNode, position: { x: number; y: number }): void => {
     uiState.handleShowNodeMapLinks(node, position);
   };
 
-  const handleNavigateToMap = async (mapId: string) => {
+  const handleNavigateToMap = async (mapId: string): Promise<void> => {
     try {
       await mapHandlers.handleNavigateToMap(mapId);
       uiState.handleCloseNodeMapLinksPanel();
@@ -294,6 +282,7 @@ const MindMapApp: React.FC = () => {
                 onCustomize={uiState.handleShowCustomization}
                 onCopy={handleCopyNode}
                 onPaste={handlePasteNode}
+                onChangeColor={(nodeId: string, color: string) => updateNode(nodeId, { color })}
                 onClose={() => uiState.setShowContextMenu(false)}
               />
             )}
@@ -320,7 +309,7 @@ const MindMapApp: React.FC = () => {
                 isOpen={uiState.showNodeMapLinksPanel}
                 position={uiState.nodeMapLinksPanelPosition}
                 selectedNode={uiState.selectedNodeForLinks}
-                currentMapId={currentMapId}
+                currentMapId={currentMapId || ''}
                 allMaps={allMindMaps}
                 onClose={uiState.handleCloseNodeMapLinksPanel}
                 onAddLink={nodeHandlers.handleAddNodeMapLink}
@@ -335,7 +324,7 @@ const MindMapApp: React.FC = () => {
               <div>
                 <span className="footer-brand">© 2024 MindFlow</span>
                 <span className="stats">
-                  ノード数: {flattenNodes && data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
+                  ノード数: {data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
                   最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
                 </span>
                 {/* ローカルモードでは同期ステータス不要 */}

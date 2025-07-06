@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import type { MindMapData, MindMapNode } from '../../shared/types';
+import type { MindMapData, MindMapNode } from '../../../shared/types';
 
 interface MindMapSidebarProps {
   mindMaps: MindMapData[];
@@ -22,7 +22,6 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
   onDeleteMap,
   onRenameMap,
   onChangeCategory,
-  availableCategories,
   isCollapsed,
   onToggleCollapse 
 }) => {
@@ -76,7 +75,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     const count = (node: MindMapNode): number => {
       let total = 1;
       if (node.children) {
-        node.children.forEach(child => {
+        node.children.forEach((child: MindMapNode) => {
           total += count(child);
         });
       }
@@ -127,7 +126,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setDragOverCategory(null);
     }
   };

@@ -1,24 +1,36 @@
+import type { MindMapData } from '../../../../shared/types';
+
+// Type definitions
+interface MapHandlersReturn {
+  handleSelectMap: (mapId: string) => Promise<void>;
+  handleCreateMap: (providedName?: string | null, providedCategory?: string | null) => Promise<string | null>;
+  handleDeleteMap: (mapId: string) => Promise<boolean>;
+  handleRenameMap: (mapId: string, newTitle: string) => void;
+  handleChangeCategory: (mapId: string, newCategory: string) => void;
+  handleNavigateToMap: (mapId: string) => Promise<void>;
+}
+
 /**
  * マップ管理関連のハンドラーを管理するカスタムフック
  */
 export const useMapHandlers = (
-  allMindMaps,
-  switchToMap,
-  createMindMap,
-  deleteMindMapById,
-  renameMindMap,
-  changeMapCategory
-) => {
-  const handleSelectMap = async (mapId) => {
+  allMindMaps: MindMapData[],
+  switchToMap: (mapId: string) => Promise<void>,
+  createMindMap: (name: string, category: string) => Promise<string>,
+  deleteMindMapById: (mapId: string) => Promise<boolean>,
+  renameMindMap: (mapId: string, newTitle: string) => void,
+  changeMapCategory: (mapId: string, newCategory: string) => void
+): MapHandlersReturn => {
+  const handleSelectMap = async (mapId: string): Promise<void> => {
     try {
       await switchToMap(mapId);
     } catch (error) {
       console.error('マップ切り替えエラー:', error);
-      alert('マップの切り替えに失敗しました: ' + error.message);
+      alert('マップの切り替えに失敗しました: ' + (error as Error).message);
     }
   };
 
-  const handleCreateMap = async (providedName = null, providedCategory = null) => {
+  const handleCreateMap = async (providedName: string | null = null, providedCategory: string | null = null): Promise<string | null> => {
     let mapName = providedName;
     if (!mapName) {
       mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
@@ -31,35 +43,35 @@ export const useMapHandlers = (
         return mapId;
       } catch (error) {
         console.error('マップ作成エラー:', error);
-        alert('マップの作成に失敗しました: ' + error.message);
+        alert('マップの作成に失敗しました: ' + (error as Error).message);
         return null;
       }
     }
     return null;
   };
 
-  const handleDeleteMap = (mapId) => {
+  const handleDeleteMap = async (mapId: string): Promise<boolean> => {
     if (allMindMaps.length <= 1) {
       alert('最後のマインドマップは削除できません');
       return false;
     }
-    return deleteMindMapById(mapId);
+    return await deleteMindMapById(mapId);
   };
 
-  const handleRenameMap = (mapId, newTitle) => {
+  const handleRenameMap = (mapId: string, newTitle: string): void => {
     renameMindMap(mapId, newTitle);
   };
 
-  const handleChangeCategory = (mapId, newCategory) => {
+  const handleChangeCategory = (mapId: string, newCategory: string): void => {
     changeMapCategory(mapId, newCategory);
   };
 
-  const handleNavigateToMap = async (mapId) => {
+  const handleNavigateToMap = async (mapId: string): Promise<void> => {
     try {
       await switchToMap(mapId);
     } catch (error) {
       console.error('マップナビゲーションエラー:', error);
-      alert('マップの切り替えに失敗しました: ' + error.message);
+      alert('マップの切り替えに失敗しました: ' + (error as Error).message);
     }
   };
 

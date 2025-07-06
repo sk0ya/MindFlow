@@ -1,7 +1,9 @@
+import type { MindMapData } from '../../../../shared/types';
+
 /**
  * アプリケーション操作関連のハンドラーを管理するカスタムフック
  */
-export const useAppActions = (data, saveMindMap) => {
+export const useAppActions = (data: MindMapData | null, saveMindMap: (data: MindMapData) => void) => {
   const handleExport = () => {
     if (!data) return;
     const dataStr = JSON.stringify(data, null, 2);
@@ -14,7 +16,7 @@ export const useAppActions = (data, saveMindMap) => {
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = async (file) => {
+  const handleImport = async (file: File) => {
     try {
       const text = await file.text();
       const importedData = JSON.parse(text);
@@ -25,7 +27,7 @@ export const useAppActions = (data, saveMindMap) => {
       localStorage.setItem('mindflow_imported_data', JSON.stringify(importedData));
       window.location.reload();
     } catch (error) {
-      alert('ファイルの読み込みに失敗しました: ' + error.message);
+      alert('ファイルの読み込みに失敗しました: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
@@ -38,8 +40,10 @@ export const useAppActions = (data, saveMindMap) => {
   };
 
   const handleSave = async () => {
-    await saveMindMap();
-    showSaveMessage();
+    if (data) {
+      await saveMindMap(data);
+      showSaveMessage();
+    }
   };
 
   return {
