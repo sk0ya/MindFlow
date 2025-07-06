@@ -150,11 +150,13 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   const handleDragEnd = useCallback((nodeId: string, x: number, y: number) => {
     if (dragState.dropTargetId && dragState.dropTargetId !== nodeId) {
       // 親要素を変更
+      console.log('🎯 ドロップターゲット検出:', { nodeId, dropTargetId: dragState.dropTargetId });
       if (onChangeParent) {
         onChangeParent(nodeId, dragState.dropTargetId);
       }
     } else {
       // 通常の位置移動
+      console.log('📍 位置移動:', { nodeId, x, y });
       onDragNode(nodeId, x, y);
     }
     
@@ -360,13 +362,58 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         }}
         style={{
           background: 'white',
-          cursor: isPanningRef.current ? 'grabbing' : 'grab',
+          cursor: isPanningRef.current ? 'grabbing' : dragState.isDragging ? 'grabbing' : 'grab',
           border: '2px solid #e1e5e9',
           borderRadius: '12px',
-          userSelect: 'none'
+          userSelect: 'none',
+          transition: 'all 0.2s ease'
         }}
       >
         <g transform={`scale(${zoom}) translate(${pan.x}, ${pan.y})`}>
+          {/* ドラッグ中のドロップガイドライン */}
+          {dragState.isDragging && dragState.dropTargetId && (
+            <g className="drop-guide">
+              {(() => {
+                const draggedNode = allNodes.find(n => n.id === dragState.draggedNodeId);
+                const targetNode = allNodes.find(n => n.id === dragState.dropTargetId);
+                if (draggedNode && targetNode) {
+                  return (
+                    <>
+                      <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                         refX="10" refY="3.5" orient="auto">
+                          <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800" />
+                        </marker>
+                      </defs>
+                      <line
+                        x1={draggedNode.x}
+                        y1={draggedNode.y}
+                        x2={targetNode.x}
+                        y2={targetNode.y}
+                        stroke="#ff9800"
+                        strokeWidth="3"
+                        strokeDasharray="8,4"
+                        markerEnd="url(#arrowhead)"
+                        opacity="0.8"
+                      />
+                      <circle
+                        cx={targetNode.x}
+                        cy={targetNode.y}
+                        r="60"
+                        fill="none"
+                        stroke="#ff9800"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                        opacity="0.5"
+                      />
+                    </>
+                  );
+                }
+                return null;
+              })()}
+            </g>
+          )}
+
           <g className="connection-lines">
             {connections.filter(conn => !conn.hasToggleButton).map((conn, index) => (
               <Connection
@@ -435,6 +482,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
           <strong>操作方法:</strong> 
           クリック=選択 | ダブルクリック=編集 | Tab=子追加 | Enter=兄弟追加 | Delete=削除 | 
           Space=編集 | マウスホイール=ズーム | ドラッグ=パン/移動 | 
+          <span style={{color: '#ff9800', fontWeight: 'bold'}}>ノードドラッグ=親変更</span> | 
           接続線のボタン=開閉
         </p>
       </div>
@@ -471,6 +519,30 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
         .connections path {
           stroke: black;
+        }
+
+        .drop-guide line {
+          animation: dragPulse 1.5s ease-in-out infinite;
+        }
+
+        .drop-guide circle {
+          animation: dropZonePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dragPulse {
+          0%, 100% { stroke-opacity: 0.8; }
+          50% { stroke-opacity: 0.4; }
+        }
+
+        @keyframes dropZonePulse {
+          0%, 100% { 
+            stroke-opacity: 0.5; 
+            r: 60;
+          }
+          50% { 
+            stroke-opacity: 0.8; 
+            r: 65;
+          }
         }
 
         @media (max-width: 768px) {

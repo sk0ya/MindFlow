@@ -333,8 +333,13 @@ const Node: React.FC<NodeProps> = ({
         style={{
           cursor: isDragging ? 'grabbing' : 'pointer',
           filter: isDragTarget 
-            ? 'drop-shadow(0 4px 12px rgba(255,152,0,0.3))' 
-            : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))')
+            ? 'drop-shadow(0 4px 12px rgba(255,152,0,0.5))' 
+            : isDragging
+            ? 'drop-shadow(0 6px 20px rgba(0,0,0,0.3))'
+            : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))'),
+          opacity: isDragging ? 0.8 : 1,
+          transform: isDragging ? 'scale(1.05)' : 'scale(1)',
+          transition: isDragging ? 'none' : 'all 0.2s ease'
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
