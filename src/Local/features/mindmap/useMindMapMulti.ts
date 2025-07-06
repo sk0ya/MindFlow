@@ -74,23 +74,23 @@ export const useMindMapMulti = (data, setData, updateData) => {
     try {
       console.log('✏️ マップ名変更:', mapId, '->', newTitle);
       
-      // 統一インターフェース：StorageManagerを通して更新
-      const allMaps = await getAllMindMaps();
-      const mapIndex = allMaps.findIndex(map => map.id === mapId);
+      // 完全なマップデータを取得（rootNodeを含む）
+      const fullMapData = await getMindMap(mapId);
       
-      if (mapIndex !== -1) {
-        const updatedMap = { 
-          ...allMaps[mapIndex], 
-          title: newTitle, 
-          updatedAt: new Date().toISOString() 
-        };
-        
-        // ローカルストレージに保存
-        await storageManager.updateMindMap(mapId, updatedMap);
-        console.log('✅ マップタイトル更新完了:', newTitle);
-      } else {
+      if (!fullMapData) {
         throw new Error('マップが見つかりません');
       }
+      
+      // タイトルとタイムスタンプのみ更新
+      const updatedMap = { 
+        ...fullMapData, 
+        title: newTitle, 
+        updatedAt: new Date().toISOString() 
+      };
+      
+      // ローカルストレージに保存
+      await storageManager.updateMindMap(mapId, updatedMap);
+      console.log('✅ マップタイトル更新完了:', newTitle);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
@@ -144,21 +144,31 @@ export const useMindMapMulti = (data, setData, updateData) => {
 
   // カテゴリー変更
   const changeMapCategory = async (mapId, newCategory) => {
-    const allMaps = await getAllMindMaps();
-    const mapIndex = allMaps.findIndex(map => map.id === mapId);
-    
-    if (mapIndex !== -1) {
-      const updatedMap = { ...allMaps[mapIndex], category: newCategory, updatedAt: new Date().toISOString() };
-      allMaps[mapIndex] = updatedMap;
+    try {
+      // 完全なマップデータを取得（rootNodeを含む）
+      const fullMapData = await getMindMap(mapId);
+      
+      if (!fullMapData) {
+        throw new Error('マップが見つかりません');
+      }
+      
+      // カテゴリーとタイムスタンプのみ更新
+      const updatedMap = { 
+        ...fullMapData, 
+        category: newCategory, 
+        updatedAt: new Date().toISOString() 
+      };
       
       // ストレージに保存
-      saveMindMap(updatedMap.id, updatedMap);
-      refreshAllMindMaps();
+      await saveMindMap(updatedMap.id, updatedMap);
+      await refreshAllMindMaps();
       
       // 現在編集中のマップの場合はデータを更新
       if (mapId === currentMapId) {
         setData(prev => ({ ...prev, category: newCategory }));
       }
+    } catch (error) {
+      console.error('❌ カテゴリー変更失敗:', error);
     }
   };
 
