@@ -128,10 +128,9 @@ export const useMindMapData = (isAppReady = false) => {
     immediate?: boolean;
     onUpdate?: (data: MindMapData, options: { [key: string]: unknown }) => void;
   } = {}) => {
-    // ローカルモードでは常にデータ更新を処理
     if (!newData) return;
     
-    // 🔧 編集中の競合状態を検出・保護
+    // 編集中の競合状態を検出・保護
     const editingInput = document.querySelector('.node-input') as HTMLInputElement | null;
     const isCurrentlyEditing = editingInput && document.activeElement === editingInput;
     
@@ -141,25 +140,18 @@ export const useMindMapData = (isAppReady = false) => {
         updateSource: options.source || 'unknown',
         isExternal: options.skipHistory || false
       });
-      
-      // 編集中は外部からの更新をスキップして編集を保護
-      // ただし、明示的に許可された場合は更新を実行
       return;
     }
     
     setData(newData);
     
-    // 外部操作の適用中でない場合のみ履歴に追加
     if (!options.skipHistory) {
       addToHistory(newData);
     }
     
-    // 保存処理
     if (options.saveImmediately) {
-      // 即座保存（重要な操作用）
       await saveImmediately(newData);
     } else if (newData.settings?.autoSave !== false) {
-      // 自動保存が有効な場合のみ自動保存を開始（デフォルトは有効）
       startAutoSave();
     }
     
@@ -174,7 +166,6 @@ export const useMindMapData = (isAppReady = false) => {
       wasEditing: isCurrentlyEditing || false
     });
     
-    // カスタムコールバックがあれば実行
     if (options.onUpdate) {
       options.onUpdate(newData, options);
     }
@@ -229,15 +220,12 @@ export const useMindMapData = (isAppReady = false) => {
       setHistoryIndex(0);
     }
     
-    // クリーンアップ
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [data]); // dataを依存配列に追加
-
-  // ローカルモードでは追加の同期処理は不要
+  }, [data]);
 
   return {
     data,

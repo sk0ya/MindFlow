@@ -25,9 +25,6 @@ import { useAppActions } from './hooks/useAppActions';
 import type { MindMapNode, Position } from '../../shared/types';
 
 const MindMapApp: React.FC = () => {
-  // ローカルモードでは認証不要
-  
-  // ローカルモードでは単純な初期化（認証やモード選択は不要）
   const [isAppReady] = useState(true);
   
   const {
@@ -70,14 +67,6 @@ const MindMapApp: React.FC = () => {
     getAvailableCategories
   } = useMindMap(isAppReady);
   
-  
-
-  // ローカルモードでは既にモード選択済みなので不要
-
-  // ローカルモードでは認証不要
-
-  // カスタムフックで機能を分離（ローカルモードでは認証ハンドラーは上で定義済み）
-  
   const fileHandlers = useFileHandlers(
     attachFileToNode,
     removeFileFromNode,
@@ -110,7 +99,6 @@ const MindMapApp: React.FC = () => {
   );
   
   const appActions = useAppActions(data, saveMindMap);
-  
 
   // キーボードショートカットの統合
   useKeyboardShortcuts({
@@ -140,12 +128,6 @@ const MindMapApp: React.FC = () => {
     showKeyboardHelper: uiState.showShortcutHelper,
     setShowKeyboardHelper: uiState.setShowShortcutHelper
   });
-  
-  // ローカルモードでは初期化完了（認証不要）
-
-  // ローカルモードでは認証チェック不要
-
-  // ファイルアクションメニューのハンドラーを拡張
 
   // コンテキストメニューのハンドラー
   const handleRightClick = (e: React.MouseEvent, nodeId: string): void => {
@@ -177,11 +159,7 @@ const MindMapApp: React.FC = () => {
     }
   };
 
-  // ローカルモードでは認証検証は不要（スキップ）
-
-  // ローカルモードでは初期化処理不要
-
-  // ローカルモードではデータが無い場合のみローディング表示
+  // ローディング表示
   if (!data) {
     return (
       <div className="mindmap-app loading-screen">
@@ -258,10 +236,6 @@ const MindMapApp: React.FC = () => {
               />
             </ErrorBoundary>
 
-            {/* ローカルモードではリアルタイム機能UI不要 */}
-
-            {/* ローカルモード専用機能 */}
-
             {uiState.showCustomizationPanel && (
               <NodeCustomizationPanel
                 selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
@@ -327,14 +301,13 @@ const MindMapApp: React.FC = () => {
                   ノード数: {data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
                   最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
                 </span>
-                {/* ローカルモードでは同期ステータス不要 */}
               </div>
             </footer>
           </div>
         </>
       ) : null}
 
-      {/* キーボードショートカットヘルパー（ローカルモード用） */}
+      {/* キーボードショートカットヘルパー */}
       <KeyboardShortcutHelper
         isVisible={uiState.showShortcutHelper}
         onClose={() => uiState.setShowShortcutHelper(false)}

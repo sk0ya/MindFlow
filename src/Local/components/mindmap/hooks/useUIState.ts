@@ -7,12 +7,6 @@ interface Position {
   y: number;
 }
 
-interface ConflictInfo {
-  id: string;
-  timestamp: number;
-  [key: string]: unknown;
-}
-
 /**
  * UI状態管理のカスタムフック（パネル、モーダル、メニューなど）
  */
@@ -40,20 +34,8 @@ export const useUIState = () => {
   // サイドバー状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   
-  // クラウドストレージパネル状態
-  const [showCloudStoragePanel, setShowCloudStoragePanel] = useState<boolean>(false);
-  
   // ローカルストレージパネル状態
   const [showLocalStoragePanel, setShowLocalStoragePanel] = useState<boolean>(false);
-  
-  // 競合通知状態
-  const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
-  
-  // 共同編集機能パネル状態
-  const [showCollaborativeFeatures, setShowCollaborativeFeatures] = useState<boolean>(false);
-  
-  // パフォーマンスダッシュボード状態（開発環境のみ）
-  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState<boolean>(false);
   
   // チュートリアル状態
   const [showTutorial, setShowTutorial] = useState<boolean>(false);
@@ -79,16 +61,6 @@ export const useUIState = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  const handleToggleCollaborativeFeatures = (): void => {
-    setShowCollaborativeFeatures(!showCollaborativeFeatures);
-  };
-
-  const handleTogglePerformanceDashboard = (): void => {
-    if (process.env.NODE_ENV === 'development') {
-      setShowPerformanceDashboard(!showPerformanceDashboard);
-    }
-  };
-
   // ノードマップリンク関連のハンドラー
   const handleShowNodeMapLinks = (node: MindMapNode, position: Position): void => {
     setSelectedNodeForLinks(node);
@@ -103,30 +75,11 @@ export const useUIState = () => {
     setSelectedNodeForLinks(null);
   };
 
-  // 競合処理関連
-  const handleConflictResolved = (conflict: Partial<ConflictInfo>): void => {
-    setConflicts(prev => [...prev, {
-      ...conflict,
-      id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now()
-    } as ConflictInfo]);
-  };
-
-  const handleDismissConflict = (conflictId: string): void => {
-    setConflicts(prev => prev.filter((c: ConflictInfo) => c.id !== conflictId));
-  };
-
   // Escapeキーでパネルを閉じる
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         handleCloseAllPanels();
-      }
-      
-      // パフォーマンスダッシュボードのトグル（開発環境のみ、Ctrl+Shift+P）
-      if (e.ctrlKey && e.shiftKey && e.key === 'P' && process.env.NODE_ENV === 'development') {
-        e.preventDefault();
-        handleTogglePerformanceDashboard();
       }
     };
 
@@ -159,15 +112,8 @@ export const useUIState = () => {
     nodeMapLinksPanelPosition,
     selectedNodeForLinks,
     sidebarCollapsed,
-    showCloudStoragePanel,
-    setShowCloudStoragePanel,
     showLocalStoragePanel,
     setShowLocalStoragePanel,
-    conflicts,
-    showCollaborativeFeatures,
-    setShowCollaborativeFeatures,
-    showPerformanceDashboard,
-    setShowPerformanceDashboard,
     showTutorial,
     setShowTutorial,
     
@@ -176,11 +122,7 @@ export const useUIState = () => {
     handleCloseAllPanels,
     handleShowCustomization,
     handleToggleSidebar,
-    handleToggleCollaborativeFeatures,
-    handleTogglePerformanceDashboard,
     handleShowNodeMapLinks,
-    handleCloseNodeMapLinksPanel,
-    handleConflictResolved,
-    handleDismissConflict
+    handleCloseNodeMapLinksPanel
   };
 };

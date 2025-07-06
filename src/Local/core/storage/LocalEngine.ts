@@ -52,15 +52,15 @@ class LocalEngine {
   // 現在のマインドマップを取得
   getCurrentMindMap() {
     const currentId = localStorage.getItem(STORAGE_KEYS.CURRENT_MAP_ID);
-    console.log('🔍 LocalEngine.getCurrentMindMap: Current ID:', currentId);
+    debug('LocalEngine.getCurrentMindMap: Current ID:', currentId);
     
     if (!currentId) {
-      console.log('🔍 LocalEngine.getCurrentMindMap: No current ID found');
+      debug('LocalEngine.getCurrentMindMap: No current ID found');
       return null;
     }
     
     const mindMap = this.getMindMap(currentId);
-    console.log('🔍 LocalEngine.getCurrentMindMap: Retrieved map:', {
+    debug('LocalEngine.getCurrentMindMap: Retrieved map:', {
       found: !!mindMap,
       hasRootNode: !!(mindMap?.rootNode),
       title: mindMap?.title
@@ -132,7 +132,7 @@ class LocalEngine {
       const key = STORAGE_KEYS.MAP_PREFIX + id;
       const dataStr = localStorage.getItem(key);
       
-      console.log('🔍 LocalEngine.getMindMap:', {
+      debug('LocalEngine.getMindMap:', {
         id,
         key,
         hasData: !!dataStr,
@@ -140,19 +140,19 @@ class LocalEngine {
       });
       
       if (!dataStr) {
-        console.log('🔍 LocalEngine.getMindMap: No data found for key:', key);
+        debug('LocalEngine.getMindMap: No data found for key:', key);
         return null;
       }
       
       const data = JSON.parse(dataStr);
-      console.log('🔍 LocalEngine.getMindMap: Parsed data:', {
+      debug('LocalEngine.getMindMap: Parsed data:', {
         hasRootNode: !!data.rootNode,
         nodeCount: data.rootNode ? this.countNodes(data.rootNode) : 0
       });
       
       return data;
     } catch (error) {
-      console.error('Failed to get mind map:', error);
+      error('Failed to get mind map:', error);
       return null;
     }
   }
@@ -210,7 +210,7 @@ class LocalEngine {
       const key = STORAGE_KEYS.MAP_PREFIX + id;
       const dataStr = JSON.stringify(updatedData);
       
-      console.log('💾 LocalEngine.updateMindMap:', {
+      debug('LocalEngine.updateMindMap:', {
         id,
         key,
         dataSize: dataStr.length,
@@ -223,15 +223,15 @@ class LocalEngine {
       // 保存後の確認
       const savedData = localStorage.getItem(key);
       if (savedData) {
-        console.log('✅ LocalEngine.updateMindMap: Data saved successfully, size:', savedData.length);
+        debug('LocalEngine.updateMindMap: Data saved successfully, size:', savedData.length);
       } else {
-        console.error('❌ LocalEngine.updateMindMap: Failed to verify saved data');
+        error('LocalEngine.updateMindMap: Failed to verify saved data');
       }
       
       return { success: true, data: updatedData };
-    } catch (error) {
-      console.error('Failed to update mind map:', error);
-      return { success: false, error: (error as Error).message };
+    } catch (err) {
+      error('Failed to update mind map:', err);
+      return { success: false, error: (err as Error).message };
     }
   }
 
