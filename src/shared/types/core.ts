@@ -3,6 +3,23 @@
  * This file contains the unified type system for MindFlow application
  */
 
+// Branded types for enhanced type safety
+export type NodeId = string & { readonly __brand: 'NodeId' };
+export type MapId = string & { readonly __brand: 'MapId' };
+export type FileId = string & { readonly __brand: 'FileId' };
+export type UserId = string & { readonly __brand: 'UserId' };
+
+// Type guards and factory functions for branded types
+export const createNodeId = (id: string): NodeId => id as NodeId;
+export const createMapId = (id: string): MapId => id as MapId;
+export const createFileId = (id: string): FileId => id as FileId;
+export const createUserId = (id: string): UserId => id as UserId;
+
+export const isNodeId = (id: string): id is NodeId => typeof id === 'string' && id.length > 0;
+export const isMapId = (id: string): id is MapId => typeof id === 'string' && id.length > 0;
+export const isFileId = (id: string): id is FileId => typeof id === 'string' && id.length > 0;
+export const isUserId = (id: string): id is UserId => typeof id === 'string' && id.length > 0;
+
 // Base node interface that both modes can extend
 export interface MindMapNode {
   id: string;

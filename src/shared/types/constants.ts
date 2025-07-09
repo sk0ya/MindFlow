@@ -32,6 +32,9 @@ export const LAYOUT_CONSTANTS = {
   LEVEL_SPACING: 200,
   VERTICAL_SPACING: 80,
   MIN_NODE_DISTANCE: 50,
+  SIBLING_SPACING: 60,
+  CHILD_OFFSET_X: 200,
+  CHILD_OFFSET_Y: 100,
   
   // Grid settings
   GRID_SIZE: 20,
@@ -42,10 +45,17 @@ export const LAYOUT_CONSTANTS = {
   MAX_ZOOM: 5.0,
   DEFAULT_ZOOM: 1.0,
   ZOOM_STEP: 0.1,
+  PAN_SENSITIVITY: 1.0,
   
   // Animation
   ANIMATION_DURATION: 300,
-  EASING: 'ease-out'
+  EASING: 'ease-out',
+  TRANSITION_DELAY: 50,
+  
+  // Performance thresholds
+  MAX_VISIBLE_NODES: 1000,
+  COLLISION_CHECK_LIMIT: 100,
+  LAYOUT_BATCH_SIZE: 50
 } as const;
 
 // Typography constants
@@ -234,5 +244,50 @@ export const PERFORMANCE_CONSTANTS = {
   RENDER_TIME_WARNING: 16, // ms (60fps threshold)
   MEMORY_WARNING: 100 * 1024 * 1024, // 100MB
   NODE_COUNT_WARNING: 1000,
-  MAX_HISTORY_SIZE: 50
+  MAX_HISTORY_SIZE: 50,
+  DEBOUNCE_DELAY: 300,
+  AUTO_SAVE_INTERVAL: 2000,
+  THROTTLE_LIMIT: 100
+} as const;
+
+// Error handling constants
+export const ERROR_CONSTANTS = {
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000,
+  TIMEOUT_DURATION: 10000,
+  LOG_LEVEL: {
+    DEBUG: 0,
+    INFO: 1,
+    WARN: 2,
+    ERROR: 3,
+    CRITICAL: 4
+  },
+  SEVERITY_COLORS: {
+    low: '#3498db',
+    medium: '#f39c12', 
+    high: '#e74c3c',
+    critical: '#8e44ad'
+  }
+} as const;
+
+// UI constants extracted from common usage
+export const UI_CONSTANTS = {
+  MODAL_Z_INDEX: 1000,
+  TOOLTIP_DELAY: 500,
+  NOTIFICATION_DURATION: 3000,
+  SIDEBAR_WIDTH: 280,
+  TOOLBAR_HEIGHT: 60,
+  PANEL_MIN_WIDTH: 200,
+  PANEL_MAX_WIDTH: 400,
+  CONTEXT_MENU_WIDTH: 180,
+  BORDER_RADIUS: {
+    SMALL: 4,
+    MEDIUM: 8,
+    LARGE: 12
+  },
+  SHADOW: {
+    LIGHT: '0 2px 4px rgba(0,0,0,0.1)',
+    MEDIUM: '0 4px 8px rgba(0,0,0,0.15)',
+    HEAVY: '0 8px 16px rgba(0,0,0,0.2)'
+  }
 } as const;

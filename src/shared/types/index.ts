@@ -13,6 +13,10 @@ import type {
 
 // Core type definitions
 export type {
+  NodeId,
+  MapId,
+  FileId,
+  UserId,
   MindMapNode,
   MindMapData,
   MindMapSettings,
@@ -39,6 +43,18 @@ export type {
   AuthHookReturn
 } from './core';
 
+// Export branded type utilities
+export {
+  createNodeId,
+  createMapId,
+  createFileId,
+  createUserId,
+  isNodeId,
+  isMapId,
+  isFileId,
+  isUserId
+} from './core';
+
 // Constants and configuration
 export {
   FILE_CONSTANTS,
@@ -51,7 +67,9 @@ export {
   API_CONSTANTS,
   KEYBOARD_SHORTCUTS,
   THEME_CONSTANTS,
-  PERFORMANCE_CONSTANTS
+  PERFORMANCE_CONSTANTS,
+  ERROR_CONSTANTS,
+  UI_CONSTANTS
 } from './constants';
 
 // Legacy compatibility exports (to be phased out)

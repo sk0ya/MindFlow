@@ -39,3 +39,34 @@ export {
 // Logging system
 export { logger, LogLevel } from './logger';
 export type { LogEntry, LoggerConfig } from './logger';
+
+// Node utilities (safe additions)
+export {
+  findNode,
+  findParentNode,
+  getAllDescendants,
+  countNodes,
+  getNodeDepth,
+  wouldCreateCircularReference,
+  calculateDistance,
+  wouldNodesCollide,
+  createNewNode,
+  cloneNode,
+  validateNodeText,
+  calculateOptimalFontSize,
+  getSiblings,
+  getNodeIndex
+} from './nodeUtils';
+
+// Enhanced error handling and safety utilities
+export {
+  type Result,
+  safeOperation,
+  safeAsyncOperation,
+  logError,
+  validateInput,
+  debounce,
+  throttle,
+  safeLocalStorage,
+  performanceUtils
+} from './errorUtils';
