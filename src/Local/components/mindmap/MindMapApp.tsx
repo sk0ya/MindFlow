@@ -11,7 +11,6 @@ import MindMapSidebar from './MindMapSidebar';
 import NodeMapLinksPanel from '../../panels/MapLinksPanel';
 import './MindMapApp.css';
 
-import KeyboardShortcutHelper from '../common/KeyboardShortcutHelper';
 import { useKeyboardShortcuts } from '../../core/hooks/useKeyboardShortcuts';
 
 // カスタムフックのインポート
@@ -19,7 +18,7 @@ import { useFileHandlers } from './hooks/useFileHandlers';
 import { useMapHandlers } from './hooks/useMapHandlers';
 import { useUIState } from './hooks/useUIState';
 import { useNodeHandlers } from './hooks/useNodeHandlers';
-import { useAppActions } from './hooks/useAppActions';
+// useAppActions import removed - not used in this component
 
 // Types
 import type { MindMapNode, Position } from '../../shared/types';
@@ -33,7 +32,6 @@ const MindMapApp: React.FC = () => {
     editingNodeId,
     editText,
     setSelectedNodeId,
-    setEditingNodeId,
     setEditText,
     updateNode,
     addChildNode,
@@ -43,7 +41,6 @@ const MindMapApp: React.FC = () => {
     changeSiblingOrder,
     findNode,
     flattenNodes,
-    applyFullLayout,
     startEdit,
     finishEdit,
     undo,
@@ -51,7 +48,6 @@ const MindMapApp: React.FC = () => {
     canUndo,
     canRedo,
     updateTitle,
-    saveMindMap,
     toggleCollapse,
     navigateToDirection,
     attachFileToNode,
@@ -99,13 +95,10 @@ const MindMapApp: React.FC = () => {
     () => {} // No cursor update in local mode
   );
   
-  const appActions = useAppActions(data, saveMindMap);
-
-  // キーボードショートカットの統合
+  // キーボードショートカットの統合を復元
   useKeyboardShortcuts({
     selectedNodeId,
     editingNodeId,
-    setEditingNodeId,
     setEditText,
     startEdit,
     finishEdit,
@@ -119,8 +112,6 @@ const MindMapApp: React.FC = () => {
     canUndo,
     canRedo,
     navigateToDirection,
-    saveMindMap,
-    applyFullLayout,
     showMapList: uiState.showMapList,
     setShowMapList: uiState.setShowMapList,
     showLocalStorage: uiState.showLocalStoragePanel,
@@ -196,8 +187,8 @@ const MindMapApp: React.FC = () => {
             <Toolbar
               title={data.title}
               onTitleChange={updateTitle}
-              onExport={appActions.handleExport}
-              onImport={appActions.handleImport}
+              onExport={() => {}} // TODO: implement export functionality
+              onImport={async () => {}} // TODO: implement import functionality
               onUndo={undo}
               onRedo={redo}
               canUndo={canUndo}
@@ -309,11 +300,7 @@ const MindMapApp: React.FC = () => {
         </>
       ) : null}
 
-      {/* キーボードショートカットヘルパー */}
-      <KeyboardShortcutHelper
-        isVisible={uiState.showShortcutHelper}
-        onClose={() => uiState.setShowShortcutHelper(false)}
-      />
+      {/* キーボードショートカットヘルパー - 現在未実装 */}
     </div>
   );
 };

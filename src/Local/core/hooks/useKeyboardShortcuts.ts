@@ -1,258 +1,156 @@
-import { useEffect } from 'react';
-import { MindMapNode } from '../../../shared/types/core';
+/**
+ * Keyboard shortcuts hook for MindMap application
+ * Handles all keyboard interactions for efficient mindmap navigation and editing
+ */
 
-interface KeyboardShortcutsProps {
+import { useEffect } from 'react';
+
+interface KeyboardShortcutHandlers {
   selectedNodeId: string | null;
   editingNodeId: string | null;
-  setEditingNodeId: (id: string | null) => void;
   setEditText: (text: string) => void;
   startEdit: (nodeId: string) => void;
-  finishEdit: (nodeId: string, text: string) => void;
+  finishEdit: (nodeId: string, newText?: string, options?: any) => Promise<void>;
   editText: string;
-  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
-  addChildNode: (parentId: string, text?: string, shouldEdit?: boolean) => void;
-  addSiblingNode: (nodeId: string, text?: string, shouldEdit?: boolean) => void;
-  deleteNode: (nodeId: string) => void;
+  updateNode: (id: string, updates: any) => void;
+  addChildNode: (parentId: string, text?: string, autoEdit?: boolean) => void;
+  addSiblingNode: (nodeId: string, text?: string, autoEdit?: boolean) => void;
+  deleteNode: (id: string) => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  navigateToDirection: (direction: string) => void;
-  saveMindMap: () => void;
-  applyFullLayout?: () => Promise<void>;
+  navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
   showMapList: boolean;
-  setShowMapList: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setShowMapList: (show: boolean) => void;
   showLocalStorage: boolean;
-  setShowLocalStorage: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setShowLocalStorage: (show: boolean) => void;
   showTutorial: boolean;
-  setShowTutorial: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setShowTutorial: (show: boolean) => void;
   showKeyboardHelper: boolean;
-  setShowKeyboardHelper: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setShowKeyboardHelper: (show: boolean) => void;
 }
 
-// キーボードショートカット管理専用のカスタムフック
-export const useKeyboardShortcuts = ({
-  selectedNodeId,
-  editingNodeId,
-  setEditingNodeId,
-  setEditText: _setEditText,
-  startEdit,
-  finishEdit,
-  editText,
-  updateNode: _updateNode,
-  addChildNode,
-  addSiblingNode,
-  deleteNode,
-  undo,
-  redo,
-  canUndo,
-  canRedo,
-  navigateToDirection,
-  saveMindMap,
-  applyFullLayout,
-  showMapList,
-  setShowMapList,
-  showLocalStorage,
-  setShowLocalStorage,
-  showTutorial,
-  setShowTutorial,
-  showKeyboardHelper,
-  setShowKeyboardHelper
-}: KeyboardShortcutsProps) => {
-  
+export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // デバッグ用：キーイベントをログ出力
-      console.log('🎹 キーイベント:', {
-        key: e.key,
-        target: (e.target as Element)?.tagName,
-        editingNodeId,
-        selectedNodeId,
-        ctrlKey: e.ctrlKey,
-        metaKey: e.metaKey,
-        shiftKey: e.shiftKey
-      });
-      
-      // 入力フィールドにフォーカスがある場合は、一部のショートカットのみ許可
-      const activeElement = e.target as Element | null;
-      const isInputFocused = activeElement?.tagName === 'INPUT' || 
-                           activeElement?.tagName === 'TEXTAREA' || 
-                           (activeElement as HTMLElement)?.contentEditable === 'true';
-
-      // エスケープキーの処理（最優先）
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        console.log('⭕ Escapeキー処理:', { editingNodeId, showMapList, showLocalStorage, showTutorial, showKeyboardHelper });
-        if (editingNodeId) {
-          setEditingNodeId(null);
-        } else if (showMapList) {
-          setShowMapList(false);
-        } else if (showLocalStorage) {
-          setShowLocalStorage(false);
-        } else if (showTutorial) {
-          setShowTutorial(false);
-        } else if (showKeyboardHelper) {
-          setShowKeyboardHelper(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't handle shortcuts when editing text
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      ) {
+        // Special handling for editing mode
+        if (handlers.editingNodeId) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            handlers.finishEdit(handlers.editingNodeId, handlers.editText);
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            handlers.finishEdit(handlers.editingNodeId, '');
+          }
         }
         return;
       }
 
-      // 編集中の場合は、まず編集を終了してから通常のキー処理を行う
-      if (editingNodeId) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          console.log('🔧 ULTRA SIMPLE Enter: 編集終了');
-          finishEdit(editingNodeId, editText);
-          // 編集終了後、通常のEnterキー処理は下の非編集時処理で実行される
-        } else if (e.key === 'Tab' && !e.shiftKey) {
-          e.preventDefault();
-          console.log('🔧 ULTRA SIMPLE Tab: 編集終了');
-          finishEdit(editingNodeId, editText);
-          // 編集終了後、通常のTabキー処理は下の非編集時処理で実行される
-        }
-        // 他のキーはそのまま編集を続ける
-        return;
-      }
+      const { key, ctrlKey, metaKey, shiftKey } = event;
+      const isModifier = ctrlKey || metaKey;
 
-      // モーダルが開いている場合は、キーボードショートカットを無効化
-      if (showMapList || showLocalStorage || showTutorial || showKeyboardHelper) {
-        return;
-      }
-
-      // 入力フィールドにフォーカスがある場合の制限
-      if (isInputFocused) {
-        // Ctrl/Cmd + S（保存）は許可
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault();
-          saveMindMap();
-        }
-        return;
-      }
-
-      // ノードが選択されている場合のみ実行されるショートカット
-      if (selectedNodeId) {
-        console.log('🎯 選択ノードでのキー処理:', { key: e.key, selectedNodeId });
-        switch (e.key) {
-          case 'Tab':
-            e.preventDefault();
-            console.log('⭕ Tab → 子ノード追加:', { selectedNodeId });
-            await addChildNode(selectedNodeId, '', true);
+      // Navigation shortcuts
+      if (!isModifier && handlers.selectedNodeId) {
+        switch (key) {
+          case 'ArrowUp':
+            event.preventDefault();
+            handlers.navigateToDirection('up');
             break;
-          
-          case 'Enter':
-            e.preventDefault();
-            console.log('⭕ Enter → 兄弟ノード追加:', { selectedNodeId });
-            if (selectedNodeId === 'root') {
-              await addChildNode('root', '', true);
-            } else {
-              await addSiblingNode(selectedNodeId, '', true);
+          case 'ArrowDown':
+            event.preventDefault();
+            handlers.navigateToDirection('down');
+            break;
+          case 'ArrowLeft':
+            event.preventDefault();
+            handlers.navigateToDirection('left');
+            break;
+          case 'ArrowRight':
+            event.preventDefault();
+            handlers.navigateToDirection('right');
+            break;
+          case ' ': // Space
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.startEdit(handlers.selectedNodeId);
             }
             break;
-          
-          case ' ':
-            e.preventDefault();
-            startEdit(selectedNodeId);
+          case 'Tab':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.addChildNode(handlers.selectedNodeId, '', true);
+            }
             break;
-          
+          case 'Enter':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.addSiblingNode(handlers.selectedNodeId, '', true);
+            }
+            break;
           case 'Delete':
           case 'Backspace':
-            e.preventDefault();
-            if (selectedNodeId !== 'root') {
-              deleteNode(selectedNodeId);
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.deleteNode(handlers.selectedNodeId);
             }
-            break;
-          
-          case 'ArrowUp':
-            e.preventDefault();
-            navigateToDirection('up');
-            break;
-          
-          case 'ArrowDown':
-            e.preventDefault();
-            navigateToDirection('down');
-            break;
-          
-          case 'ArrowLeft':
-            e.preventDefault();
-            navigateToDirection('left');
-            break;
-          
-          case 'ArrowRight':
-            e.preventDefault();
-            navigateToDirection('right');
             break;
         }
       }
 
-      // グローバルショートカット（Ctrl/Cmd組み合わせ）
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
+      // Application shortcuts with modifiers
+      if (isModifier) {
+        switch (key.toLowerCase()) {
           case 's':
-            e.preventDefault();
-            saveMindMap();
+            event.preventDefault();
+            // Auto-save is handled by the system
             break;
-          
           case 'z':
-            e.preventDefault();
-            if (e.shiftKey) {
-              if (canRedo) redo();
-            } else {
-              if (canUndo) undo();
+            event.preventDefault();
+            if (shiftKey && handlers.canRedo) {
+              handlers.redo();
+            } else if (handlers.canUndo) {
+              handlers.undo();
             }
             break;
-          
           case 'y':
-            e.preventDefault();
-            if (canRedo) redo();
-            break;
-          
-          case 'm':
-            e.preventDefault();
-            setShowMapList(prev => !prev);
-            break;
-          
-          case 'k':
-            e.preventDefault();
-            setShowLocalStorage(prev => !prev);
-            break;
-          
-          case 'l':
-            e.preventDefault();
-            if (applyFullLayout) {
-              applyFullLayout();
+            event.preventDefault();
+            if (handlers.canRedo) {
+              handlers.redo();
             }
             break;
         }
-        return;
       }
 
-      // その他のグローバルショートカット
-      switch (e.key) {
+      // Function keys and special shortcuts
+      switch (key) {
         case 'F1':
-          e.preventDefault();
-          setShowTutorial(prev => !prev);
+          event.preventDefault();
+          handlers.setShowKeyboardHelper(!handlers.showKeyboardHelper);
           break;
-        
-        case '?':
-          if (e.shiftKey) {
-            e.preventDefault();
-            setShowKeyboardHelper(prev => !prev);
-          }
+        case 'Escape':
+          event.preventDefault();
+          // Close any open panels
+          if (handlers.showMapList) handlers.setShowMapList(false);
+          if (handlers.showLocalStorage) handlers.setShowLocalStorage(false);
+          if (handlers.showTutorial) handlers.setShowTutorial(false);
+          if (handlers.showKeyboardHelper) handlers.setShowKeyboardHelper(false);
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [
-    selectedNodeId,
-    editingNodeId,
-    editText,
-    showMapList,
-    showLocalStorage,
-    showTutorial,
-    showKeyboardHelper,
-    canUndo,
-    canRedo
-  ]);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handlers]);
 };
+
+export default useKeyboardShortcuts;
