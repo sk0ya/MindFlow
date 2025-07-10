@@ -130,6 +130,16 @@ export const calculateNodePosition = (parentNode: MindMapNode | null, childIndex
   };
   
   const distance = LAYOUT.RADIAL_BASE_RADIUS;
+  
+  // 初回の子ノードの場合（子ノードが1つの場合）
+  if (totalChildren === 1) {
+    return {
+      x: parentNode.x + distance,
+      y: parentNode.y
+    };
+  }
+  
+  // 複数の子ノードがある場合の放射状配置
   const startAngle = -90;
   const angleStep = totalChildren > 1 ? 180 / (totalChildren - 1) : 0;
   const angle = startAngle + (angleStep * childIndex);

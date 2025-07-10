@@ -13,8 +13,8 @@ interface KeyboardShortcutHandlers {
   finishEdit: (nodeId: string, newText?: string, options?: any) => Promise<void>;
   editText: string;
   updateNode: (id: string, updates: any) => void;
-  addChildNode: (parentId: string, text?: string, autoEdit?: boolean) => void;
-  addSiblingNode: (nodeId: string, text?: string, autoEdit?: boolean) => void;
+  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (nodeId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
   deleteNode: (id: string) => void;
   undo: () => void;
   redo: () => void;

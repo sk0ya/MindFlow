@@ -76,3 +76,38 @@ Object.defineProperty(global, 'crypto', {
 // Mock atob/btoa for JWT decoding
 global.atob = jest.fn((str) => Buffer.from(str, 'base64').toString('binary'));
 global.btoa = jest.fn((str) => Buffer.from(str, 'binary').toString('base64'));
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor(cb) {
+    this.cb = cb;
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// Mock SVGElement methods
+Object.defineProperty(SVGElement.prototype, 'getBBox', {
+  value: () => ({
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 20
+  }),
+  writable: true
+});
+
+// Mock createObjectURL for file handling tests
+global.URL.createObjectURL = jest.fn(() => 'mocked-url');
+global.URL.revokeObjectURL = jest.fn();
+
+// Mock FileReader
+global.FileReader = class FileReader {
+  readAsDataURL() {
+    setTimeout(() => {
+      this.result = 'data:text/plain;base64,dGVzdA==';
+      this.onload();
+    }, 0);
+  }
+};

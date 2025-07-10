@@ -227,6 +227,14 @@ export const useMindMapData = (isAppReady = false) => {
     };
   }, [data]);
 
+  // Export/Import functions for testing
+  const exportData = () => data;
+  const importData = (newData: MindMapData) => {
+    setData(newData);
+    setHistory([deepClone(newData)]);
+    setHistoryIndex(0);
+  };
+
   return {
     data,
     setData,
@@ -242,6 +250,8 @@ export const useMindMapData = (isAppReady = false) => {
     saveMindMap: async () => await saveImmediately(data, { isManualSave: true }),
     setHistory,
     setHistoryIndex,
-    triggerLocalSync: async () => await saveImmediately()
+    triggerLocalSync: async () => await saveImmediately(),
+    exportData,
+    importData
   };
 };

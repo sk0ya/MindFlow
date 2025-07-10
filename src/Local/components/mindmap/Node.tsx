@@ -740,3 +740,5 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
   // その他の場合は再レンダリングしない
   return true;
 });
+
+export { Node };

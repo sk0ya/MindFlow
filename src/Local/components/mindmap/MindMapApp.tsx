@@ -291,7 +291,7 @@ const MindMapApp: React.FC = () => {
               <div>
                 <span className="footer-brand">© 2024 MindFlow</span>
                 <span className="stats">
-                  ノード数: {data?.rootNode ? flattenNodes(data.rootNode).length : 0} | 
+                  ノード数: {data?.rootNode ? flattenNodes().length : 0} | 
                   最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
                 </span>
               </div>
