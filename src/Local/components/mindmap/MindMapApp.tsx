@@ -21,6 +21,7 @@ import { useNodeHandlers } from './hooks/useNodeHandlers';
 
 // サービスのインポート
 import { LocalMindMapService } from '../../core/services';
+import { useCommandHistory } from '../../core/hooks/useCommandHistory';
 
 // Types
 import type { MindMapNode, Position } from '../../shared/types';
@@ -45,10 +46,6 @@ const MindMapApp: React.FC = () => {
     flattenNodes,
     startEdit,
     finishEdit,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
     updateTitle,
     toggleCollapse,
     navigateToDirection,
@@ -83,6 +80,7 @@ const MindMapApp: React.FC = () => {
   );
   
   const uiState = useUIState();
+  const commandHistory = useCommandHistory();
   
   // サービスレイヤーの初期化
   const mindMapService = useMemo(() => new LocalMindMapService(
@@ -93,21 +91,28 @@ const MindMapApp: React.FC = () => {
       attachFileToNode,
       removeFileFromNode,
       downloadFile,
-      renameFileInNode
+      renameFileInNode,
+      changeParent,
+      changeSiblingOrder,
+      deleteNode
     },
     fileHandlers,
     mapHandlers,
-    uiState
-  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, fileHandlers, mapHandlers, uiState]);
+    uiState,
+    commandHistory
+  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, changeParent, changeSiblingOrder, deleteNode, fileHandlers, mapHandlers, uiState, commandHistory]);
 
   const nodeHandlers = useNodeHandlers(
     setSelectedNodeId,
     (position: Position | null) => uiState.setContextMenuPosition(position || { x: 0, y: 0 }),
     uiState.setShowContextMenu,
     uiState.setShowCustomizationPanel,
-    addChildNode,
+    (parentId: string, text?: string, startEditing?: boolean) => {
+      mindMapService.addChildNodeWithCommand(parentId, text || '', { startEditing });
+      return Promise.resolve(null);
+    },
     addSiblingNode,
-    updateNode,
+    (nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates),
     (nodeId: string, targetMapId: string) => mindMapService.addNodeMapLink(nodeId, targetMapId),
     (nodeId: string, linkId: string) => mindMapService.removeNodeMapLink(nodeId, linkId),
     () => {} // No cursor update in local mode
@@ -121,14 +126,17 @@ const MindMapApp: React.FC = () => {
     startEdit,
     finishEdit,
     editText,
-    updateNode,
-    addChildNode,
+    updateNode: (nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates),
+    addChildNode: async (parentId: string, text = '', startEditing = false) => {
+      mindMapService.addChildNodeWithCommand(parentId, text, { startEditing });
+      return Promise.resolve(null);
+    },
     addSiblingNode,
-    deleteNode,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
+    deleteNode: (nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId),
+    undo: () => mindMapService.undo(),
+    redo: () => mindMapService.redo(),
+    canUndo: mindMapService.canUndo(),
+    canRedo: mindMapService.canRedo(),
     navigateToDirection,
     showMapList: uiState.showMapList,
     setShowMapList: uiState.setShowMapList,
@@ -210,10 +218,10 @@ const MindMapApp: React.FC = () => {
               onTitleChange={updateTitle}
               onExport={() => {}} // TODO: implement export functionality
               onImport={async () => {}} // TODO: implement import functionality
-              onUndo={undo}
-              onRedo={redo}
-              canUndo={canUndo}
-              canRedo={canRedo}
+              onUndo={async () => { mindMapService.undo(); }}
+              onRedo={async () => { mindMapService.redo(); }}
+              canUndo={mindMapService.canUndo()}
+              canRedo={mindMapService.canRedo()}
               zoom={uiState.zoom}
               onZoomReset={uiState.handleZoomReset}
               onShowLocalStoragePanel={() => uiState.setShowLocalStoragePanel(true)}
@@ -234,7 +242,7 @@ const MindMapApp: React.FC = () => {
                 onChangeSiblingOrder={changeSiblingOrder}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}
-                onDeleteNode={deleteNode}
+                onDeleteNode={(nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId)}
                 onRightClick={handleRightClick}
                 onToggleCollapse={toggleCollapse}
                 onNavigateToDirection={navigateToDirection}
@@ -253,7 +261,7 @@ const MindMapApp: React.FC = () => {
             {uiState.showCustomizationPanel && (
               <NodeCustomizationPanel
                 selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
-                onUpdateNode={updateNode}
+                onUpdateNode={(nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates)}
                 onClose={() => uiState.setShowCustomizationPanel(false)}
                 position={uiState.customizationPosition}
               />
@@ -266,11 +274,11 @@ const MindMapApp: React.FC = () => {
                 selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}
-                onDelete={deleteNode}
+                onDelete={(nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId)}
                 onCustomize={uiState.handleShowCustomization}
                 onCopy={handleCopyNode}
                 onPaste={(parentId: string) => handlePasteNode(parentId)}
-                onChangeColor={(nodeId: string, color: string) => updateNode(nodeId, { color })}
+                onChangeColor={(nodeId: string, color: string) => mindMapService.updateNodeWithCommand(nodeId, { color })}
                 onClose={() => uiState.setShowContextMenu(false)}
               />
             )}

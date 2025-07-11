@@ -1,9 +1,31 @@
-import type { MindMapNode, MindMapData, Position } from '../../shared/types';
+import type { MindMapNode, Position } from '../../shared/types';
+import { useCommandHistory } from '../hooks/useCommandHistory';
+import { 
+  UpdateNodeCommand, 
+  AddChildNodeCommand, 
+  DeleteNodeCommand, 
+  ChangeParentCommand,
+  NodeOperations
+} from '../commands';
 
 export interface MindMapService {
   // ノード操作
   copyNode(node: MindMapNode): MindMapNode;
   pasteNode(parentId: string, clipboard: MindMapNode | null): Promise<void>;
+  
+  // コマンドベースのノード操作
+  updateNodeWithCommand(nodeId: string, updates: Partial<MindMapNode>): void;
+  addChildNodeWithCommand(parentId: string, text: string, options?: any): string;
+  deleteNodeWithCommand(nodeId: string): void;
+  changeParentWithCommand(nodeId: string, newParentId: string): void;
+  
+  // Undo/Redo操作
+  undo(): boolean;
+  redo(): boolean;
+  canUndo(): boolean;
+  canRedo(): boolean;
+  getUndoDescription(): string | null;
+  getRedoDescription(): string | null;
   
   // ノードマップリンク操作
   addNodeMapLink(nodeId: string, targetMapId: string): Promise<void>;
@@ -34,17 +56,92 @@ export class LocalMindMapService implements MindMapService {
   private fileHandlers: any;
   private mapHandlers: any;
   private uiState: any;
+  private commandHistory: ReturnType<typeof useCommandHistory>;
+  private nodeOperations: NodeOperations;
 
   constructor(
     mindMapHook: any,
     fileHandlers: any,
     mapHandlers: any,
-    uiState: any
+    uiState: any,
+    commandHistory: ReturnType<typeof useCommandHistory>
   ) {
     this.mindMapHook = mindMapHook;
     this.fileHandlers = fileHandlers;
     this.mapHandlers = mapHandlers;
     this.uiState = uiState;
+    this.commandHistory = commandHistory;
+    
+    // NodeOperationsインターフェースの実装
+    this.nodeOperations = {
+      updateNode: (nodeId: string, updates: Partial<MindMapNode>) => {
+        this.mindMapHook.updateNode(nodeId, updates);
+      },
+      addChildNode: (parentId: string, text: string, options?: any) => {
+        return this.mindMapHook.addChildNode(parentId, text, options);
+      },
+      deleteNode: (nodeId: string) => {
+        this.mindMapHook.deleteNode(nodeId);
+      },
+      findNode: (nodeId: string) => {
+        return this.mindMapHook.findNode(nodeId);
+      },
+      changeParent: (nodeId: string, newParentId: string) => {
+        this.mindMapHook.changeParent(nodeId, newParentId);
+      },
+      changeSiblingOrder: (nodeId: string, direction: 'up' | 'down') => {
+        this.mindMapHook.changeSiblingOrder(nodeId, direction);
+      }
+    };
+  }
+
+  // コマンドベースのノード操作
+  updateNodeWithCommand(nodeId: string, updates: Partial<MindMapNode>): void {
+    const command = new UpdateNodeCommand(nodeId, updates, this.nodeOperations);
+    this.commandHistory.executeCommand(command);
+  }
+
+  addChildNodeWithCommand(parentId: string, text: string, options?: any): string {
+    const command = new AddChildNodeCommand(parentId, text, options, this.nodeOperations);
+    this.commandHistory.executeCommand(command);
+    // コマンドが実行済みなので、最後に追加されたノードのIDを返す
+    // TODO: AddChildNodeCommandから実際のnodeIdを取得する仕組みが必要
+    return `node_${Date.now()}`;
+  }
+
+  deleteNodeWithCommand(nodeId: string): void {
+    const command = new DeleteNodeCommand(nodeId, this.nodeOperations);
+    this.commandHistory.executeCommand(command);
+  }
+
+  changeParentWithCommand(nodeId: string, newParentId: string): void {
+    const command = new ChangeParentCommand(nodeId, newParentId, this.nodeOperations);
+    this.commandHistory.executeCommand(command);
+  }
+
+  // Undo/Redo操作
+  undo(): boolean {
+    return this.commandHistory.undo();
+  }
+
+  redo(): boolean {
+    return this.commandHistory.redo();
+  }
+
+  canUndo(): boolean {
+    return this.commandHistory.canUndo();
+  }
+
+  canRedo(): boolean {
+    return this.commandHistory.canRedo();
+  }
+
+  getUndoDescription(): string | null {
+    return this.commandHistory.getUndoDescription();
+  }
+
+  getRedoDescription(): string | null {
+    return this.commandHistory.getRedoDescription();
   }
 
   copyNode(node: MindMapNode): MindMapNode {
@@ -103,7 +200,7 @@ export class LocalMindMapService implements MindMapService {
       throw new Error('ノードが見つかりません');
     }
     
-    const updatedLinks = (node.mapLinks || []).filter(link => link.id !== linkId);
+    const updatedLinks = (node.mapLinks || []).filter((link: any) => link.id !== linkId);
     await this.mindMapHook.updateNode(nodeId, { mapLinks: updatedLinks });
   }
 
