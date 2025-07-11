@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import Node from './Node';
+import NodeRefactored from './NodeRefactored';
 import Connection from '../common/Connection';
 import type { MindMapData, MindMapNode, FileAttachment } from '../../../shared/types';
 
@@ -542,7 +542,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
 
           <g className="nodes">
             {allNodes.map(node => (
-              <Node
+              <NodeRefactored
                 key={node.id}
                 node={node}
                 isSelected={selectedNodeId === node.id}
