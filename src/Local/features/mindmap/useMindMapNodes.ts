@@ -76,7 +76,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
 
   // ノード更新（Local版）
   const updateNode = async (nodeId: string, updates: Partial<MindMapNode>, options: { source?: string; allowDuringEdit?: boolean } = {}) => {
-    console.log('📝 updateNode開始:', { nodeId, updates });
     
     const currentData = dataRef.current;
     if (!currentData) return;
@@ -105,7 +104,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     
     await updateData(clonedData, { ...updateOptions, saveImmediately: true });
     
-    console.log('✅ ローカル状態更新完了:', nodeId);
   };
 
   // 子ノード追加（Local版）
@@ -113,7 +111,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     const parentNode = findNode(parentId);
     if (!parentNode) return null;
     
-    console.log('🔄 子ノード追加開始:', { parentId, nodeText, startEditing });
     
     // 新しい子ノードを作成
     const newChild = createNewNode(nodeText, parentNode);
@@ -123,7 +120,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     newChild.y = position.y;
     newChild.color = getNodeColor(parentNode, childrenCount);
     
-    console.log('📝 子ノード作成:', newChild.id);
     
     // ローカル状態を更新
     const currentData = dataRef.current;
@@ -159,7 +155,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     };
     await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
-    console.log('✅ 子ノード作成完了:', newChild.id);
     
     // マップ一覧のノード数を更新
     if (refreshAllMindMaps) {
@@ -183,7 +178,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     const parentNode = findParentNode(nodeId);
     if (!parentNode) return null;
     
-    console.log('🔄 兄弟ノード追加開始:', { nodeId, parentNode: parentNode.id, nodeText, startEditing });
     
     // 新しい兄弟ノードを作成
     const newSibling = createNewNode(nodeText, parentNode);
@@ -201,7 +195,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
       }
     }
     
-    console.log('📝 兄弟ノード作成:', newSibling.id);
     
     // ローカル状態を更新
     const currentData = dataRef.current;
@@ -233,7 +226,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     };
     await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
-    console.log('✅ 兄弟ノード作成完了:', newSibling.id);
     
     // マップ一覧のノード数を更新
     if (refreshAllMindMaps) {
@@ -254,7 +246,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
   const deleteNode = async (nodeId: string): Promise<boolean> => {
     if (nodeId === 'root') return false;
     
-    console.log('🗑️ deleteNode実行開始:', { nodeId, timestamp: Date.now() });
     
     // 削除後に選択するノードを決定
     let nodeToSelect = null;
@@ -280,7 +271,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     }
     
     // ローカル状態を更新
-    console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
     if (!currentData) return false;
     
@@ -308,7 +298,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     };
     await updateData(newData, { skipHistory: false, immediate: true, saveImmediately: true });
     
-    console.log('✅ ローカル状態更新完了:', nodeId);
     
     // マップ一覧のノード数を更新
     if (refreshAllMindMaps) {
@@ -331,10 +320,8 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
 
   // 兄弟ノードの順序を変更（Local版）
   const changeSiblingOrder = async (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true): Promise<boolean> => {
-    console.log('🔄 兄弟順序変更開始:', { draggedNodeId, targetNodeId, insertBefore });
     
     if (draggedNodeId === 'root' || targetNodeId === 'root' || draggedNodeId === targetNodeId) {
-      console.log('🚫 ルートノードまたは同一ノードの順序変更をスキップ');
       return false;
     }
     
@@ -343,7 +330,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     const targetParent = findParentNode(targetNodeId);
     
     if (!draggedParent || !targetParent || draggedParent.id !== targetParent.id) {
-      console.log('🚫 異なる親を持つノード同士の順序変更はできません');
       return false;
     }
     
@@ -362,7 +348,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
         const targetIndex = children.findIndex(child => child.id === targetNodeId);
         
         if (draggedIndex === -1 || targetIndex === -1) {
-          console.error('❌ ノードのインデックスが見つかりません');
           return node;
         }
         
@@ -380,13 +365,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
         
         // 新しい位置に挿入
         children.splice(insertIndex, 0, draggedNode);
-        
-        console.log('🔄 順序変更完了:', { 
-          draggedIndex, 
-          targetIndex: newTargetIndex, 
-          insertIndex,
-          newOrder: children.map(c => c.id)
-        });
         
         return { ...node, children };
       }
@@ -417,20 +395,16 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
           parentId: draggedParent.id
         }
       });
-      console.log('✅ 兄弟順序変更完了:', { draggedNodeId, targetNodeId });
       return true;
     } catch (error) {
-      console.error('❌ 兄弟順序変更エラー:', error);
       return false;
     }
   };
 
   // ノードの親を変更（Local版）
   const changeParent = async (nodeId: string, newParentId: string): Promise<boolean> => {
-    console.log('🔄 changeParent関数開始:', { nodeId, newParentId });
     
     if (nodeId === 'root' || nodeId === newParentId) {
-      console.log('🚫 ルートノードまたは自分自身への変更をスキップ');
       return false;
     }
     
@@ -445,29 +419,17 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     };
     
     if (isDescendant(nodeId, newParentId)) {
-      console.warn('🚫 循環参照が発生するため、親要素を変更できません');
       return false;
     }
     
     const nodeToMove = findNode(nodeId);
     const newParent = findNode(newParentId);
-    
-    console.log('🔍 ノード検索結果:', { 
-      nodeToMove: !!nodeToMove, 
-      newParent: !!newParent,
-      nodeToMoveTitle: nodeToMove?.text,
-      newParentTitle: newParent?.text 
-    });
-    
     if (!nodeToMove || !newParent) {
-      console.error('❌ ノードまたは新しい親が見つからない');
       return false;
     }
     
-    console.log('🔄 ノード親変更開始:', { nodeId, newParentId });
     
     // ローカル状態を更新
-    console.log('📝 ローカル状態更新開始');
     const currentData = dataRef.current;
     if (!currentData) return false;
     const clonedData = deepClone(currentData);
@@ -510,10 +472,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     }
     
     const newData = { ...clonedData, rootNode: newRootNode };
-    console.log('📝 updateData実行前の状態:', { 
-      hasNewData: !!newData, 
-      hasRootNode: !!newData.rootNode 
-    });
     
     try {
       await updateData(newData, {
@@ -526,10 +484,8 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
           newParentId
         }
       });
-      console.log('✅ ローカル状態更新完了:', nodeId);
       return true;
     } catch (error) {
-      console.error('❌ updateData実行エラー:', error);
       return false;
     }
   };
@@ -553,21 +509,9 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     const isEmpty = !textToSave || textToSave.trim() === '';
     const isRoot = nodeId === 'root';
     
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📝 finishEdit (Local):', { 
-        nodeId, 
-        isEmpty,
-        isRoot,
-        hasCurrentNode: !!currentNode,
-        skipMapSwitchDelete: options.skipMapSwitchDelete
-      });
-    }
     
     // 空文字で確定した場合はノードを削除（ルート以外、マップ切り替え時除く）
     if (isEmpty && !isRoot && currentNode && !options.skipMapSwitchDelete) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🗑️ 空文字確定でノード削除 (Local):', nodeId);
-      }
       setEditingNodeId(null);
       setEditText('');
       await deleteNode(nodeId);
@@ -576,9 +520,6 @@ export const useMindMapNodes = (data: MindMapData | null, updateData: (data: Min
     
     // テキストを保存
     if (!isEmpty) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('💾 テキスト保存 (Local):', { nodeId, text: textToSave.trim() });
-      }
       await updateNode(nodeId, { text: textToSave.trim() }, { 
         allowDuringEdit: true, 
         source: 'finishEdit-local' 

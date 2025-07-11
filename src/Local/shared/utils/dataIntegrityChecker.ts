@@ -269,7 +269,6 @@ export class DataIntegrityChecker {
       return false;
     }
 
-    console.log(`✅ 操作前検証成功: ${operation}`);
     return true;
   }
 
@@ -279,24 +278,19 @@ export class DataIntegrityChecker {
   static logIntegrityReport(result: IntegrityCheckResult, mapData: MindMapData | null | undefined): void {
     console.group(`📊 データ整合性レポート: ${mapData?.title || 'Unknown Map'}`);
     
-    console.log(`🎯 全体評価: ${result.isValid ? '✅ 正常' : '❌ 問題あり'}`);
-    console.log(`📋 検出された問題: ${result.issues.length}件`);
     
     if (result.issues.length > 0) {
       console.group('🚨 問題詳細:');
-      result.issues.forEach((issue, index) => {
-        const severity = issue.severity === 'critical' ? '🔴' : 
-                        issue.severity === 'warning' ? '🟡' : '🔵';
-        console.log(`${severity} ${index + 1}. ${issue.description}`);
+      result.issues.forEach((issue) => {
         if (issue.data) {
-          console.log('   データ:', issue.data);
+          // Log issue data if needed
         }
       });
       console.groupEnd();
 
       console.group('💡 修復提案:');
-      result.repairSuggestions.forEach((suggestion, index) => {
-        console.log(`${index + 1}. ${suggestion}`);
+      result.repairSuggestions.forEach(() => {
+        // Log suggestions if needed
       });
       console.groupEnd();
     }

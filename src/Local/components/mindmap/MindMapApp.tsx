@@ -18,7 +18,6 @@ import { useFileHandlers } from './hooks/useFileHandlers';
 import { useMapHandlers } from './hooks/useMapHandlers';
 import { useUIState } from './hooks/useUIState';
 import { useNodeHandlers } from './hooks/useNodeHandlers';
-// useAppActions import removed - not used in this component
 
 // Types
 import type { MindMapNode, Position } from '../../shared/types';

@@ -251,7 +251,6 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
   }
   
   // 🔧 重要: 完全なディープクローンを作成してオブジェクト参照の共有を防止
-  console.log('🎨 assignColorsToExistingNodes: ディープクローンを実行中...');
   const clonedData = deepClone(mindMapData);
   
   const assignColors = (node: MindMapNode, parentColor: string | null = null, isRootChild: boolean = false, childIndex: number = 0): void => {
@@ -279,7 +278,6 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
   // クローンされたデータに対して色の割り当てを実行
   assignColors(clonedData.rootNode);
   
-  console.log('🎨 assignColorsToExistingNodes: 色の割り当て完了');
   return clonedData;
 };
 
