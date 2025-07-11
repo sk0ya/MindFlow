@@ -44,3 +44,32 @@ export {
   isValidMindMapData,
   isValidFileAttachment,
 } from '../../../shared/types';
+
+// Export new type safety modules
+export type { NodeId, MapId, FileId } from './brandedTypes';
+export { isNodeId, isMapId, isFileId, createNodeId, createMapId, createFileId } from './brandedTypes';
+
+export type { Result } from './result';
+export { Success, Failure, isSuccess, isFailure, map, flatMap, match, collect, tryCatch, tryCatchAsync } from './result';
+
+export type { MindFlowError } from './errors';
+export { 
+  ErrorCode, 
+  MindFlowBaseError, 
+  NodeError, 
+  MapError, 
+  FileError, 
+  StorageError, 
+  ValidationError,
+  createNodeError,
+  createMapError,
+  createFileError,
+  createStorageError,
+  createValidationError,
+  isNodeError,
+  isMapError,
+  isFileError,
+  isStorageError,
+  isValidationError,
+  isMindFlowError
+} from './errors';

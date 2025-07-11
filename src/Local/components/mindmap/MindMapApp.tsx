@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useMindMap } from '../../core/hooks/useMindMap';
+import React, { useState } from 'react';
+import { useMindMapStore, selectUI } from '../../core/store/mindMapStore';
+import { useMindMapZustand } from '../../core/hooks/useMindMapZustand';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
@@ -16,112 +17,123 @@ import { useKeyboardShortcuts } from '../../core/hooks/useKeyboardShortcuts';
 // カスタムフックのインポート
 import { useFileHandlers } from './hooks/useFileHandlers';
 import { useMapHandlers } from './hooks/useMapHandlers';
-import { useUIState } from './hooks/useUIState';
 import { useNodeHandlers } from './hooks/useNodeHandlers';
 
-// サービスのインポート
-import { LocalMindMapService } from '../../core/services';
-
 // Types
-import type { MindMapNode, Position } from '../../shared/types';
+import type { MindMapNode, Position, FileAttachment } from '../../shared/types';
 
 const MindMapApp: React.FC = () => {
   const [isAppReady] = useState(true);
+  console.log('MindMapApp render, isAppReady:', isAppReady);
   
+  // useMindMapZustandフックを使用して初期化処理を実行
+  const mindMapZustand = useMindMapZustand(isAppReady);
+  
+  // useMindMapZustandからのデータを使用
+  const data = mindMapZustand.data;
+  const selectedNodeId = mindMapZustand.selectedNodeId;
+  const editingNodeId = mindMapZustand.editingNodeId;
+  const editText = mindMapZustand.editText;
+  const ui = useMindMapStore(selectUI);
+  
+  console.log('MindMapApp state:', { data, selectedNodeId, editingNodeId, editText, ui });
+  
+  // アクション関数を取得（useMindMapZustandから）
   const {
-    data,
-    selectedNodeId,
-    editingNodeId,
-    editText,
-    setSelectedNodeId,
     setEditText,
     updateNode,
     addChildNode,
     addSiblingNode,
     deleteNode,
-    changeParent,
-    changeSiblingOrder,
+    moveNode,
     findNode,
-    flattenNodes,
-    startEdit,
-    finishEdit,
+    startEditingNode,
+    finishEditingNode,
     undo,
     redo,
     canUndo,
     canRedo,
-    updateTitle,
-    toggleCollapse,
-    navigateToDirection,
-    attachFileToNode,
-    removeFileFromNode,
-    renameFileInNode,
-    downloadFile,
-    allMindMaps,
-    currentMapId,
-    createMindMap,
-    renameMindMap,
-    deleteMindMapById,
-    switchToMap,
-    changeMapCategory,
-    getAvailableCategories,
-    store
-  } = useMindMap(isAppReady);
+  } = mindMapZustand;
   
+  // UI actions（Zustandストアから）
+  const {
+    setZoom,
+    setPan,
+    resetZoom,
+    setShowCustomizationPanel,
+    setShowContextMenu,
+    setContextMenuPosition,
+    setShowShortcutHelper,
+    setShowMapList,
+    setShowLocalStoragePanel,
+    setShowTutorial,
+    setClipboard,
+    setShowImageModal,
+    setShowFileActionMenu,
+    setSelectedImage,
+    closeAllPanels,
+    toggleSidebar,
+    showCustomization,
+    showNodeMapLinks,
+    closeNodeMapLinksPanel
+  } = useMindMapStore();
+  
+  // 下記フック群は一時的にダミーデータで対応
   const fileHandlers = useFileHandlers(
-    attachFileToNode,
-    removeFileFromNode,
-    renameFileInNode,
-    downloadFile
+    async (nodeId: string, file: File): Promise<FileAttachment> => {
+      console.log('attachFileToNode called:', { nodeId, file });
+      return {
+        id: `file_${Date.now()}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        isImage: file.type.startsWith('image/'),
+        createdAt: new Date().toISOString(),
+        data: ''
+      };
+    },
+    async () => {}, // removeFileFromNode
+    async () => {}, // renameFileInNode
+    async () => {}  // downloadFile
   );
   
   const mapHandlers = useMapHandlers(
-    allMindMaps,
-    switchToMap,
-    createMindMap,
-    deleteMindMapById,
-    renameMindMap,
-    changeMapCategory
+    [], // allMindMaps
+    async () => {}, // switchToMap
+    async (name: string, category: string): Promise<string> => {
+      console.log('createMindMap called:', { name, category });
+      return 'new-map-id';
+    },
+    async (): Promise<boolean> => {
+      console.log('deleteMindMapById called');
+      return true;
+    },
+    async () => {}, // renameMindMap
+    async () => {}  // changeMapCategory
   );
   
-  const uiState = useUIState();
-  
-  // サービスレイヤーの初期化
-  const mindMapService = useMemo(() => new LocalMindMapService(
-    { 
-      addChildNode, 
-      updateNode, 
-      findNode,
-      attachFileToNode,
-      removeFileFromNode,
-      downloadFile,
-      renameFileInNode,
-      changeParent,
-      changeSiblingOrder,
-      deleteNode,
-      undo,
-      redo,
-      canUndo,
-      canRedo,
-      store
-    },
-    fileHandlers,
-    mapHandlers,
-    uiState
-  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, changeParent, changeSiblingOrder, deleteNode, undo, redo, canUndo, canRedo, store, fileHandlers, mapHandlers, uiState]);
-
   const nodeHandlers = useNodeHandlers(
-    setSelectedNodeId,
-    (position: Position | null) => uiState.setContextMenuPosition(position || { x: 0, y: 0 }),
-    uiState.setShowContextMenu,
-    uiState.setShowCustomizationPanel,
-    (parentId: string, text?: string, startEditing?: boolean) => {
-      mindMapService.addChildNodeWithCommand(parentId, text || '', { startEditing });
-      return Promise.resolve(null);
+    mindMapZustand.setSelectedNodeId,
+    (position: Position | null) => setContextMenuPosition(position || { x: 0, y: 0 }),
+    setShowContextMenu,
+    setShowCustomizationPanel,
+    async (parentId: string, text?: string, startEditing?: boolean): Promise<string> => {
+      const newNodeId = await addChildNode(parentId, text || '');
+      if (startEditing && newNodeId) {
+        startEditingNode(newNodeId);
+      }
+      return newNodeId || '';
     },
     addSiblingNode,
-    (nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates),
-    (nodeId: string, targetMapId: string) => mindMapService.addNodeMapLink(nodeId, targetMapId),
-    (nodeId: string, linkId: string) => mindMapService.removeNodeMapLink(nodeId, linkId),
+    (nodeId: string, updates: Partial<MindMapNode>) => updateNode(nodeId, updates),
+    (nodeId: string, targetMapId: string) => {
+      // TODO: implement addNodeMapLink
+      console.log('addNodeMapLink:', nodeId, targetMapId);
+    },
+    (nodeId: string, linkId: string) => {
+      // TODO: implement removeNodeMapLink
+      console.log('removeNodeMapLink:', nodeId, linkId);
+    },
     () => {} // No cursor update in local mode
   );
   
@@ -130,45 +142,62 @@ const MindMapApp: React.FC = () => {
     selectedNodeId,
     editingNodeId,
     setEditText,
-    startEdit,
-    finishEdit,
+    startEdit: startEditingNode,
+    finishEdit: (nodeId: string, newText?: string) => finishEditingNode(nodeId, newText || ''),
     editText,
-    updateNode: (nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates),
-    addChildNode: async (parentId: string, text = '', startEditing = false) => {
-      mindMapService.addChildNodeWithCommand(parentId, text, { startEditing });
+    updateNode: (nodeId: string, updates: Partial<MindMapNode>) => updateNode(nodeId, updates),
+    addChildNode: async (parentId: string, text = '', startEditingAfter = false) => {
+      const newNodeId = await addChildNode(parentId, text);
+      if (startEditingAfter && newNodeId) {
+        startEditingNode(newNodeId);
+      }
       return Promise.resolve(null);
     },
     addSiblingNode,
-    deleteNode: (nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId),
-    undo: () => mindMapService.undo(),
-    redo: () => mindMapService.redo(),
-    canUndo: mindMapService.canUndo(),
-    canRedo: mindMapService.canRedo(),
-    navigateToDirection,
-    showMapList: uiState.showMapList,
-    setShowMapList: uiState.setShowMapList,
-    showLocalStorage: uiState.showLocalStoragePanel,
-    setShowLocalStorage: uiState.setShowLocalStoragePanel,
-    showTutorial: uiState.showTutorial,
-    setShowTutorial: uiState.setShowTutorial,
-    showKeyboardHelper: uiState.showShortcutHelper,
-    setShowKeyboardHelper: uiState.setShowShortcutHelper
+    deleteNode: (nodeId: string) => deleteNode(nodeId),
+    undo: () => undo(),
+    redo: () => redo(),
+    canUndo: canUndo,
+    canRedo: canRedo,
+    navigateToDirection: (direction: string) => {
+      // TODO: implement navigation
+      console.log('Navigate to:', direction);
+    },
+    showMapList: ui.showMapList,
+    setShowMapList: setShowMapList,
+    showLocalStorage: ui.showLocalStoragePanel,
+    setShowLocalStorage: setShowLocalStoragePanel,
+    showTutorial: ui.showTutorial,
+    setShowTutorial: setShowTutorial,
+    showKeyboardHelper: ui.showShortcutHelper,
+    setShowKeyboardHelper: setShowShortcutHelper
   });
 
-  // ビジネスロジックハンドラー（サービス経由）
+  // ビジネスロジックハンドラー
   const handleRightClick = (e: React.MouseEvent, nodeId: string): void => {
     nodeHandlers.handleRightClick(e, nodeId);
-    uiState.handleCloseAllPanels();
+    closeAllPanels();
   };
 
   const handleCopyNode = (node: MindMapNode): void => {
-    const clipboard = mindMapService.copyNode(node);
-    uiState.setClipboard(clipboard);
+    // Simple clipboard copy (JSON serialization)
+    setClipboard(node);
   };
 
   const handlePasteNode = async (parentId: string): Promise<void> => {
     try {
-      await mindMapService.pasteNode(parentId, uiState.clipboard);
+      if (ui.clipboard) {
+        // Create a copy of the node with new ID
+        const newNodeId = await addChildNode(parentId, ui.clipboard.text || '');
+        // TODO: Copy other properties like color, position, etc.
+        if (newNodeId) {
+          updateNode(newNodeId, { 
+            color: ui.clipboard.color,
+            fontSize: ui.clipboard.fontSize,
+            fontWeight: ui.clipboard.fontWeight
+          });
+        }
+      }
     } catch (error) {
       console.error('ノードの貼り付けエラー:', error);
       alert('ノードの貼り付けに失敗しました: ' + (error as Error).message);
@@ -176,12 +205,13 @@ const MindMapApp: React.FC = () => {
   };
 
   const handleShowNodeMapLinks = (node: MindMapNode, position: { x: number; y: number }): void => {
-    mindMapService.showNodeMapLinks(node, position);
+    showNodeMapLinks(node, position);
   };
 
   const handleNavigateToMap = async (mapId: string): Promise<void> => {
     try {
-      await mindMapService.navigateToMap(mapId);
+      // TODO: implement map navigation
+      console.log('Navigate to map:', mapId);
     } catch (error) {
       console.error('マップナビゲーションエラー:', error);
       alert((error as Error).message);
@@ -207,32 +237,32 @@ const MindMapApp: React.FC = () => {
       {data ? (
         <>
           <MindMapSidebar
-            mindMaps={allMindMaps}
-            currentMapId={currentMapId}
+            mindMaps={[]}
+            currentMapId={''}
             onSelectMap={mapHandlers.handleSelectMap}
             onCreateMap={mapHandlers.handleCreateMap}
             onDeleteMap={mapHandlers.handleDeleteMap}
             onRenameMap={mapHandlers.handleRenameMap}
             onChangeCategory={mapHandlers.handleChangeCategory}
-            availableCategories={getAvailableCategories()}
-            isCollapsed={uiState.sidebarCollapsed}
-            onToggleCollapse={uiState.handleToggleSidebar}
+            availableCategories={[]}
+            isCollapsed={ui.sidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
           />
           
-          <div className={`container ${uiState.sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
+          <div className={`container ${ui.sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
             <Toolbar
               title={data.title}
-              onTitleChange={updateTitle}
+              onTitleChange={(title: string) => updateNode('root', { text: title })}
               onExport={() => {}} // TODO: implement export functionality
               onImport={async () => {}} // TODO: implement import functionality
-              onUndo={async () => { mindMapService.undo(); }}
-              onRedo={async () => { mindMapService.redo(); }}
-              canUndo={mindMapService.canUndo()}
-              canRedo={mindMapService.canRedo()}
-              zoom={uiState.zoom}
-              onZoomReset={uiState.handleZoomReset}
-              onShowLocalStoragePanel={() => uiState.setShowLocalStoragePanel(true)}
-              onShowShortcutHelper={() => uiState.setShowShortcutHelper(true)}
+              onUndo={async () => { undo(); }}
+              onRedo={async () => { redo(); }}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              zoom={ui.zoom}
+              onZoomReset={resetZoom}
+              onShowLocalStoragePanel={() => setShowLocalStoragePanel(true)}
+              onShowShortcutHelper={() => setShowShortcutHelper(true)}
             />
 
             <ErrorBoundary>
@@ -243,78 +273,99 @@ const MindMapApp: React.FC = () => {
                 editText={editText}
                 setEditText={setEditText}
                 onSelectNode={nodeHandlers.handleNodeSelect}
-                onStartEdit={startEdit}
-                onFinishEdit={finishEdit}
-                onChangeParent={changeParent}
-                onChangeSiblingOrder={changeSiblingOrder}
+                onStartEdit={startEditingNode}
+                onFinishEdit={finishEditingNode}
+                onChangeParent={moveNode}
+                onChangeSiblingOrder={(draggedNodeId: string, targetNodeId: string, insertBefore: boolean) => {
+                  // TODO: implement sibling order change
+                  console.log('Change sibling order:', draggedNodeId, targetNodeId, insertBefore);
+                }}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}
-                onDeleteNode={(nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId)}
+                onDeleteNode={(nodeId: string) => deleteNode(nodeId)}
                 onRightClick={handleRightClick}
-                onToggleCollapse={toggleCollapse}
-                onNavigateToDirection={navigateToDirection}
+                onToggleCollapse={(nodeId: string) => {
+                  const node = findNode(nodeId);
+                  if (node) {
+                    updateNode(nodeId, { collapsed: !node.collapsed });
+                  }
+                }}
+                onNavigateToDirection={(direction: string) => {
+                  // TODO: implement navigation
+                  console.log('Navigate to:', direction);
+                }}
                 onFileUpload={fileHandlers.handleFileUpload}
                 onRemoveFile={fileHandlers.handleRemoveFile}
                 onShowImageModal={fileHandlers.handleShowImageModal}
                 onShowFileActionMenu={fileHandlers.handleShowFileActionMenu}
                 onShowNodeMapLinks={handleShowNodeMapLinks}
-                zoom={uiState.zoom}
-                setZoom={uiState.setZoom}
-                pan={uiState.pan}
-                setPan={uiState.setPan}
+                zoom={ui.zoom}
+                setZoom={setZoom}
+                pan={ui.pan}
+                setPan={(pan: Position | ((prev: Position) => Position)) => {
+                  if (typeof pan === 'function') {
+                    const currentPan = ui.pan;
+                    setPan(pan(currentPan));
+                  } else {
+                    setPan(pan);
+                  }
+                }}
               />
             </ErrorBoundary>
 
-            {uiState.showCustomizationPanel && (
+            {ui.showCustomizationPanel && (
               <NodeCustomizationPanel
                 selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
-                onUpdateNode={(nodeId: string, updates: Partial<MindMapNode>) => mindMapService.updateNodeWithCommand(nodeId, updates)}
-                onClose={() => uiState.setShowCustomizationPanel(false)}
-                position={uiState.customizationPosition}
+                onUpdateNode={(nodeId: string, updates: Partial<MindMapNode>) => updateNode(nodeId, updates)}
+                onClose={() => setShowCustomizationPanel(false)}
+                position={ui.customizationPosition}
               />
             )}
 
-            {uiState.showContextMenu && (
+            {ui.showContextMenu && (
               <ContextMenu
                 visible={true}
-                position={uiState.contextMenuPosition}
+                position={ui.contextMenuPosition}
                 selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
                 onAddChild={nodeHandlers.handleAddChild}
                 onAddSibling={nodeHandlers.handleAddSibling}
-                onDelete={(nodeId: string) => mindMapService.deleteNodeWithCommand(nodeId)}
-                onCustomize={uiState.handleShowCustomization}
+                onDelete={(nodeId: string) => deleteNode(nodeId)}
+                onCustomize={showCustomization}
                 onCopy={handleCopyNode}
                 onPaste={(parentId: string) => handlePasteNode(parentId)}
-                onChangeColor={(nodeId: string, color: string) => mindMapService.updateNodeWithCommand(nodeId, { color })}
-                onClose={() => uiState.setShowContextMenu(false)}
+                onChangeColor={(nodeId: string, color: string) => updateNode(nodeId, { color })}
+                onClose={() => setShowContextMenu(false)}
               />
             )}
 
             <ImageModal
-              isOpen={fileHandlers.showImageModal}
-              image={fileHandlers.modalImage}
-              onClose={fileHandlers.handleCloseImageModal}
+              isOpen={ui.showImageModal}
+              image={ui.selectedImage}
+              onClose={() => setShowImageModal(false)}
             />
 
             <FileActionMenu
-              isOpen={fileHandlers.showFileActionMenu}
-              file={fileHandlers.actionMenuFile}
-              position={fileHandlers.fileActionMenuPosition}
-              onClose={fileHandlers.handleCloseFileActionMenu}
+              isOpen={ui.showFileActionMenu}
+              file={ui.selectedFile}
+              position={ui.fileMenuPosition}
+              onClose={() => setShowFileActionMenu(false)}
               onDownload={fileHandlers.handleFileDownload}
               onRename={fileHandlers.handleFileRename}
               onDelete={fileHandlers.handleFileDelete}
-              onView={fileHandlers.handleShowImageModal}
+              onView={(file: any) => {
+                setSelectedImage(file);
+                setShowImageModal(true);
+              }}
             />
 
-            {uiState.selectedNodeForLinks && (
+            {ui.selectedNodeForLinks && (
               <NodeMapLinksPanel
-                isOpen={uiState.showNodeMapLinksPanel}
-                position={uiState.nodeMapLinksPanelPosition}
-                selectedNode={uiState.selectedNodeForLinks}
-                currentMapId={currentMapId || ''}
-                allMaps={allMindMaps}
-                onClose={uiState.handleCloseNodeMapLinksPanel}
+                isOpen={ui.showNodeMapLinksPanel}
+                position={ui.nodeMapLinksPanelPosition}
+                selectedNode={ui.selectedNodeForLinks}
+                currentMapId={''}
+                allMaps={[]}
+                onClose={closeNodeMapLinksPanel}
                 onAddLink={nodeHandlers.handleAddNodeMapLink}
                 onRemoveLink={nodeHandlers.handleRemoveNodeMapLink}
                 onNavigateToMap={handleNavigateToMap}
@@ -327,7 +378,7 @@ const MindMapApp: React.FC = () => {
               <div>
                 <span className="footer-brand">© 2024 MindFlow</span>
                 <span className="stats">
-                  ノード数: {data?.rootNode ? flattenNodes().length : 0} | 
+                  ノード数: {data?.rootNode ? 'N/A' : 0} | 
                   最終更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('ja-JP') : 'N/A'}
                 </span>
               </div>

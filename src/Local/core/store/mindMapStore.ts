@@ -2,6 +2,37 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type { MindMapData, MindMapNode, Position } from '../../shared/types';
+
+// UI State types
+interface UIState {
+  // Basic UI state
+  zoom: number;
+  pan: Position;
+  
+  // Panel visibility
+  showCustomizationPanel: boolean;
+  customizationPosition: Position;
+  showContextMenu: boolean;
+  contextMenuPosition: Position;
+  showShortcutHelper: boolean;
+  showMapList: boolean;
+  showNodeMapLinksPanel: boolean;
+  nodeMapLinksPanelPosition: Position;
+  sidebarCollapsed: boolean;
+  showLocalStoragePanel: boolean;
+  showTutorial: boolean;
+  
+  // File and image states
+  selectedImage: any;
+  selectedFile: any;
+  fileMenuPosition: Position;
+  showImageModal: boolean;
+  showFileActionMenu: boolean;
+  
+  // Other UI states
+  clipboard: MindMapNode | null;
+  selectedNodeForLinks: MindMapNode | null;
+}
 import { 
   normalizeTreeData, 
   denormalizeTreeData,
@@ -23,6 +54,9 @@ interface MindMapStore {
   editText: string;
   history: MindMapData[];
   historyIndex: number;
+  
+  // UI State
+  ui: UIState;
   
   // Actions
   setData: (data: MindMapData) => void;
@@ -52,6 +86,34 @@ interface MindMapStore {
   // Utility
   updateNormalizedData: () => void;
   syncToMindMapData: () => void;
+  
+  // UI Actions
+  setZoom: (zoom: number) => void;
+  setPan: (pan: Position) => void;
+  resetZoom: () => void;
+  setShowCustomizationPanel: (show: boolean) => void;
+  setCustomizationPosition: (position: Position) => void;
+  setShowContextMenu: (show: boolean) => void;
+  setContextMenuPosition: (position: Position) => void;
+  setShowShortcutHelper: (show: boolean) => void;
+  setShowMapList: (show: boolean) => void;
+  setShowNodeMapLinksPanel: (show: boolean) => void;
+  setNodeMapLinksPanelPosition: (position: Position) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setShowLocalStoragePanel: (show: boolean) => void;
+  setShowTutorial: (show: boolean) => void;
+  setSelectedImage: (image: any) => void;
+  setSelectedFile: (file: any) => void;
+  setFileMenuPosition: (position: Position) => void;
+  setShowImageModal: (show: boolean) => void;
+  setShowFileActionMenu: (show: boolean) => void;
+  setClipboard: (node: MindMapNode | null) => void;
+  setSelectedNodeForLinks: (node: MindMapNode | null) => void;
+  closeAllPanels: () => void;
+  toggleSidebar: () => void;
+  showCustomization: (position?: Position) => void;
+  showNodeMapLinks: (node: MindMapNode, position: Position) => void;
+  closeNodeMapLinksPanel: () => void;
 }
 
 export const useMindMapStore = create<MindMapStore>()(
@@ -66,6 +128,30 @@ export const useMindMapStore = create<MindMapStore>()(
         editText: '',
         history: [],
         historyIndex: -1,
+        
+        // UI State
+        ui: {
+          zoom: 1,
+          pan: { x: 0, y: 0 },
+          showCustomizationPanel: false,
+          customizationPosition: { x: 0, y: 0 },
+          showContextMenu: false,
+          contextMenuPosition: { x: 0, y: 0 },
+          showShortcutHelper: false,
+          showMapList: false,
+          showNodeMapLinksPanel: false,
+          nodeMapLinksPanelPosition: { x: 0, y: 0 },
+          sidebarCollapsed: false,
+          showLocalStoragePanel: false,
+          showTutorial: false,
+          selectedImage: null,
+          selectedFile: null,
+          fileMenuPosition: { x: 0, y: 0 },
+          showImageModal: false,
+          showFileActionMenu: false,
+          clipboard: null,
+          selectedNodeForLinks: null,
+        },
         
         // Set data and normalize
         setData: (data: MindMapData) => {
@@ -345,6 +431,64 @@ export const useMindMapStore = create<MindMapStore>()(
           const { historyIndex, history } = get();
           return historyIndex < history.length - 1;
         },
+        
+        // UI Actions
+        setZoom: (zoom: number) => set((state) => { state.ui.zoom = zoom; }),
+        setPan: (pan: Position) => set((state) => { state.ui.pan = pan; }),
+        resetZoom: () => set((state) => { 
+          state.ui.zoom = 1; 
+          state.ui.pan = { x: 0, y: 0 }; 
+        }),
+        setShowCustomizationPanel: (show: boolean) => set((state) => { state.ui.showCustomizationPanel = show; }),
+        setCustomizationPosition: (position: Position) => set((state) => { state.ui.customizationPosition = position; }),
+        setShowContextMenu: (show: boolean) => set((state) => { state.ui.showContextMenu = show; }),
+        setContextMenuPosition: (position: Position) => set((state) => { state.ui.contextMenuPosition = position; }),
+        setShowShortcutHelper: (show: boolean) => set((state) => { state.ui.showShortcutHelper = show; }),
+        setShowMapList: (show: boolean) => set((state) => { state.ui.showMapList = show; }),
+        setShowNodeMapLinksPanel: (show: boolean) => set((state) => { state.ui.showNodeMapLinksPanel = show; }),
+        setNodeMapLinksPanelPosition: (position: Position) => set((state) => { state.ui.nodeMapLinksPanelPosition = position; }),
+        setSidebarCollapsed: (collapsed: boolean) => set((state) => { state.ui.sidebarCollapsed = collapsed; }),
+        setShowLocalStoragePanel: (show: boolean) => set((state) => { state.ui.showLocalStoragePanel = show; }),
+        setShowTutorial: (show: boolean) => set((state) => { state.ui.showTutorial = show; }),
+        setSelectedImage: (image: any) => set((state) => { state.ui.selectedImage = image; }),
+        setSelectedFile: (file: any) => set((state) => { state.ui.selectedFile = file; }),
+        setFileMenuPosition: (position: Position) => set((state) => { state.ui.fileMenuPosition = position; }),
+        setShowImageModal: (show: boolean) => set((state) => { state.ui.showImageModal = show; }),
+        setShowFileActionMenu: (show: boolean) => set((state) => { state.ui.showFileActionMenu = show; }),
+        setClipboard: (node: MindMapNode | null) => set((state) => { state.ui.clipboard = node; }),
+        setSelectedNodeForLinks: (node: MindMapNode | null) => set((state) => { state.ui.selectedNodeForLinks = node; }),
+        
+        closeAllPanels: () => set((state) => {
+          state.ui.showCustomizationPanel = false;
+          state.ui.showContextMenu = false;
+          state.ui.showNodeMapLinksPanel = false;
+          state.ui.showImageModal = false;
+          state.ui.showFileActionMenu = false;
+        }),
+        
+        toggleSidebar: () => set((state) => {
+          state.ui.sidebarCollapsed = !state.ui.sidebarCollapsed;
+        }),
+        
+        showCustomization: (position?: Position) => set((state) => {
+          state.ui.customizationPosition = position || { x: 300, y: 200 };
+          state.ui.showCustomizationPanel = true;
+          state.ui.showContextMenu = false;
+        }),
+        
+        showNodeMapLinks: (node: MindMapNode, position: Position) => set((state) => {
+          state.ui.selectedNodeForLinks = node;
+          state.ui.nodeMapLinksPanelPosition = position;
+          state.ui.showNodeMapLinksPanel = true;
+          // Close other panels first
+          state.ui.showCustomizationPanel = false;
+          state.ui.showContextMenu = false;
+        }),
+        
+        closeNodeMapLinksPanel: () => set((state) => {
+          state.ui.showNodeMapLinksPanel = false;
+          state.ui.selectedNodeForLinks = null;
+        }),
       }))
     ),
     {
@@ -362,3 +506,26 @@ export const selectEditingNodeId = (state: MindMapStore) => state.editingNodeId;
 export const selectEditText = (state: MindMapStore) => state.editText;
 export const selectCanUndo = (state: MindMapStore) => state.canUndo();
 export const selectCanRedo = (state: MindMapStore) => state.canRedo();
+
+// UI Selectors
+export const selectUI = (state: MindMapStore) => state.ui;
+export const selectZoom = (state: MindMapStore) => state.ui.zoom;
+export const selectPan = (state: MindMapStore) => state.ui.pan;
+export const selectShowCustomizationPanel = (state: MindMapStore) => state.ui.showCustomizationPanel;
+export const selectCustomizationPosition = (state: MindMapStore) => state.ui.customizationPosition;
+export const selectShowContextMenu = (state: MindMapStore) => state.ui.showContextMenu;
+export const selectContextMenuPosition = (state: MindMapStore) => state.ui.contextMenuPosition;
+export const selectShowShortcutHelper = (state: MindMapStore) => state.ui.showShortcutHelper;
+export const selectShowMapList = (state: MindMapStore) => state.ui.showMapList;
+export const selectShowNodeMapLinksPanel = (state: MindMapStore) => state.ui.showNodeMapLinksPanel;
+export const selectNodeMapLinksPanelPosition = (state: MindMapStore) => state.ui.nodeMapLinksPanelPosition;
+export const selectSidebarCollapsed = (state: MindMapStore) => state.ui.sidebarCollapsed;
+export const selectShowLocalStoragePanel = (state: MindMapStore) => state.ui.showLocalStoragePanel;
+export const selectShowTutorial = (state: MindMapStore) => state.ui.showTutorial;
+export const selectSelectedImage = (state: MindMapStore) => state.ui.selectedImage;
+export const selectSelectedFile = (state: MindMapStore) => state.ui.selectedFile;
+export const selectFileMenuPosition = (state: MindMapStore) => state.ui.fileMenuPosition;
+export const selectShowImageModal = (state: MindMapStore) => state.ui.showImageModal;
+export const selectShowFileActionMenu = (state: MindMapStore) => state.ui.showFileActionMenu;
+export const selectClipboard = (state: MindMapStore) => state.ui.clipboard;
+export const selectSelectedNodeForLinks = (state: MindMapStore) => state.ui.selectedNodeForLinks;
