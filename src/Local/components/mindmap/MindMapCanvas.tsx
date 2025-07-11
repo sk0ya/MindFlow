@@ -341,18 +341,30 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target === svgRef.current) {
+    // ノード要素（rect, circle, foreignObject）以外をクリックした場合にパンを開始
+    const target = e.target as Element;
+    const isNodeElement = target.tagName === 'rect' || 
+                         target.tagName === 'circle' || 
+                         target.tagName === 'foreignObject' ||
+                         target.closest('foreignObject');
+    
+    if (!isNodeElement) {
       isPanningRef.current = true;
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
       e.preventDefault();
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     // ドラッグ中はパン操作を無効化してドラッグ操作を優先
     if (isPanningRef.current && !dragState.isDragging) {
       const deltaX = e.clientX - lastPanPointRef.current.x;
       const deltaY = e.clientY - lastPanPointRef.current.y;
+      
+      // 小さな移動は無視してパフォーマンスを改善
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+        return;
+      }
       
       setPan(prev => ({
         x: prev.x + deltaX / zoom,
@@ -361,17 +373,24 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
     }
-  };
+  }, [dragState.isDragging, zoom, setPan]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     // ドラッグ中でない場合のみパン終了
     if (!dragState.isDragging) {
       isPanningRef.current = false;
     }
-  };
+  }, [dragState.isDragging]);
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
-    if (e.target === svgRef.current) {
+    // ノード要素（rect, circle, foreignObject）以外をクリックした場合に背景クリック処理
+    const target = e.target as Element;
+    const isNodeElement = target.tagName === 'rect' || 
+                         target.tagName === 'circle' || 
+                         target.tagName === 'foreignObject' ||
+                         target.closest('foreignObject');
+    
+    if (!isNodeElement) {
       // 編集中の場合は編集を確定してから選択をクリア
       if (editingNodeId) {
         onFinishEdit(editingNodeId, editText);
@@ -400,7 +419,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragState.isDragging]);
+  }, [handleMouseMove, handleMouseUp]);
 
   return (
     <div className="mindmap-canvas-container">

@@ -100,7 +100,8 @@ const Node: React.FC<NodeProps> = ({
   }, [isEditing, node.id]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+    // パン機能との競合を避けるため、stopPropagationを削除
+    // e.stopPropagation(); // この行を削除
     e.preventDefault();
     
     if (svgRef.current) {
