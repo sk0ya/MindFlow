@@ -13,6 +13,10 @@ MindFlow is a **React-based mindmap application** inspired by MindMeister. Curre
 - **Drag & Drop**: Intuitive node reorganization
 - **Multiple mindmaps**: Create and manage multiple mindmaps
 - **Export/Import**: JSON-based data portability
+- **Performance Optimized**: Virtualization and Web Workers for large mindmaps
+- **Undo/Redo**: Full command history with keyboard shortcuts
+- **Smart Caching**: Intelligent performance optimization
+- **Performance Monitoring**: Built-in performance dashboard
 
 ## Architecture
 
@@ -20,27 +24,73 @@ MindFlow is a **React-based mindmap application** inspired by MindMeister. Curre
 ```
 src/Local/
 ├── components/
-│   ├── MindMapApp.tsx         # Main application container
-│   ├── MindMapCanvas.tsx      # SVG rendering engine
-│   ├── MindMapNode.tsx        # Individual node component
-│   ├── ContextMenu.tsx        # Right-click menu
-│   ├── CustomizationPanel.tsx # Node styling options
-│   ├── FileModal.tsx          # File attachment modal
-│   └── MapModal.tsx           # Map management modal
-├── hooks/
-│   ├── useMindMap.ts          # Main orchestrator hook
-│   ├── useMindMapData.ts      # Data persistence
-│   ├── useMindMapNodes.ts     # Node operations
-│   ├── useMindMapLayout.ts    # Layout calculations
-│   ├── useUIState.ts          # UI state management
-│   ├── useFileHandlers.ts     # File operations
-│   └── useMapHandlers.ts      # Map management
-├── types/
-│   └── index.ts               # TypeScript definitions
-└── utils/
-    ├── dataUtils.ts           # Data manipulation
-    ├── colorUtils.ts          # Color scheme logic
-    └── layoutUtils.ts         # Layout algorithms
+│   ├── common/                # Shared UI components
+│   │   ├── Connection.tsx     # SVG connections
+│   │   ├── ContextMenu.tsx    # Right-click menu
+│   │   ├── Toolbar.tsx        # Main toolbar
+│   │   └── KeyboardShortcutHelper.tsx # Keyboard shortcuts
+│   ├── mindmap/               # Core mindmap components
+│   │   ├── MindMapApp.tsx     # Main application container
+│   │   ├── MindMapCanvas.tsx  # SVG rendering engine
+│   │   ├── MindMapSidebar.tsx # Side panel
+│   │   ├── Node.tsx           # Individual node component
+│   │   ├── NodeCustomizationPanel.tsx # Node styling
+│   │   ├── canvas/            # Canvas-specific components
+│   │   └── node/              # Node-specific components
+│   ├── files/                 # File handling components
+│   │   ├── FileActionMenu.tsx # File operations menu
+│   │   └── ImageModal.tsx     # Image viewer
+│   └── performance/           # Performance optimization
+│       ├── LazyComponents.tsx # Lazy loading
+│       ├── PerformanceDashboard.tsx # Performance monitoring
+│       └── VirtualizedCanvas.tsx # Viewport rendering
+├── core/                      # Core business logic
+│   ├── commands/              # Command pattern implementation
+│   │   ├── Command.ts         # Base command interface
+│   │   └── nodeCommands/      # Node-specific commands
+│   ├── data/                  # Data layer
+│   │   └── normalizedStore.ts # Normalized data structure
+│   ├── hooks/                 # Core hooks
+│   │   ├── useMindMap.ts      # Main orchestrator
+│   │   ├── useMindMapZustand.ts # Zustand state management
+│   │   ├── useCommandHistory.ts # Undo/redo functionality
+│   │   └── useKeyboardShortcuts.ts # Keyboard handling
+│   ├── services/              # Business logic services
+│   │   ├── mindMapService.ts  # MindMap operations
+│   │   └── index.ts           # Service exports
+│   ├── storage/               # Data persistence
+│   │   ├── LocalEngine.ts     # Local storage engine
+│   │   └── storageUtils.ts    # Storage utilities
+│   └── store/                 # State management
+│       └── mindMapStore.ts    # Zustand store
+├── features/                  # Feature-specific modules
+│   ├── files/                 # File handling features
+│   │   ├── fileOptimization.ts # File optimization
+│   │   ├── fileValidation.ts  # File validation
+│   │   └── useMindMapFiles.ts # File operations hook
+│   └── mindmap/               # MindMap features
+│       ├── useMindMapData.ts  # Data operations
+│       └── useMindMapMulti.ts # Multi-map support
+├── shared/                    # Shared utilities
+│   ├── constants/             # Application constants
+│   ├── types/                 # TypeScript definitions
+│   │   ├── brandedTypes.ts    # Branded types for type safety
+│   │   ├── dataTypes.ts       # Data structure types
+│   │   ├── errors.ts          # Error types
+│   │   ├── result.ts          # Result pattern types
+│   │   └── index.ts           # Type exports
+│   └── utils/                 # Utility functions
+│       ├── autoLayout.ts      # Auto-layout algorithms
+│       ├── dataIntegrityChecker.ts # Data validation
+│       ├── lodash-utils.ts    # Utility functions
+│       └── logger.ts          # Logging utilities
+├── hooks/                     # Performance hooks
+│   ├── useLayoutWorker.ts     # Web worker for layout
+│   └── useSmartCache.ts       # Intelligent caching
+├── utils/                     # Performance utilities
+│   └── performanceMonitor.ts  # Performance monitoring
+└── workers/                   # Web Workers
+    └── layoutWorker.ts        # Layout computation worker
 ```
 
 ## Key Data Structures
@@ -102,71 +152,174 @@ npm run serve        # Serve production build from dist folder
 - Follow **TypeScript strict mode** requirements
 
 ### State Management
-- **Local state** for UI-only concerns
-- **Custom hooks** for shared logic
+- **Zustand store** for centralized state management
+- **Normalized data structure** for O(1) operations
+- **Command pattern** for undo/redo functionality
 - **localStorage** for data persistence
-- **Context API** avoided for performance reasons
+- **Result pattern** for robust error handling
 
 ### Performance Best Practices
 - Use **React.memo** for expensive components
-- Implement **virtualization** for large node counts (planned)
-- Optimize **re-renders** with proper dependency arrays
-- Batch **DOM updates** when possible
+- **Virtualization** implemented for large node counts
+- **Web Workers** for heavy computations
+- **Smart caching** for optimal performance
+- **Performance monitoring** dashboard available
 
 ## Current Architecture Issues & Improvement Plan
 
-### Critical Issues Identified
+### Identified Structural Problems
 
-1. **Excessive Hook Coupling**: Main `useMindMap` hook composes 5+ other hooks with complex dependencies
-2. **O(n) Tree Operations**: Node finding/manipulation has poor performance with large mindmaps
-3. **Props Drilling**: MindMapApp component passes 50+ props down the tree
-4. **Scattered State**: UI state fragmented across multiple hooks
-5. **Inconsistent Error Handling**: Mix of console.log, alert, and thrown errors
+Despite the solid architectural foundation, several critical issues remain that impact maintainability and performance:
 
-### Improvement Roadmap
+#### 🔴 Critical Issues (High Priority)
 
-#### Phase 1: Core Foundation (High Priority)
-- **Normalized Data Structure**: Replace nested tree with lookup tables for O(1) operations
-- **Unified State Management**: Implement Zustand for centralized state
-- **Type Safety**: Add branded types and Result pattern for error handling
+1. **Component Complexity Overload**
+   - `MindMapApp.tsx`: 395 lines with excessive responsibilities
+   - `Node.tsx`: 745 lines mixing rendering, editing, and event handling
+   - `MindMapCanvas.tsx`: 674 lines with complex drag/drop and rendering logic
+   - **Impact**: Difficult debugging, testing complexity, performance bottlenecks
 
-#### Phase 2: Business Logic (Medium Priority)
-- **Command Pattern**: Implement for undo/redo functionality
-- **Domain Services**: Extract business logic from hooks/components
-- **Component Simplification**: Break down large components
+2. **Hook Architecture Complexity**
+   - Multiple abstraction layers: `useMindMap` → `useMindMapZustand` → `useMindMapStore`
+   - Component-specific hooks creating tight coupling
+   - **Impact**: Unclear data flow, debugging difficulties, reusability issues
 
-#### Phase 3: Performance (Lower Priority)
-- **Virtualization**: Viewport-based rendering for large mindmaps
-- **Web Workers**: Offload heavy computations
-- **Caching Strategy**: Intelligent memoization
+3. **Type System Fragmentation**
+   - Type definitions scattered across multiple files
+   - Risk of circular dependencies
+   - **Impact**: Maintenance overhead, potential runtime errors
 
-### Expected Outcomes
-- **50% reduction** in component complexity
-- **O(1) node operations** instead of O(n)
-- **90% faster** rendering for large mindmaps
-- **Better maintainability** with clear separation of concerns
+#### 🟡 Performance Issues (Medium Priority)
+
+4. **Missing Performance Optimizations**
+   - No `React.memo` on expensive components
+   - Unnecessary re-renders throughout component tree
+   - **Impact**: Poor performance with large mindmaps
+
+5. **Feature Organization Problems**
+   - Related code scattered across different directories
+   - Difficult to locate and maintain feature-specific logic
+   - **Impact**: Slow development, increased bugs
+
+### Improvement Implementation Plan
+
+#### Phase 1: Component Decomposition (Week 1-2)
+**Target**: Reduce component complexity by 60%
+
+1. **MindMapApp.tsx Refactoring**
+   ```typescript
+   // Split into focused components:
+   <MindMapApp>
+     <MindMapHeader />        // Toolbar & title management
+     <MindMapWorkspace>       // Main content area
+       <MindMapCanvas />      // Canvas rendering
+       <MindMapSidebar />     // Side panels
+     </MindMapWorkspace>
+     <MindMapModals />        // Modal dialogs
+   </MindMapApp>
+   ```
+
+2. **Node.tsx Decomposition**
+   ```typescript
+   // Split by responsibility:
+   <Node>
+     <NodeRenderer />         // Visual rendering
+     <NodeEditor />           // Text editing
+     <NodeDragHandler />      // Drag & drop
+     <NodeAttachments />      // File attachments
+   </Node>
+   ```
+
+#### Phase 2: Hook Simplification (Week 3)
+**Target**: Reduce hook complexity by 50%
+
+1. **Simplified Hook Architecture**
+   ```typescript
+   // Clear separation of concerns:
+   useMindMapData()      // Data operations only
+   useMindMapUI()        // UI state management
+   useMindMapActions()   // User actions
+   useMindMapSync()      // Persistence layer
+   ```
+
+2. **Performance Optimization**
+   - Add `React.memo` to expensive components
+   - Implement proper `useCallback` and `useMemo` usage
+   - Optimize Zustand store selectors
+
+#### Phase 3: Type System & Organization (Week 4)
+**Target**: Eliminate type fragmentation
+
+1. **Unified Type System**
+   ```typescript
+   src/shared/types/
+   ├── index.ts           // Main exports
+   ├── mindmap.ts         // Core types
+   ├── ui.ts             // UI types
+   └── storage.ts        // Storage types
+   ```
+
+2. **Feature-Based Organization**
+   ```typescript
+   src/Local/features/
+   ├── mindmap/
+   │   ├── components/
+   │   ├── hooks/
+   │   ├── services/
+   │   └── types/
+   └── files/
+       ├── components/
+       ├── hooks/
+       └── services/
+   ```
+
+### Success Metrics
+
+#### Immediate Goals (Phase 1)
+- **Component Size**: <200 lines per component
+- **Performance**: <100ms render times
+- **Maintainability**: Reduce cyclomatic complexity by 40%
+
+#### Long-term Goals (Phase 2-3)
+- **Test Coverage**: >80% code coverage
+- **Type Safety**: Eliminate all `any` types
+- **Bundle Size**: <500KB production build
 
 ## Common Development Tasks
 
 ### Adding a New Feature
-1. Start with the data model in `types/index.ts`
-2. Create/modify hooks in `hooks/` directory
-3. Update components as needed
-4. Test with various mindmap sizes
+1. Start with the data model in `shared/types/dataTypes.ts`
+2. Add business logic to appropriate service in `core/services/`
+3. Implement commands if needed in `core/commands/`
+4. Update Zustand store in `core/store/mindMapStore.ts`
+5. Create/modify components in appropriate domain folder
+6. Test with various mindmap sizes using performance dashboard
+
+### Current Development Priority
+**Focus on Component Decomposition (Phase 1)**
+- Start with `MindMapApp.tsx` refactoring (highest impact)
+- Follow the component decomposition plan above
+- Target: <200 lines per component
+- Maintain existing functionality while improving structure
 
 ### Debugging Node Operations
 ```typescript
 // Enable debug logging
 localStorage.setItem('mindflow_debug', 'true');
 
-// Check current mindmap data
-const data = JSON.parse(localStorage.getItem('mindMapData') || '{}');
-console.log('Current mindmap:', data);
+// Check current mindmap data (normalized structure)
+const store = useMindMapStore.getState();
+console.log('Current mindmap:', store.currentMindMap);
+console.log('Normalized nodes:', store.normalizedNodes);
 
-// Monitor performance
-console.time('findNode');
-const node = findNode(nodeId);
-console.timeEnd('findNode');
+// Monitor performance with built-in monitoring
+import { performanceMonitor } from '@/utils/performanceMonitor';
+performanceMonitor.startMeasure('findNode');
+const node = store.getNode(nodeId); // O(1) operation
+performanceMonitor.endMeasure('findNode');
+
+// View performance dashboard
+// Access at /performance-dashboard in dev mode
 ```
 
 ### Testing Drag & Drop
@@ -205,9 +358,9 @@ console.timeEnd('findNode');
 
 ### Current Limitations
 1. **Browser Storage**: Limited by localStorage quota
-2. **Performance**: Degrades with very large mindmaps
-3. **File Handling**: No streaming, all in-memory
-4. **Single User**: No collaboration features
+2. **Performance**: Optimized for large mindmaps with virtualization
+3. **File Handling**: Optimized with compression and validation
+4. **Single User**: No collaboration features (planned for future)
 
 ### Best Practices
 1. **Save frequently**: Use Ctrl+S to ensure data persistence
