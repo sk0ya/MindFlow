@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMindMap } from '../../core/hooks/useMindMap';
 import Toolbar from '../common/Toolbar';
 import MindMapCanvas from './MindMapCanvas';
@@ -18,6 +18,9 @@ import { useFileHandlers } from './hooks/useFileHandlers';
 import { useMapHandlers } from './hooks/useMapHandlers';
 import { useUIState } from './hooks/useUIState';
 import { useNodeHandlers } from './hooks/useNodeHandlers';
+
+// サービスのインポート
+import { LocalMindMapService } from '../../core/services';
 
 // Types
 import type { MindMapNode, Position } from '../../shared/types';
@@ -81,6 +84,22 @@ const MindMapApp: React.FC = () => {
   
   const uiState = useUIState();
   
+  // サービスレイヤーの初期化
+  const mindMapService = useMemo(() => new LocalMindMapService(
+    { 
+      addChildNode, 
+      updateNode, 
+      findNode,
+      attachFileToNode,
+      removeFileFromNode,
+      downloadFile,
+      renameFileInNode
+    },
+    fileHandlers,
+    mapHandlers,
+    uiState
+  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, fileHandlers, mapHandlers, uiState]);
+
   const nodeHandlers = useNodeHandlers(
     setSelectedNodeId,
     (position: Position | null) => uiState.setContextMenuPosition(position || { x: 0, y: 0 }),
@@ -89,8 +108,8 @@ const MindMapApp: React.FC = () => {
     addChildNode,
     addSiblingNode,
     updateNode,
-    () => Promise.resolve(), // Placeholder for addNodeMapLink
-    () => Promise.resolve(), // Placeholder for removeNodeMapLink  
+    (nodeId: string, targetMapId: string) => mindMapService.addNodeMapLink(nodeId, targetMapId),
+    (nodeId: string, linkId: string) => mindMapService.removeNodeMapLink(nodeId, linkId),
     () => {} // No cursor update in local mode
   );
   
@@ -121,33 +140,36 @@ const MindMapApp: React.FC = () => {
     setShowKeyboardHelper: uiState.setShowShortcutHelper
   });
 
-  // コンテキストメニューのハンドラー
+  // ビジネスロジックハンドラー（サービス経由）
   const handleRightClick = (e: React.MouseEvent, nodeId: string): void => {
     nodeHandlers.handleRightClick(e, nodeId);
     uiState.handleCloseAllPanels();
   };
 
   const handleCopyNode = (node: MindMapNode): void => {
-    const clipboard = nodeHandlers.handleCopyNode(node);
+    const clipboard = mindMapService.copyNode(node);
     uiState.setClipboard(clipboard);
   };
 
-  const handlePasteNode = (parentId: string): void => {
-    nodeHandlers.handlePasteNode(parentId, uiState.clipboard);
+  const handlePasteNode = async (parentId: string): Promise<void> => {
+    try {
+      await mindMapService.pasteNode(parentId, uiState.clipboard);
+    } catch (error) {
+      console.error('ノードの貼り付けエラー:', error);
+      alert('ノードの貼り付けに失敗しました: ' + (error as Error).message);
+    }
   };
 
-  // ノードマップリンクのハンドラー
   const handleShowNodeMapLinks = (node: MindMapNode, position: { x: number; y: number }): void => {
-    uiState.handleShowNodeMapLinks(node, position);
+    mindMapService.showNodeMapLinks(node, position);
   };
 
   const handleNavigateToMap = async (mapId: string): Promise<void> => {
     try {
-      await mapHandlers.handleNavigateToMap(mapId);
-      uiState.handleCloseNodeMapLinksPanel();
+      await mindMapService.navigateToMap(mapId);
     } catch (error) {
       console.error('マップナビゲーションエラー:', error);
-      alert('マップの切り替えに失敗しました: ' + (error as Error).message);
+      alert((error as Error).message);
     }
   };
 
@@ -247,7 +269,7 @@ const MindMapApp: React.FC = () => {
                 onDelete={deleteNode}
                 onCustomize={uiState.handleShowCustomization}
                 onCopy={handleCopyNode}
-                onPaste={handlePasteNode}
+                onPaste={(parentId: string) => handlePasteNode(parentId)}
                 onChangeColor={(nodeId: string, color: string) => updateNode(nodeId, { color })}
                 onClose={() => uiState.setShowContextMenu(false)}
               />
