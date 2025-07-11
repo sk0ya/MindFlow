@@ -1,6 +1,8 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
-import NodeRefactored from './NodeRefactored';
-import Connection from '../common/Connection';
+import React, { useRef, useCallback, useEffect, memo } from 'react';
+import Node from './Node';
+import CanvasConnections from './canvas/CanvasConnections';
+import CanvasDragGuide from './canvas/CanvasDragGuide';
+import { useCanvasDragHandler } from './canvas/CanvasDragHandler';
 import type { MindMapData, MindMapNode, FileAttachment } from '../../../shared/types';
 
 interface MindMapCanvasProps {
@@ -31,22 +33,6 @@ interface MindMapCanvasProps {
   setPan: (pan: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void;
 }
 
-interface DragState {
-  isDragging: boolean;
-  draggedNodeId: string | null;
-  dropTargetId: string | null;
-}
-
-interface Connection {
-  from: MindMapNode | { x: number; y: number };
-  to: MindMapNode | { x: number; y: number };
-  hasToggleButton: boolean;
-  nodeId?: string;
-  isCollapsed?: boolean;
-  isToggleConnection?: boolean;
-  color?: string;
-}
-
 const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   data,
   selectedNodeId,
@@ -63,7 +49,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   onDeleteNode,
   onRightClick,
   onToggleCollapse,
-  onNavigateToDirection: _onNavigateToDirection,
   onFileUpload,
   onRemoveFile,
   onShowImageModal,
@@ -77,18 +62,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanningRef = useRef(false);
   const lastPanPointRef = useRef({ x: 0, y: 0 });
-  const [dragState, setDragState] = useState<DragState>({
-    isDragging: false,
-    draggedNodeId: null,
-    dropTargetId: null
-  });
   
-  // dragStateのrefも作成してNodeからアクセスできるようにする
-  const dragStateRef = useRef(dragState);
-  useEffect(() => {
-    dragStateRef.current = dragState;
-  }, [dragState]);
-
   const flattenVisibleNodes = (node: MindMapNode): MindMapNode[] => {
     const result = [node];
     if (!node?.collapsed && node?.children) {
@@ -101,233 +75,15 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   
   const allNodes = flattenVisibleNodes(data.rootNode);
   
-  // ドロップターゲット検出のためのヘルパー関数
-  const getNodeAtPosition = useCallback((x: number, y: number): MindMapNode | null => {
-    // SVG座標系での位置を取得
-    const svgRect = svgRef.current?.getBoundingClientRect();
-    if (!svgRect) return null;
-    
-    // マウス座標をSVG内座標に変換（zoom, panを考慮）
-    // 正しい変換: (クライアント座標 - SVG位置) / zoom - pan
-    const svgX = (x - svgRect.left) / zoom - pan.x;
-    const svgY = (y - svgRect.top) / zoom - pan.y;
-    
-    console.log('🎯 座標変換:', { 
-      clientX: x, clientY: y, 
-      svgLeft: svgRect.left, svgTop: svgRect.top,
-      zoom, panX: pan.x, panY: pan.y,
-      svgX, svgY 
-    });
-    
-    // 各ノードとの距離を計算して最も近いものを見つける
-    let closestNode: MindMapNode | null = null;
-    let minDistance = Infinity;
-    const maxDropDistance = 120; // ドロップ可能な最大距離を増加
-    
-    allNodes.forEach(node => {
-      if (node.id === dragState.draggedNodeId) return; // 自分自身は除外
-      
-      const distance = Math.sqrt(
-        Math.pow(node.x - svgX, 2) + Math.pow(node.y - svgY, 2)
-      );
-      
-      console.log('📏 ノード距離計算:', { 
-        nodeId: node.id, 
-        nodeX: node.x, nodeY: node.y, 
-        distance, 
-        maxDropDistance 
-      });
-      
-      if (distance < maxDropDistance && distance < minDistance) {
-        minDistance = distance;
-        closestNode = node;
-      }
-    });
-    
-    console.log('🎯 最終結果:', { closestNodeId: (closestNode as MindMapNode | null)?.id, minDistance });
-    return closestNode;
-  }, [allNodes, zoom, pan, dragState.draggedNodeId]);
-
-  // ドラッグ開始時の処理
-  const handleDragStart = useCallback((nodeId: string) => {
-    console.log('🔥 ドラッグ開始:', { nodeId });
-    setDragState({
-      isDragging: true,
-      draggedNodeId: nodeId,
-      dropTargetId: null
-    });
-  }, []);
-
-  // ドラッグ中の処理
-  const handleDragMove = useCallback((x: number, y: number) => {
-    console.log('🎯 handleDragMove 呼び出し:', { x, y });
-    setDragState(prev => {
-      console.log('🎯 ドラッグ状態確認:', { isDragging: prev.isDragging });
-      if (!prev.isDragging) {
-        console.log('🚫 ドラッグ中でないため処理をスキップ');
-        return prev;
-      }
-      
-      const targetNode = getNodeAtPosition(x, y);
-      console.log('🎯 ドラッグ移動:', { x, y, targetNodeId: targetNode?.id });
-      return {
-        ...prev,
-        dropTargetId: targetNode?.id || null
-      };
-    });
-  }, [getNodeAtPosition]);
-
-  // ドラッグ終了時の処理（親変更または兄弟順序変更）
-  const handleDragEnd = useCallback((nodeId: string, _x: number, _y: number) => {
-    setDragState(prevState => {
-      console.log('🎯 handleDragEnd 実行:', { 
-        nodeId, 
-        dropTargetId: prevState.dropTargetId, 
-        hasOnChangeParent: !!onChangeParent,
-        hasOnChangeSiblingOrder: !!onChangeSiblingOrder
-      });
-      
-      if (prevState.dropTargetId && prevState.dropTargetId !== nodeId) {
-        // ドラッグしたノードと対象ノードの親を確認
-        const draggedNode = allNodes.find(n => n.id === nodeId);
-        const targetNode = allNodes.find(n => n.id === prevState.dropTargetId);
-        
-        if (draggedNode && targetNode) {
-          // 親を特定するためのヘルパー関数
-          const findParent = (childId: string): MindMapNode | null => {
-            const findParentRecursive = (node: MindMapNode): MindMapNode | null => {
-              if (node.children) {
-                for (const child of node.children) {
-                  if (child.id === childId) return node;
-                  const found = findParentRecursive(child);
-                  if (found) return found;
-                }
-              }
-              return null;
-            };
-            return findParentRecursive(data.rootNode);
-          };
-          
-          const draggedParent = findParent(nodeId);
-          const targetParent = findParent(prevState.dropTargetId);
-          
-          console.log('🔍 親要素確認:', {
-            draggedParentId: draggedParent?.id,
-            targetParentId: targetParent?.id,
-            areSameParent: draggedParent?.id === targetParent?.id
-          });
-          
-          if (draggedParent && targetParent && draggedParent.id === targetParent.id) {
-            // 同じ親を持つ場合は兄弟順序変更
-            console.log('🔄 兄弟順序変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
-            if (onChangeSiblingOrder) {
-              // デフォルトでは対象ノードの前に挿入
-              onChangeSiblingOrder(nodeId, prevState.dropTargetId, true);
-            } else {
-              console.error('❌ onChangeSiblingOrder関数が未定義');
-            }
-          } else {
-            // 異なる親を持つ場合は親変更
-            console.log('🔄 親変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
-            if (onChangeParent) {
-              onChangeParent(nodeId, prevState.dropTargetId);
-            } else {
-              console.error('❌ onChangeParent関数が未定義');
-            }
-          }
-        }
-      } else {
-        console.log('🚫 ドロップターゲットなし、操作をスキップ');
-      }
-      
-      return {
-        isDragging: false,
-        draggedNodeId: null,
-        dropTargetId: null
-      };
-    });
-  }, [onChangeParent, onChangeSiblingOrder, allNodes, data.rootNode]);
-  
-  const connections: Connection[] = [];
-  allNodes.forEach(node => {
-    if (node.children && node.children.length > 0) {
-      const isRootNode = node.id === 'root';
-      
-      if (!node.collapsed) {
-        if (isRootNode) {
-          // ルートノードの場合は直接接続
-          node.children.forEach((child: MindMapNode) => {
-            connections.push({ 
-              from: node, 
-              to: child, 
-              hasToggleButton: false,
-              color: child.color || '#666'
-            });
-          });
-        } else {
-          // 非ルートノードの場合はトグルボタン経由
-          // ルートノードの位置を基準に左右を判定
-          const rootNode = data.rootNode;
-          const isOnRight = node.x > rootNode.x;
-          const toggleOffset = isOnRight ? 80 : -80;
-          const toggleX = node.x + toggleOffset;
-          const toggleY = node.y;
-          
-          // 親からトグルボタンへの接続線
-          connections.push({
-            from: node,
-            to: { x: toggleX, y: toggleY },
-            hasToggleButton: false,
-            isToggleConnection: true,
-            color: node.color || '#666'
-          });
-          
-          // トグルボタン自体
-          connections.push({
-            from: { x: toggleX, y: toggleY },
-            to: { x: toggleX, y: toggleY },
-            hasToggleButton: true,
-            nodeId: node.id,
-            isCollapsed: false
-          });
-          
-          // トグルボタンから各子要素への線
-          node.children.forEach((child: MindMapNode) => {
-            connections.push({
-              from: { x: toggleX, y: toggleY },
-              to: child,
-              hasToggleButton: false,
-              color: node.color || '#666'
-            });
-          });
-        }
-      } else {
-        // 折りたたまれている場合
-        const rootNode = data.rootNode;
-        const isOnRight = node.x > rootNode.x;
-        const toggleOffset = isOnRight ? 80 : -80;
-        const toggleX = node.x + toggleOffset;
-        const toggleY = node.y;
-        
-        // 親からトグルボタンへの接続線
-        connections.push({
-          from: node,
-          to: { x: toggleX, y: toggleY },
-          hasToggleButton: false,
-          isToggleConnection: true,
-          color: node.color || '#666'
-        });
-        
-        // トグルボタン自体
-        connections.push({ 
-          from: { x: toggleX, y: toggleY },
-          to: { x: toggleX, y: toggleY }, 
-          hasToggleButton: true,
-          nodeId: node.id,
-          isCollapsed: true
-        });
-      }
-    }
+  // ドラッグハンドラーを使用
+  const { dragState, handleDragStart, handleDragMove, handleDragEnd } = useCanvasDragHandler({
+    allNodes,
+    zoom,
+    pan,
+    svgRef,
+    onChangeParent,
+    onChangeSiblingOrder,
+    rootNode: data.rootNode
   });
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -402,11 +158,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   // ノード選択時に編集を確定する処理
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     // 編集中で、異なるノードが選択された場合は編集を確定
-    // ただし、Node.jsxのblur処理に委任（editTextの同期問題を避けるため）
     if (editingNodeId && editingNodeId !== nodeId) {
-      // editTextを渡さず、Node.jsx側で現在の入力値を使用させる
       console.log('🖱️ Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
-      // onFinishEdit(editingNodeId, editText); // この行を削除
     }
     onSelectNode(nodeId);
   }, [editingNodeId, onSelectNode]);
@@ -445,104 +198,20 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
       >
         <g transform={`scale(${zoom}) translate(${pan.x}, ${pan.y})`}>
           {/* ドラッグ中のドロップガイドライン */}
-          {dragState.isDragging && (
-            <g className="drop-guide">
-              {(() => {
-                const draggedNode = allNodes.find(n => n.id === dragState.draggedNodeId);
-                const targetNode = allNodes.find(n => n.id === dragState.dropTargetId);
-                console.log('🎨 ガイドライン表示:', { 
-                  isDragging: dragState.isDragging, 
-                  dropTargetId: dragState.dropTargetId,
-                  draggedNode: !!draggedNode,
-                  targetNode: !!targetNode
-                });
-                // ドラッグ中は最低限のエフェクトを表示
-                if (draggedNode) {
-                  return (
-                    <>
-                      <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                         refX="10" refY="3.5" orient="auto">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800" />
-                        </marker>
-                      </defs>
-                      
-                      {/* ドラッグ中ノードの強調表示 */}
-                      <circle
-                        cx={draggedNode.x}
-                        cy={draggedNode.y}
-                        r="50"
-                        fill="none"
-                        stroke="#ff9800"
-                        strokeWidth="2"
-                        strokeDasharray="6,6"
-                        opacity="0.6"
-                      />
-                      
-                      {/* ドロップ検出範囲の表示 */}
-                      <circle
-                        cx={draggedNode.x}
-                        cy={draggedNode.y}
-                        r="120"
-                        fill="none"
-                        stroke="#ff9800"
-                        strokeWidth="1"
-                        strokeDasharray="2,8"
-                        opacity="0.3"
-                      />
-                      
-                      {/* ドロップターゲットがある場合の接続線 */}
-                      {targetNode && (
-                        <>
-                          <line
-                            x1={draggedNode.x}
-                            y1={draggedNode.y}
-                            x2={targetNode.x}
-                            y2={targetNode.y}
-                            stroke="#ff9800"
-                            strokeWidth="3"
-                            strokeDasharray="8,4"
-                            markerEnd="url(#arrowhead)"
-                            opacity="0.8"
-                          />
-                          <circle
-                            cx={targetNode.x}
-                            cy={targetNode.y}
-                            r="60"
-                            fill="none"
-                            stroke="#ff9800"
-                            strokeWidth="2"
-                            strokeDasharray="4,4"
-                            opacity="0.5"
-                          />
-                        </>
-                      )}
-                    </>
-                  );
-                }
-                return null;
-              })()}
-            </g>
-          )}
+          <CanvasDragGuide
+            dragState={dragState}
+            allNodes={allNodes}
+          />
 
-          <g className="connection-lines">
-            {connections.filter(conn => !conn.hasToggleButton).map((conn, index) => (
-              <Connection
-                key={`${'id' in conn.from ? conn.from.id : 'toggle'}-${'id' in conn.to ? conn.to.id : 'toggle'}-${index}`}
-                from={conn.from}
-                to={conn.to}
-                hasToggleButton={false}
-                onToggleCollapse={onToggleCollapse}
-                nodeId={conn.nodeId || ''}
-                isToggleConnection={conn.isToggleConnection}
-                color={conn.color}
-              />
-            ))}
-          </g>
+          <CanvasConnections
+            allNodes={allNodes}
+            data={data}
+            onToggleCollapse={onToggleCollapse}
+          />
 
           <g className="nodes">
             {allNodes.map(node => (
-              <NodeRefactored
+              <Node
                 key={node.id}
                 node={node}
                 isSelected={selectedNodeId === node.id}
@@ -568,20 +237,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
                 zoom={zoom}
                 pan={pan}
                 svgRef={svgRef}
-              />
-            ))}
-          </g>
-
-          <g className="toggle-buttons">
-            {connections.filter(conn => conn.hasToggleButton).map((conn, index) => (
-              <Connection
-                key={`toggle-${conn.nodeId}-${index}`}
-                from={conn.from}
-                to={conn.to}
-                hasToggleButton={true}
-                onToggleCollapse={onToggleCollapse}
-                nodeId={conn.nodeId || ''}
-                isCollapsed={conn.isCollapsed}
               />
             ))}
           </g>
@@ -670,5 +325,4 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
   );
 };
 
-
-export default MindMapCanvas;
+export default memo(MindMapCanvas);

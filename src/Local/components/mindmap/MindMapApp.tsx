@@ -18,20 +18,11 @@ import type { MindMapNode, Position, FileAttachment } from '../../shared/types';
 
 const MindMapApp: React.FC = () => {
   const [isAppReady] = useState(true);
-  console.log('MindMapApp render, isAppReady:', isAppReady);
-  
-  // 簡素化されたフックを使用
   const mindMap = useMindMapSimplified(isAppReady);
-  
-  // 状態を取得
   const { data, selectedNodeId, editingNodeId, editText, ui, canUndo, canRedo, allMindMaps, currentMapId } = mindMap;
   
-  console.log('MindMapApp state:', { data, selectedNodeId, editingNodeId, editText, ui });
-  
-  // 下記フック群は一時的にダミーデータで対応
   const fileHandlers = useFileHandlers(
-    async (nodeId: string, file: File): Promise<FileAttachment> => {
-      console.log('attachFileToNode called:', { nodeId, file });
+    async (_nodeId: string, file: File): Promise<FileAttachment> => {
       return {
         id: `file_${Date.now()}`,
         name: file.name,
@@ -42,9 +33,9 @@ const MindMapApp: React.FC = () => {
         data: ''
       };
     },
-    async () => {}, // removeFileFromNode
-    async () => {}, // renameFileInNode
-    async () => {}  // downloadFile
+    async () => {},
+    async () => {},
+    async () => {}
   );
   
   const mapHandlers = useMapHandlers(
@@ -53,12 +44,10 @@ const MindMapApp: React.FC = () => {
       mindMap.selectMap(mapId);
     },
     async (name: string, category: string): Promise<string> => {
-      console.log('createMindMap called:', { name, category });
       mindMap.createMap(name, category);
       return 'new-map-id';
     },
     async (mapId: string): Promise<boolean> => {
-      console.log('deleteMindMapById called:', mapId);
       mindMap.deleteMap(mapId);
       return true;
     },
@@ -84,18 +73,11 @@ const MindMapApp: React.FC = () => {
     },
     mindMap.addSiblingNode,
     (nodeId: string, updates: Partial<MindMapNode>) => mindMap.updateNode(nodeId, updates),
-    (nodeId: string, targetMapId: string) => {
-      // TODO: implement addNodeMapLink
-      console.log('addNodeMapLink:', nodeId, targetMapId);
-    },
-    (nodeId: string, linkId: string) => {
-      // TODO: implement removeNodeMapLink
-      console.log('removeNodeMapLink:', nodeId, linkId);
-    },
-    () => {} // No cursor update in local mode
+    (_nodeId: string, _targetMapId: string) => {},
+    (_nodeId: string, _linkId: string) => {},
+    () => {}
   );
   
-  // キーボードショートカットの統合を復元
   useKeyboardShortcuts({
     selectedNodeId,
     editingNodeId,
@@ -119,10 +101,7 @@ const MindMapApp: React.FC = () => {
     redo: () => mindMap.redo(),
     canUndo: canUndo,
     canRedo: canRedo,
-    navigateToDirection: (direction: string) => {
-      // TODO: implement navigation
-      console.log('Navigate to:', direction);
-    },
+    navigateToDirection: (_direction: string) => {},
     showMapList: ui.showMapList,
     setShowMapList: mindMap.setShowMapList,
     showLocalStorage: ui.showLocalStoragePanel,
@@ -133,34 +112,25 @@ const MindMapApp: React.FC = () => {
     setShowKeyboardHelper: mindMap.setShowShortcutHelper
   });
 
-  // ビジネスロジックハンドラー
   const handleRightClick = (e: React.MouseEvent, nodeId: string): void => {
     nodeHandlers.handleRightClick(e, nodeId);
     mindMap.closeAllPanels();
   };
 
   const handleCopyNode = (node: MindMapNode): void => {
-    // Simple clipboard copy (JSON serialization)
     mindMap.setClipboard(node);
   };
 
   const handlePasteNode = async (parentId: string): Promise<void> => {
-    try {
-      if (ui.clipboard) {
-        // Create a copy of the node with new ID
-        const newNodeId = await mindMap.addChildNode(parentId, ui.clipboard.text || '');
-        // TODO: Copy other properties like color, position, etc.
-        if (newNodeId) {
-          mindMap.updateNode(newNodeId, { 
-            color: ui.clipboard.color,
-            fontSize: ui.clipboard.fontSize,
-            fontWeight: ui.clipboard.fontWeight
-          });
-        }
+    if (ui.clipboard) {
+      const newNodeId = await mindMap.addChildNode(parentId, ui.clipboard.text || '');
+      if (newNodeId) {
+        mindMap.updateNode(newNodeId, { 
+          color: ui.clipboard.color,
+          fontSize: ui.clipboard.fontSize,
+          fontWeight: ui.clipboard.fontWeight
+        });
       }
-    } catch (error) {
-      console.error('ノードの貼り付けエラー:', error);
-      alert('ノードの貼り付けに失敗しました: ' + (error as Error).message);
     }
   };
 
@@ -169,16 +139,10 @@ const MindMapApp: React.FC = () => {
   };
 
   const handleNavigateToMap = async (mapId: string): Promise<void> => {
-    try {
-      // TODO: implement map navigation
-      console.log('Navigate to map:', mapId);
-    } catch (error) {
-      console.error('マップナビゲーションエラー:', error);
-      alert((error as Error).message);
-    }
+    mindMap.selectMap(mapId);
+    mindMap.closeAllPanels();
   };
 
-  // ローディング表示
   if (!data) {
     return (
       <div className="mindmap-app loading-screen">
@@ -277,22 +241,10 @@ const MindMapApp: React.FC = () => {
                 mindMap.showCustomization(node, ui.contextMenuPosition);
               }}
               onFileDownload={fileHandlers.handleFileDownload}
-              onFileRename={(fileId: string, newName: string) => {
-                // TODO: implement file rename
-                console.log('File rename:', fileId, newName);
-              }}
-              onFileDelete={(fileId: string) => {
-                // TODO: implement file delete
-                console.log('File delete:', fileId);
-              }}
-              onAddNodeMapLink={(nodeId: string, targetMapId: string) => {
-                // TODO: implement add node map link
-                console.log('Add node map link:', nodeId, targetMapId);
-              }}
-              onRemoveNodeMapLink={(nodeId: string, linkId: string) => {
-                // TODO: implement remove node map link
-                console.log('Remove node map link:', nodeId, linkId);
-              }}
+              onFileRename={(_fileId: string, _newName: string) => {}}
+              onFileDelete={(_fileId: string) => {}}
+              onAddNodeMapLink={(_nodeId: string, _targetMapId: string) => {}}
+              onRemoveNodeMapLink={(_nodeId: string, _linkId: string) => {}}
               onNavigateToMap={handleNavigateToMap}
               onCloseCustomizationPanel={() => mindMap.setShowCustomizationPanel(false)}
               onCloseContextMenu={() => mindMap.setShowContextMenu(false)}
@@ -310,7 +262,6 @@ const MindMapApp: React.FC = () => {
         </>
       ) : null}
 
-      {/* キーボードショートカットヘルパー - 現在未実装 */}
     </div>
   );
 };

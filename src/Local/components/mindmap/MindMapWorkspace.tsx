@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { ErrorBoundary } from '../../../shared/components';
-import MindMapCanvasRefactored from './MindMapCanvasRefactored';
+import MindMapCanvas from './MindMapCanvas';
 import type { MindMapData, MindMapNode, Position, FileAttachment } from '../../../shared/types';
 
 interface MindMapWorkspaceProps {
@@ -56,7 +56,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
 }) => {
   return (
     <ErrorBoundary>
-      <MindMapCanvasRefactored
+      <MindMapCanvas
         data={data}
         selectedNodeId={selectedNodeId}
         editingNodeId={editingNodeId}
@@ -66,19 +66,13 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         onStartEdit={onStartEdit}
         onFinishEdit={onFinishEdit}
         onChangeParent={onMoveNode}
-        onChangeSiblingOrder={(draggedNodeId: string, targetNodeId: string, insertBefore: boolean) => {
-          // TODO: implement sibling order change
-          console.log('Change sibling order:', draggedNodeId, targetNodeId, insertBefore);
-        }}
+        onChangeSiblingOrder={(_draggedNodeId: string, _targetNodeId: string, _insertBefore: boolean) => {}}
         onAddChild={onAddChild}
         onAddSibling={onAddSibling}
         onDeleteNode={onDeleteNode}
         onRightClick={onRightClick}
         onToggleCollapse={onToggleCollapse}
-        onNavigateToDirection={(direction: 'up' | 'down' | 'left' | 'right') => {
-          // TODO: implement navigation
-          console.log('Navigate to:', direction);
-        }}
+        onNavigateToDirection={(_direction: 'up' | 'down' | 'left' | 'right') => {}}
         onFileUpload={onFileUpload}
         onRemoveFile={onRemoveFile}
         onShowImageModal={onShowImageModal}
