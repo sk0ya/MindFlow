@@ -1,12 +1,4 @@
 import type { MindMapNode, Position } from '../../shared/types';
-import { useCommandHistory } from '../hooks/useCommandHistory';
-import { 
-  UpdateNodeCommand, 
-  AddChildNodeCommand, 
-  DeleteNodeCommand, 
-  ChangeParentCommand,
-  NodeOperations
-} from '../commands';
 
 export interface MindMapService {
   // ノード操作
@@ -56,92 +48,66 @@ export class LocalMindMapService implements MindMapService {
   private fileHandlers: any;
   private mapHandlers: any;
   private uiState: any;
-  private commandHistory: ReturnType<typeof useCommandHistory>;
-  private nodeOperations: NodeOperations;
 
   constructor(
     mindMapHook: any,
     fileHandlers: any,
     mapHandlers: any,
-    uiState: any,
-    commandHistory: ReturnType<typeof useCommandHistory>
+    uiState: any
   ) {
     this.mindMapHook = mindMapHook;
     this.fileHandlers = fileHandlers;
     this.mapHandlers = mapHandlers;
     this.uiState = uiState;
-    this.commandHistory = commandHistory;
-    
-    // NodeOperationsインターフェースの実装
-    this.nodeOperations = {
-      updateNode: (nodeId: string, updates: Partial<MindMapNode>) => {
-        this.mindMapHook.updateNode(nodeId, updates);
-      },
-      addChildNode: (parentId: string, text: string, options?: any) => {
-        return this.mindMapHook.addChildNode(parentId, text, options);
-      },
-      deleteNode: (nodeId: string) => {
-        this.mindMapHook.deleteNode(nodeId);
-      },
-      findNode: (nodeId: string) => {
-        return this.mindMapHook.findNode(nodeId);
-      },
-      changeParent: (nodeId: string, newParentId: string) => {
-        this.mindMapHook.changeParent(nodeId, newParentId);
-      },
-      changeSiblingOrder: (nodeId: string, direction: 'up' | 'down') => {
-        this.mindMapHook.changeSiblingOrder(nodeId, direction);
-      }
-    };
   }
 
-  // コマンドベースのノード操作
+  // コマンドベースのノード操作（既存のZustandストアを直接使用）
   updateNodeWithCommand(nodeId: string, updates: Partial<MindMapNode>): void {
-    const command = new UpdateNodeCommand(nodeId, updates, this.nodeOperations);
-    this.commandHistory.executeCommand(command);
+    // 既存のストアの履歴機能を利用
+    this.mindMapHook.updateNode(nodeId, updates);
   }
 
-  addChildNodeWithCommand(parentId: string, text: string, options?: any): string {
-    const command = new AddChildNodeCommand(parentId, text, options, this.nodeOperations);
-    this.commandHistory.executeCommand(command);
-    // コマンドが実行済みなので、最後に追加されたノードのIDを返す
-    // TODO: AddChildNodeCommandから実際のnodeIdを取得する仕組みが必要
-    return `node_${Date.now()}`;
+  addChildNodeWithCommand(parentId: string, text: string, _options?: any): string {
+    // 既存のストアの履歴機能を利用
+    const nodeId = this.mindMapHook.addChildNode(parentId, text);
+    return nodeId || `node_${Date.now()}`;
   }
 
   deleteNodeWithCommand(nodeId: string): void {
-    const command = new DeleteNodeCommand(nodeId, this.nodeOperations);
-    this.commandHistory.executeCommand(command);
+    // 既存のストアの履歴機能を利用
+    this.mindMapHook.deleteNode(nodeId);
   }
 
   changeParentWithCommand(nodeId: string, newParentId: string): void {
-    const command = new ChangeParentCommand(nodeId, newParentId, this.nodeOperations);
-    this.commandHistory.executeCommand(command);
+    // 既存のストアの履歴機能を利用
+    this.mindMapHook.changeParent(nodeId, newParentId);
   }
 
-  // Undo/Redo操作
+  // Undo/Redo操作（既存のZustandストアのundo/redoを使用）
   undo(): boolean {
-    return this.commandHistory.undo();
+    this.mindMapHook.undo();
+    return true;
   }
 
   redo(): boolean {
-    return this.commandHistory.redo();
+    this.mindMapHook.redo();
+    return true;
   }
 
   canUndo(): boolean {
-    return this.commandHistory.canUndo();
+    return this.mindMapHook.canUndo;
   }
 
   canRedo(): boolean {
-    return this.commandHistory.canRedo();
+    return this.mindMapHook.canRedo;
   }
 
   getUndoDescription(): string | null {
-    return this.commandHistory.getUndoDescription();
+    return null; // 既存のストアには説明機能がない
   }
 
   getRedoDescription(): string | null {
-    return this.commandHistory.getRedoDescription();
+    return null; // 既存のストアには説明機能がない
   }
 
   copyNode(node: MindMapNode): MindMapNode {

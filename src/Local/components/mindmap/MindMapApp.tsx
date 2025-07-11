@@ -21,7 +21,6 @@ import { useNodeHandlers } from './hooks/useNodeHandlers';
 
 // サービスのインポート
 import { LocalMindMapService } from '../../core/services';
-import { useCommandHistory } from '../../core/hooks/useCommandHistory';
 
 // Types
 import type { MindMapNode, Position } from '../../shared/types';
@@ -46,6 +45,10 @@ const MindMapApp: React.FC = () => {
     flattenNodes,
     startEdit,
     finishEdit,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     updateTitle,
     toggleCollapse,
     navigateToDirection,
@@ -60,7 +63,8 @@ const MindMapApp: React.FC = () => {
     deleteMindMapById,
     switchToMap,
     changeMapCategory,
-    getAvailableCategories
+    getAvailableCategories,
+    store
   } = useMindMap(isAppReady);
   
   const fileHandlers = useFileHandlers(
@@ -80,7 +84,6 @@ const MindMapApp: React.FC = () => {
   );
   
   const uiState = useUIState();
-  const commandHistory = useCommandHistory();
   
   // サービスレイヤーの初期化
   const mindMapService = useMemo(() => new LocalMindMapService(
@@ -94,13 +97,17 @@ const MindMapApp: React.FC = () => {
       renameFileInNode,
       changeParent,
       changeSiblingOrder,
-      deleteNode
+      deleteNode,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      store
     },
     fileHandlers,
     mapHandlers,
-    uiState,
-    commandHistory
-  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, changeParent, changeSiblingOrder, deleteNode, fileHandlers, mapHandlers, uiState, commandHistory]);
+    uiState
+  ), [addChildNode, updateNode, findNode, attachFileToNode, removeFileFromNode, downloadFile, renameFileInNode, changeParent, changeSiblingOrder, deleteNode, undo, redo, canUndo, canRedo, store, fileHandlers, mapHandlers, uiState]);
 
   const nodeHandlers = useNodeHandlers(
     setSelectedNodeId,

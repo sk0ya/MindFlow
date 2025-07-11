@@ -15,6 +15,7 @@ export class UpdateNodeCommand implements Command {
   private newData: Partial<MindMapNode>;
   private oldData: Partial<MindMapNode>;
   private operations: NodeOperations;
+  private executed: boolean = false;
 
   constructor(
     nodeId: string,
@@ -43,11 +44,17 @@ export class UpdateNodeCommand implements Command {
   }
 
   execute(): void {
-    this.operations.updateNode(this.nodeId, this.newData);
+    if (!this.executed) {
+      this.operations.updateNode(this.nodeId, this.newData);
+      this.executed = true;
+    }
   }
 
   undo(): void {
-    this.operations.updateNode(this.nodeId, this.oldData);
+    if (this.executed) {
+      this.operations.updateNode(this.nodeId, this.oldData);
+      this.executed = false;
+    }
   }
 
   getDescription(): string {
@@ -74,6 +81,7 @@ export class AddChildNodeCommand implements Command {
   private options: any;
   private addedNodeId: string | null = null;
   private operations: NodeOperations;
+  private executed: boolean = false;
 
   constructor(
     parentId: string,
@@ -88,12 +96,16 @@ export class AddChildNodeCommand implements Command {
   }
 
   execute(): void {
-    this.addedNodeId = this.operations.addChildNode(this.parentId, this.text, this.options);
+    if (!this.executed) {
+      this.addedNodeId = this.operations.addChildNode(this.parentId, this.text, this.options);
+      this.executed = true;
+    }
   }
 
   undo(): void {
-    if (this.addedNodeId) {
+    if (this.executed && this.addedNodeId) {
       this.operations.deleteNode(this.addedNodeId);
+      this.executed = false;
     }
   }
 
@@ -106,8 +118,8 @@ export class DeleteNodeCommand implements Command {
   private nodeId: string;
   private parentId: string | null = null;
   private nodeData: MindMapNode | null = null;
-  // private _siblingIndex: number = -1; // TODO: 将来の順序復元で使用
   private operations: NodeOperations;
+  private executed: boolean = false;
 
   constructor(nodeId: string, operations: NodeOperations) {
     this.nodeId = nodeId;
@@ -122,23 +134,46 @@ export class DeleteNodeCommand implements Command {
       const parentNode = this.findParentNode(nodeId);
       if (parentNode) {
         this.parentId = parentNode.id;
-        // this._siblingIndex = parentNode.children.findIndex(child => child.id === nodeId);
       }
     }
   }
 
-  private findParentNode(_nodeId: string): MindMapNode | null {
-    // 実装は具体的なデータ構造に依存
-    // TODO: 正規化データ構造から親を見つける実装
-    return null;
+  private findParentNode(nodeId: string): MindMapNode | null {
+    // 正規化データ構造から親を見つける実装
+    // まず全ノードを取得して親子関係を探す
+    const allNodes = this.operations.findNode('root')?.children || [];
+    
+    const findParentRecursive = (nodes: MindMapNode[], targetId: string): MindMapNode | null => {
+      for (const node of nodes) {
+        if (node.children.some(child => child.id === targetId)) {
+          return node;
+        }
+        const parentInChildren = findParentRecursive(node.children, targetId);
+        if (parentInChildren) {
+          return parentInChildren;
+        }
+      }
+      return null;
+    };
+    
+    // ルートノードから検索
+    const rootNode = this.operations.findNode('root');
+    if (rootNode && rootNode.children.some(child => child.id === nodeId)) {
+      return rootNode;
+    }
+    
+    return findParentRecursive(allNodes, nodeId);
   }
 
   execute(): void {
-    this.operations.deleteNode(this.nodeId);
+    if (!this.executed) {
+      this.operations.deleteNode(this.nodeId);
+      this.executed = true;
+    }
   }
 
   undo(): void {
-    if (this.nodeData && this.parentId) {
+    if (this.executed && this.nodeData && this.parentId) {
       // ノードを復元
       const restoredId = this.operations.addChildNode(this.parentId, this.nodeData.text, {
         fontSize: this.nodeData.fontSize,
@@ -151,6 +186,7 @@ export class DeleteNodeCommand implements Command {
       
       // 子ノードも復元
       this.restoreChildren(restoredId, this.nodeData.children);
+      this.executed = false;
     }
   }
 

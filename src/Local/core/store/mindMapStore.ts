@@ -90,19 +90,20 @@ export const useMindMapStore = create<MindMapStore>()(
           });
         },
         
-        // Sync normalized data back to tree structure
+        // Sync normalized data back to tree structure and add to history
         syncToMindMapData: () => {
           set((state) => {
             if (state.normalizedData && state.data) {
               const newRootNode = denormalizeTreeData(state.normalizedData);
-              state.data = {
+              const newData = {
                 ...state.data,
                 rootNode: newRootNode,
                 updatedAt: new Date().toISOString()
               };
+              state.data = newData;
               
               // Add to history
-              state.history = [...state.history.slice(0, state.historyIndex + 1), state.data];
+              state.history = [...state.history.slice(0, state.historyIndex + 1), newData];
               state.historyIndex = state.history.length - 1;
             }
           });

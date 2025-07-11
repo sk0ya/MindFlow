@@ -115,7 +115,7 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
             event.preventDefault();
             if (shiftKey && handlers.canRedo) {
               handlers.redo();
-            } else if (handlers.canUndo) {
+            } else if (!shiftKey && handlers.canUndo) {
               handlers.undo();
             }
             break;

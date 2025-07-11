@@ -56,10 +56,12 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
   // ノード操作（自動保存はuseEffectで処理）
   const updateNode = useCallback(async (nodeId: string, updates: Partial<MindMapNode>) => {
     store.updateNode(nodeId, updates);
+    store.syncToMindMapData(); // 履歴に追加
   }, [store]);
   
   const addChildNode = useCallback(async (parentId: string, text: string = 'New Node', startEditing: boolean = false): Promise<string | null> => {
     const newNodeId = store.addChildNode(parentId, text);
+    store.syncToMindMapData(); // 履歴に追加
     if (startEditing && newNodeId) {
       store.startEditing(newNodeId);
     }
@@ -68,6 +70,7 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
   
   const addSiblingNode = useCallback(async (nodeId: string, text: string = 'New Node', startEditing: boolean = false): Promise<string | null> => {
     const newNodeId = store.addSiblingNode(nodeId, text);
+    store.syncToMindMapData(); // 履歴に追加
     if (startEditing && newNodeId) {
       store.startEditing(newNodeId);
     }
@@ -76,10 +79,12 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
   
   const deleteNode = useCallback(async (nodeId: string) => {
     store.deleteNode(nodeId);
+    store.syncToMindMapData(); // 履歴に追加
   }, [store]);
   
   const moveNode = useCallback(async (nodeId: string, newParentId: string) => {
     store.moveNode(nodeId, newParentId);
+    store.syncToMindMapData(); // 履歴に追加
   }, [store]);
   
   // 編集機能
@@ -89,6 +94,7 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
   
   const finishEditingNode = useCallback(async (nodeId: string, text: string) => {
     store.finishEditing(nodeId, text);
+    store.syncToMindMapData(); // 履歴に追加
   }, [store]);
   
   const cancelEditingNode = useCallback(() => {
