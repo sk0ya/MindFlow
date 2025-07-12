@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usePerformanceMonitor, PERFORMANCE_THRESHOLDS, checkPerformanceWarnings } from '../../../shared/utils/performanceMonitor';
-import type { PerformanceMetrics } from '../../../shared/utils/performanceMonitor';
+import { usePerformanceMonitor, PERFORMANCE_THRESHOLDS, checkPerformanceWarnings, type PerformanceMetrics } from '../../../shared/utils/performanceMonitor';
 
 interface PerformanceDashboardProps {
   isOpen: boolean;

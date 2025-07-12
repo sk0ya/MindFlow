@@ -203,6 +203,7 @@ export const useMapSwitching = ({ data, setData }: UseMapSwitchingProps) => {
       
     } catch (error: unknown) {
       console.error('❌ マップ切り替え失敗:', error);
+      // eslint-disable-next-line no-alert
       alert(`マップの切り替えに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };

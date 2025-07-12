@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { FileAttachment } from '../../../../shared/types';
 
 interface Position {
@@ -51,6 +51,11 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
     }
   }, [isRenaming, newFileName]);
 
+  const handleClose = useCallback(() => {
+    setIsRenaming(false);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -74,12 +79,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
     }
     
     return undefined;
-  }, [isOpen]);
-
-  const handleClose = () => {
-    setIsRenaming(false);
-    onClose();
-  };
+  }, [isOpen, handleClose]);
 
   const handleRenameStart = () => {
     setIsRenaming(true);
@@ -116,6 +116,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
   };
 
   const handleDelete = () => {
+    // eslint-disable-next-line no-alert
     if (file && window.confirm(`「${file.name}」を削除しますか？`)) {
       onDelete(file.id);
       handleClose();

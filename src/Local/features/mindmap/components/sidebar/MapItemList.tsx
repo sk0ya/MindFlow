@@ -115,6 +115,7 @@ const MapItemList: React.FC<MapItemListProps> = ({
               className="action-btn delete"
               onClick={(e) => {
                 e.stopPropagation();
+                // eslint-disable-next-line no-alert
                 if (window.confirm(`「${map.title}」を削除しますか？`)) {
                   onDeleteMap(map.id);
                 }

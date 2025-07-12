@@ -79,6 +79,7 @@ export const useFileHandlers = (
       downloadFile(file);
     } catch (error) {
       console.error('ファイルダウンロードエラー:', error);
+      // eslint-disable-next-line no-alert
       alert('ファイルのダウンロードに失敗しました: ' + (error as Error).message);
     }
   };
@@ -90,6 +91,7 @@ export const useFileHandlers = (
       }
     } catch (error) {
       console.error('ファイル名変更エラー:', error);
+      // eslint-disable-next-line no-alert
       alert('ファイル名の変更に失敗しました: ' + (error as Error).message);
     }
   };
@@ -101,6 +103,7 @@ export const useFileHandlers = (
       }
     } catch (error) {
       console.error('ファイル削除エラー:', error);
+      // eslint-disable-next-line no-alert
       alert('ファイルの削除に失敗しました: ' + (error as Error).message);
     }
   };
@@ -113,6 +116,7 @@ export const useFileHandlers = (
       await attachFileToNode(nodeId, file);
     } catch (error) {
       console.error('ファイルアップロードエラー:', error);
+      // eslint-disable-next-line no-alert
       alert('ファイルのアップロードに失敗しました: ' + (error as Error).message);
     }
   };
@@ -122,6 +126,7 @@ export const useFileHandlers = (
       removeFileFromNode(nodeId, fileId);
     } catch (error) {
       console.error('ファイル削除エラー:', error);
+      // eslint-disable-next-line no-alert
       alert('ファイルの削除に失敗しました: ' + (error as Error).message);
     }
   };

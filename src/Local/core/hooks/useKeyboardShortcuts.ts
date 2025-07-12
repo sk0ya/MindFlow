@@ -9,27 +9,27 @@ import type { MindMapNode } from '../../../shared/types';
 interface KeyboardShortcutHandlers {
   selectedNodeId: string | null;
   editingNodeId: string | null;
-  setEditText: (text: string) => void;
-  startEdit: (nodeId: string) => void;
-  finishEdit: (nodeId: string, newText?: string, options?: Partial<MindMapNode>) => Promise<void>;
+  setEditText: (_text: string) => void;
+  startEdit: (_nodeId: string) => void;
+  finishEdit: (_nodeId: string, _newText?: string, _options?: Partial<MindMapNode>) => Promise<void>;
   editText: string;
-  updateNode: (id: string, updates: Partial<MindMapNode>) => void;
-  addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
-  addSiblingNode: (nodeId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
-  deleteNode: (id: string) => void;
+  updateNode: (_id: string, _updates: Partial<MindMapNode>) => void;
+  addChildNode: (_parentId: string, _text?: string, _startEditing?: boolean) => Promise<string | null>;
+  addSiblingNode: (_nodeId: string, _text?: string, _startEditing?: boolean) => Promise<string | null>;
+  deleteNode: (_id: string) => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  navigateToDirection: (_direction: 'up' | 'down' | 'left' | 'right') => void;
   showMapList: boolean;
-  setShowMapList: (show: boolean) => void;
+  setShowMapList: (_show: boolean) => void;
   showLocalStorage: boolean;
-  setShowLocalStorage: (show: boolean) => void;
+  setShowLocalStorage: (_show: boolean) => void;
   showTutorial: boolean;
-  setShowTutorial: (show: boolean) => void;
+  setShowTutorial: (_show: boolean) => void;
   showKeyboardHelper: boolean;
-  setShowKeyboardHelper: (show: boolean) => void;
+  setShowKeyboardHelper: (_show: boolean) => void;
 }
 
 export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {

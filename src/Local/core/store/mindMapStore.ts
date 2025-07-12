@@ -61,23 +61,23 @@ interface MindMapStore {
   ui: UIState;
   
   // Actions
-  setData: (data: MindMapData) => void;
-  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
-  addChildNode: (parentId: string, text?: string) => string | undefined;
-  addSiblingNode: (nodeId: string, text?: string) => string | undefined;
-  deleteNode: (nodeId: string) => void;
-  moveNode: (nodeId: string, newParentId: string) => void;
+  setData: (_data: MindMapData) => void;
+  updateNode: (_nodeId: string, _updates: Partial<MindMapNode>) => void;
+  addChildNode: (_parentId: string, _text?: string) => string | undefined;
+  addSiblingNode: (_nodeId: string, _text?: string) => string | undefined;
+  deleteNode: (_nodeId: string) => void;
+  moveNode: (_nodeId: string, _newParentId: string) => void;
   
   // Node operations (O(1) with normalized data)
-  findNode: (nodeId: string) => MindMapNode | null;
-  getChildNodes: (nodeId: string) => MindMapNode[];
+  findNode: (_nodeId: string) => MindMapNode | null;
+  getChildNodes: (_nodeId: string) => MindMapNode[];
   
   // Selection & Editing
-  selectNode: (nodeId: string | null) => void;
-  startEditing: (nodeId: string) => void;
-  finishEditing: (nodeId: string, text: string) => void;
+  selectNode: (_nodeId: string | null) => void;
+  startEditing: (_nodeId: string) => void;
+  finishEditing: (_nodeId: string, _text: string) => void;
   cancelEditing: () => void;
-  setEditText: (text: string) => void;
+  setEditText: (_text: string) => void;
   
   // History
   undo: () => void;
@@ -91,31 +91,31 @@ interface MindMapStore {
   applyAutoLayout: () => void;
   
   // UI Actions
-  setZoom: (zoom: number) => void;
-  setPan: (pan: Position) => void;
+  setZoom: (_zoom: number) => void;
+  setPan: (_pan: Position) => void;
   resetZoom: () => void;
-  setShowCustomizationPanel: (show: boolean) => void;
-  setCustomizationPosition: (position: Position) => void;
-  setShowContextMenu: (show: boolean) => void;
-  setContextMenuPosition: (position: Position) => void;
-  setShowShortcutHelper: (show: boolean) => void;
-  setShowMapList: (show: boolean) => void;
-  setShowNodeMapLinksPanel: (show: boolean) => void;
-  setNodeMapLinksPanelPosition: (position: Position) => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-  setShowLocalStoragePanel: (show: boolean) => void;
-  setShowTutorial: (show: boolean) => void;
-  setSelectedImage: (image: ImageFile | null) => void;
-  setSelectedFile: (file: FileAttachment | null) => void;
-  setFileMenuPosition: (position: Position) => void;
-  setShowImageModal: (show: boolean) => void;
-  setShowFileActionMenu: (show: boolean) => void;
-  setClipboard: (node: MindMapNode | null) => void;
-  setSelectedNodeForLinks: (node: MindMapNode | null) => void;
+  setShowCustomizationPanel: (_show: boolean) => void;
+  setCustomizationPosition: (_position: Position) => void;
+  setShowContextMenu: (_show: boolean) => void;
+  setContextMenuPosition: (_position: Position) => void;
+  setShowShortcutHelper: (_show: boolean) => void;
+  setShowMapList: (_show: boolean) => void;
+  setShowNodeMapLinksPanel: (_show: boolean) => void;
+  setNodeMapLinksPanelPosition: (_position: Position) => void;
+  setSidebarCollapsed: (_collapsed: boolean) => void;
+  setShowLocalStoragePanel: (_show: boolean) => void;
+  setShowTutorial: (_show: boolean) => void;
+  setSelectedImage: (_image: ImageFile | null) => void;
+  setSelectedFile: (_file: FileAttachment | null) => void;
+  setFileMenuPosition: (_position: Position) => void;
+  setShowImageModal: (_show: boolean) => void;
+  setShowFileActionMenu: (_show: boolean) => void;
+  setClipboard: (_node: MindMapNode | null) => void;
+  setSelectedNodeForLinks: (_node: MindMapNode | null) => void;
   closeAllPanels: () => void;
   toggleSidebar: () => void;
-  showCustomization: (position?: Position) => void;
-  showNodeMapLinks: (node: MindMapNode, position: Position) => void;
+  showCustomization: (_position?: Position) => void;
+  showNodeMapLinks: (_node: MindMapNode, _position: Position) => void;
   closeNodeMapLinksPanel: () => void;
 }
 

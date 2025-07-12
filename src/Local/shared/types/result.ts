@@ -80,7 +80,7 @@ export const tryCatch = <T, E = Error>(
   try {
     return { success: true, data: fn() };
   } catch (error) {
-    const handledError = errorHandler ? errorHandler(error) : (error as unknown as E);
+    const handledError = errorHandler ? errorHandler(error) : error as E;
     return { success: false, error: handledError };
   }
 };
@@ -94,7 +94,7 @@ export const tryCatchAsync = async <T, E = Error>(
     const data = await fn();
     return { success: true, data };
   } catch (error) {
-    const handledError = errorHandler ? errorHandler(error) : (error as unknown as E);
+    const handledError = errorHandler ? errorHandler(error) : error as E;
     return { success: false, error: handledError };
   }
 };

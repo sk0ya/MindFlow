@@ -50,6 +50,7 @@ export const validateFileName = (fileName: string) => {
   const errors: string[] = [];
   
   // 基本的な文字チェック
+  // eslint-disable-next-line no-control-regex
   const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
   if (invalidChars.test(fileName)) {
     errors.push('ファイル名に無効な文字が含まれています');
@@ -116,7 +117,7 @@ export const validateFileConsistency = (file: File) => {
   const mimeType = file.type;
   
   // 拡張子とMIMEタイプの対応チェック
-  let expectedMimeTypes: string[] = [];
+  const expectedMimeTypes: string[] = [];
   
   Object.entries(ALLOWED_FILE_TYPES.images).forEach(([mime, config]) => {
     if (config.extensions.includes(extension)) {

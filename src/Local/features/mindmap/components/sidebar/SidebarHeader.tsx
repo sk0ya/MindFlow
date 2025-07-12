@@ -14,8 +14,10 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   onToggleCollapse
 }) => {
   const handleCreateCategory = () => {
+    // eslint-disable-next-line no-alert
     const newCategory = prompt('新しいカテゴリー名を入力してください:', '');
     if (newCategory && newCategory.trim()) {
+      // eslint-disable-next-line no-alert
       const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
       if (mapName && mapName.trim()) {
         onCreateMap(mapName.trim(), newCategory.trim());
@@ -31,6 +33,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
         <button 
           className="action-button create"
           onClick={() => {
+            // eslint-disable-next-line no-alert
             const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
             if (mapName && mapName.trim()) {
               onCreateMap(mapName.trim());

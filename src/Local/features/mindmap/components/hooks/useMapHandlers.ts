@@ -26,6 +26,7 @@ export const useMapHandlers = (
       await switchToMap(mapId);
     } catch (error) {
       console.error('マップ切り替えエラー:', error);
+      // eslint-disable-next-line no-alert
       alert('マップの切り替えに失敗しました: ' + (error as Error).message);
     }
   };
@@ -33,6 +34,7 @@ export const useMapHandlers = (
   const handleCreateMap = async (providedName: string | null = null, providedCategory: string | null = null): Promise<string | null> => {
     let mapName = providedName;
     if (!mapName) {
+      // eslint-disable-next-line no-alert
       mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
     }
     
@@ -43,6 +45,7 @@ export const useMapHandlers = (
         return mapId;
       } catch (error) {
         console.error('マップ作成エラー:', error);
+        // eslint-disable-next-line no-alert
         alert('マップの作成に失敗しました: ' + (error as Error).message);
         return null;
       }
@@ -52,6 +55,7 @@ export const useMapHandlers = (
 
   const handleDeleteMap = async (mapId: string): Promise<boolean> => {
     if (allMindMaps.length <= 1) {
+      // eslint-disable-next-line no-alert
       alert('最後のマインドマップは削除できません');
       return false;
     }
@@ -71,6 +75,7 @@ export const useMapHandlers = (
       await switchToMap(mapId);
     } catch (error) {
       console.error('マップナビゲーションエラー:', error);
+      // eslint-disable-next-line no-alert
       alert('マップの切り替えに失敗しました: ' + (error as Error).message);
     }
   };

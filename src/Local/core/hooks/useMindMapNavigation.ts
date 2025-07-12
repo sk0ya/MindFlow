@@ -4,10 +4,10 @@ import type { MindMapNode, MindMapData } from '../../../shared/types';
 interface NavigationHookParams {
   selectedNodeId: string | null;
   data: MindMapData | null;
-  findNode: (nodeId: string) => MindMapNode | null;
-  flattenNodes: (rootNode: MindMapNode) => MindMapNode[];
-  findParentNode: (nodeId: string) => MindMapNode | null;
-  setSelectedNodeId: (nodeId: string | null) => void;
+  findNode: (_nodeId: string) => MindMapNode | null;
+  flattenNodes: (_rootNode: MindMapNode) => MindMapNode[];
+  findParentNode: (_nodeId: string) => MindMapNode | null;
+  setSelectedNodeId: (_nodeId: string | null) => void;
 }
 
 export const useMindMapNavigation = ({
