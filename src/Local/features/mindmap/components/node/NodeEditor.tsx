@@ -62,7 +62,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       onFinishEdit(node.id, node.text);
     }
     // Tab/EnterはuseKeyboardShortcutsで統一処理
-  }, [node.id, node.text, isComposing, onFinishEdit, blurTimeoutRef]);
+  }, [node.id, node.text, isComposing, onFinishEdit, blurTimeoutRef, editText]);
 
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true);

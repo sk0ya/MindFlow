@@ -38,7 +38,7 @@ interface ViewportBounds {
   bottom: number;
 }
 
-interface Connection {
+interface ConnectionData {
   from: MindMapNode | { x: number; y: number };
   to: MindMapNode | { x: number; y: number };
   hasToggleButton: boolean;
@@ -151,10 +151,10 @@ const VirtualizedCanvas: React.FC<VirtualizedCanvasProps> = ({
   }, [data.rootNode, viewportBounds, selectedNodeId, editingNodeId, flattenVisibleNodes]);
 
   // 接続線の計算（可視ノードのみ）
-  const connections = useMemo((): Connection[] => {
+  const connections = useMemo((): ConnectionData[] => {
     const allNodes = flattenVisibleNodes(data.rootNode);
     const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-    const connections: Connection[] = [];
+    const connections: ConnectionData[] = [];
 
     allNodes.forEach(node => {
       if (node.children && node.children.length > 0) {

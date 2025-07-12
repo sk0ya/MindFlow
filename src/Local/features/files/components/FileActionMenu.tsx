@@ -11,10 +11,10 @@ interface FileActionMenuProps {
   file: FileAttachment | null;
   position: Position;
   onClose: () => void;
-  onDownload: (file: FileAttachment) => void;
-  onRename: (fileId: string, newName: string) => void;
-  onDelete: (fileId: string) => void;
-  onView: (file: FileAttachment) => void;
+  onDownload: (_file: FileAttachment) => void;
+  onRename: (_fileId: string, _newName: string) => void;
+  onDelete: (_fileId: string) => void;
+  onView: (_file: FileAttachment) => void;
 }
 
 const FileActionMenu: React.FC<FileActionMenuProps> = ({ 

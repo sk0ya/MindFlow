@@ -11,7 +11,7 @@ interface NodeUpdates {
   [key: string]: unknown;
 }
 
-export const useMindMapFiles = (findNode: (nodeId: string) => MindMapNode | null, updateNode: (nodeId: string, updates: NodeUpdates) => void, currentMapId: string | null = null) => {
+export const useMindMapFiles = (findNode: (_nodeId: string) => MindMapNode | null, updateNode: (_nodeId: string, _updates: NodeUpdates) => void, currentMapId: string | null = null) => {
   // アプリ初期化状態をチェック
   const isAppInitializing = () => {
     const initializing = !currentMapId;

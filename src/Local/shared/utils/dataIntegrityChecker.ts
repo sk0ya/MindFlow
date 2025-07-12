@@ -276,22 +276,27 @@ export class DataIntegrityChecker {
    * 詳細ログ出力
    */
   static logIntegrityReport(result: IntegrityCheckResult, mapData: MindMapData | null | undefined): void {
+    // eslint-disable-next-line no-console
     console.group(`📊 データ整合性レポート: ${mapData?.title || 'Unknown Map'}`);
     
     
     if (result.issues.length > 0) {
+      // eslint-disable-next-line no-console
       console.group('🚨 問題詳細:');
       result.issues.forEach((issue) => {
         if (issue.data) {
           // Log issue data if needed
         }
       });
+      // eslint-disable-next-line no-console
       console.groupEnd();
 
+      // eslint-disable-next-line no-console
       console.group('💡 修復提案:');
       result.repairSuggestions.forEach(() => {
         // Log suggestions if needed
       });
+      // eslint-disable-next-line no-console
       console.groupEnd();
     }
 

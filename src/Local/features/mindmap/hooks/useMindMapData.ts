@@ -225,7 +225,7 @@ export const useMindMapData = (isAppReady = false) => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [data]);
+  }, [data, history.length]);
 
   // Export/Import functions for testing
   const exportData = () => data;

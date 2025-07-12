@@ -236,9 +236,11 @@ class Logger {
     
     switch (logEntry.levelNumber) {
       case LOG_LEVELS.DEBUG:
+        // eslint-disable-next-line no-console
         console.debug(`%c${formattedMessage}`, style);
         break;
       case LOG_LEVELS.INFO:
+        // eslint-disable-next-line no-console
         console.info(`%c${formattedMessage}`, style);
         break;
       case LOG_LEVELS.WARN:
@@ -504,6 +506,7 @@ if (getEnvironment() === 'development') {
   // グローバルにロガーを公開（デバッグ用）
   if (typeof window !== 'undefined') {
     window.mindflowLogger = logger;
+    // eslint-disable-next-line no-console
     window.logStats = () => console.table(logger.getLogStats());
     window.clearLogs = () => logger.clearLogs();
   }
