@@ -28,7 +28,7 @@ export const useMindMap = (isAppReady = false) => {
 
   // ファイル操作（簡易実装）
   const attachFileToNode = useCallback(async (nodeId: string, file: File): Promise<FileAttachment> => {
-    console.log('attachFileToNode called:', { nodeId, file });
+    console.warn('attachFileToNode called:', { nodeId, file });
     // TODO: 実際のファイル添付機能を実装
     const fileAttachment: FileAttachment = {
       id: `file_${Date.now()}`,
@@ -43,24 +43,24 @@ export const useMindMap = (isAppReady = false) => {
   }, []);
   
   const removeFileFromNode = useCallback(async (nodeId: string, fileId: string) => {
-    console.log('removeFileFromNode called:', { nodeId, fileId });
+    console.warn('removeFileFromNode called:', { nodeId, fileId });
   }, []);
   
   const renameFileInNode = useCallback(async (nodeId: string, fileId: string, newName: string) => {
-    console.log('renameFileInNode called:', { nodeId, fileId, newName });
+    console.warn('renameFileInNode called:', { nodeId, fileId, newName });
   }, []);
   
-  const downloadFile = useCallback(async (file: any) => {
-    console.log('downloadFile called:', file);
+  const downloadFile = useCallback(async (file: FileAttachment) => {
+    console.warn('downloadFile called:', file);
   }, []);
 
   // 後方互換性のための必要最小限の関数のみ
   const changeParent = useCallback(async (nodeId: string, newParentId: string) => {
     return await mindMapHook.moveNode(nodeId, newParentId);
-  }, [mindMapHook.moveNode]);
+  }, [mindMapHook]);
 
   const changeSiblingOrder = useCallback(async (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
-    console.log('changeSiblingOrder called:', { draggedNodeId, targetNodeId, insertBefore });
+    console.warn('changeSiblingOrder called:', { draggedNodeId, targetNodeId, insertBefore });
     return true;
   }, []);
 
@@ -142,21 +142,21 @@ export const useMindMap = (isAppReady = false) => {
     currentMapId: mindMapHook.data?.id || null,
     allMindMaps: mindMapHook.data ? [mindMapHook.data] : [],
     createMindMap: useCallback(async (title: string) => {
-      console.log('createMindMap called:', title);
+      console.warn('createMindMap called:', title);
       return 'new-map-id';
     }, []),
     renameMindMap: useCallback(async (mapId: string, newTitle: string) => {
-      console.log('renameMindMap called:', { mapId, newTitle });
+      console.warn('renameMindMap called:', { mapId, newTitle });
     }, []),
     deleteMindMapById: useCallback(async (mapId: string) => {
-      console.log('deleteMindMapById called:', mapId);
+      console.warn('deleteMindMapById called:', mapId);
       return true;
     }, []),
     switchToMap: useCallback(async (mapId: string) => {
-      console.log('switchToMap called:', mapId);
+      console.warn('switchToMap called:', mapId);
     }, []),
     changeMapCategory: useCallback(async (mapId: string, category: string) => {
-      console.log('changeMapCategory called:', { mapId, category });
+      console.warn('changeMapCategory called:', { mapId, category });
     }, []),
     getAvailableCategories: useCallback(() => ['未分類', '仕事', '個人', '学習'], []),
     

@@ -1,4 +1,52 @@
-import type { MindMapNode, Position } from '../../../../shared/types';
+import type { MindMapNode, Position, FileAttachment, NodeMapLink } from '../../../../shared/types';
+
+// 依存関係の型定義
+interface MindMapHookDependency {
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  addChildNode: (parentId: string, text: string, options?: Partial<MindMapNode>) => string | undefined;
+  deleteNode: (nodeId: string) => void;
+  findNode: (nodeId: string) => MindMapNode | undefined;
+  changeParent: (nodeId: string, newParentId: string) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+interface FileHandlerDependency {
+  uploadFile: (nodeId: string, file: File) => Promise<void>;
+  removeFile: (nodeId: string, fileId: string) => Promise<void>;
+  downloadFile: (nodeId: string, fileId: string) => Promise<void>;
+  renameFile: (nodeId: string, fileId: string, newName: string) => Promise<void>;
+  handleFileUpload: (nodeId: string, file: File) => Promise<void>;
+  handleRemoveFile: (nodeId: string, fileId: string) => Promise<void>;
+  handleFileDownload: (nodeId: string, fileId: string) => Promise<void>;
+  handleFileRename: (nodeId: string, fileId: string, newName: string) => Promise<void>;
+  handleShowImageModal: (image: { url: string; alt: string }) => void;
+  handleShowFileActionMenu: (file: FileAttachment, position: Position) => void;
+}
+
+interface MapHandlerDependency {
+  createMap: (title: string) => Promise<string>;
+  deleteMap: (mapId: string) => Promise<void>;
+  renameMap: (mapId: string, newTitle: string) => Promise<void>;
+  changeMapCategory: (mapId: string, category: string) => Promise<void>;
+  selectMap: (mapId: string) => Promise<void>;
+  handleNavigateToMap: (mapId: string) => Promise<void>;
+  handleCreateMap: (title: string) => Promise<string>;
+  handleDeleteMap: (mapId: string) => Promise<void>;
+  handleRenameMap: (mapId: string, newTitle: string) => Promise<void>;
+  handleChangeCategory: (mapId: string, category: string) => Promise<void>;
+  handleSelectMap: (mapId: string) => Promise<void>;
+}
+
+interface UIStateDependency {
+  showImageModal: (image: { url: string; alt: string }) => void;
+  showFileActionMenu: (file: FileAttachment, position: Position) => void;
+  showNodeMapLinks: (node: MindMapNode, position: Position) => void;
+  handleShowNodeMapLinks: (node: MindMapNode, position: Position) => void;
+  handleCloseNodeMapLinksPanel: () => void;
+}
 
 export interface MindMapService {
   // ノード操作
@@ -7,7 +55,7 @@ export interface MindMapService {
   
   // コマンドベースのノード操作
   updateNodeWithCommand(nodeId: string, updates: Partial<MindMapNode>): void;
-  addChildNodeWithCommand(parentId: string, text: string, options?: any): string;
+  addChildNodeWithCommand(parentId: string, text: string, options?: Partial<MindMapNode>): string;
   deleteNodeWithCommand(nodeId: string): void;
   changeParentWithCommand(nodeId: string, newParentId: string): void;
   
@@ -32,7 +80,7 @@ export interface MindMapService {
   
   // UI操作
   showImageModal(image: { url: string; alt: string }): void;
-  showFileActionMenu(file: any, position: Position): void;
+  showFileActionMenu(file: FileAttachment, position: Position): void;
   showNodeMapLinks(node: MindMapNode, position: Position): void;
   
   // マップ管理
@@ -44,16 +92,16 @@ export interface MindMapService {
 }
 
 export class LocalMindMapService implements MindMapService {
-  private mindMapHook: any;
-  private fileHandlers: any;
-  private mapHandlers: any;
-  private uiState: any;
+  private mindMapHook: MindMapHookDependency;
+  private fileHandlers: FileHandlerDependency;
+  private mapHandlers: MapHandlerDependency;
+  private uiState: UIStateDependency;
 
   constructor(
-    mindMapHook: any,
-    fileHandlers: any,
-    mapHandlers: any,
-    uiState: any
+    mindMapHook: MindMapHookDependency,
+    fileHandlers: FileHandlerDependency,
+    mapHandlers: MapHandlerDependency,
+    uiState: UIStateDependency
   ) {
     this.mindMapHook = mindMapHook;
     this.fileHandlers = fileHandlers;
@@ -67,7 +115,7 @@ export class LocalMindMapService implements MindMapService {
     this.mindMapHook.updateNode(nodeId, updates);
   }
 
-  addChildNodeWithCommand(parentId: string, text: string, _options?: any): string {
+  addChildNodeWithCommand(parentId: string, text: string, _options?: Partial<MindMapNode>): string {
     // 既存のストアの履歴機能を利用
     const nodeId = this.mindMapHook.addChildNode(parentId, text);
     return nodeId || `node_${Date.now()}`;
@@ -151,9 +199,11 @@ export class LocalMindMapService implements MindMapService {
     }
     
     const existingLinks = node.mapLinks || [];
-    const newLink = {
+    const newLink: NodeMapLink = {
       id: `link_${Date.now()}`,
-      mapId: targetMapId,
+      targetMapId: targetMapId,
+      targetMapTitle: '', // TODO: Get actual title from target map
+      description: '',
       createdAt: new Date().toISOString()
     };
     
@@ -168,7 +218,7 @@ export class LocalMindMapService implements MindMapService {
       throw new Error('ノードが見つかりません');
     }
     
-    const updatedLinks = (node.mapLinks || []).filter((link: any) => link.id !== linkId);
+    const updatedLinks = (node.mapLinks || []).filter(link => link.id !== linkId);
     await this.mindMapHook.updateNode(nodeId, { mapLinks: updatedLinks });
   }
 
@@ -202,7 +252,7 @@ export class LocalMindMapService implements MindMapService {
     this.fileHandlers.handleShowImageModal(image);
   }
 
-  showFileActionMenu(file: any, position: Position): void {
+  showFileActionMenu(file: FileAttachment, position: Position): void {
     this.fileHandlers.handleShowFileActionMenu(file, position);
   }
 

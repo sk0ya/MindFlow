@@ -27,7 +27,7 @@ interface UseLayoutWorkerResult {
 export const useLayoutWorker = (): UseLayoutWorkerResult => {
   const workerRef = useRef<Worker | null>(null);
   const isWorkingRef = useRef(false);
-  const pendingCallbacksRef = useRef<Map<string, { resolve: (value: any) => void; reject: (error: Error) => void }>>(new Map());
+  const pendingCallbacksRef = useRef<Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>>(new Map());
 
   // Worker の初期化
   const initializeWorker = useCallback(() => {
@@ -73,7 +73,7 @@ export const useLayoutWorker = (): UseLayoutWorkerResult => {
   }, []);
 
   // Worker メッセージ送信のヘルパー
-  const sendMessage = useCallback((type: string, payload: any): Promise<any> => {
+  const sendMessage = useCallback((type: string, payload: unknown): Promise<unknown> => {
     return new Promise((resolve, reject) => {
       try {
         initializeWorker();
@@ -113,7 +113,7 @@ export const useLayoutWorker = (): UseLayoutWorkerResult => {
   // レイアウト計算
   const calculateLayout = useCallback(async (rootNode: MindMapNode): Promise<NodePosition[]> => {
     try {
-      const result = await sendMessage('CALCULATE_LAYOUT', { rootNode });
+      const result = await sendMessage('CALCULATE_LAYOUT', { rootNode }) as { positions: NodePosition[] };
       return result.positions;
     } catch (error) {
       console.error('Layout calculation failed:', error);
@@ -124,7 +124,7 @@ export const useLayoutWorker = (): UseLayoutWorkerResult => {
   // 位置最適化
   const optimizePositions = useCallback(async (positions: NodePosition[]): Promise<NodePosition[]> => {
     try {
-      const result = await sendMessage('OPTIMIZE_POSITIONS', { positions });
+      const result = await sendMessage('OPTIMIZE_POSITIONS', { positions }) as { positions: NodePosition[] };
       return result.positions;
     } catch (error) {
       console.error('Position optimization failed:', error);
@@ -135,7 +135,7 @@ export const useLayoutWorker = (): UseLayoutWorkerResult => {
   // 境界計算
   const calculateBounds = useCallback(async (positions: NodePosition[]): Promise<LayoutBounds> => {
     try {
-      const result = await sendMessage('CALCULATE_BOUNDS', { positions });
+      const result = await sendMessage('CALCULATE_BOUNDS', { positions }) as { bounds: LayoutBounds };
       return result.bounds;
     } catch (error) {
       console.error('Bounds calculation failed:', error);

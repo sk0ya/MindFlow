@@ -4,15 +4,16 @@
  */
 
 import { useEffect } from 'react';
+import type { MindMapNode } from '../../../shared/types';
 
 interface KeyboardShortcutHandlers {
   selectedNodeId: string | null;
   editingNodeId: string | null;
   setEditText: (text: string) => void;
   startEdit: (nodeId: string) => void;
-  finishEdit: (nodeId: string, newText?: string, options?: any) => Promise<void>;
+  finishEdit: (nodeId: string, newText?: string, options?: Partial<MindMapNode>) => Promise<void>;
   editText: string;
-  updateNode: (id: string, updates: any) => void;
+  updateNode: (id: string, updates: Partial<MindMapNode>) => void;
   addChildNode: (parentId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
   addSiblingNode: (nodeId: string, text?: string, startEditing?: boolean) => Promise<string | null>;
   deleteNode: (id: string) => void;

@@ -2,12 +2,12 @@ import { Command } from '../Command';
 import type { MindMapNode } from '../../../shared/types';
 
 export interface NodeOperations {
-  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
-  addChildNode: (parentId: string, text: string, options?: any) => string;
-  deleteNode: (nodeId: string) => void;
-  findNode: (nodeId: string) => MindMapNode | null;
-  changeParent: (nodeId: string, newParentId: string) => void;
-  changeSiblingOrder: (nodeId: string, direction: 'up' | 'down') => void;
+  updateNode: (_nodeId: string, _updates: Partial<MindMapNode>) => void;
+  addChildNode: (_parentId: string, _text: string, _options?: Partial<MindMapNode>) => string;
+  deleteNode: (_nodeId: string) => void;
+  findNode: (_nodeId: string) => MindMapNode | null;
+  changeParent: (_nodeId: string, _newParentId: string) => void;
+  changeSiblingOrder: (_nodeId: string, _direction: 'up' | 'down') => void;
 }
 
 export class UpdateNodeCommand implements Command {
@@ -78,7 +78,7 @@ export class UpdateNodeCommand implements Command {
 export class AddChildNodeCommand implements Command {
   private parentId: string;
   private text: string;
-  private options: any;
+  private options: Partial<MindMapNode>;
   private addedNodeId: string | null = null;
   private operations: NodeOperations;
   private executed: boolean = false;
@@ -86,7 +86,7 @@ export class AddChildNodeCommand implements Command {
   constructor(
     parentId: string,
     text: string,
-    options: any,
+    options: Partial<MindMapNode>,
     operations: NodeOperations
   ) {
     this.parentId = parentId;
@@ -138,7 +138,7 @@ export class DeleteNodeCommand implements Command {
     }
   }
 
-  private findParentNode(nodeId: string): MindMapNode | null {
+  private findParentNode(targetNodeId: string): MindMapNode | null {
     // 正規化データ構造から親を見つける実装
     // まず全ノードを取得して親子関係を探す
     const allNodes = this.operations.findNode('root')?.children || [];
@@ -158,11 +158,11 @@ export class DeleteNodeCommand implements Command {
     
     // ルートノードから検索
     const rootNode = this.operations.findNode('root');
-    if (rootNode && rootNode.children.some(child => child.id === nodeId)) {
+    if (rootNode && rootNode.children.some(child => child.id === targetNodeId)) {
       return rootNode;
     }
     
-    return findParentRecursive(allNodes, nodeId);
+    return findParentRecursive(allNodes, targetNodeId);
   }
 
   execute(): void {

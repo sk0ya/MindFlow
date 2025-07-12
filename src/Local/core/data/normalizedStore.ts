@@ -173,7 +173,8 @@ export function addNormalizedNode(
     throw new Error(`Parent node not found: ${parentId}`);
   }
 
-  const { children, ...nodeWithoutChildren } = newNode;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { children: _children, ...nodeWithoutChildren } = newNode;
 
   return {
     ...normalizedData,

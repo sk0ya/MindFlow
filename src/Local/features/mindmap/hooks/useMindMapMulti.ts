@@ -291,7 +291,7 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
           childrenCount: c.children?.length || 0
         })) || [],
         isClonedData: originalTargetMap !== targetMap, // 参照が異なることを確認
-        originalMapChildren: originalTargetMap.rootNode?.children?.length || 0
+        originalMapChildren: originalTargetMap?.rootNode?.children?.length || 0
       });
       
       // マップ表示（完全に独立したデータ）
@@ -310,16 +310,16 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
           color: c.color
         })) || [],
         dataIndependence: {
-          fromOriginal: originalTargetMap.rootNode !== coloredMap.rootNode,
+          fromOriginal: originalTargetMap?.rootNode !== coloredMap.rootNode,
           fromTarget: targetMap.rootNode !== coloredMap.rootNode,
-          childrenFromOriginal: originalTargetMap.rootNode?.children !== coloredMap.rootNode?.children,
+          childrenFromOriginal: originalTargetMap?.rootNode?.children !== coloredMap.rootNode?.children,
           childrenFromTarget: targetMap.rootNode?.children !== coloredMap.rootNode?.children
         },
         dataIntegrity: {
-          originalChildren: originalTargetMap.rootNode?.children?.length || 0,
+          originalChildren: originalTargetMap?.rootNode?.children?.length || 0,
           targetChildren: targetMap.rootNode?.children?.length || 0,
           coloredChildren: coloredMap.rootNode?.children?.length || 0,
-          isConsistent: (originalTargetMap.rootNode?.children?.length || 0) === (coloredMap.rootNode?.children?.length || 0)
+          isConsistent: (originalTargetMap?.rootNode?.children?.length || 0) === (coloredMap.rootNode?.children?.length || 0)
         }
       });
       
@@ -330,7 +330,7 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
       }
       
       // 🔧 データ消失チェック（問題特定用）
-      const originalChildren = originalTargetMap.rootNode?.children?.length || 0;
+      const originalChildren = originalTargetMap?.rootNode?.children?.length || 0;
       const finalChildren = coloredMap.rootNode?.children?.length || 0;
       if (originalChildren !== finalChildren) {
         console.error('❌ データ消失検出!', {
@@ -342,7 +342,7 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
         });
         // デバッグ用に詳細な差分を出力
         console.error('詳細差分:', {
-          originalChildrenIds: originalTargetMap.rootNode?.children?.map((c: MindMapNode) => c.id) || [],
+          originalChildrenIds: originalTargetMap?.rootNode?.children?.map((c: MindMapNode) => c.id) || [],
           finalChildrenIds: coloredMap.rootNode?.children?.map((c: MindMapNode) => c.id) || []
         });
       }
