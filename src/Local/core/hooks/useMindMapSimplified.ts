@@ -54,18 +54,15 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
   const dataActions = {
     // ノード操作
     updateNode: useCallback((nodeId: string, updates: Partial<MindMapNode>) => {
-      console.log('updateNode:', nodeId, updates);
       store.updateNode(nodeId, updates);
     }, [store]),
 
     addChildNode: useCallback(async (parentId: string, text = ''): Promise<string | null> => {
-      console.log('addChildNode:', parentId, text);
       const newNodeId = store.addChildNode(parentId, text);
       return newNodeId || null;
     }, [store]),
 
     addSiblingNode: useCallback(async (nodeId: string, text = '', startEditing = false): Promise<string | null> => {
-      console.log('addSiblingNode:', nodeId, text, startEditing);
       const newNodeId = store.addSiblingNode(nodeId, text);
       if (startEditing && newNodeId) {
         store.startEditing(newNodeId);
@@ -74,12 +71,10 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
     }, [store]),
 
     deleteNode: useCallback((nodeId: string) => {
-      console.log('deleteNode:', nodeId);
       store.deleteNode(nodeId);
     }, [store]),
 
     moveNode: useCallback((nodeId: string, newParentId: string) => {
-      console.log('moveNode:', nodeId, newParentId);
       store.moveNode(nodeId, newParentId);
     }, [store]),
 
@@ -89,12 +84,10 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
 
     // 編集操作
     startEditingNode: useCallback((nodeId: string) => {
-      console.log('startEditingNode:', nodeId);
       store.startEditing(nodeId);
     }, [store]),
 
     finishEditingNode: useCallback((nodeId: string, text: string) => {
-      console.log('finishEditingNode:', nodeId, text);
       store.finishEditing(nodeId, text);
     }, [store]),
 
@@ -104,12 +97,10 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
 
     // 履歴操作
     undo: useCallback(() => {
-      console.log('undo');
       store.undo();
     }, [store]),
 
     redo: useCallback(() => {
-      console.log('redo');
       store.redo();
     }, [store])
   };

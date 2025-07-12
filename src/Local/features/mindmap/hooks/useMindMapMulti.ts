@@ -44,7 +44,6 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
         newMap.rootNode.text = title;
       }
       
-      console.log('🆕 マップ作成開始:', title);
       
       const result = await storageManager.createMap(newMap);
       
@@ -52,13 +51,11 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
         throw new Error(result.error || 'マップ作成に失敗しました');
       }
       
-      console.log('✅ マップ作成完了:', result.data?.title || title);
       
       // マップ一覧を更新
       await refreshAllMindMaps();
       
       // ローカルモードでは即座作成完了
-      console.log('✅ ローカルマップ作成完了:', result.data?.title || title);
       
       // 新規作成したマップに切り替え
       await switchToMap(result.data?.id || newMap.id, true);
@@ -115,14 +112,12 @@ export const useMindMapMulti = (data: MindMapData | null, setData: (data: MindMa
     }
     
     try {
-      console.log('🗑️ マップ削除開始:', mapId);
       
       // ローカルストレージから削除
       const success = await deleteMindMap(mapId);
       if (!success) {
         throw new Error('マップ削除に失敗しました');
       }
-      console.log('✅ マップ削除成功:', mapId);
       
       // マップ一覧を更新
       await refreshAllMindMaps();

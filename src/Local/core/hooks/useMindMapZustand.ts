@@ -14,23 +14,19 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
   // 初期データの読み込み
   useEffect(() => {
     if (isAppReady && !store.data) {
-      console.log('Loading initial data...');
       const savedData = localStorage.getItem('mindMapData');
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData) as MindMapData;
-          console.log('Loaded saved data:', parsedData);
           store.setData(parsedData);
         } catch (error) {
           console.error('Failed to load saved data:', error);
           // デフォルトデータを作成
           const initialData = createInitialData();
-          console.log('Created initial data:', initialData);
           store.setData(initialData);
         }
       } else {
         // 初回起動時
-        console.log('No saved data, creating initial data...');
         const initialData = createInitialData();
         console.log('Created initial data:', initialData);
         store.setData(initialData);

@@ -1,1 +1,0 @@
-export * from '../../features/mindmap/services/mindMapService';
