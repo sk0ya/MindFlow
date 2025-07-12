@@ -44,6 +44,7 @@ import {
 } from '../data/normalizedStore';
 import { createNewNode, COLORS } from '../../shared/types/dataTypes';
 import { LAYOUT } from '../../shared/constants';
+import { autoSelectLayout } from '../../shared/utils/autoLayout';
 
 interface MindMapStore {
   // State
@@ -86,6 +87,7 @@ interface MindMapStore {
   // Utility
   updateNormalizedData: () => void;
   syncToMindMapData: () => void;
+  applyAutoLayout: () => void;
   
   // UI Actions
   setZoom: (zoom: number) => void;
@@ -195,6 +197,34 @@ export const useMindMapStore = create<MindMapStore>()(
           });
         },
         
+        applyAutoLayout: () => {
+          const state = get();
+          if (!state.data?.rootNode) return;
+          
+          try {
+            const layoutedRootNode = autoSelectLayout(state.data.rootNode);
+            
+            set((draft) => {
+              if (draft.data) {
+                draft.data = {
+                  ...draft.data,
+                  rootNode: layoutedRootNode,
+                  updatedAt: new Date().toISOString()
+                };
+                
+                // Update normalized data
+                draft.normalizedData = normalizeTreeData(layoutedRootNode);
+                
+                // Add to history
+                draft.history = [...draft.history.slice(0, draft.historyIndex + 1), draft.data];
+                draft.historyIndex = draft.history.length - 1;
+              }
+            });
+          } catch (error) {
+            console.error('Auto layout failed:', error);
+          }
+        },
+        
         // Node operations
         findNode: (nodeId: string) => {
           const { normalizedData } = get();
@@ -289,6 +319,12 @@ export const useMindMapStore = create<MindMapStore>()(
             }
           });
           
+          // Apply auto layout if enabled
+          const { data } = get();
+          if (data?.settings?.autoLayout) {
+            get().applyAutoLayout();
+          }
+          
           return newNodeId;
         },
         
@@ -331,6 +367,12 @@ export const useMindMapStore = create<MindMapStore>()(
               console.error('deleteNode error:', error);
             }
           });
+          
+          // Apply auto layout if enabled
+          const { data } = get();
+          if (data?.settings?.autoLayout) {
+            get().applyAutoLayout();
+          }
         },
         
         moveNode: (nodeId: string, newParentId: string) => {
@@ -353,6 +395,12 @@ export const useMindMapStore = create<MindMapStore>()(
               console.error('moveNode error:', error);
             }
           });
+          
+          // Apply auto layout if enabled
+          const { data } = get();
+          if (data?.settings?.autoLayout) {
+            get().applyAutoLayout();
+          }
         },
         
         // Selection & Editing

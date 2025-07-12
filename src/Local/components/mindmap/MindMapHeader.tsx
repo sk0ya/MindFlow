@@ -15,6 +15,9 @@ interface MindMapHeaderProps {
   onZoomReset: () => void;
   onShowLocalStoragePanel: () => void;
   onShowShortcutHelper: () => void;
+  onAutoLayout?: () => void;
+  onToggleSidebar?: () => void;
+  showSidebar?: boolean;
 }
 
 const MindMapHeader: React.FC<MindMapHeaderProps> = ({
@@ -29,7 +32,10 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   zoom,
   onZoomReset,
   onShowLocalStoragePanel,
-  onShowShortcutHelper
+  onShowShortcutHelper,
+  onAutoLayout,
+  onToggleSidebar,
+  showSidebar = true
 }) => {
   return (
     <Toolbar
@@ -45,6 +51,9 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       onZoomReset={onZoomReset}
       onShowLocalStoragePanel={onShowLocalStoragePanel}
       onShowShortcutHelper={onShowShortcutHelper}
+      onAutoLayout={onAutoLayout}
+      onToggleSidebar={onToggleSidebar}
+      showSidebar={showSidebar}
     />
   );
 };

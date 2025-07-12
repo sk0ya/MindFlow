@@ -64,9 +64,12 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
       return newNodeId || null;
     }, [store]),
 
-    addSiblingNode: useCallback(async (nodeId: string, text = ''): Promise<string | null> => {
-      console.log('addSiblingNode:', nodeId, text);
+    addSiblingNode: useCallback(async (nodeId: string, text = '', startEditing = false): Promise<string | null> => {
+      console.log('addSiblingNode:', nodeId, text, startEditing);
       const newNodeId = store.addSiblingNode(nodeId, text);
+      if (startEditing && newNodeId) {
+        store.startEditing(newNodeId);
+      }
       return newNodeId || null;
     }, [store]),
 
@@ -182,6 +185,10 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
 
     toggleSidebar: useCallback(() => {
       store.toggleSidebar();
+    }, [store]),
+
+    applyAutoLayout: useCallback(() => {
+      store.applyAutoLayout();
     }, [store]),
 
     showCustomization: useCallback((_node: MindMapNode, position: Position) => {

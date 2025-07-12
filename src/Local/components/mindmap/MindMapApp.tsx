@@ -95,7 +95,13 @@ const MindMapApp: React.FC = () => {
       }
       return Promise.resolve(null);
     },
-    addSiblingNode: mindMap.addSiblingNode,
+    addSiblingNode: async (nodeId: string, text = '', startEditingAfter = false) => {
+      const newNodeId = await mindMap.addSiblingNode(nodeId, text);
+      if (startEditingAfter && newNodeId) {
+        mindMap.startEditingNode(newNodeId);
+      }
+      return Promise.resolve(null);
+    },
     deleteNode: (nodeId: string) => mindMap.deleteNode(nodeId),
     undo: () => mindMap.undo(),
     redo: () => mindMap.redo(),
@@ -187,6 +193,9 @@ const MindMapApp: React.FC = () => {
               onZoomReset={mindMap.resetZoom}
               onShowLocalStoragePanel={() => mindMap.setShowLocalStoragePanel(true)}
               onShowShortcutHelper={() => mindMap.setShowShortcutHelper(true)}
+              onAutoLayout={() => mindMap.applyAutoLayout()}
+              onToggleSidebar={mindMap.toggleSidebar}
+              showSidebar={!ui.sidebarCollapsed}
             />
 
             <MindMapWorkspace
