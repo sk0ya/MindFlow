@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { MindMapNode, MindMapData } from '../../shared/types';
+import type { MindMapNode, MindMapData } from '../../../shared/types';
 
 interface NavigationHookParams {
   selectedNodeId: string | null;

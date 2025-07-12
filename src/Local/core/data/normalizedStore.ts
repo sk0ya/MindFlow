@@ -1,4 +1,4 @@
-import type { MindMapNode, MindMapData } from '../../shared/types';
+import type { MindMapNode, MindMapData } from '../../../shared/types';
 
 // 正規化されたデータ構造
 export interface NormalizedData {

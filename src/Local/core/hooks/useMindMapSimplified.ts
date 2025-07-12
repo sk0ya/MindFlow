@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
-import type { MindMapNode, MindMapData, Position } from '../../shared/types';
+import type { MindMapNode, MindMapData, Position } from '../../../shared/types';
 import { createInitialData } from '../../shared/types/dataTypes';
 
 /**

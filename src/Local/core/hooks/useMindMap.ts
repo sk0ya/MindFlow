@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useMindMapZustand } from './useMindMapZustand';
 import { useMindMapNavigation } from './useMindMapNavigation';
-import type { FileAttachment } from '../../shared/types';
+import type { FileAttachment } from '../../../shared/types';
 
 /**
  * 簡素化されたメインMindMapフック

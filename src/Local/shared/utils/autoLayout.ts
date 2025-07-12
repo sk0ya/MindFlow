@@ -103,7 +103,8 @@ export const hierarchicalLayout = (rootNode: MindMapNode, options: LayoutOptions
       node.y = centerY;
     } else {
       if (direction === 'horizontal') {
-        node.x = centerX + (depth * levelSpacing * (depth % 2 === 1 ? 1 : -1));
+        // 全ての子ノードを右側に配置（標準的なツリーレイアウト）
+        node.x = centerX + (depth * levelSpacing);
         node.y = centerY + (offset - totalSiblings / 2) * nodeSpacing;
       } else {
         node.x = centerX + (offset - totalSiblings / 2) * nodeSpacing;
@@ -173,22 +174,9 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         const leftChildren: MindMapNode[] = [];
         const rightChildren: MindMapNode[] = [];
 
-        // 子ノードを左右に振り分け（最初の4つは右、次の4つは左、その後は交互）
-        node.children.forEach((child: MindMapNode, index: number) => {
-          if (index < 4) {
-            // 最初の4つは右側
-            rightChildren.push(child);
-          } else if (index < 8) {
-            // 次の4つは左側
-            leftChildren.push(child);
-          } else {
-            // 8つ以降は交互配置
-            if ((index - 8) % 2 === 0) {
-              rightChildren.push(child);
-            } else {
-              leftChildren.push(child);
-            }
-          }
+        // すべての子ノードを右側に配置（標準的なマインドマップレイアウト）
+        node.children.forEach((child: MindMapNode) => {
+          rightChildren.push(child);
         });
 
         // 右側の子ノード配置
@@ -474,6 +462,68 @@ export const circularLayout = (rootNode: MindMapNode, options: LayoutOptions = {
 };
 
 /**
+ * シンプルな右側階層レイアウト - 標準的なマインドマップスタイル
+ */
+export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
+  const {
+    centerX = COORDINATES.DEFAULT_CENTER_X,
+    centerY = COORDINATES.DEFAULT_CENTER_Y,
+    levelSpacing = LAYOUT.LEVEL_SPACING,
+    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN * 2
+  } = options;
+
+  // 全ノードを平坦化して深度順でソート
+  const allNodes: Array<{ node: MindMapNode; depth: number; parentY: number }> = [];
+  
+  const collectNodes = (node: MindMapNode, depth = 0, parentY = centerY): void => {
+    allNodes.push({ node, depth, parentY });
+    
+    if (!node.collapsed && node.children && node.children.length > 0) {
+      node.children.forEach((child: MindMapNode) => {
+        collectNodes(child, depth + 1, node.y || parentY);
+      });
+    }
+  };
+
+  const newRootNode = cloneDeep(rootNode);
+  
+  // まずルートノードを配置
+  newRootNode.x = centerX;
+  newRootNode.y = centerY;
+  
+  // 全ノードを収集
+  collectNodes(newRootNode);
+  
+  // 各階層でのY座標カウンター
+  const levelYCounters: { [depth: number]: number } = {};
+  
+  // 深度順に処理
+  allNodes.forEach(({ node, depth }) => {
+    if (depth === 0) {
+      // ルートは既に配置済み
+      levelYCounters[0] = centerY;
+      return;
+    }
+    
+    // X座標: 右側に階層的に配置
+    node.x = centerX + (depth * levelSpacing);
+    
+    // Y座標: 各階層で順次配置
+    if (levelYCounters[depth] === undefined) {
+      // この階層の最初のノード
+      // 上の階層から少し上にオフセット
+      const baseY = centerY - (depth * 50);
+      levelYCounters[depth] = baseY;
+    }
+    
+    node.y = levelYCounters[depth];
+    levelYCounters[depth] += nodeSpacing;
+  });
+
+  return newRootNode;
+};
+
+/**
  * 自動レイアウト選択 - ノード数に基づいて最適なレイアウトを選択
  */
 export const autoSelectLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
@@ -488,14 +538,11 @@ export const autoSelectLayout = (rootNode: MindMapNode, options: LayoutOptions =
   const allNodes = flattenNodes(rootNode);
   const nodeCount = allNodes.length;
 
-  if (nodeCount <= 5) {
+  if (nodeCount <= 3) {
     return radialLayout(rootNode, options);
-  } else if (nodeCount <= 15) {
-    return improvedMindMapLayout(rootNode, options);
-  } else if (nodeCount <= 30) {
-    return hierarchicalLayout(rootNode, options);
   } else {
-    return organicLayout(rootNode, options);
+    // 4ノード以上は常にシンプルな右側階層レイアウト
+    return simpleHierarchicalLayout(rootNode, options);
   }
 };
 
@@ -551,6 +598,12 @@ export const layoutPresets: { [key: string]: LayoutPreset } = {
     description: '全ノードを円周上に配置',
     icon: '⭕',
     func: circularLayout
+  },
+  simple: {
+    name: 'シンプル階層',
+    description: '右側一方向の標準レイアウト',
+    icon: '➡️',
+    func: simpleHierarchicalLayout
   },
   auto: {
     name: '自動選択',

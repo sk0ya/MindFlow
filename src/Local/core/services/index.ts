@@ -1,1 +1,1 @@
-export * from './mindMapService';
+export * from '../../features/mindmap/services/mindMapService';

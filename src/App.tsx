@@ -4,7 +4,7 @@ import { StorageModeSelector } from './StorageSelection/ui/components/storage/St
 import { AuthProvider } from './Cloud/hooks/useAuth';
 
 // Dynamic imports for both Local and Cloud modes
-const LocalMindMapApp = React.lazy(() => import('./Local/components/mindmap/MindMapApp'));
+const LocalMindMapApp = React.lazy(() => import('./Local/features/mindmap/components/MindMapApp'));
 const CloudMindMapApp = React.lazy(() => import('./Cloud/components/MindMapApp'));
 
 const App: React.FC = () => {

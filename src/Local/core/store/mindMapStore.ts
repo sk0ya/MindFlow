@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { MindMapData, MindMapNode, Position } from '../../shared/types';
+import type { MindMapData, MindMapNode, Position } from '../../../shared/types';
 
 // UI State types
 interface UIState {
@@ -199,10 +199,15 @@ export const useMindMapStore = create<MindMapStore>()(
         
         applyAutoLayout: () => {
           const state = get();
-          if (!state.data?.rootNode) return;
+          if (!state.data?.rootNode) {
+            console.log('No root node found for auto layout');
+            return;
+          }
           
           try {
+            console.log('Applying auto layout to root node:', state.data.rootNode);
             const layoutedRootNode = autoSelectLayout(state.data.rootNode);
+            console.log('Auto layout result:', layoutedRootNode);
             
             set((draft) => {
               if (draft.data) {
@@ -220,6 +225,7 @@ export const useMindMapStore = create<MindMapStore>()(
                 draft.historyIndex = draft.history.length - 1;
               }
             });
+            console.log('Auto layout applied successfully');
           } catch (error) {
             console.error('Auto layout failed:', error);
           }
