@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { MindMapData, MindMapNode, Position } from '../../../shared/types';
+import type { MindMapData, MindMapNode, Position, FileAttachment } from '../../../shared/types';
+import type { ImageFile } from '../../shared/types';
 
 // UI State types
 interface UIState {
@@ -23,8 +24,8 @@ interface UIState {
   showTutorial: boolean;
   
   // File and image states
-  selectedImage: any;
-  selectedFile: any;
+  selectedImage: ImageFile | null;
+  selectedFile: FileAttachment | null;
   fileMenuPosition: Position;
   showImageModal: boolean;
   showFileActionMenu: boolean;
@@ -104,8 +105,8 @@ interface MindMapStore {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowLocalStoragePanel: (show: boolean) => void;
   setShowTutorial: (show: boolean) => void;
-  setSelectedImage: (image: any) => void;
-  setSelectedFile: (file: any) => void;
+  setSelectedImage: (image: ImageFile | null) => void;
+  setSelectedFile: (file: FileAttachment | null) => void;
   setFileMenuPosition: (position: Position) => void;
   setShowImageModal: (show: boolean) => void;
   setShowFileActionMenu: (show: boolean) => void;
@@ -278,7 +279,7 @@ export const useMindMapStore = create<MindMapStore>()(
               if (!parentNode) return;
               
               const childIds = state.normalizedData.childrenMap[parentId] || [];
-              const childNodes = childIds.map(id => state.normalizedData!.nodes[id]).filter(Boolean);
+              const childNodes = childIds.map(id => state.normalizedData?.nodes[id]).filter(Boolean);
               
               // 新しいノードの位置を計算
               let newPosition: Position;
@@ -291,10 +292,18 @@ export const useMindMapStore = create<MindMapStore>()(
               } else {
                 // 既存の子ノードがある場合、最後の子ノードの下に配置
                 const lastChild = childNodes[childNodes.length - 1];
-                newPosition = {
-                  x: lastChild.x,
-                  y: lastChild.y + LAYOUT.RADIAL_BASE_RADIUS * 0.8
-                };
+                if (lastChild) {
+                  newPosition = {
+                    x: lastChild.x,
+                    y: lastChild.y + LAYOUT.RADIAL_BASE_RADIUS * 0.8
+                  };
+                } else {
+                  // Fallback position
+                  newPosition = {
+                    x: parentNode.x + LAYOUT.RADIAL_BASE_RADIUS,
+                    y: parentNode.y
+                  };
+                }
               }
               const color = parentNode.id === 'root' 
                 ? COLORS[childNodes.length % COLORS.length] 
@@ -504,8 +513,8 @@ export const useMindMapStore = create<MindMapStore>()(
         setSidebarCollapsed: (collapsed: boolean) => set((state) => { state.ui.sidebarCollapsed = collapsed; }),
         setShowLocalStoragePanel: (show: boolean) => set((state) => { state.ui.showLocalStoragePanel = show; }),
         setShowTutorial: (show: boolean) => set((state) => { state.ui.showTutorial = show; }),
-        setSelectedImage: (image: any) => set((state) => { state.ui.selectedImage = image; }),
-        setSelectedFile: (file: any) => set((state) => { state.ui.selectedFile = file; }),
+        setSelectedImage: (image: ImageFile | null) => set((state) => { state.ui.selectedImage = image; }),
+        setSelectedFile: (file: FileAttachment | null) => set((state) => { state.ui.selectedFile = file; }),
         setFileMenuPosition: (position: Position) => set((state) => { state.ui.fileMenuPosition = position; }),
         setShowImageModal: (show: boolean) => set((state) => { state.ui.showImageModal = show; }),
         setShowFileActionMenu: (show: boolean) => set((state) => { state.ui.showFileActionMenu = show; }),

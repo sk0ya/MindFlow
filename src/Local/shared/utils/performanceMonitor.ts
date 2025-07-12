@@ -147,8 +147,11 @@ export class PerformanceMonitor {
 
   // Memory usage monitoring
   getMemoryUsage(): number {
-    if ('memory' in performance) {
-      return (performance as any).memory.usedJSHeapSize / 1024 / 1024; // MB
+    if ('memory' in performance && typeof (performance as any).memory === 'object') {
+      const memoryInfo = (performance as any).memory;
+      if (typeof memoryInfo.usedJSHeapSize === 'number') {
+        return memoryInfo.usedJSHeapSize / 1024 / 1024; // MB
+      }
     }
     return 0;
   }

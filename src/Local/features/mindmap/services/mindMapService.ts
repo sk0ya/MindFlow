@@ -126,7 +126,7 @@ export class LocalMindMapService implements MindMapService {
     }
     
     const pasteNodeRecursive = (node: MindMapNode, parentId: string): void => {
-      this.mindMapHook.addChildNode(parentId, node.text, {
+      const newNodeId = this.mindMapHook.addChildNode(parentId, node.text, {
         fontSize: node.fontSize,
         fontWeight: node.fontWeight,
         color: node.color,
@@ -134,9 +134,11 @@ export class LocalMindMapService implements MindMapService {
         mapLinks: node.mapLinks || []
       });
       
-      node.children.forEach(child => {
-        pasteNodeRecursive(child, node.id);
-      });
+      if (newNodeId) {
+        node.children.forEach(child => {
+          pasteNodeRecursive(child, newNodeId);
+        });
+      }
     };
     
     pasteNodeRecursive(clipboard, parentId);

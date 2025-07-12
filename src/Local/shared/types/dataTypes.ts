@@ -26,6 +26,45 @@ export interface Theme {
   textColor: string;
 }
 
+// Service Dependency Interfaces
+export interface MindMapHookDependency {
+  updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  addChildNode: (parentId: string, text: string, options?: Partial<MindMapNode>) => string | undefined;
+  deleteNode: (nodeId: string) => void;
+  changeParent: (nodeId: string, newParentId: string) => void;
+  findNode: (nodeId: string) => MindMapNode | undefined;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export interface FileHandlersDependency {
+  handleFileUpload: (nodeId: string, file: File) => Promise<void>;
+  handleRemoveFile: (nodeId: string, fileId: string) => Promise<void>;
+  handleFileDownload: (nodeId: string, fileId: string) => Promise<void>;
+  handleFileRename: (nodeId: string, fileId: string, newName: string) => Promise<void>;
+  handleShowImageModal: (image: { url: string; alt: string }) => void;
+  handleShowFileActionMenu: (file: FileAttachment, position: Position) => void;
+}
+
+export interface MapHandlersDependency {
+  handleNavigateToMap: (mapId: string) => Promise<void>;
+  handleCreateMap: (title: string) => Promise<string>;
+  handleDeleteMap: (mapId: string) => Promise<void>;
+  handleRenameMap: (mapId: string, newTitle: string) => Promise<void>;
+  handleChangeCategory: (mapId: string, category: string) => Promise<void>;
+  handleSelectMap: (mapId: string) => Promise<void>;
+}
+
+export interface UIStateDependency {
+  handleCloseNodeMapLinksPanel: () => void;
+  handleShowNodeMapLinks: (node: MindMapNode, position: Position) => void;
+}
+
+// Image and File Types for UI state - simplified to use FileAttachment
+export type ImageFile = FileAttachment;
+
 // ファイル関連の定数（定数ファイルから参照）
 export const MAX_FILE_SIZE = STORAGE.MAX_FILE_SIZE;
 export const ALLOWED_FILE_TYPES = VALIDATION.ALLOWED_FILE_TYPES;

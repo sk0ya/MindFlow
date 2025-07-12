@@ -11,8 +11,6 @@ export type {
   FileAttachment,
   NodeMapLink as MapLink, // Backward compatibility alias
   UIState,
-  Position,
-  Theme,
   ValidationResult,
   StorageStats,
   PerformanceMetrics,
@@ -23,6 +21,17 @@ export type {
   AppError,
   MindMapHookReturn,
 } from '../../../shared/types';
+
+// Import local types
+export type {
+  Position,
+  Theme,
+  MindMapHookDependency,
+  FileHandlersDependency,
+  MapHandlersDependency,
+  UIStateDependency,
+  ImageFile,
+} from './dataTypes';
 
 // Re-export constants for convenience
 export {

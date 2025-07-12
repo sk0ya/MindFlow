@@ -3,12 +3,20 @@ import type { MindMapNode } from '../shared/types';
 
 interface LayoutWorkerMessage {
   type: 'CALCULATE_LAYOUT' | 'OPTIMIZE_POSITIONS' | 'CALCULATE_BOUNDS';
-  payload: any;
+  payload: {
+    rootNode?: MindMapNode;
+    positions?: NodePosition[];
+    bounds?: LayoutBounds;
+  };
 }
 
 interface LayoutResult {
   type: 'LAYOUT_COMPLETE' | 'POSITIONS_OPTIMIZED' | 'BOUNDS_CALCULATED';
-  payload: any;
+  payload: {
+    positions?: NodePosition[];
+    bounds?: LayoutBounds;
+    error?: string;
+  };
 }
 
 interface NodePosition {
@@ -49,7 +57,9 @@ class LayoutCalculator {
     const queue = [{ node: rootNode, depth: 0 }];
     
     while (queue.length > 0) {
-      const { node, depth } = queue.shift()!;
+      const queueItem = queue.shift();
+      if (!queueItem) break;
+      const { node, depth } = queueItem;
       
       if (node.children && node.children.length > 0) {
         const childPositions = this.calculateChildPositions(
@@ -63,7 +73,7 @@ class LayoutCalculator {
             positions.push(pos);
             processedNodes.add(pos.id);
             
-            const childNode = node.children!.find(c => c.id === pos.id);
+            const childNode = node.children?.find(c => c.id === pos.id);
             if (childNode) {
               queue.push({ node: childNode, depth: depth + 1 });
             }
@@ -195,6 +205,9 @@ self.onmessage = (event: MessageEvent<LayoutWorkerMessage>) => {
     switch (type) {
       case 'CALCULATE_LAYOUT': {
         const { rootNode } = payload;
+        if (!rootNode) {
+          throw new Error('rootNode is required for CALCULATE_LAYOUT');
+        }
         const positions = LayoutCalculator.calculateAutoLayout(rootNode);
         const result: LayoutResult = {
           type: 'LAYOUT_COMPLETE',
@@ -206,6 +219,9 @@ self.onmessage = (event: MessageEvent<LayoutWorkerMessage>) => {
       
       case 'OPTIMIZE_POSITIONS': {
         const { positions } = payload;
+        if (!positions) {
+          throw new Error('positions is required for OPTIMIZE_POSITIONS');
+        }
         const optimized = LayoutCalculator.optimizePositions(positions);
         const result: LayoutResult = {
           type: 'POSITIONS_OPTIMIZED',
@@ -217,6 +233,9 @@ self.onmessage = (event: MessageEvent<LayoutWorkerMessage>) => {
       
       case 'CALCULATE_BOUNDS': {
         const { positions } = payload;
+        if (!positions) {
+          throw new Error('positions is required for CALCULATE_BOUNDS');
+        }
         const bounds = LayoutCalculator.calculateBounds(positions);
         const result: LayoutResult = {
           type: 'BOUNDS_CALCULATED',

@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
-import type { MindMapNode, MindMapData } from '../../../shared/types';
+import type { MindMapNode } from '../../../shared/types';
 import { createInitialData } from '../../shared/types/dataTypes';
+import { isValidMindMapData } from '../../shared/types';
 
 /**
  * Zustand統合版のMindMapフック
@@ -17,8 +18,15 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
       const savedData = localStorage.getItem('mindMapData');
       if (savedData) {
         try {
-          const parsedData = JSON.parse(savedData) as MindMapData;
-          store.setData(parsedData);
+          const parsedData = JSON.parse(savedData);
+          // データの型安全性を検証
+          if (isValidMindMapData(parsedData)) {
+            store.setData(parsedData);
+          } else {
+            console.warn('Invalid saved data format, creating new data');
+            const initialData = createInitialData();
+            store.setData(initialData);
+          }
         } catch (error) {
           console.error('Failed to load saved data:', error);
           // デフォルトデータを作成

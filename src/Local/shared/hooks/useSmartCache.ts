@@ -44,7 +44,7 @@ export class SmartCache<T> {
   }
 
   // キャッシュキーの生成
-  private generateKey(keyParts: any[]): string {
+  private generateKey(keyParts: (string | number | boolean | object)[]): string {
     return keyParts.map(part => 
       typeof part === 'object' ? JSON.stringify(part) : String(part)
     ).join('|');
@@ -90,9 +90,9 @@ export class SmartCache<T> {
   }
 
   // キャッシュからの取得または計算
-  get<K extends any[]>(
-    keyParts: K,
-    computeFn: (...args: K) => T,
+  get(
+    keyParts: (string | number | boolean | object)[],
+    computeFn: () => T,
     forceRefresh = false
   ): T {
     const key = this.generateKey(keyParts);
@@ -111,7 +111,7 @@ export class SmartCache<T> {
     }
 
     // 計算実行
-    const value = computeFn(...keyParts);
+    const value = computeFn();
     const computeTime = performance.now() - startTime;
 
     // 計算時間が閾値以上の場合のみキャッシュ
@@ -166,8 +166,8 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
     forceRefresh = false
   ): T => {
     return layoutCacheRef.current.get(
-      [nodeId, nodeData.children?.length || 0, nodeData.collapsed],
-      (...args: any[]) => computeFn(args[0], args[1]),
+      [nodeId, nodeData.children?.length || 0, nodeData.collapsed || false],
+      () => computeFn(nodeId, nodeData),
       forceRefresh
     );
   }, []);
@@ -182,7 +182,7 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
   ): T => {
     return geometryCacheRef.current.get(
       [nodeId, position.x, position.y, size.width, size.height],
-      (...args: any[]) => computeFn(args[0], args[1], args[2]),
+      () => computeFn(nodeId, position, size),
       forceRefresh
     );
   }, []);
@@ -198,7 +198,7 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
   ): T => {
     return connectionCacheRef.current.get(
       [parentId, childIds, parentPos, childPositions],
-      (...args: any[]) => computeFn(args[0], args[1], args[2], args[3]),
+      () => computeFn(parentId, childIds, parentPos, childPositions),
       forceRefresh
     );
   }, []);
