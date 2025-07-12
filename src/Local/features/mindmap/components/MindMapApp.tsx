@@ -174,7 +174,7 @@ const MindMapApp: React.FC = () => {
             onDeleteMap={mapHandlers.handleDeleteMap}
             onRenameMap={mapHandlers.handleRenameMap}
             onChangeCategory={mapHandlers.handleChangeCategory}
-            availableCategories={[...new Set(allMindMaps.map((map: any) => map.category || '未分類'))]}
+            availableCategories={[...new Set(allMindMaps.map(map => map.category || '未分類'))]}
             isCollapsed={ui.sidebarCollapsed}
             onToggleCollapse={mindMap.toggleSidebar}
           />

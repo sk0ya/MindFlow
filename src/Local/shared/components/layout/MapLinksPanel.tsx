@@ -1,5 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import type { MindMapNode, MindMapData, MapLink } from '../../types';
+import React, { useRef, useEffect } from 'react';
+import { MapLinkForm } from './MapLinkForm';
+import { MapLinkList } from './MapLinkList';
+import type { MindMapNode, MindMapData } from '../../types';
 
 // Type definitions
 interface Position {
@@ -30,32 +32,7 @@ const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
   onRemoveLink,
   onNavigateToMap
 }) => {
-  const [selectedMapId, setSelectedMapId] = useState<string>('');
-  const [linkDescription, setLinkDescription] = useState<string>('');
   const panelRef = useRef<HTMLDivElement>(null);
-
-  const handleAddLink = useCallback(() => {
-    if (selectedMapId && selectedMapId !== currentMapId) {
-      const targetMap = allMaps.find(map => map.id === selectedMapId);
-      if (targetMap) {
-        onAddLink(selectedNode!.id, selectedMapId, targetMap.title, linkDescription.trim());
-        setSelectedMapId('');
-        setLinkDescription('');
-      }
-    }
-  }, [selectedMapId, currentMapId, allMaps, linkDescription, onAddLink, selectedNode]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault();
-      handleAddLink();
-    }
-  }, [handleAddLink]);
-
-  const availableMaps = allMaps.filter((map: MindMapData) => 
-    map.id !== currentMapId && 
-    !selectedNode!.mapLinks?.some((link: MapLink) => link.targetMapId === map.id)
-  );
 
   // クリック外し検出でパネルを閉じる
   useEffect(() => {
@@ -109,90 +86,18 @@ const NodeMapLinksPanel: React.FC<NodeMapLinksPanelProps> = ({
       </div>
 
       <div className="panel-content">
-        {/* 既存のリンク一覧 */}
-        <div className="existing-links">
-          <h4>既存のリンク</h4>
-          {selectedNode.mapLinks && selectedNode.mapLinks.length > 0 ? (
-            <div className="links-list">
-              {selectedNode.mapLinks.map((link: MapLink) => (
-                <div key={link.id} className="link-item">
-                  <div 
-                    className="link-info"
-                    onDoubleClick={() => onNavigateToMap(link.targetMapId)}
-                    style={{ cursor: 'pointer' }}
-                    title="ダブルクリックでマップに移動"
-                  >
-                    <div className="link-title">{link.targetMapTitle}</div>
-                    {link.description && (
-                      <div className="link-description">{link.description}</div>
-                    )}
-                  </div>
-                  <div className="link-actions">
-                    <button
-                      className="navigate-btn"
-                      onClick={() => onNavigateToMap(link.targetMapId)}
-                      title="このマップに移動"
-                    >
-                      🔗
-                    </button>
-                    <button
-                      className="remove-btn"
-                      onClick={() => onRemoveLink(selectedNode.id, link.id)}
-                      title="リンクを削除"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="no-links">リンクがありません</div>
-          )}
-        </div>
-
-        {/* 新しいリンク追加 */}
-        <div className="add-link-section">
-          <h4>新しいリンクを追加</h4>
-          {availableMaps.length > 0 ? (
-            <div className="add-link-form">
-              <select
-                value={selectedMapId}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMapId(e.target.value)}
-                className="map-select"
-              >
-                <option value="">リンク先マップを選択...</option>
-                {availableMaps.map((map: MindMapData) => (
-                  <option key={map.id} value={map.id}>
-                    {map.title} ({map.category})
-                  </option>
-                ))}
-              </select>
-              
-              <input
-                type="text"
-                placeholder="リンクの説明（省略可）"
-                value={linkDescription}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLinkDescription(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="description-input"
-                maxLength={100}
-              />
-              
-              <button
-                className="add-btn"
-                onClick={handleAddLink}
-                disabled={!selectedMapId}
-              >
-                リンクを追加
-              </button>
-            </div>
-          ) : (
-            <div className="no-available-maps">
-              リンク可能なマップがありません
-            </div>
-          )}
-        </div>
+        <MapLinkList
+          selectedNode={selectedNode}
+          onRemoveLink={onRemoveLink}
+          onNavigateToMap={onNavigateToMap}
+        />
+        
+        <MapLinkForm
+          selectedNode={selectedNode}
+          currentMapId={currentMapId}
+          allMaps={allMaps}
+          onAddLink={onAddLink}
+        />
       </div>
 
       <style>{`

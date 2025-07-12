@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 型安全性チェックを実行中..."
+
+# TypeScript型チェック
+npm run type-check
+if [ $? -ne 0 ]; then
+  echo "❌ TypeScript型チェックに失敗しました"
+  exit 1
+fi
+
+# ESLint型安全性チェック
+npm run lint:type-safety
+if [ $? -ne 0 ]; then
+  echo "❌ ESLint型安全性チェックに失敗しました"
+  exit 1
+fi
+
+# カスタム危険パターンスキャン
+npm run scan:unsafe-ci
+if [ $? -ne 0 ]; then
+  echo "❌ 危険な型パターンが検出されました"
+  exit 1
+fi
+
+echo "✅ 型安全性チェック完了"

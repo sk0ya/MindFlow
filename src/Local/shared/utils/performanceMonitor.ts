@@ -147,8 +147,8 @@ export class PerformanceMonitor {
 
   // Memory usage monitoring
   getMemoryUsage(): number {
-    if ('memory' in performance && typeof (performance as any).memory === 'object') {
-      const memoryInfo = (performance as any).memory;
+    if ('memory' in performance && typeof (performance as unknown as { memory?: unknown }).memory === 'object') {
+      const memoryInfo = (performance as unknown as { memory: { usedJSHeapSize?: number } }).memory;
       if (typeof memoryInfo.usedJSHeapSize === 'number') {
         return memoryInfo.usedJSHeapSize / 1024 / 1024; // MB
       }
@@ -193,8 +193,8 @@ export class PerformanceMonitor {
     }
 
     const renderTimes = results.map(r => r.duration);
-    const fpss = results.map(r => r.metrics!.fps);
-    const memoryUsages = results.map(r => r.metrics!.memoryUsage);
+    const fpss = results.map(r => r.metrics?.fps ?? 0);
+    const memoryUsages = results.map(r => r.metrics?.memoryUsage ?? 0);
 
     return {
       averageRenderTime: renderTimes.reduce((a, b) => a + b) / renderTimes.length,

@@ -3,6 +3,23 @@ import { createInitialData } from '../../shared/types/dataTypes';
 import type { MindMapData, MindMapNode, MindMapSettings } from '../../shared/types/dataTypes';
 import { debug, error } from '../../shared/utils/logger';
 
+// 型検証関数
+const isStringArray = (data: unknown): data is string[] => {
+  return Array.isArray(data) && data.every(item => typeof item === 'string');
+};
+
+const isMindMapData = (data: unknown): data is MindMapData => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'title' in data &&
+    'rootNode' in data &&
+    typeof (data as any).id === 'string' &&
+    typeof (data as any).title === 'string'
+  );
+};
+
 const STORAGE_KEYS = {
   CURRENT_MAP_ID: 'mindmap_current_id',
   MAP_PREFIX: 'mindmap_',
@@ -41,7 +58,8 @@ class LocalEngine {
       }
     } else if (!currentMapId) {
       // マップリストはあるが現在のマップIDがない場合
-      const mapIds = JSON.parse(mapList);
+      const parsedMapIds = JSON.parse(mapList);
+      const mapIds = isStringArray(parsedMapIds) ? parsedMapIds : [];
       if (mapIds.length > 0) {
         localStorage.setItem(STORAGE_KEYS.CURRENT_MAP_ID, mapIds[0]);
         debug('LocalEngine: Set current map ID to first available', { mapId: mapIds[0] });
@@ -75,7 +93,8 @@ class LocalEngine {
       const mapListStr = localStorage.getItem(STORAGE_KEYS.MAP_LIST);
       if (!mapListStr) return [];
       
-      const mapIds = JSON.parse(mapListStr);
+      const parsedMapIds = JSON.parse(mapListStr);
+      const mapIds = isStringArray(parsedMapIds) ? parsedMapIds : [];
       const maps = [];
       
       for (const id of mapIds) {
@@ -103,7 +122,8 @@ class LocalEngine {
       const mapListStr = localStorage.getItem(STORAGE_KEYS.MAP_LIST);
       if (!mapListStr) return [];
       
-      const mapIds = JSON.parse(mapListStr);
+      const parsedMapIds = JSON.parse(mapListStr);
+      const mapIds = isStringArray(parsedMapIds) ? parsedMapIds : [];
       const maps = [];
       
       for (const id of mapIds) {
@@ -144,11 +164,14 @@ class LocalEngine {
         return null;
       }
       
-      const data = JSON.parse(dataStr);
-      debug('LocalEngine.getMindMap: Parsed data:', {
-        hasRootNode: !!data.rootNode,
-        nodeCount: data.rootNode ? this.countNodes(data.rootNode) : 0
-      });
+      const parsedData = JSON.parse(dataStr);
+      const data = isMindMapData(parsedData) ? parsedData : null;
+      if (data) {
+        debug('LocalEngine.getMindMap: Parsed data:', {
+          hasRootNode: !!data.rootNode,
+          nodeCount: data.rootNode ? this.countNodes(data.rootNode) : 0
+        });
+      }
       
       return data;
     } catch (err) {
@@ -185,7 +208,8 @@ class LocalEngine {
       
       // マップリストを更新
       const mapListStr = localStorage.getItem(STORAGE_KEYS.MAP_LIST) || '[]';
-      const mapList = JSON.parse(mapListStr);
+      const parsedMapList = JSON.parse(mapListStr);
+      const mapList = isStringArray(parsedMapList) ? parsedMapList : [];
       if (!mapList.includes(id)) {
         mapList.push(id);
         localStorage.setItem(STORAGE_KEYS.MAP_LIST, JSON.stringify(mapList));
@@ -243,7 +267,8 @@ class LocalEngine {
       
       // マップリストから削除
       const mapListStr = localStorage.getItem(STORAGE_KEYS.MAP_LIST) || '[]';
-      const mapList = JSON.parse(mapListStr);
+      const parsedMapList = JSON.parse(mapListStr);
+      const mapList = isStringArray(parsedMapList) ? parsedMapList : [];
       const filteredList = mapList.filter((mapId: string) => mapId !== id);
       localStorage.setItem(STORAGE_KEYS.MAP_LIST, JSON.stringify(filteredList));
       
@@ -272,7 +297,8 @@ class LocalEngine {
       if (!settingsStr) {
         return { autoSave: true, autoLayout: false };
       }
-      return JSON.parse(settingsStr);
+      const parsedSettings = JSON.parse(settingsStr);
+    return (typeof parsedSettings === 'object' && parsedSettings !== null) ? parsedSettings as MindMapSettings : {};
     } catch (error) {
       console.error('Failed to get app settings:', error);
       return { autoSave: true, autoLayout: false };

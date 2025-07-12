@@ -5,6 +5,8 @@ interface DragState {
   isDragging: boolean;
   draggedNodeId: string | null;
   dropTargetId: string | null;
+  dropPosition: 'child' | 'before' | 'after' | null;
+  dragOffset: { x: number; y: number };
 }
 
 interface CanvasDragHandlerProps {
@@ -29,7 +31,9 @@ export const useCanvasDragHandler = ({
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedNodeId: null,
-    dropTargetId: null
+    dropTargetId: null,
+    dropPosition: null,
+    dragOffset: { x: 0, y: 0 }
   });
 
   // ドロップターゲット検出のためのヘルパー関数
@@ -72,26 +76,30 @@ export const useCanvasDragHandler = ({
   }, [allNodes, zoom, pan, dragState.draggedNodeId, svgRef]);
 
   // ドラッグ開始時の処理
-  const handleDragStart = useCallback((nodeId: string) => {
+  const handleDragStart = useCallback((nodeId: string, _e: React.MouseEvent | React.TouchEvent) => {
     console.log('🔥 ドラッグ開始:', { nodeId });
     setDragState({
       isDragging: true,
       draggedNodeId: nodeId,
-      dropTargetId: null
+      dropTargetId: null,
+      dropPosition: null,
+      dragOffset: { x: 0, y: 0 }
     });
   }, []);
 
   // ドラッグ中の処理
-  const handleDragMove = useCallback((x: number, y: number) => {
-    console.log('🎯 handleDragMove 呼び出し:', { x, y });
+  const handleDragMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+    const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+    console.log('🎯 handleDragMove 呼び出し:', { x: clientX, y: clientY });
     setDragState(prev => {
       if (!prev.isDragging) {
         console.log('🚫 ドラッグ中でないため処理をスキップ');
         return prev;
       }
       
-      const targetNode = getNodeAtPosition(x, y);
-      console.log('🎯 ドラッグ移動:', { x, y, targetNodeId: targetNode?.id });
+      const targetNode = getNodeAtPosition(clientX, clientY);
+      console.log('🎯 ドラッグ移動:', { x: clientX, y: clientY, targetNodeId: targetNode?.id });
       return {
         ...prev,
         dropTargetId: targetNode?.id || null
@@ -100,18 +108,18 @@ export const useCanvasDragHandler = ({
   }, [getNodeAtPosition]);
 
   // ドラッグ終了時の処理
-  const handleDragEnd = useCallback((nodeId: string, _x: number, _y: number) => {
+  const handleDragEnd = useCallback(() => {
     setDragState(prevState => {
       console.log('🎯 handleDragEnd 実行:', { 
-        nodeId, 
+        draggedNodeId: prevState.draggedNodeId, 
         dropTargetId: prevState.dropTargetId, 
         hasOnChangeParent: !!onChangeParent,
         hasOnChangeSiblingOrder: !!onChangeSiblingOrder
       });
       
-      if (prevState.dropTargetId && prevState.dropTargetId !== nodeId) {
+      if (prevState.dropTargetId && prevState.dropTargetId !== prevState.draggedNodeId) {
         // ドラッグしたノードと対象ノードの親を確認
-        const draggedNode = allNodes.find(n => n.id === nodeId);
+        const draggedNode = allNodes.find(n => n.id === prevState.draggedNodeId);
         const targetNode = allNodes.find(n => n.id === prevState.dropTargetId);
         
         if (draggedNode && targetNode) {
@@ -130,7 +138,7 @@ export const useCanvasDragHandler = ({
             return findParentRecursive(rootNode);
           };
           
-          const draggedParent = findParent(nodeId);
+          const draggedParent = prevState.draggedNodeId ? findParent(prevState.draggedNodeId) : null;
           const targetParent = findParent(prevState.dropTargetId);
           
           console.log('🔍 親要素確認:', {
@@ -141,15 +149,15 @@ export const useCanvasDragHandler = ({
           
           if (draggedParent && targetParent && draggedParent.id === targetParent.id) {
             // 同じ親を持つ場合は兄弟順序変更
-            console.log('🔄 兄弟順序変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
-            if (onChangeSiblingOrder) {
-              onChangeSiblingOrder(nodeId, prevState.dropTargetId, true);
+            console.log('🔄 兄弟順序変更実行:', { nodeId: prevState.draggedNodeId, dropTargetId: prevState.dropTargetId });
+            if (onChangeSiblingOrder && prevState.draggedNodeId) {
+              onChangeSiblingOrder(prevState.draggedNodeId, prevState.dropTargetId, true);
             }
           } else {
             // 異なる親を持つ場合は親変更
-            console.log('🔄 親変更実行:', { nodeId, dropTargetId: prevState.dropTargetId });
-            if (onChangeParent) {
-              onChangeParent(nodeId, prevState.dropTargetId);
+            console.log('🔄 親変更実行:', { nodeId: prevState.draggedNodeId, dropTargetId: prevState.dropTargetId });
+            if (onChangeParent && prevState.draggedNodeId) {
+              onChangeParent(prevState.draggedNodeId, prevState.dropTargetId);
             }
           }
         }
@@ -158,7 +166,9 @@ export const useCanvasDragHandler = ({
       return {
         isDragging: false,
         draggedNodeId: null,
-        dropTargetId: null
+        dropTargetId: null,
+        dropPosition: null,
+        dragOffset: { x: 0, y: 0 }
       };
     });
   }, [onChangeParent, onChangeSiblingOrder, allNodes, rootNode]);

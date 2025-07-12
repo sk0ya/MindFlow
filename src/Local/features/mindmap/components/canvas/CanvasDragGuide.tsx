@@ -5,6 +5,8 @@ interface DragState {
   isDragging: boolean;
   draggedNodeId: string | null;
   dropTargetId: string | null;
+  dropPosition: 'child' | 'before' | 'after' | null;
+  dragOffset: { x: number; y: number };
 }
 
 interface CanvasDragGuideProps {

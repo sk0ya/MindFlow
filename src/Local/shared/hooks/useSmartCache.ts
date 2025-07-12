@@ -100,12 +100,12 @@ export class SmartCache<T> {
 
     // キャッシュヒットチェック
     if (!forceRefresh && this.cache.has(key)) {
-      const entry = this.cache.get(key)!;
-      if (this.isValid(entry)) {
+      const entry = this.cache.get(key);
+      if (entry && this.isValid(entry)) {
         entry.hitCount++;
         this.updateStats(true, 0);
         return entry.value;
-      } else {
+      } else if (entry) {
         this.cache.delete(key);
       }
     }
@@ -154,9 +154,9 @@ export class SmartCache<T> {
 
 // MindMap 専用のキャッシュフック
 export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
-  const layoutCacheRef = useRef(new SmartCache<any>(config));
-  const geometryCacheRef = useRef(new SmartCache<any>(config));
-  const connectionCacheRef = useRef(new SmartCache<any>(config));
+  const layoutCacheRef = useRef(new SmartCache<unknown>(config));
+  const geometryCacheRef = useRef(new SmartCache<unknown>(config));
+  const connectionCacheRef = useRef(new SmartCache<unknown>(config));
 
   // レイアウト計算のキャッシュ
   const getCachedLayout = useCallback(<T>(
@@ -169,7 +169,7 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
       [nodeId, nodeData.children?.length || 0, nodeData.collapsed || false],
       () => computeFn(nodeId, nodeData),
       forceRefresh
-    );
+    ) as T;
   }, []);
 
   // 幾何計算のキャッシュ
@@ -184,7 +184,7 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
       [nodeId, position.x, position.y, size.width, size.height],
       () => computeFn(nodeId, position, size),
       forceRefresh
-    );
+    ) as T;
   }, []);
 
   // 接続線計算のキャッシュ
@@ -200,7 +200,7 @@ export const useSmartCache = (config?: Partial<SmartCacheConfig>) => {
       [parentId, childIds, parentPos, childPositions],
       () => computeFn(parentId, childIds, parentPos, childPositions),
       forceRefresh
-    );
+    ) as T;
   }, []);
 
   // 全キャッシュクリア

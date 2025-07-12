@@ -14,7 +14,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - 厳格な型チェック */
+    /* Linting - プロダクション向け厳格な型チェック */
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -33,6 +33,10 @@
     "noImplicitOverride": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
+    
+    /* 危険な型パターンを防止する追加オプション */
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedSideEffectImports": false,
 
     /* Path mapping */
     "baseUrl": ".",

@@ -2,6 +2,24 @@ import { useCallback, useEffect, useState } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
 import type { MindMapNode, MindMapData, Position } from '../../../shared/types';
 import { createInitialData } from '../../shared/types/dataTypes';
+import type { ImageFile } from '../../shared/types';
+
+// 型検証関数
+const isMindMapData = (data: unknown): data is MindMapData => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'title' in data &&
+    'rootNode' in data &&
+    typeof (data as any).id === 'string' &&
+    typeof (data as any).title === 'string'
+  );
+};
+
+const isMindMapDataArray = (data: unknown): data is MindMapData[] => {
+  return Array.isArray(data) && data.every(item => isMindMapData(item));
+};
 
 /**
  * 簡素化されたマインドマップフック
@@ -18,9 +36,13 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
       const savedData = localStorage.getItem('mindMapData');
       if (savedData) {
         try {
-          const parsedData = JSON.parse(savedData) as MindMapData;
-          console.log('Loaded saved data:', parsedData);
-          store.setData(parsedData);
+          const parsedData = JSON.parse(savedData);
+          if (isMindMapData(parsedData)) {
+            console.log('Loaded saved data:', parsedData);
+            store.setData(parsedData);
+          } else {
+            throw new Error('Invalid MindMapData format');
+          }
         } catch (error) {
           console.error('Failed to load saved data:', error);
           // デフォルトデータを作成
@@ -166,7 +188,7 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
       store.setShowFileActionMenu(show);
     }, [store]),
 
-    setSelectedImage: useCallback((file: any) => {
+    setSelectedImage: useCallback((file: ImageFile | null) => {
       store.setSelectedImage(file);
     }, [store]),
 
@@ -288,16 +310,17 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
   useEffect(() => {
     if (store.data) {
       setAllMindMaps(prevMaps => {
-        const existingIndex = prevMaps.findIndex(map => map.id === store.data!.id);
-        if (existingIndex >= 0) {
+        const existingIndex = prevMaps.findIndex(map => map.id === store.data?.id);
+        if (existingIndex >= 0 && store.data) {
           // 既存のマップを更新
           const newMaps = [...prevMaps];
-          newMaps[existingIndex] = store.data!;
+          newMaps[existingIndex] = store.data;
           return newMaps;
-        } else {
+        } else if (store.data) {
           // 新しいマップを追加
-          return [...prevMaps, store.data!];
+          return [...prevMaps, store.data];
         }
+        return prevMaps;
       });
     }
   }, [store.data]);
@@ -308,8 +331,12 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
       try {
         const savedMaps = localStorage.getItem('allMindMaps');
         if (savedMaps) {
-          const parsedMaps = JSON.parse(savedMaps) as MindMapData[];
-          setAllMindMaps(parsedMaps);
+          const parsedMaps = JSON.parse(savedMaps);
+          if (isMindMapDataArray(parsedMaps)) {
+            setAllMindMaps(parsedMaps);
+          } else {
+            console.error('Invalid MindMapData array format');
+          }
         }
       } catch (error) {
         console.error('Failed to load all maps:', error);

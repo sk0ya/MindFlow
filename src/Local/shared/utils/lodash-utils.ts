@@ -10,7 +10,7 @@ export const cloneDeep = <T>(obj: T): T => {
   if (typeof obj === "object") {
     const clonedObj = {} as Record<string, unknown>;
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         clonedObj[key] = cloneDeep((obj as Record<string, unknown>)[key]);
       }
     }

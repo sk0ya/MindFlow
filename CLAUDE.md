@@ -23,27 +23,6 @@ MindFlow is a **React-based mindmap application** inspired by MindMeister. Curre
 ### Frontend Structure (`src/Local/`)
 ```
 src/Local/
-├── components/
-│   ├── common/                # Shared UI components
-│   │   ├── Connection.tsx     # SVG connections
-│   │   ├── ContextMenu.tsx    # Right-click menu
-│   │   ├── Toolbar.tsx        # Main toolbar
-│   │   └── KeyboardShortcutHelper.tsx # Keyboard shortcuts
-│   ├── mindmap/               # Core mindmap components
-│   │   ├── MindMapApp.tsx     # Main application container
-│   │   ├── MindMapCanvas.tsx  # SVG rendering engine
-│   │   ├── MindMapSidebar.tsx # Side panel
-│   │   ├── Node.tsx           # Individual node component
-│   │   ├── NodeCustomizationPanel.tsx # Node styling
-│   │   ├── canvas/            # Canvas-specific components
-│   │   └── node/              # Node-specific components
-│   ├── files/                 # File handling components
-│   │   ├── FileActionMenu.tsx # File operations menu
-│   │   └── ImageModal.tsx     # Image viewer
-│   └── performance/           # Performance optimization
-│       ├── LazyComponents.tsx # Lazy loading
-│       ├── PerformanceDashboard.tsx # Performance monitoring
-│       └── VirtualizedCanvas.tsx # Viewport rendering
 ├── core/                      # Core business logic
 │   ├── commands/              # Command pattern implementation
 │   │   ├── Command.ts         # Base command interface
@@ -55,42 +34,69 @@ src/Local/
 │   │   ├── useMindMapZustand.ts # Zustand state management
 │   │   ├── useCommandHistory.ts # Undo/redo functionality
 │   │   └── useKeyboardShortcuts.ts # Keyboard handling
-│   ├── services/              # Business logic services
-│   │   ├── mindMapService.ts  # MindMap operations
-│   │   └── index.ts           # Service exports
 │   ├── storage/               # Data persistence
 │   │   ├── LocalEngine.ts     # Local storage engine
 │   │   └── storageUtils.ts    # Storage utilities
-│   └── store/                 # State management
-│       └── mindMapStore.ts    # Zustand store
+│   ├── store/                 # State management
+│   │   └── mindMapStore.ts    # Zustand store
+│   └── layoutWorker.ts        # Layout computation worker
 ├── features/                  # Feature-specific modules
 │   ├── files/                 # File handling features
-│   │   ├── fileOptimization.ts # File optimization
-│   │   ├── fileValidation.ts  # File validation
-│   │   └── useMindMapFiles.ts # File operations hook
-│   └── mindmap/               # MindMap features
-│       ├── useMindMapData.ts  # Data operations
-│       └── useMindMapMulti.ts # Multi-map support
-├── shared/                    # Shared utilities
-│   ├── constants/             # Application constants
-│   ├── types/                 # TypeScript definitions
-│   │   ├── brandedTypes.ts    # Branded types for type safety
-│   │   ├── dataTypes.ts       # Data structure types
-│   │   ├── errors.ts          # Error types
-│   │   ├── result.ts          # Result pattern types
-│   │   └── index.ts           # Type exports
-│   └── utils/                 # Utility functions
-│       ├── autoLayout.ts      # Auto-layout algorithms
-│       ├── dataIntegrityChecker.ts # Data validation
-│       ├── lodash-utils.ts    # Utility functions
-│       └── logger.ts          # Logging utilities
-├── hooks/                     # Performance hooks
-│   ├── useLayoutWorker.ts     # Web worker for layout
-│   └── useSmartCache.ts       # Intelligent caching
-├── utils/                     # Performance utilities
-│   └── performanceMonitor.ts  # Performance monitoring
-└── workers/                   # Web Workers
-    └── layoutWorker.ts        # Layout computation worker
+│   │   ├── components/        # File-related components
+│   │   │   ├── FileActionMenu.tsx # File operations menu
+│   │   │   └── ImageModal.tsx     # Image viewer
+│   │   ├── hooks/             # File handling hooks
+│   │   │   └── useMindMapFiles.ts # File operations hook
+│   │   ├── utils/             # File utilities
+│   │   │   ├── fileOptimization.ts # File optimization
+│   │   │   └── fileValidation.ts  # File validation
+│   ├── mindmap/               # MindMap features
+│   │   ├── components/        # MindMap components
+│   │   │   ├── MindMapApp.tsx     # Main application container
+│   │   │   ├── MindMapCanvas.tsx  # SVG rendering engine
+│   │   │   ├── MindMapSidebar.tsx # Side panel
+│   │   │   ├── Node.tsx           # Individual node component
+│   │   │   ├── NodeCustomizationPanel.tsx # Node styling (now ~115 lines)  
+│   │   │   ├── canvas/            # Canvas-specific components
+│   │   │   ├── node/              # Node-specific components
+│   │   │   └── sidebar/           # Sidebar components
+│   │   ├── hooks/             # MindMap hooks
+│   │   │   ├── useMindMapData.ts  # Data operations
+│   │   │   └── useMindMapMulti.ts # Multi-map support
+│   │   └── services/          # MindMap services
+│   │       └── mindMapService.ts  # MindMap operations
+│   └── performance/           # Performance optimization
+│       └── components/        # Performance components
+│           ├── LazyComponents.tsx # Lazy loading
+│           ├── PerformanceDashboard.tsx # Performance monitoring
+│           └── VirtualizedCanvas.tsx # Viewport rendering
+└── shared/                    # Shared utilities
+    ├── components/            # Shared UI components
+    │   ├── ui/                # UI components
+    │   │   ├── Connection.tsx     # SVG connections
+    │   │   ├── ContextMenu.tsx    # Right-click menu
+    │   │   ├── Toolbar.tsx        # Main toolbar
+    │   │   ├── KeyboardShortcutHelper.tsx # Keyboard shortcuts
+    │   │   └── toolbar/           # Toolbar components
+    │   └── layout/            # Layout components
+    │       └── MapLinksPanel.tsx  # Map links panel
+    ├── constants/             # Application constants
+    ├── hooks/                 # Shared hooks
+    │   ├── useAutoLayout.ts   # Auto-layout hook
+    │   ├── useLayoutWorker.ts # Web worker for layout
+    │   └── useSmartCache.ts   # Intelligent caching
+    ├── types/                 # TypeScript definitions
+    │   ├── brandedTypes.ts    # Branded types for type safety
+    │   ├── dataTypes.ts       # Data structure types
+    │   ├── errors.ts          # Error types
+    │   ├── result.ts          # Result pattern types
+    │   └── index.ts           # Type exports
+    └── utils/                 # Utility functions
+        ├── autoLayout.ts      # Auto-layout algorithms
+        ├── dataIntegrityChecker.ts # Data validation
+        ├── lodash-utils.ts    # Utility functions
+        ├── logger.ts          # Logging utilities
+        └── performanceMonitor.ts  # Performance monitoring
 ```
 
 ## Key Data Structures
@@ -242,14 +248,15 @@ npm run serve        # Serve production build from dist folder
 
 #### **Components Exceeding 200-line Target**
 
-1. **NodeCustomizationPanel.tsx: 395 lines** (High Priority)
-   - **Recommendation**: Split into specialized panels
+1. **NodeCustomizationPanel.tsx: ~115 lines** ✅ (Already Optimized)
+   - Successfully decomposed into specialized panels:
    ```typescript
-   // Proposed decomposition:
-   ├── NodeStylePanel.tsx - Basic styling
-   ├── NodeColorPanel.tsx - Color management
+   // Current decomposition:
+   ├── NodeCustomizationPanel.tsx - Main panel (~115 lines)
    ├── NodeFontPanel.tsx - Typography settings
-   └── NodeAdvancedPanel.tsx - Advanced features
+   ├── NodeBorderPanel.tsx - Border styling
+   ├── NodePresetPanel.tsx - Preset styles
+   └── NodeCustomizationStyles.tsx - Styled components
    ```
 
 2. **MindMapCanvas.tsx: 327 lines** (Medium Priority)
@@ -306,28 +313,28 @@ npm run serve        # Serve production build from dist folder
 
 ### 🎯 **Current Development Priority**
 
-**Focus: Complete Phase 1 cleanup & initiate Phase 2**
-- **Immediate**: Address NodeCustomizationPanel.tsx decomposition
-- **Next**: Implement comprehensive testing infrastructure
-- **Goal**: Achieve 100% compliance with 200-line target
-- **Timeline**: Phase 2 completion within 2 weeks
+**Focus: Phase 2 - Testing & Further Optimization**
+- **Completed**: Phase 1 component decomposition successfully achieved
+- **Current**: Begin comprehensive testing infrastructure implementation
+- **Goal**: Achieve >80% test coverage with performance benchmarks
+- **Architecture**: Feature-based organization fully implemented
 
 ## Common Development Tasks
 
 ### Adding a New Feature
 1. Start with the data model in `shared/types/dataTypes.ts`
-2. Add business logic to appropriate service in `core/services/`
+2. Add business logic to appropriate service in `features/[feature]/services/`
 3. Implement commands if needed in `core/commands/`
 4. Update Zustand store in `core/store/mindMapStore.ts`
 5. Create/modify components in appropriate domain folder
 6. Test with various mindmap sizes using performance dashboard
 
 ### Current Development Priority  
-**Focus: Complete Phase 1 cleanup & initiate Phase 2**
-- **Immediate**: Address NodeCustomizationPanel.tsx decomposition (395 lines → <200 lines)
+**Focus: Phase 1 Completed - Ready for Phase 2**
+- **Completed**: NodeCustomizationPanel.tsx successfully decomposed (~115 lines)
 - **Next**: Implement comprehensive testing infrastructure  
-- **Goal**: Achieve 100% compliance with 200-line target
-- **Performance**: Maintain sub-100ms render times with new architecture
+- **Goal**: Maintain code quality and add test coverage
+- **Performance**: Continue sub-100ms render times with new architecture
 
 ### Debugging Node Operations
 ```typescript
@@ -340,7 +347,7 @@ console.log('Current mindmap:', store.currentMindMap);
 console.log('Normalized nodes:', store.normalizedNodes);
 
 // Monitor performance with built-in monitoring
-import { performanceMonitor } from '@/utils/performanceMonitor';
+import { performanceMonitor } from '@/Local/shared/utils/performanceMonitor';
 performanceMonitor.startMeasure('findNode');
 const node = store.getNode(nodeId); // O(1) operation
 performanceMonitor.endMeasure('findNode');
@@ -358,7 +365,7 @@ performanceMonitor.endMeasure('findNode');
 ## File Size Limits
 - **Attachments**: 10MB per file
 - **Total Storage**: ~5MB localStorage limit
-- **Performance**: Noticeable slowdown >100 nodes
+- **Performance**: Optimized for large mindmaps with virtualization
 
 ## Security Considerations
 - All data stored client-side
