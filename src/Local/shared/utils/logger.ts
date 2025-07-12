@@ -24,8 +24,8 @@ interface LoggerOptions {
   maxStorageEntries?: number;
   remoteEndpoint?: string | null;
   context?: Record<string, unknown>;
-  filters?: Array<(logEntry: LogEntry) => boolean>;
-  formatter?: (logEntry: LogEntry) => string;
+  filters?: Array<(_logEntry: LogEntry) => boolean>;
+  formatter?: (_logEntry: LogEntry) => string;
   bufferSize?: number;
   flushInterval?: number;
 }
@@ -104,8 +104,8 @@ class Logger {
   public remoteEndpoint: string | null;
   public context: Record<string, unknown>;
   public storageKey: string;
-  public filters: Array<(logEntry: LogEntry) => boolean>;
-  public formatter: (logEntry: LogEntry) => string;
+  public filters: Array<(_logEntry: LogEntry) => boolean>;
+  public formatter: (_logEntry: LogEntry) => string;
   public logBuffer: LogEntry[];
   public bufferSize: number;
   public flushInterval: number;

@@ -12,8 +12,8 @@ const isMindMapData = (data: unknown): data is MindMapData => {
     'id' in data &&
     'title' in data &&
     'rootNode' in data &&
-    typeof (data as any).id === 'string' &&
-    typeof (data as any).title === 'string'
+    typeof (data as { id: unknown; title: unknown }).id === 'string' &&
+    typeof (data as { id: unknown; title: unknown }).title === 'string'
   );
 };
 
@@ -32,13 +32,13 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
   // 初期データの読み込み
   useEffect(() => {
     if (isAppReady && !store.data) {
-      console.log('Loading initial data...');
+      // Loading initial data...
       const savedData = localStorage.getItem('mindMapData');
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
           if (isMindMapData(parsedData)) {
-            console.log('Loaded saved data:', parsedData);
+            // Loaded saved data successfully
             store.setData(parsedData);
           } else {
             throw new Error('Invalid MindMapData format');

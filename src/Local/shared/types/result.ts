@@ -26,7 +26,7 @@ export const isFailure = <T, E>(result: Result<T, E>): result is { success: fals
 // Chain operations on Result
 export const map = <T, U, E>(
   result: Result<T, E>,
-  fn: (value: T) => U
+  fn: (_value: T) => U
 ): Result<U, E> => {
   if (isSuccess(result)) {
     return { success: true, data: fn(result.data) };
@@ -36,7 +36,7 @@ export const map = <T, U, E>(
 
 export const flatMap = <T, U, E>(
   result: Result<T, E>,
-  fn: (value: T) => Result<U, E>
+  fn: (_value: T) => Result<U, E>
 ): Result<U, E> => {
   if (isSuccess(result)) {
     return fn(result.data);
@@ -48,8 +48,8 @@ export const flatMap = <T, U, E>(
 export const match = <T, E, U>(
   result: Result<T, E>,
   patterns: {
-    success: (data: T) => U;
-    failure: (error: E) => U;
+    success: (_data: T) => U;
+    failure: (_error: E) => U;
   }
 ): U => {
   if (isSuccess(result)) {
@@ -75,7 +75,7 @@ export const collect = <T, E>(results: Result<T, E>[]): Result<T[], E> => {
 // Try-catch wrapper that returns Result
 export const tryCatch = <T, E = Error>(
   fn: () => T,
-  errorHandler?: (error: unknown) => E
+  errorHandler?: (_error: unknown) => E
 ): Result<T, E> => {
   try {
     return { success: true, data: fn() };
@@ -88,7 +88,7 @@ export const tryCatch = <T, E = Error>(
 // Async version of tryCatch
 export const tryCatchAsync = async <T, E = Error>(
   fn: () => Promise<T>,
-  errorHandler?: (error: unknown) => E
+  errorHandler?: (_error: unknown) => E
 ): Promise<Result<T, E>> => {
   try {
     const data = await fn();

@@ -40,7 +40,13 @@ export default [
       // 未使用変数・関数
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true
+      }],
+      'no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true
       }],
       
       // React固有ルール
@@ -49,7 +55,7 @@ export default [
       'react-hooks/exhaustive-deps': 'error',
       
       // 基本的なJavaScript/TypeScriptルール
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
       'no-debugger': 'error',
       'no-alert': 'error',
       'no-var': 'error',

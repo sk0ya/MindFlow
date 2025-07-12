@@ -1,6 +1,5 @@
 // ローカルストレージ専用エンジン
-import { createInitialData } from '../../shared/types/dataTypes';
-import type { MindMapData, MindMapNode, MindMapSettings } from '../../shared/types/dataTypes';
+import { createInitialData, type MindMapData, type MindMapNode, type MindMapSettings } from '../../shared/types/dataTypes';
 import { debug, error } from '../../shared/utils/logger';
 
 // 型検証関数
@@ -15,8 +14,8 @@ const isMindMapData = (data: unknown): data is MindMapData => {
     'id' in data &&
     'title' in data &&
     'rootNode' in data &&
-    typeof (data as any).id === 'string' &&
-    typeof (data as any).title === 'string'
+    typeof (data as { id: unknown; title: unknown }).id === 'string' &&
+    typeof (data as { id: unknown; title: unknown }).title === 'string'
   );
 };
 

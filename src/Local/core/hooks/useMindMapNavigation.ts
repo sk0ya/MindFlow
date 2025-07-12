@@ -78,7 +78,7 @@ export const useMindMapNavigation = ({
           targetNode = currentNode.children && currentNode.children.length > 0 
             ? currentNode.children[0] : null;
           break;
-        case 'left':
+        case 'left': {
           // 左方向: 前の兄弟ノードを選択
           const leftParent = findParentNode(selectedNodeId);
           if (leftParent && leftParent.children) {
@@ -86,7 +86,8 @@ export const useMindMapNavigation = ({
             targetNode = currentIndex > 0 ? leftParent.children[currentIndex - 1] : null;
           }
           break;
-        case 'right':
+        }
+        case 'right': {
           // 右方向: 次の兄弟ノードを選択
           const rightParent = findParentNode(selectedNodeId);
           if (rightParent && rightParent.children) {
@@ -95,6 +96,7 @@ export const useMindMapNavigation = ({
               ? rightParent.children[currentIndex + 1] : null;
           }
           break;
+        }
       }
     }
     

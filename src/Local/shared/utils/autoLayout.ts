@@ -163,7 +163,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
     return { width, height };
   };
 
-  const updateNodePositions = (node: MindMapNode, depth = 0, side: 'center' | 'left' | 'right' = 'center', yOffset = 0, _availableHeight = 0): void => {
+  const updateNodePositions = (node: MindMapNode, depth = 0, side: 'center' | 'left' | 'right' = 'center', yOffset = 0): void => {
     if (depth === 0) {
       if (!preserveRootPosition) {
         node.x = centerX;
@@ -188,7 +188,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
           rightChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
             const childYOffset = (currentOffset + childHeight / 2 - rightTotalHeight / 2) * minVerticalSpacing;
-            updateNodePositions(child, 1, 'right', childYOffset, childHeight);
+            updateNodePositions(child, 1, 'right', childYOffset);
             currentOffset += childHeight;
           });
         }
@@ -202,7 +202,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
           leftChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
             const childYOffset = (currentOffset + childHeight / 2 - leftTotalHeight / 2) * minVerticalSpacing;
-            updateNodePositions(child, 1, 'left', childYOffset, childHeight);
+            updateNodePositions(child, 1, 'left', childYOffset);
             currentOffset += childHeight;
           });
         }
@@ -226,7 +226,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         node.children.forEach((child: MindMapNode) => {
           const childHeight = calculateSubtreeHeight(child);
           const childYOffset = yOffset + (currentOffset + childHeight / 2 - totalChildHeight / 2) * spacing;
-          updateNodePositions(child, depth + 1, side, childYOffset, childHeight);
+          updateNodePositions(child, depth + 1, side, childYOffset);
           currentOffset += childHeight;
         });
       }
@@ -331,7 +331,7 @@ export const organicLayout = (rootNode: MindMapNode, options: LayoutOptions = {}
   } = options;
 
   // 初期配置：放射状に配置
-  let layoutNode = radialLayout(rootNode, { centerX, centerY, baseRadius: baseRadius + Math.random() * radiusVariation });
+  const layoutNode = radialLayout(rootNode, { centerX, centerY, baseRadius: baseRadius + Math.random() * radiusVariation });
 
   // 全ノードを平坦化
   const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
@@ -553,7 +553,7 @@ interface LayoutPreset {
   name: string;
   description: string;
   icon: string;
-  func: (rootNode: MindMapNode, options?: LayoutOptions) => MindMapNode;
+  func: (_rootNode: MindMapNode, _options?: LayoutOptions) => MindMapNode;
 }
 
 export const layoutPresets: { [key: string]: LayoutPreset } = {

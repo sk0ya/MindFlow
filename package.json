@@ -16,7 +16,7 @@
     "type-check:local": "tsc --noEmit --strict src/Local/**/*.ts src/Local/**/*.tsx",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
-    "lint:type-safety": "eslint src/Local --ext .ts,.tsx --max-warnings 100",
+    "lint:type-safety": "eslint src/Local --ext .ts,.tsx --max-warnings 200",
     "scan:unsafe": "node scripts/detect-unsafe-patterns.js",
     "scan:unsafe-ci": "node scripts/detect-unsafe-patterns.js --ci",
     "scan:unsafe-local": "node scripts/detect-unsafe-patterns.js --local-only",

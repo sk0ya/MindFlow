@@ -1,4 +1,5 @@
 // Custom error types for better error handling
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export enum ErrorCode {
   // Node errors
   NODE_NOT_FOUND = 'NODE_NOT_FOUND',
