@@ -170,7 +170,7 @@ export const VALIDATION_CONSTANTS = {
 
 // API configuration
 export const API_CONSTANTS = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
   ENDPOINTS: {
     AUTH: '/api/auth',
     MINDMAPS: '/api/mindmaps',

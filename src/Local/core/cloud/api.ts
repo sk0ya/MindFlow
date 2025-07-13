@@ -1,7 +1,7 @@
 // Cloudflare Workers API integration
 import type { MindMapData } from '@shared/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
 export interface ApiResponse<T = any> {
   success: boolean;

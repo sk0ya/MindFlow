@@ -2,7 +2,7 @@
 import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse } from './types';
 
 const DEFAULT_CONFIG: AuthConfig = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
   tokenKey: 'mindflow_auth_token',
   refreshTokenKey: 'mindflow_refresh_token'
 };
