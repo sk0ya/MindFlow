@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useMindMapData } from './useMindMapData';
 import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
@@ -45,30 +45,54 @@ export const useMindMap = (
     }
   }, [dataHook.data, persistenceHook]);
 
-  // ノード操作時のみの自動保存 - updatedAtの変更を検知してデバウンス保存
-  const [lastMapSwitchTime, setLastMapSwitchTime] = useState<number>(0);
+  // 自動保存のロジック - useRefを使って無限ループを防ぐ
+  const lastSaveTimeRef = useRef<string>('');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMapIdRef = useRef<string>('');
   
   useEffect(() => {
-    if (dataHook.data && persistenceHook.isInitialized) {
-      const now = Date.now();
-      // マップ切り替え後500ms以内は保存しない（切り替え時の誤保存を防ぐ）
-      if (now - lastMapSwitchTime > 500) {
-        const timeoutId = setTimeout(() => {
-          if (dataHook.data) {
-            saveCurrentMap();
-          }
-        }, 300); // 短いデバウンス時間
-
-        return () => clearTimeout(timeoutId);
-      }
+    const currentData = dataHook.data;
+    const currentUpdatedAt = currentData?.updatedAt || '';
+    const currentMapId = currentData?.id || '';
+    
+    // マップが切り替わった場合は保存しない
+    if (currentMapId !== lastMapIdRef.current) {
+      lastMapIdRef.current = currentMapId;
+      lastSaveTimeRef.current = currentUpdatedAt;
+      return;
     }
-    return undefined;
-  }, [dataHook.data?.updatedAt, persistenceHook.isInitialized, saveCurrentMap, lastMapSwitchTime]);
-
-  // マップ切り替え時にタイムスタンプを記録
-  useEffect(() => {
-    setLastMapSwitchTime(Date.now());
-  }, [dataHook.data?.id]);
+    
+    // updatedAtが変更されていない場合は保存しない
+    if (currentUpdatedAt === lastSaveTimeRef.current || !currentUpdatedAt) {
+      return;
+    }
+    
+    // 既存のタイマーをクリア
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // デバウンス保存
+    if (currentData && persistenceHook.isInitialized) {
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await persistenceHook.saveData(currentData);
+          await persistenceHook.updateMapInList(currentData);
+          console.log('💾 Auto save completed:', currentData.title);
+          lastSaveTimeRef.current = currentUpdatedAt;
+        } catch (error) {
+          console.error('❌ Auto save failed:', error);
+        }
+      }, 300);
+    }
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, [dataHook.data?.updatedAt, dataHook.data?.id, persistenceHook.isInitialized]);
 
   // マップ管理の高レベル操作（非同期対応）
   const mapOperations = {
