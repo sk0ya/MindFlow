@@ -1,7 +1,7 @@
 // Authentication provider for cloud mode
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { CloudAuthAdapter } from '../../core/auth/CloudAuthAdapter';
-import type { AuthAdapter, AuthState } from '../../core/auth/types';
+import { CloudAuthAdapter } from '@local/core/auth';
+import type { AuthAdapter, AuthState } from '@local/core/auth';
 
 interface AuthContextType {
   authAdapter: AuthAdapter;

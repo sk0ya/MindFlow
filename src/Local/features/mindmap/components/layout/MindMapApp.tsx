@@ -10,7 +10,12 @@ import './MindMapApp.css';
 // Types
 import type { MindMapNode, FileAttachment } from '@local/shared';
 import type { StorageConfig } from '@local/core/storage/types';
-import { useAuth, LoginModal } from '../../../../components/auth';
+import { 
+  localModeConfig, 
+  createCloudModeConfig, 
+  createHybridModeConfig 
+} from '@local/examples/StorageConfigExamples';
+import { useAuth, LoginModal } from '@local/components/auth';
 
 interface MindMapAppProps {
   storageMode?: 'local' | 'cloud' | 'hybrid';
@@ -56,11 +61,18 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
   }, [auth?.authState.isAuthenticated]);
   
   // Create storage configuration based on selected mode
-  const storageConfig: StorageConfig = {
-    mode: storageMode,
-    autoSave: true,
-    authAdapter: authAdapter || undefined
-  };
+  const storageConfig: StorageConfig = React.useMemo(() => {
+    switch (storageMode) {
+      case 'local':
+        return localModeConfig;
+      case 'cloud':
+        return authAdapter ? createCloudModeConfig(authAdapter) : localModeConfig;
+      case 'hybrid':
+        return authAdapter ? createHybridModeConfig(authAdapter) : localModeConfig;
+      default:
+        return localModeConfig;
+    }
+  }, [storageMode, authAdapter]);
   
   const mindMap = useMindMap(isAppReady, storageConfig);
   const { 
@@ -210,25 +222,25 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
 
   // Show loading while auth is initializing in cloud mode
   if (isCloudMode && auth && !auth.isReady) {
-    return <div>Initializing authentication...</div>;
-  }
-
-  // Show login modal if authentication is required
-  if (needsAuth && authAdapter) {
     return (
-      <>
-        <div>Please log in to access cloud features.</div>
-        <LoginModal 
-          isOpen={showLoginModal}
-          onClose={() => setShowLoginModal(false)}
-          authAdapter={authAdapter}
-        />
-      </>
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">認証システムを初期化中...</p>
+        </div>
+      </div>
     );
   }
 
   if (!data) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">データを読み込み中...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -324,6 +336,15 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
         onCloseNodeMapLinksPanel={closeAllPanels}
         onShowImageModal={showImageModal}
       />
+      
+      {/* Authentication Modal - Shows when cloud mode requires login */}
+      {needsAuth && authAdapter && (
+        <LoginModal 
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          authAdapter={authAdapter}
+        />
+      )}
     </div>
   );
 };

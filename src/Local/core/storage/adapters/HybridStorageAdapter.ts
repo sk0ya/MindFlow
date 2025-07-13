@@ -1,6 +1,7 @@
 // Hybrid storage adapter - combines local IndexedDB with cloud backup
 import type { MindMapData } from '@shared/types';
-import type { StorageAdapter, AuthAdapter, SyncStatus } from '../types';
+import type { StorageAdapter, SyncStatus } from '../types';
+import type { AuthAdapter } from '../../auth/types';
 import { LocalStorageAdapter } from './LocalStorageAdapter';
 import { CloudStorageAdapter } from './CloudStorageAdapter';
 

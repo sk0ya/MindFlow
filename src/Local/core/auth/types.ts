@@ -19,6 +19,8 @@ export interface LoginResponse {
   message: string;
   token?: string;
   user?: AuthUser;
+  emailSent?: boolean;
+  magicLink?: string;
 }
 
 export interface AuthConfig {
@@ -34,7 +36,7 @@ export interface AuthAdapter {
   readonly authState: AuthState;
   
   // Authentication operations
-  login(email: string): Promise<{ success: boolean; error?: string }>;
+  login(email: string): Promise<LoginResponse>;
   verifyMagicLink(token: string): Promise<{ success: boolean; error?: string }>;
   logout(): void;
   

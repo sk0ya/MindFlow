@@ -72,7 +72,7 @@ export class CloudAuthAdapter implements AuthAdapter {
   /**
    * Magic linkでログイン
    */
-  async login(email: string): Promise<{ success: boolean; error?: string }> {
+  async login(email: string): Promise<LoginResponse> {
     this.setLoading(true);
     
     try {
@@ -104,17 +104,17 @@ export class CloudAuthAdapter implements AuthAdapter {
         console.log('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
         
         // 開発モードの場合、Magic Linkを自動的に開く
+        // eslint-disable-next-line no-alert
         if (result.magicLink && confirm('メールが送信されませんでした。Magic Linkを直接開きますか？')) {
           window.location.href = result.magicLink;
-          return { success: true };
         }
       }
       
-      return { success: true };
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       this.setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, message: errorMessage };
     } finally {
       this.setLoading(false);
     }

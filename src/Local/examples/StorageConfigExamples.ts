@@ -1,5 +1,6 @@
 // Storage configuration examples for different use cases
-import type { StorageConfig, AuthAdapter } from '../core/storage/types';
+import type { StorageConfig } from '../core/storage/types';
+import type { AuthAdapter } from '../core/auth/types';
 
 /**
  * ローカルモード設定例

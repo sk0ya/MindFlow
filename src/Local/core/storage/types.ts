@@ -1,5 +1,6 @@
 // Storage abstraction types for dual Local/Cloud architecture
 import type { MindMapData } from '@shared/types';
+import type { AuthAdapter } from '../auth/types';
 
 /**
  * 統一ストレージインターフェース
@@ -25,34 +26,6 @@ export interface StorageAdapter {
   cleanup(): void;
 }
 
-/**
- * 認証アダプターインターフェース（Cloud/Hybridモード用）
- */
-export interface AuthAdapter {
-  readonly isAuthenticated: boolean;
-  readonly user: AuthUser | null;
-  readonly isInitialized: boolean;
-  
-  // 認証操作
-  login(email: string): Promise<{ success: boolean; error?: string }>;
-  logout(): void;
-  
-  // トークン管理
-  getAuthHeaders(): Record<string, string>;
-  refreshToken(): Promise<boolean>;
-  
-  // イベント
-  onAuthChange(callback: (user: AuthUser | null) => void): () => void;
-}
-
-/**
- * ユーザー情報
- */
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName?: string;
-}
 
 /**
  * ストレージ設定

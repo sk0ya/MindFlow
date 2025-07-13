@@ -1,6 +1,7 @@
 // Cloud storage adapter - integrates cloud storage with Local architecture
 import type { MindMapData } from '@shared/types';
-import type { StorageAdapter, AuthAdapter } from '../types';
+import type { StorageAdapter } from '../types';
+import type { AuthAdapter } from '../../auth/types';
 import { createInitialData } from '@local/shared/types/dataTypes';
 import {
   initCloudIndexedDB,

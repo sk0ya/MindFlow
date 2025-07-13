@@ -1,8 +1,6 @@
 // Storage abstraction barrel exports
 export type {
   StorageAdapter,
-  AuthAdapter,
-  AuthUser,
   StorageConfig,
   StorageMode,
   SyncStatus,
