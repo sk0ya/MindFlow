@@ -11,19 +11,29 @@ export async function sendMagicLinkEmail(email, magicLink, env) {
     fromEmail: env.FROM_EMAIL 
   });
   
-  // RESEND_KEY と RESEND_API_KEY の両方をチェック
-  const resendKey = env.RESEND_KEY || env.RESEND_API_KEY;
+  // RESEND_KEY を使用（正しいAPIキー）
+  const resendKey = env.RESEND_KEY;
   
   console.log('🔑 APIキーチェック:', {
     hasResendKey: !!env.RESEND_KEY,
     hasResendApiKey: !!env.RESEND_API_KEY,
+    resendKeyLength: env.RESEND_KEY?.length || 0,
+    resendApiKeyLength: env.RESEND_API_KEY?.length || 0,
     keyValue: resendKey ? 'SET' : 'NOT SET',
     isPlaceholder: resendKey === 're_placeholder_key',
-    keyPrefix: resendKey ? resendKey.substring(0, 10) : 'none'
+    keyPrefix: resendKey ? resendKey.substring(0, 15) : 'none',
+    keyType: resendKey ? (resendKey.startsWith('re_') ? 'VALID_FORMAT' : 'INVALID_FORMAT') : 'NO_KEY'
   });
   
-  if (!resendKey || resendKey === 're_placeholder_key') {
-    console.log('⚠️ RESEND_KEY/RESEND_API_KEY が設定されていないため開発モードで動作');
+  if (!resendKey || resendKey === 're_placeholder_key' || resendKey.trim() === '') {
+    console.log('⚠️ RESEND_KEY が無効なため開発モードで動作:', {
+      keyExists: !!resendKey,
+      keyLength: resendKey?.length || 0,
+      keyIsPlaceholder: resendKey === 're_placeholder_key',
+      keyIsEmpty: resendKey === '',
+      keyIsWhitespace: resendKey?.trim() === '',
+      actualKey: resendKey ? `${resendKey.substring(0, 10)}...` : 'NONE'
+    });
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
@@ -37,7 +47,7 @@ Magic Link: ${magicLink}
   try {
     // メール送信データを準備
     const emailData = {
-      from: `MindFlow <${env.FROM_EMAIL || 'onboarding@resend.dev'}>`, // 環境変数から取得
+      from: `MindFlow <onboarding@resend.dev>`, // 一時的にResend認証済みアドレスを使用
       to: [email],
       subject: 'MindFlow - ログインリンク',
       html: createMagicLinkEmailHTML(magicLink),
@@ -81,7 +91,11 @@ Magic Link: ${magicLink}
     });
     return { success: true, messageId: result.id };
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error('❌ Email sending failed:', {
+      error: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     
     // フォールバック: 開発モードとして処理
     console.log(`
@@ -89,6 +103,7 @@ Magic Link: ${magicLink}
 To: ${email}
 Subject: MindFlow - ログインリンク
 Magic Link: ${magicLink}
+Error: ${error.message}
 ==========================================
     `);
     return { success: true, messageId: 'fallback-mode' };

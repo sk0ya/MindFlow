@@ -102,6 +102,12 @@ export class CloudAuthAdapter implements AuthAdapter {
         console.log('✅ Magic link email sent to:', email);
       } else {
         console.log('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
+        
+        // 開発モードの場合、Magic Linkを自動的に開く
+        if (result.magicLink && confirm('メールが送信されませんでした。Magic Linkを直接開きますか？')) {
+          window.location.href = result.magicLink;
+          return { success: true };
+        }
       }
       
       return { success: true };
