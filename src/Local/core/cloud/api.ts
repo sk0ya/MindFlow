@@ -100,6 +100,8 @@ export class CloudflareAPI {
    * マインドマップを更新
    */
   async updateMindMap(data: MindMapData): Promise<MindMapData> {
+    console.log('🔄 API: Updating mindmap:', { id: data.id, title: data.title });
+    
     const response = await fetch(`${API_BASE_URL}/api/mindmaps/${data.id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
@@ -107,12 +109,19 @@ export class CloudflareAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update mindmap: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('❌ API: Update mindmap failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        body: errorText 
+      });
+      throw new Error(`Failed to update mindmap: ${response.statusText} - ${errorText}`);
     }
 
     const result: MindMapApiResponse = await response.json();
     
     if (!result.success) {
+      console.error('❌ API: Update mindmap API error:', result.error);
       throw new Error(result.error || 'Failed to update mindmap');
     }
 

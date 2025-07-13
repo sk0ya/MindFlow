@@ -195,12 +195,16 @@ class CloudIndexedDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readonly');
       const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const index = store.index('isDirty');
-      const request = index.getAll(IDBKeyRange.only(true));
+      const request = store.getAll();
 
       request.onsuccess = () => {
-        const dirtyData = request.result || [];
+        const allData = request.result || [];
+        // Filter for dirty data manually
+        const dirtyData = allData.filter((item: CachedCloudMindMap) => 
+          item._metadata && item._metadata.isDirty === true
+        );
         console.log('🔄 Cloud IndexedDB: 未同期データ取得', { 
+          total: allData.length,
           dirty: dirtyData.length
         });
         resolve(dirtyData);

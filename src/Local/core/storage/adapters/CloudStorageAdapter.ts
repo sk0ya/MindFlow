@@ -145,7 +145,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       console.log('💾 CloudStorageAdapter: Data saved locally:', data.title);
 
       // 2. APIにも保存（非同期）
-      this.saveToAPIAsync(data);
+      this.saveToAPIAsync(data).catch(error => {
+        console.warn('⚠️ CloudStorageAdapter: Background API save failed:', error);
+      });
     } catch (error) {
       console.error('❌ CloudStorageAdapter: Failed to save data:', error);
       throw error;
@@ -308,18 +310,28 @@ export class CloudStorageAdapter implements StorageAdapter {
   /**
    * 非同期でAPIに保存
    */
-  private saveToAPIAsync(data: MindMapData): void {
+  private async saveToAPIAsync(data: MindMapData): Promise<void> {
     if (!this.authAdapter.isAuthenticated) return;
 
-    // 非同期でAPI保存を実行
-    this.apiClient.updateMindMap(data)
-      .then(async (updatedData) => {
-        await markAsCloudSynced(updatedData.id);
-        console.log('☁️ CloudStorageAdapter: Data synced to cloud:', updatedData.title);
-      })
-      .catch((error) => {
-        console.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
-      });
+    try {
+      // まずサーバーに存在するかチェックして、適切なAPIを使用
+      let updatedData: MindMapData;
+      
+      try {
+        // 既存のマップを更新を試行
+        updatedData = await this.apiClient.updateMindMap(data);
+        console.log('☁️ CloudStorageAdapter: Data updated in cloud:', updatedData.title);
+      } catch (updateError) {
+        // 更新が失敗した場合は新規作成を試行
+        console.log('🆕 CloudStorageAdapter: Creating new mindmap in cloud');
+        updatedData = await this.apiClient.createMindMap(data);
+        console.log('☁️ CloudStorageAdapter: Data created in cloud:', updatedData.title);
+      }
+      
+      await markAsCloudSynced(updatedData.id);
+    } catch (error) {
+      console.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
+    }
   }
 
   /**
