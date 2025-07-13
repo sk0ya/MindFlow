@@ -125,9 +125,6 @@ export class CloudStorageAdapter implements StorageAdapter {
       
       // 3. サーバーデータがある場合はそれを使用、なければローカルデータ
       if (serverData) {
-        // サーバーデータをローカルに保存
-        await this.saveToLocal(serverData);
-        await markAsCloudSynced(serverData.id);
         console.log('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
         return serverData;
       } else if (localData) {
@@ -206,8 +203,7 @@ export class CloudStorageAdapter implements StorageAdapter {
         const cleanedMaps = serverMaps.map(map => cleanEmptyNodesFromData(map));
         console.log(`📋 CloudStorageAdapter: Loaded ${cleanedMaps.length} maps from API`);
         
-        // ローカルキャッシュも更新
-        await Promise.all(cleanedMaps.map(map => this.saveToLocal(map)));
+        // Note: ローカルキャッシュの更新は明示的な保存時のみ行う（読み込み時は不要）
         
         return cleanedMaps;
       }
