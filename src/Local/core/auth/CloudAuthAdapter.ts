@@ -86,11 +86,24 @@ export class CloudAuthAdapter implements AuthAdapter {
 
       const result: LoginResponse = await response.json();
 
+      console.log('📧 Server response:', {
+        status: response.status,
+        success: result.success,
+        emailSent: result.emailSent,
+        message: result.message,
+        hasToken: !!result.magicLink
+      });
+
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Login failed');
       }
 
-      console.log('📧 Magic link sent to:', email);
+      if (result.emailSent) {
+        console.log('✅ Magic link email sent to:', email);
+      } else {
+        console.log('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
+      }
+      
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';

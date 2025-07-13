@@ -4,11 +4,13 @@ import { corsHeaders } from './utils/cors.js';
 
 export default {
   async fetch(request, env, ctx) {
+    const requestOrigin = request.headers.get('Origin');
+    
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 200,
-        headers: corsHeaders(env.CORS_ORIGIN)
+        headers: corsHeaders(env.CORS_ORIGIN, requestOrigin)
       });
     }
 
@@ -37,7 +39,7 @@ export default {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            ...corsHeaders(env.CORS_ORIGIN)
+            ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
           }
         });
       }

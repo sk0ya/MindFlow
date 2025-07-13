@@ -5,13 +5,25 @@ export async function sendMagicLinkEmail(email, magicLink, env) {
   console.log('📧 メール送信開始:', { 
     email, 
     hasResendKey: !!env.RESEND_KEY,
+    hasResendApiKey: !!env.RESEND_API_KEY,
     resendKeyLength: env.RESEND_KEY?.length,
+    resendApiKeyLength: env.RESEND_API_KEY?.length,
     fromEmail: env.FROM_EMAIL 
   });
   
-  // Resend.com APIを使用してメール送信
-  if (!env.RESEND_KEY || env.RESEND_KEY === 're_placeholder_key') {
-    console.log('⚠️ RESEND_KEY が設定されていないため開発モードで動作');
+  // RESEND_KEY と RESEND_API_KEY の両方をチェック
+  const resendKey = env.RESEND_KEY || env.RESEND_API_KEY;
+  
+  console.log('🔑 APIキーチェック:', {
+    hasResendKey: !!env.RESEND_KEY,
+    hasResendApiKey: !!env.RESEND_API_KEY,
+    keyValue: resendKey ? 'SET' : 'NOT SET',
+    isPlaceholder: resendKey === 're_placeholder_key',
+    keyPrefix: resendKey ? resendKey.substring(0, 10) : 'none'
+  });
+  
+  if (!resendKey || resendKey === 're_placeholder_key') {
+    console.log('⚠️ RESEND_KEY/RESEND_API_KEY が設定されていないため開発モードで動作');
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
@@ -23,30 +35,50 @@ Magic Link: ${magicLink}
   }
 
   try {
+    // メール送信データを準備
+    const emailData = {
+      from: `MindFlow <${env.FROM_EMAIL || 'onboarding@resend.dev'}>`, // 環境変数から取得
+      to: [email],
+      subject: 'MindFlow - ログインリンク',
+      html: createMagicLinkEmailHTML(magicLink),
+      text: createMagicLinkEmailText(magicLink)
+    };
+    
+    console.log('📮 Resend API呼び出し:', {
+      url: 'https://api.resend.com/emails',
+      fromEmail: emailData.from,
+      toEmail: emailData.to,
+      hasApiKey: !!resendKey,
+      apiKeyPrefix: resendKey ? resendKey.substring(0, 10) + '...' : 'none'
+    });
+    
     // Resend API を使用してメール送信
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${env.RESEND_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: `MindFlow <${env.FROM_EMAIL || 'onboarding@resend.dev'}>`, // 環境変数から取得
-        to: [email],
-        subject: 'MindFlow - ログインリンク',
-        html: createMagicLinkEmailHTML(magicLink),
-        text: createMagicLinkEmailText(magicLink)
-      })
+      body: JSON.stringify(emailData)
     });
 
     const result = await response.json();
     
     if (!response.ok) {
-      console.error('Resend API error:', result);
-      throw new Error(`Email API error: ${result.message || 'Unknown error'}`);
+      console.error('❌ Resend API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: result,
+        name: result.name,
+        message: result.message
+      });
+      throw new Error(`Email API error: ${result.message || result.name || 'Unknown error'}`);
     }
 
-    console.log('Email sent successfully:', result.id);
+    console.log('✅ Email sent successfully:', { 
+      messageId: result.id,
+      response: result 
+    });
     return { success: true, messageId: result.id };
   } catch (error) {
     console.error('Email sending failed:', error);

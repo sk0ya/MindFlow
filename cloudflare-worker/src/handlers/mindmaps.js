@@ -3,6 +3,7 @@ import { corsHeaders } from '../utils/cors.js';
 import { verifyJWT } from '../utils/auth.js';
 
 export async function handleRequest(request, env) {
+  const requestOrigin = request.headers.get('Origin');
   const url = new URL(request.url);
   const method = request.method;
   
@@ -85,7 +86,7 @@ export async function handleRequest(request, env) {
     return new Response(JSON.stringify(apiResponse), {
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN)
+        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
       }
     });
 
@@ -102,7 +103,7 @@ export async function handleRequest(request, env) {
       status: error.status || 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN)
+        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
       }
     });
   }

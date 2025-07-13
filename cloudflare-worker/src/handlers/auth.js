@@ -6,6 +6,7 @@ import { sendMagicLinkEmail } from '../utils/email.js';
 import { createAuthToken, verifyAuthToken, cleanupExpiredTokens } from '../utils/authTokens.js';
 
 export async function handleAuthRequest(request, env) {
+  const requestOrigin = request.headers.get('Origin');
   const url = new URL(request.url);
   const method = request.method;
   const pathParts = url.pathname.split('/');
@@ -60,7 +61,7 @@ export async function handleAuthRequest(request, env) {
     return new Response(JSON.stringify(response), {
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN)
+        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
       }
     });
 
@@ -70,7 +71,7 @@ export async function handleAuthRequest(request, env) {
       status: error.status || 400,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN)
+        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
       }
     });
   }
@@ -185,7 +186,7 @@ async function handleVerifyMagicLink(request, env) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN)
+        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
       }
     });
   } catch (error) {
