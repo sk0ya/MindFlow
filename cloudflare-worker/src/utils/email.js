@@ -1,7 +1,7 @@
 // メール送信ユーティリティ
 // Resend.com APIを使用してメール送信
 
-export async function sendMagicLinkEmail(email, magicLink, env) {
+export async function sendMagicLinkEmail(email, magicLink, env, token = null) {
   console.log('📧 メール送信開始:', { 
     email, 
     hasResendKey: !!env.RESEND_KEY,
@@ -46,6 +46,7 @@ export async function sendMagicLinkEmail(email, magicLink, env) {
 To: ${email}
 Subject: MindFlow - ログインリンク
 Magic Link: ${magicLink}
+${token ? `Token: ${token}` : 'Token: Not provided'}
 Debug: ${JSON.stringify(debugInfo)}
 ==========================================
     `);
@@ -62,8 +63,8 @@ Debug: ${JSON.stringify(debugInfo)}
       from: `MindFlow <${env.FROM_EMAIL}>`,
       to: [email],
       subject: 'MindFlow - ログインリンク',
-      html: createMagicLinkEmailHTML(magicLink),
-      text: createMagicLinkEmailText(magicLink)
+      html: createMagicLinkEmailHTML(magicLink, token),
+      text: createMagicLinkEmailText(magicLink, token)
     };
     
     console.log('📮 Resend API呼び出し:', {
@@ -115,6 +116,7 @@ Debug: ${JSON.stringify(debugInfo)}
 To: ${email}
 Subject: MindFlow - ログインリンク
 Magic Link: ${magicLink}
+${token ? `Token: ${token}` : 'Token: Not provided'}
 Error: ${error.message}
 ==========================================
     `);
@@ -128,7 +130,7 @@ Error: ${error.message}
   }
 }
 
-function createMagicLinkEmailHTML(magicLink) {
+function createMagicLinkEmailHTML(magicLink, token = null) {
   return `
 <!DOCTYPE html>
 <html>
@@ -161,6 +163,18 @@ function createMagicLinkEmailHTML(magicLink) {
         <a href="${magicLink}" class="button">MindFlowにログイン</a>
       </div>
       
+      ${token ? `
+      <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #0c4a6e; font-size: 16px;">🔑 ログイントークン</h3>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #0c4a6e;">
+          リンクをクリックできない場合は、以下のトークンをコピーしてログイン画面に入力してください：
+        </p>
+        <div style="background-color: #dbeafe; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; word-break: break-all; text-align: center; color: #1e40af; font-weight: bold;">
+          ${token}
+        </div>
+      </div>
+      ` : ''}
+      
       <div class="security-note">
         <strong>🔒 セキュリティについて</strong><br>
         • このリンクは10分間有効です<br>
@@ -183,7 +197,7 @@ function createMagicLinkEmailHTML(magicLink) {
   `;
 }
 
-function createMagicLinkEmailText(magicLink) {
+function createMagicLinkEmailText(magicLink, token = null) {
   return `
 MindFlow - ログインリンク
 
@@ -194,7 +208,14 @@ MindFlowにログインするためのリンクをお送りしました。
 
 ログインリンク: ${magicLink}
 
-セキュリティについて:
+${token ? `
+🔑 ログイントークン:
+リンクをクリックできない場合は、以下のトークンをコピーして
+ログイン画面に入力してください：
+
+${token}
+
+` : ''}セキュリティについて:
 • このリンクは10分間有効です
 • ログイン後、リンクは無効になります  
 • このメールは誰にも転送しないでください

@@ -110,8 +110,8 @@ async function handleSendMagicLink(request, env) {
     const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}&type=magic-link`;
     
     console.log('🔍 メール送信開始');
-    // メール送信
-    const emailResult = await sendMagicLinkEmail(email, magicLink, env);
+    // メール送信（トークンも渡す）
+    const emailResult = await sendMagicLinkEmail(email, magicLink, env, authToken.token);
     console.log('✅ メール送信完了:', { messageId: emailResult.messageId });
     
     console.log('🔍 期限切れトークンクリーンアップ開始');
@@ -154,6 +154,10 @@ async function handleSendMagicLink(request, env) {
       response.magicLink = magicLink;
       response.debugEmailResult = emailResult;
     }
+    
+    // トークンをレスポンスに含める（本番・開発共通）
+    // フロントエンドでトークン入力機能を使えるようにする
+    response.token = authToken.token;
     
     return response;
   } catch (error) {

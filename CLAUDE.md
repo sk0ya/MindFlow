@@ -2,168 +2,107 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
+## Common Commands
 
-### Build & Development
-- `npm run dev` - Start Vite development server (port 3001)
-- `npm run build` - Full build with validation
-- `npm run preview` - Preview production build
+### Development
+- `npm run dev` - Start development server with Vite
+- `npm run build` - Build production version (includes validation)
+- `npm run preview` - Preview built app locally 
+- `npm run serve` - Serve production build
 
-### Type Checking
-- `npm run type-check` - Standard TypeScript checking
-- `npm run type-check:strict` - Strict checking using tsconfig.strict.json
-- `npm run type-check:local` - Strict checking for src/Local directory only
+### Testing & Quality
+- `npm run type-check` - Run TypeScript type checking
+- `npm run type-check:strict` - Run strict TypeScript checking
+- `npm run lint` - Run ESLint on source files
+- `npm run lint:fix` - Fix auto-fixable ESLint issues
+- `npm run test` - Run Jest test suite
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
 
-### Testing
-- `npm run test` - Run all tests
-- `npm run test:watch` - Watch mode
-- `npm run test:coverage` - With coverage reports
-- `npm run test:cloud-sync` - Cloud sync specific tests
-- `npm run test:integration` - Integration tests
-- `npm run test:unit` - Unit tests only
+### Specialized Testing
+- `npm run test:cloud-sync` - Test cloud synchronization features
+- `npm run test:integration` - Run integration tests for sync and hooks
+- `npm run test:unit` - Run unit tests for utilities
 
-### Code Quality
-- `npm run lint` - ESLint checking
-- `npm run lint:fix` - Auto-fix linting issues
-- `npm run scan:unsafe` - Detect unsafe TypeScript patterns
+### Security & Safety
+- `npm run scan:unsafe` - Detect unsafe patterns in code
+- `npm run scan:unsafe-ci` - Run unsafe pattern detection for CI
+- `npm run validate` - Run validation checks before build
 
-## Architecture Overview
+## Project Architecture
 
-MindFlow is a React-based mind mapping application with dual storage modes:
+### High-Level Structure
+This is a React-based mindmap application with a modular architecture supporting multiple storage modes:
 
-### Dual Architecture Pattern
-The app implements **two separate architectures** for different storage modes:
+- **Storage Modes**: Local (localStorage/IndexedDB), Cloud, and Hybrid
+- **Entry Point**: `src/App.tsx` dynamically imports the main app based on storage mode
+- **Main App**: Located in `src/app/` with modular feature-based organization
 
-1. **Local Mode** (`src/Local/`):
-   - Zustand store with Immer for state management
-   - Normalized data structure for O(1) node operations
-   - LocalStorage persistence with auto-save
-   - Rich undo/redo history (50 operations)
+### Core Architecture Components
 
-2. **Cloud Mode** (`src/Cloud/`):
-   - React hooks pattern with useState/useCallback
-   - Tree-based data structure (non-normalized)
-   - IndexedDB + Cloudflare Workers API dual-layer persistence
-   - Real-time sync with conflict resolution
+#### Storage System (`src/app/core/storage/`)
+- **StorageAdapterFactory**: Creates appropriate storage adapters based on configuration
+- **Adapters**: LocalStorageAdapter, CloudStorageAdapter, HybridStorageAdapter
+- Three storage modes support different use cases:
+  - `local`: Pure local storage using localStorage and IndexedDB
+  - `cloud`: Cloud-based storage with authentication
+  - `hybrid`: Combination of local and cloud storage
 
-### Entry Points
-- `src/main.tsx` - React 18 entry point
-- `src/App.tsx` - Mode routing with lazy loading
-- `src/StorageSelection/` - Storage mode selection UI
+#### State Management (`src/app/core/`)
+- **Hooks-based Architecture**: Specialized hooks for different concerns
+  - `useMindMap`: Main orchestrating hook that combines all others
+  - `useMindMapData`: Data and node operations
+  - `useMindMapUI`: UI state management
+  - `useMindMapActions`: Actions and history management
+  - `useMindMapPersistence`: Storage and persistence logic
+- **Zustand Store**: Located in `src/app/core/store/` with slices for different domains
+- **Auto-save**: Debounced auto-save with manual save override
 
-### Key Components Structure
+#### Feature Structure (`src/app/features/`)
+- **MindMap Feature** (`mindmap/`): Core mindmap functionality
+  - Layout components (header, sidebar, workspace, canvas)
+  - Core components (nodes, connections, drag handlers)
+  - Modals and panels for various interactions
+- **Files Feature** (`files/`): File import/export and attachment handling
 
-```
-src/
-├── Local/                    # Local storage mode implementation
-│   ├── core/                 # Core state management
-│   │   ├── store/
-│   │   │   ├── slices/       # Zustand store slices (data, ui, history, node)
-│   │   │   └── mindMapStore.ts # Combined store
-│   │   ├── hooks/            # Core hooks (useMindMapSimplified, useKeyboardShortcuts)
-│   │   └── data/             # Data normalization utilities
-│   ├── features/
-│   │   ├── mindmap/          # Main mindmap feature
-│   │   │   ├── components/
-│   │   │   │   ├── app/      # App-level components
-│   │   │   │   ├── canvas/   # Canvas rendering components
-│   │   │   │   ├── node/     # Node-specific components
-│   │   │   │   └── sidebar/  # Sidebar components
-│   │   │   └── hooks/        # Feature-specific hooks
-│   │   └── files/            # File handling feature
-│   └── shared/               # Local-specific shared code
-│       ├── components/       # Reusable UI components
-│       ├── constants/        # Split into logical modules
-│       ├── types/            # Type definitions
-│       └── utils/            # Utility functions
-├── Cloud/                    # Cloud storage mode implementation
-├── shared/                   # Cross-mode shared code
-│   ├── types/                # Unified type system
-│   ├── components/           # Shared components (ErrorBoundary)
-│   └── utils/                # Environment utilities
-└── StorageSelection/         # Mode initialization
-```
+#### Shared Resources (`src/app/shared/`)
+- UI components, constants, types, and utilities used across features
+- Note: There's also a `src/shared/` for project-wide shared resources
 
-### State Management Patterns
+### Key Technical Details
 
-**Local Mode (Modular Zustand Store)**:
-- **Data Slice**: Manages mind map data and normalization
-- **UI Slice**: Handles all UI state (panels, modals, selection)
-- **History Slice**: Undo/redo functionality with 50-operation history
-- **Node Slice**: All node CRUD operations and editing state
-- Normalized store: `{nodes: {[id]: Node}, rootIds: string[], ui: UIState}`
-- Hook: `useMindMapSimplified()` with data/UI/map operations
-- Persistence: Debounced LocalStorage saves
+#### Magic Link Authentication
+The app detects magic link tokens in URL parameters (`?token=...`) and automatically switches to cloud mode for authenticated users.
 
-**Cloud Mode**:
-- Direct tree manipulation with `useMindMap()`
-- Dual persistence: `useCloudData()` handles IndexedDB + API sync
-- Offline-first with background synchronization
+#### Storage Mode Persistence
+Storage mode selection is persisted in localStorage as `mindflow_storage_mode`.
 
-### Type System & Import Organization
-- **Branded types** for IDs: `NodeId`, `MapId`, `FileId`, `UserId`
-- **Unified interfaces** in `src/shared/types/`
-- **Runtime type guards** for data validation
-- **Path aliases** configured in tsconfig.json:
-  - `@/*` → `src/*`
-  - `@local/*` → `src/Local/*`
-  - `@cloud/*` → `src/Cloud/*`
-  - `@shared/*` → `src/shared/*`
-- **Barrel exports** for clean imports:
-  - `import { Component } from '@local/shared'`
-  - `import { useMindMapSimplified } from '@local/core'`
+#### Data Model
+- Normalized data structure for efficient updates
+- Auto-layout system for node positioning
+- History management with undo/redo (up to 50 operations)
+- Real-time auto-save with debouncing (300ms)
 
-### Backend (Cloudflare Worker)
-- Located in `cloudflare-worker/` directory
-- D1 database with comprehensive schema
-- Real-time collaboration via WebSockets
-- Operational Transformation for conflict resolution
+### Important Patterns
 
-## Development Guidelines
+#### Import Paths
+After recent refactoring, the project uses relative imports instead of path aliases. When editing files in `src/app/`, use relative paths like `../../shared/types` instead of absolute imports.
 
-### Working with Both Modes
-- Always check which mode you're working in (`src/Local/` vs `src/Cloud/`)
-- **Local mode**: Uses normalized data - access via store selectors and slices
-- **Cloud mode**: Uses tree traversal - direct node manipulation
-- **Shared types** are in `src/shared/types/`
-- Use **barrel exports** for cleaner imports: `import { Component } from '@local/shared'`
+#### Authentication Flow
+Cloud and hybrid modes wrap the app with `AuthProvider`. Local mode bypasses authentication entirely.
 
-### Local Mode Development
-- **Store changes**: Modify the appropriate slice in `src/Local/core/store/slices/`
-- **New components**: Add to feature-specific directories with proper barrel exports
-- **State access**: Use `useMindMapStore()` with specific selectors for performance
-- **Constants**: Add to appropriate module in `src/Local/shared/constants/`
+#### Component Lazy Loading
+The main app component is lazy-loaded to support the dynamic storage mode switching pattern.
 
-### Testing Strategy
-- Unit tests for individual components and hooks
-- Integration tests for cross-component workflows
-- Cloud sync tests for real-time collaboration
-- Coverage reporting with Jest
+### Development Notes
 
-### Performance Considerations
-- Local mode optimized for large mind maps (normalized data)
-- Cloud mode optimized for real-time collaboration
-- Both use React.memo and useCallback for performance
-- SVG rendering for scalable graphics
+#### Type Safety
+The project has strict TypeScript checking. Always run `npm run type-check` before committing changes.
 
-### File Organization
-- **Feature-based organization** within each mode with barrel exports
-- **Shared components** avoid duplication across modes
-- **Branded types** prevent ID mix-ups across domains
-- **Clear separation** between storage implementations
-- **Modular constants** split by domain (layout, colors, typography, etc.)
+#### Testing Strategy
+- Unit tests for utilities and pure functions
+- Integration tests for hooks and sync functionality  
+- Specialized tests for cloud sync features
 
-### Environment Variables
-- **Vite environment**: Use `import.meta.env` instead of `process.env`
-- **Environment utilities**: Use `isDevelopment()`, `isProduction()` from `@shared/utils/env`
-- **Cross-environment compatibility**: Environment utilities work in both browser and Node.js
-
-## Important Notes
-
-- The app can switch between storage modes at runtime
-- Both modes share the same UI components but different state management
-- **Real-time features** only available in Cloud mode
-- **Local mode** supports larger datasets more efficiently with normalized store
-- **Store architecture**: Modular slices (data, ui, history, node) for better maintainability
-- **TypeScript strict mode** enabled - maintain type safety
-- **Performance optimized** with React.memo, useCallback, and normalized data structures
+#### Security
+The project includes automated unsafe pattern detection. Run security scans before deploying.

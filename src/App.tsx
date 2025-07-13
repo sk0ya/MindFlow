@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider } from './Local/components/auth';
+import { AuthProvider } from './app/components/auth';
 
 // Dynamic import for Local mode with storage configuration
-const LocalMindMapApp = React.lazy(() => import('./Local'));
+const LocalMindMapApp = React.lazy(() => import('./app'));
 
 type StorageMode = 'local' | 'cloud' | 'hybrid';
 
