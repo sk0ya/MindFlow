@@ -14,12 +14,12 @@ import { useAuth, LoginModal } from '../../../../components/auth';
 
 interface MindMapAppProps {
   storageMode?: 'local' | 'cloud' | 'hybrid';
-  onModeChange?: (mode: string) => void;
+  onModeChange?: (mode: 'local' | 'cloud' | 'hybrid') => void;
 }
 
 const MindMapApp: React.FC<MindMapAppProps> = ({ 
   storageMode = 'local', 
-  onModeChange: _ // Mark as unused but keep for future use
+  onModeChange
 }) => {
   const [isAppReady] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -246,6 +246,8 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
         onZoomReset={() => {}}
         onShowLocalStoragePanel={() => {}}
         onShowShortcutHelper={() => {}}
+        storageMode={storageMode}
+        onStorageModeChange={onModeChange}
       />
       
       <div className="mindmap-content">

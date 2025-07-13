@@ -18,6 +18,8 @@ interface MindMapHeaderProps {
   onAutoLayout?: () => void;
   onToggleSidebar?: () => void;
   showSidebar?: boolean;
+  storageMode?: 'local' | 'cloud' | 'hybrid';
+  onStorageModeChange?: (mode: 'local' | 'cloud' | 'hybrid') => void;
 }
 
 const MindMapHeader: React.FC<MindMapHeaderProps> = ({
@@ -35,7 +37,9 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   onShowShortcutHelper,
   onAutoLayout,
   onToggleSidebar,
-  showSidebar = true
+  showSidebar = true,
+  storageMode = 'local',
+  onStorageModeChange
 }) => {
   return (
     <Toolbar
@@ -54,6 +58,8 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       onAutoLayout={onAutoLayout}
       onToggleSidebar={onToggleSidebar}
       showSidebar={showSidebar}
+      storageMode={storageMode}
+      onStorageModeChange={onStorageModeChange}
     />
   );
 };

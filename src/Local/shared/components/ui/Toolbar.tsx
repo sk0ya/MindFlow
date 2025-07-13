@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import ToolbarLogo from './toolbar/ToolbarLogo';
 import TitleEditor from './toolbar/TitleEditor';
 import ActionButtons from './toolbar/ActionButtons';
+import StorageModeSwitch from './toolbar/StorageModeSwitch';
 import ToolbarStyles from './toolbar/ToolbarStyles';
 
 interface ToolbarProps {
@@ -21,6 +22,8 @@ interface ToolbarProps {
   isLocalMode?: boolean;
   onToggleSidebar?: () => void;
   showSidebar?: boolean;
+  storageMode?: 'local' | 'cloud' | 'hybrid';
+  onStorageModeChange?: (mode: 'local' | 'cloud' | 'hybrid') => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -39,7 +42,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onAutoLayout,
   isLocalMode = true,
   onToggleSidebar,
-  showSidebar = true
+  showSidebar = true,
+  storageMode = 'local',
+  onStorageModeChange
 }) => {
   return (
     <div className="toolbar">
@@ -67,6 +72,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
         onAutoLayout={onAutoLayout}
         isLocalMode={isLocalMode}
       />
+
+      {onStorageModeChange && (
+        <StorageModeSwitch
+          currentMode={storageMode}
+          onModeChange={onStorageModeChange}
+        />
+      )}
       
       <ToolbarStyles />
     </div>

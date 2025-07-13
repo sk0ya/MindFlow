@@ -1,52 +1,38 @@
-import React, { useState } from 'react';
-import { useAppInitialization } from './StorageSelection/core/hooks/useAppInitialization';
-import { StorageModeSelector } from './StorageSelection/ui/components/storage/StorageModeSelector';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './Local/components/auth';
 
 // Dynamic import for Local mode with storage configuration
 const LocalMindMapApp = React.lazy(() => import('./Local'));
 
+type StorageMode = 'local' | 'cloud' | 'hybrid';
+
 const App: React.FC = () => {
-  const { storageMode, isInitialized, changeStorageMode } = useAppInitialization();
-  const [selectedStorageMode, setSelectedStorageMode] = useState<'local' | 'cloud' | 'hybrid'>('local');
+  const [storageMode, setStorageMode] = useState<StorageMode>('local');
 
-  // Sync selectedStorageMode with the actual storageMode
-  React.useEffect(() => {
-    if (storageMode) {
-      setSelectedStorageMode(storageMode as 'local' | 'cloud' | 'hybrid');
+  // Check for magic link token to switch to cloud mode
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const magicLinkToken = urlParams.get('token');
+    
+    if (magicLinkToken) {
+      console.log('🔗 Magic link detected, switching to cloud mode');
+      setStorageMode('cloud');
+    } else {
+      // Load saved mode from localStorage, default to local
+      const savedMode = localStorage.getItem('mindflow_storage_mode') as StorageMode;
+      if (savedMode && ['local', 'cloud', 'hybrid'].includes(savedMode)) {
+        setStorageMode(savedMode);
+      }
     }
-  }, [storageMode]);
+  }, []);
 
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
+  // Save mode changes to localStorage
+  const handleModeChange = (mode: StorageMode) => {
+    setStorageMode(mode);
+    localStorage.setItem('mindflow_storage_mode', mode);
+  };
 
-  // Show storage mode selector if no mode is set
-  if (!storageMode) {
-    return (
-      <StorageModeSelector
-        currentMode={selectedStorageMode}
-        onModeChange={(mode: string) => {
-          const validModes = ['local', 'cloud', 'hybrid'];
-          if (validModes.includes(mode)) {
-            setSelectedStorageMode(mode as 'local' | 'cloud' | 'hybrid');
-            changeStorageMode(mode as 'local' | 'cloud' | 'hybrid');
-          } else {
-            console.warn(`Storage mode "${mode}" is not supported. Using local mode.`);
-            setSelectedStorageMode('local');
-            changeStorageMode('local');
-          }
-        }}
-      />
-    );
-  }
-
-  // Use Local architecture with appropriate storage configuration
-  // Wrap cloud/hybrid modes with AuthProvider
+  // App content with storage mode configuration
   const AppContent = (
     <React.Suspense fallback={
       <div className="flex items-center justify-center min-h-screen">
@@ -54,20 +40,14 @@ const App: React.FC = () => {
       </div>
     }>
       <LocalMindMapApp 
-        storageMode={selectedStorageMode} 
-        onModeChange={(mode: string) => {
-          const validModes = ['local', 'cloud', 'hybrid'];
-          if (validModes.includes(mode)) {
-            setSelectedStorageMode(mode as 'local' | 'cloud' | 'hybrid');
-            changeStorageMode(mode as any);
-          }
-        }}
+        storageMode={storageMode} 
+        onModeChange={handleModeChange}
       />
     </React.Suspense>
   );
 
   // Wrap with AuthProvider for cloud/hybrid modes
-  if (selectedStorageMode === 'cloud' || selectedStorageMode === 'hybrid') {
+  if (storageMode === 'cloud' || storageMode === 'hybrid') {
     return (
       <AuthProvider>
         {AppContent}
