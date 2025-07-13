@@ -201,7 +201,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
                   cursor: isLoading ? 'not-allowed' : 'pointer'
                 }}
               >
-                キャンセル
+                ローカルモードに戻る
               </button>
             </div>
           </form>
@@ -276,7 +276,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
                   cursor: 'pointer'
                 }}
               >
-                閉じる
+                ローカルモードに戻る
               </button>
             </div>
           </div>

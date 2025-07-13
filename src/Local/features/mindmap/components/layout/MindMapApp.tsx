@@ -358,7 +358,14 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
       {isCloudMode && authAdapter && (
         <LoginModal 
           isOpen={showLoginModal}
-          onClose={() => setShowLoginModal(false)}
+          onClose={() => {
+            console.log('🔙 Login modal closed, switching to local mode');
+            setShowLoginModal(false);
+            // Switch back to local mode when user cancels login
+            if (onModeChange) {
+              onModeChange('local');
+            }
+          }}
           authAdapter={authAdapter}
         />
       )}
