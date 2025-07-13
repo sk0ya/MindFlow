@@ -13,6 +13,7 @@ interface MindMapWorkspaceProps {
   onStartEdit: (nodeId: string) => void;
   onFinishEdit: (nodeId: string, text: string) => void;
   onMoveNode: (nodeId: string, newParentId: string) => void;
+  onChangeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore: boolean) => void;
   onAddChild: (parentId: string) => void;
   onAddSibling: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
@@ -39,6 +40,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   onStartEdit,
   onFinishEdit,
   onMoveNode,
+  onChangeSiblingOrder,
   onAddChild,
   onAddSibling,
   onDeleteNode,
@@ -54,6 +56,13 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   pan,
   setPan
 }) => {
+  console.log('🏗️ MindMapWorkspace props:', { 
+    hasOnMoveNode: !!onMoveNode,
+    hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
+    onMoveNodeType: typeof onMoveNode,
+    onChangeSiblingOrderType: typeof onChangeSiblingOrder
+  });
+  
   return (
     <ErrorBoundary>
       <MindMapCanvas
@@ -66,7 +75,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         onStartEdit={onStartEdit}
         onFinishEdit={onFinishEdit}
         onChangeParent={onMoveNode}
-        onChangeSiblingOrder={(_draggedNodeId: string, _targetNodeId: string, _insertBefore: boolean) => {}}
+        onChangeSiblingOrder={onChangeSiblingOrder}
         onAddChild={onAddChild}
         onAddSibling={onAddSibling}
         onDeleteNode={onDeleteNode}

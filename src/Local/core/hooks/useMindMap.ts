@@ -60,9 +60,16 @@ export const useMindMap = (isAppReady = false) => {
   }, [mindMapHook]);
 
   const changeSiblingOrder = useCallback(async (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
-    console.warn('changeSiblingOrder called:', { draggedNodeId, targetNodeId, insertBefore });
-    return true;
-  }, []);
+    console.log('🎯 useMindMap changeSiblingOrder:', { draggedNodeId, targetNodeId, insertBefore });
+    try {
+      const result = await mindMapHook.changeSiblingOrder(draggedNodeId, targetNodeId, insertBefore);
+      console.log('✅ useMindMap changeSiblingOrder完了');
+      return result;
+    } catch (error) {
+      console.error('❌ useMindMap changeSiblingOrder エラー:', error);
+      throw error;
+    }
+  }, [mindMapHook]);
 
   const startEdit = useCallback((nodeId: string, clearText: boolean = false) => {
     mindMapHook.startEditingNode(nodeId);
@@ -128,6 +135,9 @@ export const useMindMap = (isAppReady = false) => {
     // 後方互換性
     changeParent,
     changeSiblingOrder,
+    
+    // エイリアス
+    moveNode: changeParent,
     
     // ナビゲーション
     navigateToDirection: navigation.navigateToDirection,

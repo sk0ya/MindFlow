@@ -240,3 +240,80 @@ export function moveNormalizedNode(
     }
   };
 }
+
+/**
+ * 正規化されたデータで兄弟ノードの順序を変更 - O(1)
+ */
+export function changeSiblingOrderNormalized(
+  normalizedData: NormalizedData,
+  draggedNodeId: string,
+  targetNodeId: string,
+  insertBefore: boolean = true
+): NormalizedData {
+  console.log('🔧 changeSiblingOrderNormalized 開始:', { draggedNodeId, targetNodeId, insertBefore });
+  
+  const draggedParentId = normalizedData.parentMap[draggedNodeId];
+  const targetParentId = normalizedData.parentMap[targetNodeId];
+  
+  console.log('🔧 親要素確認:', { draggedParentId, targetParentId });
+  
+  if (!draggedParentId || !targetParentId) {
+    const error = 'Parent not found for one of the nodes';
+    console.error('❌', error);
+    throw new Error(error);
+  }
+  
+  if (draggedParentId !== targetParentId) {
+    const error = 'Nodes must have the same parent to change sibling order';
+    console.error('❌', error);
+    throw new Error(error);
+  }
+  
+  const siblings = normalizedData.childrenMap[draggedParentId] || [];
+  const draggedIndex = siblings.indexOf(draggedNodeId);
+  const targetIndex = siblings.indexOf(targetNodeId);
+  
+  console.log('🔧 兄弟リスト:', { siblings, draggedIndex, targetIndex });
+  
+  if (draggedIndex === -1 || targetIndex === -1) {
+    const error = 'One of the nodes is not a child of the parent';
+    console.error('❌', error, { draggedIndex, targetIndex, siblings });
+    throw new Error(error);
+  }
+  
+  if (draggedIndex === targetIndex) {
+    console.log('🔧 同じインデックスのため変更なし');
+    return normalizedData; // No change needed
+  }
+  
+  // Remove dragged node from current position
+  const newSiblings = siblings.filter(id => id !== draggedNodeId);
+  
+  // Find the new insertion index
+  const adjustedTargetIndex = newSiblings.indexOf(targetNodeId);
+  const insertionIndex = insertBefore ? adjustedTargetIndex : adjustedTargetIndex + 1;
+  
+  console.log('🔧 挿入処理:', { 
+    originalSiblings: siblings, 
+    newSiblings, 
+    adjustedTargetIndex, 
+    insertionIndex, 
+    insertBefore 
+  });
+  
+  // Insert dragged node at new position
+  newSiblings.splice(insertionIndex, 0, draggedNodeId);
+  
+  console.log('🔧 最終的な兄弟リスト:', newSiblings);
+  
+  const result = {
+    ...normalizedData,
+    childrenMap: {
+      ...normalizedData.childrenMap,
+      [draggedParentId]: newSiblings
+    }
+  };
+  
+  console.log('✅ changeSiblingOrderNormalized 完了');
+  return result;
+}

@@ -149,6 +149,15 @@ const MindMapApp: React.FC = () => {
     mindMap.closeAllPanels();
   };
 
+  // mindMapオブジェクトの状態をログ出力
+  console.log('🚀 MindMapApp mindMapオブジェクト確認:', {
+    hasMindMap: !!mindMap,
+    hasChangeSiblingOrder: !!mindMap?.changeSiblingOrder,
+    changeSiblingOrderType: typeof mindMap?.changeSiblingOrder,
+    hasChangeParent: !!mindMap?.changeParent,
+    hasMoveNode: !!mindMap?.moveNode
+  });
+
   if (!data) {
     return (
       <div className="mindmap-app loading-screen">
@@ -208,6 +217,7 @@ const MindMapApp: React.FC = () => {
               onStartEdit={mindMap.startEditingNode}
               onFinishEdit={mindMap.finishEditingNode}
               onMoveNode={mindMap.moveNode}
+              onChangeSiblingOrder={mindMap.changeSiblingOrder}
               onAddChild={nodeHandlers.handleAddChild}
               onAddSibling={nodeHandlers.handleAddSibling}
               onDeleteNode={mindMap.deleteNode}

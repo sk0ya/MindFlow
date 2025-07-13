@@ -96,6 +96,17 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
     store.syncToMindMapData(); // 履歴に追加
   }, [store]);
   
+  const changeSiblingOrder = useCallback(async (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
+    console.log('🔗 useMindMapZustand changeSiblingOrder:', { draggedNodeId, targetNodeId, insertBefore });
+    try {
+      store.changeSiblingOrder(draggedNodeId, targetNodeId, insertBefore);
+      store.syncToMindMapData(); // 履歴に追加
+      console.log('✅ useMindMapZustand changeSiblingOrder完了');
+    } catch (error) {
+      console.error('❌ useMindMapZustand changeSiblingOrder エラー:', error);
+    }
+  }, [store]);
+  
   // 編集機能
   const startEditingNode = useCallback((nodeId: string) => {
     store.startEditing(nodeId);
@@ -137,6 +148,7 @@ export const useMindMapZustand = (isAppReady: boolean = false) => {
     addSiblingNode,
     deleteNode,
     moveNode,
+    changeSiblingOrder,
     
     // レガシー互換
     addNode: addChildNode,

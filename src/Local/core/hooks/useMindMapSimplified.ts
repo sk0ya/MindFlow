@@ -100,6 +100,11 @@ export const useMindMapSimplified = (isAppReady: boolean = true) => {
       store.moveNode(nodeId, newParentId);
     }, [store]),
 
+    changeSiblingOrder: useCallback((draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
+      console.log('🎯 useMindMapSimplified changeSiblingOrder:', { draggedNodeId, targetNodeId, insertBefore });
+      store.changeSiblingOrder(draggedNodeId, targetNodeId, insertBefore);
+    }, [store]),
+
     findNode: useCallback((nodeId: string): MindMapNode | null => {
       return store.findNode(nodeId);
     }, [store]),

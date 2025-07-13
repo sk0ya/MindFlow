@@ -41,6 +41,7 @@ import {
   deleteNormalizedNode,
   addNormalizedNode,
   moveNormalizedNode,
+  changeSiblingOrderNormalized,
   type NormalizedData
 } from '../data/normalizedStore';
 import { createNewNode, COLORS } from '../../shared/types/dataTypes';
@@ -67,6 +68,7 @@ interface MindMapStore {
   addSiblingNode: (_nodeId: string, _text?: string) => string | undefined;
   deleteNode: (_nodeId: string) => void;
   moveNode: (_nodeId: string, _newParentId: string) => void;
+  changeSiblingOrder: (_draggedNodeId: string, _targetNodeId: string, _insertBefore?: boolean) => void;
   
   // Node operations (O(1) with normalized data)
   findNode: (_nodeId: string) => MindMapNode | null;
@@ -414,6 +416,47 @@ export const useMindMapStore = create<MindMapStore>()(
           // Apply auto layout if enabled
           const { data } = get();
           if (data?.settings?.autoLayout) {
+            get().applyAutoLayout();
+          }
+        },
+        
+        changeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
+          console.log('🏪 Store changeSiblingOrder開始:', { draggedNodeId, targetNodeId, insertBefore });
+          set((state) => {
+            if (!state.normalizedData) {
+              console.error('❌ normalizedDataが存在しません');
+              return;
+            }
+            
+            try {
+              console.log('🔄 changeSiblingOrder実行:', { draggedNodeId, targetNodeId, insertBefore });
+              const originalData = state.normalizedData;
+              state.normalizedData = changeSiblingOrderNormalized(state.normalizedData, draggedNodeId, targetNodeId, insertBefore);
+              
+              // 変更があったかどうかをチェック
+              const hasChanged = JSON.stringify(originalData.childrenMap) !== JSON.stringify(state.normalizedData.childrenMap);
+              console.log('🔄 変更チェック:', { hasChanged });
+              
+              // Sync back to tree structure
+              const newRootNode = denormalizeTreeData(state.normalizedData);
+              if (state.data) {
+                state.data = {
+                  ...state.data,
+                  rootNode: newRootNode,
+                  updatedAt: new Date().toISOString()
+                };
+                console.log('🔄 データ更新完了');
+              }
+              console.log('✅ changeSiblingOrder完了');
+            } catch (error) {
+              console.error('❌ changeSiblingOrder error:', error);
+            }
+          });
+          
+          // Apply auto layout if enabled
+          const { data } = get();
+          if (data?.settings?.autoLayout) {
+            console.log('🔄 自動レイアウト適用中...');
             get().applyAutoLayout();
           }
         },
