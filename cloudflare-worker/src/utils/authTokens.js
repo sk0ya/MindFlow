@@ -48,13 +48,43 @@ export async function createAuthToken(email, request, env) {
 
 // トークンを検証して使用済みにマーク
 export async function verifyAuthToken(token, env) {
+  console.log('🔍 Token検証開始:', { token: token.substring(0, 10) + '...' });
+  
+  // まず、トークンがDBに存在するかチェック
+  const { results: allTokens } = await env.DB.prepare(`
+    SELECT *, 
+           datetime('now') as current_time,
+           (expires_at > datetime('now')) as is_valid_time,
+           (used_at IS NULL) as is_unused
+    FROM auth_tokens 
+    WHERE id = ?
+  `).bind(token).all();
+
+  console.log('🔍 Token検索結果:', {
+    found: allTokens.length > 0,
+    tokenData: allTokens[0] ? {
+      exists: true,
+      expires_at: allTokens[0].expires_at,
+      current_time: allTokens[0].current_time,
+      is_valid_time: allTokens[0].is_valid_time,
+      is_unused: allTokens[0].is_unused,
+      used_at: allTokens[0].used_at
+    } : 'Token not found'
+  });
+
   const { results } = await env.DB.prepare(`
     SELECT * FROM auth_tokens 
     WHERE id = ? AND expires_at > datetime('now') AND used_at IS NULL
   `).bind(token).all();
 
   if (results.length === 0) {
-    throw new Error('Invalid or expired authentication token');
+    const errorMsg = allTokens.length === 0 
+      ? 'Authentication token not found' 
+      : allTokens[0].is_valid_time 
+        ? 'Authentication token already used'
+        : 'Authentication token expired';
+    console.error('❌ Token検証失敗:', errorMsg);
+    throw new Error(errorMsg);
   }
 
   const authToken = results[0];

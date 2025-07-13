@@ -124,7 +124,8 @@ async function handleSendMagicLink(request, env) {
       success: true,
       message: message,
       expiresIn: 600, // 10分
-      emailSent: emailResult.messageId !== 'dev-mode' && emailResult.messageId !== 'fallback-mode'
+      emailSent: emailResult.messageId !== 'dev-mode' && emailResult.messageId !== 'fallback-mode',
+      debugEmailResult: emailResult // 一時的にデバッグ情報を含める
     };
     
     // メール送信に失敗した場合のみ Magic Link を返す
@@ -182,6 +183,7 @@ async function handleVerifyMagicLink(request, env) {
     });
     
     // JSONレスポンスとして返す（修正: Response オブジェクトを作成）
+    const requestOrigin = request.headers.get('Origin');
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: {

@@ -8,7 +8,13 @@ export async function sendMagicLinkEmail(email, magicLink, env) {
     hasResendApiKey: !!env.RESEND_API_KEY,
     resendKeyLength: env.RESEND_KEY?.length,
     resendApiKeyLength: env.RESEND_API_KEY?.length,
-    fromEmail: env.FROM_EMAIL 
+    fromEmail: env.FROM_EMAIL,
+    allEnvKeys: Object.keys(env), // 全ての環境変数名を表示
+    envValues: Object.entries(env).reduce((acc, [key, value]) => {
+      acc[key] = key.includes('KEY') || key.includes('SECRET') ? 
+        (value ? `SET(${value.length})` : 'NOT_SET') : value;
+      return acc;
+    }, {})
   });
   
   // RESEND_KEY を使用（正しいAPIキー）
@@ -25,29 +31,35 @@ export async function sendMagicLinkEmail(email, magicLink, env) {
     keyType: resendKey ? (resendKey.startsWith('re_') ? 'VALID_FORMAT' : 'INVALID_FORMAT') : 'NO_KEY'
   });
   
-  if (!resendKey || resendKey === 're_placeholder_key' || resendKey.trim() === '') {
-    console.log('⚠️ RESEND_KEY が無効なため開発モードで動作:', {
+  if (!resendKey || resendKey.trim() === '') {
+    const debugInfo = {
       keyExists: !!resendKey,
       keyLength: resendKey?.length || 0,
       keyIsPlaceholder: resendKey === 're_placeholder_key',
       keyIsEmpty: resendKey === '',
       keyIsWhitespace: resendKey?.trim() === '',
       actualKey: resendKey ? `${resendKey.substring(0, 10)}...` : 'NONE'
-    });
+    };
+    console.log('⚠️ RESEND_KEY が無効なため開発モードで動作:', debugInfo);
     console.log(`
 === Magic Link Email (Development Mode) ===
 To: ${email}
 Subject: MindFlow - ログインリンク
 Magic Link: ${magicLink}
+Debug: ${JSON.stringify(debugInfo)}
 ==========================================
     `);
-    return { success: true, messageId: 'dev-mode' };
+    return { 
+      success: true, 
+      messageId: 'dev-mode',
+      debugInfo: debugInfo // 一時的にデバッグ情報を含める
+    };
   }
 
   try {
     // メール送信データを準備
     const emailData = {
-      from: `MindFlow <onboarding@resend.dev>`, // 一時的にResend認証済みアドレスを使用
+      from: `MindFlow <${env.FROM_EMAIL}>`,
       to: [email],
       subject: 'MindFlow - ログインリンク',
       html: createMagicLinkEmailHTML(magicLink),
