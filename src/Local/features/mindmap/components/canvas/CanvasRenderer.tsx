@@ -1,14 +1,14 @@
 import React, { memo } from 'react';
-import Node from '../Node';
-import CanvasConnections from './CanvasConnections';
-import CanvasDragGuide from './CanvasDragGuide';
-import type { MindMapData, MindMapNode, FileAttachment } from '../../../../shared/types';
+import { Node } from '../..';
+import { CanvasConnections, CanvasDragGuide } from '.';
+import type { MindMapData, MindMapNode, FileAttachment } from '../../../../shared';
 
 interface DragState {
   isDragging: boolean;
   draggedNodeId: string | null;
   dropTargetId: string | null;
   dropPosition: 'child' | 'before' | 'after' | null;
+  dropAction: 'move-parent' | 'reorder-sibling' | null;
   dragOffset: { x: number; y: number };
 }
 

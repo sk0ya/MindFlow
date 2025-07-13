@@ -84,6 +84,9 @@ export const useCanvasDragHandler = ({
       return { node: null, position: null, action: null };
     }
 
+    // 型アサーション（nullチェック後なのでclosestNodeは非null）
+    const targetNode: MindMapNode = closestNode;
+
     // ドラッグ中のノードと最も近いノードの親子関係を確認
     const findParent = (childId: string): MindMapNode | null => {
       const findParentRecursive = (node: MindMapNode): MindMapNode | null => {
@@ -100,11 +103,11 @@ export const useCanvasDragHandler = ({
     };
 
     const draggedParent = dragState.draggedNodeId ? findParent(dragState.draggedNodeId) : null;
-    const targetParent = findParent(closestNode.id);
+    const targetParent = findParent(targetNode.id);
 
     // ノード内での相対位置を計算（ノードの高さを40pxと仮定）
     const nodeHeight = 40;
-    const relativeY = svgY - closestNode.y;
+    const relativeY = svgY - targetNode.y;
     const topThreshold = -nodeHeight / 2;    // 上部1/2に拡大
     const bottomThreshold = nodeHeight / 2;  // 下部1/2に拡大
 
@@ -134,7 +137,7 @@ export const useCanvasDragHandler = ({
     }
 
     console.log('🎯 ドロップ判定結果:', {
-      closestNodeId: closestNode.id,
+      closestNodeId: targetNode.id,
       relativeY,
       topThreshold,
       bottomThreshold,
@@ -147,7 +150,7 @@ export const useCanvasDragHandler = ({
       shiftKey
     });
 
-    return { node: closestNode, position, action };
+    return { node: targetNode, position, action };
   }, [allNodes, zoom, pan, dragState.draggedNodeId, svgRef, rootNode]);
 
   // ドラッグ開始時の処理

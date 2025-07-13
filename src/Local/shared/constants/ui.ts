@@ -1,0 +1,23 @@
+/**
+ * UI・UX関連の定数
+ */
+export const UI = {
+  // アニメーション時間
+  ANIMATION_DURATION: 300,
+  TRANSITION_DURATION: 200,
+  
+  // モーダル・パネル
+  MODAL_Z_INDEX: 1000,
+  PANEL_WIDTH: 300,
+  SIDEBAR_WIDTH: 280,
+  
+  // ツールチップ・通知
+  TOOLTIP_DELAY: 500,
+  NOTIFICATION_DURATION: 3000,
+  ERROR_NOTIFICATION_DURATION: 5000,
+  
+  // タッチ・マウス
+  DOUBLE_CLICK_THRESHOLD: 300,
+  LONG_PRESS_DURATION: 500,
+  DRAG_THRESHOLD: 5,
+};

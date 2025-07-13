@@ -42,11 +42,12 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@/components/*": ["src/ui/components/*"],
-      "@/hooks/*": ["src/core/hooks/*", "src/features/*/"],
-      "@/utils/*": ["src/shared/utils/*"],
-      "@/types/*": ["src/shared/types/*"],
-      "@/constants/*": ["src/shared/constants/*"]
+      "@local/*": ["src/Local/*"],
+      "@local/core/*": ["src/Local/core/*"],
+      "@local/features/*": ["src/Local/features/*"],
+      "@local/shared/*": ["src/Local/shared/*"],
+      "@cloud/*": ["src/Cloud/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src/**/*"],

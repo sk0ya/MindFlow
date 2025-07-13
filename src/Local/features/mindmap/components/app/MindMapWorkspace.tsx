@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import { ErrorBoundary } from '../../../../shared/components';
-import MindMapCanvas from './MindMapCanvas';
+import { ErrorBoundary } from '../../../../../shared/components';
+import MindMapCanvas from '../MindMapCanvas';
 import type { MindMapData, MindMapNode, Position, FileAttachment } from '../../../../shared/types';
 
 interface MindMapWorkspaceProps {

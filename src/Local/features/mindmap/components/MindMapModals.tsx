@@ -1,10 +1,8 @@
 import React, { memo } from 'react';
-import ContextMenu from '../../../shared/components/ui/ContextMenu';
+import { ContextMenu, MapLinksPanel } from '../../../shared';
 import NodeCustomizationPanel from './NodeCustomizationPanel';
-import ImageModal from '../../files/components/ImageModal';
-import FileActionMenu from '../../files/components/FileActionMenu';
-import NodeMapLinksPanel from '../../../shared/components/layout/MapLinksPanel';
-import type { MindMapNode, FileAttachment } from '../../../../shared/types';
+import { ImageModal, FileActionMenu } from '../../files';
+import type { MindMapNode, FileAttachment } from '../../../shared';
 
 interface MindMapModalsProps {
   ui: {
@@ -116,7 +114,7 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
       />
 
       {ui.selectedNodeForLinks && (
-        <NodeMapLinksPanel
+        <MapLinksPanel
           isOpen={ui.showNodeMapLinksPanel}
           position={ui.nodeMapLinksPanelPosition}
           selectedNode={ui.selectedNodeForLinks}

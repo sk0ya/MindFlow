@@ -4,6 +4,7 @@
  */
 
 import { Component, ReactNode, ErrorInfo } from 'react';
+import { isDevelopment } from '../utils/env';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -39,7 +40,7 @@ class ErrorReporter {
     };
 
     // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopment()) {
       console.error('🚨 ErrorBoundary Report:', errorReport);
     }
 
@@ -57,7 +58,7 @@ class ErrorReporter {
     }
 
     // TODO: Send to remote error reporting service in production
-    // if (process.env.NODE_ENV === 'production') {
+    // if (isProduction()) {
     //   this.sendToRemoteService(errorReport);
     // }
 
@@ -201,9 +202,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <p className="error-id">Error ID: {errorId}</p>
             )}
 
-            {(showDetails || process.env.NODE_ENV === 'development') && error && errorInfo && (
+            {(showDetails || isDevelopment()) && error && errorInfo && (
               <details className="error-details">
-                <summary>Error Details {process.env.NODE_ENV === 'development' ? '(Development)' : ''}</summary>
+                <summary>Error Details {isDevelopment() ? '(Development)' : ''}</summary>
                 <div className="error-stack">
                   <h4>Error:</h4>
                   <pre>{error.toString()}</pre>

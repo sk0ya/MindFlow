@@ -55,17 +55,42 @@ The app implements **two separate architectures** for different storage modes:
 
 ```
 src/
-├── Local/core/               # Zustand store, hooks, utilities
-├── Local/features/           # MindMap, Files, UI features
-├── Cloud/hooks/              # State management hooks
-├── Cloud/components/         # Cloud-specific components
-├── shared/                   # Cross-mode components and types
+├── Local/                    # Local storage mode implementation
+│   ├── core/                 # Core state management
+│   │   ├── store/
+│   │   │   ├── slices/       # Zustand store slices (data, ui, history, node)
+│   │   │   └── mindMapStore.ts # Combined store
+│   │   ├── hooks/            # Core hooks (useMindMapSimplified, useKeyboardShortcuts)
+│   │   └── data/             # Data normalization utilities
+│   ├── features/
+│   │   ├── mindmap/          # Main mindmap feature
+│   │   │   ├── components/
+│   │   │   │   ├── app/      # App-level components
+│   │   │   │   ├── canvas/   # Canvas rendering components
+│   │   │   │   ├── node/     # Node-specific components
+│   │   │   │   └── sidebar/  # Sidebar components
+│   │   │   └── hooks/        # Feature-specific hooks
+│   │   └── files/            # File handling feature
+│   └── shared/               # Local-specific shared code
+│       ├── components/       # Reusable UI components
+│       ├── constants/        # Split into logical modules
+│       ├── types/            # Type definitions
+│       └── utils/            # Utility functions
+├── Cloud/                    # Cloud storage mode implementation
+├── shared/                   # Cross-mode shared code
+│   ├── types/                # Unified type system
+│   ├── components/           # Shared components (ErrorBoundary)
+│   └── utils/                # Environment utilities
 └── StorageSelection/         # Mode initialization
 ```
 
 ### State Management Patterns
 
-**Local Mode**:
+**Local Mode (Modular Zustand Store)**:
+- **Data Slice**: Manages mind map data and normalization
+- **UI Slice**: Handles all UI state (panels, modals, selection)
+- **History Slice**: Undo/redo functionality with 50-operation history
+- **Node Slice**: All node CRUD operations and editing state
 - Normalized store: `{nodes: {[id]: Node}, rootIds: string[], ui: UIState}`
 - Hook: `useMindMapSimplified()` with data/UI/map operations
 - Persistence: Debounced LocalStorage saves
@@ -75,11 +100,18 @@ src/
 - Dual persistence: `useCloudData()` handles IndexedDB + API sync
 - Offline-first with background synchronization
 
-### Type System
-- Branded types for IDs: `NodeId`, `MapId`, `FileId`, `UserId`
-- Unified interfaces in `src/shared/types/`
-- Runtime type guards for data validation
-- Path aliases: `@/` maps to `src/`
+### Type System & Import Organization
+- **Branded types** for IDs: `NodeId`, `MapId`, `FileId`, `UserId`
+- **Unified interfaces** in `src/shared/types/`
+- **Runtime type guards** for data validation
+- **Path aliases** configured in tsconfig.json:
+  - `@/*` → `src/*`
+  - `@local/*` → `src/Local/*`
+  - `@cloud/*` → `src/Cloud/*`
+  - `@shared/*` → `src/shared/*`
+- **Barrel exports** for clean imports:
+  - `import { Component } from '@local/shared'`
+  - `import { useMindMapSimplified } from '@local/core'`
 
 ### Backend (Cloudflare Worker)
 - Located in `cloudflare-worker/` directory
@@ -91,9 +123,16 @@ src/
 
 ### Working with Both Modes
 - Always check which mode you're working in (`src/Local/` vs `src/Cloud/`)
-- Local mode uses normalized data - access via store selectors
-- Cloud mode uses tree traversal - direct node manipulation
-- Shared types are in `src/shared/types/`
+- **Local mode**: Uses normalized data - access via store selectors and slices
+- **Cloud mode**: Uses tree traversal - direct node manipulation
+- **Shared types** are in `src/shared/types/`
+- Use **barrel exports** for cleaner imports: `import { Component } from '@local/shared'`
+
+### Local Mode Development
+- **Store changes**: Modify the appropriate slice in `src/Local/core/store/slices/`
+- **New components**: Add to feature-specific directories with proper barrel exports
+- **State access**: Use `useMindMapStore()` with specific selectors for performance
+- **Constants**: Add to appropriate module in `src/Local/shared/constants/`
 
 ### Testing Strategy
 - Unit tests for individual components and hooks
@@ -108,15 +147,23 @@ src/
 - SVG rendering for scalable graphics
 
 ### File Organization
-- Feature-based organization within each mode
-- Shared components avoid duplication
-- Branded types prevent ID mix-ups across domains
-- Clear separation between storage implementations
+- **Feature-based organization** within each mode with barrel exports
+- **Shared components** avoid duplication across modes
+- **Branded types** prevent ID mix-ups across domains
+- **Clear separation** between storage implementations
+- **Modular constants** split by domain (layout, colors, typography, etc.)
+
+### Environment Variables
+- **Vite environment**: Use `import.meta.env` instead of `process.env`
+- **Environment utilities**: Use `isDevelopment()`, `isProduction()` from `@shared/utils/env`
+- **Cross-environment compatibility**: Environment utilities work in both browser and Node.js
 
 ## Important Notes
 
 - The app can switch between storage modes at runtime
 - Both modes share the same UI components but different state management
-- Real-time features only available in Cloud mode
-- Local mode supports larger datasets more efficiently
-- TypeScript strict mode enabled - maintain type safety
+- **Real-time features** only available in Cloud mode
+- **Local mode** supports larger datasets more efficiently with normalized store
+- **Store architecture**: Modular slices (data, ui, history, node) for better maintainability
+- **TypeScript strict mode** enabled - maintain type safety
+- **Performance optimized** with React.memo, useCallback, and normalized data structures

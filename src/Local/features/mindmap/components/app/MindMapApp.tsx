@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import { useMindMapSimplified } from '../../../core/hooks/useMindMapSimplified';
-import { useKeyboardShortcuts } from '../../../core/hooks/useKeyboardShortcuts';
-import MindMapSidebar from './MindMapSidebar';
+import { useMindMapSimplified, useKeyboardShortcuts } from '../../../../core';
+import MindMapSidebar from '../MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
-import MindMapModals from './MindMapModals';
-import MindMapFooter from './MindMapFooter';
+import MindMapModals from '../MindMapModals';
+import MindMapFooter from '../MindMapFooter';
 import './MindMapApp.css';
 
 // カスタムフックのインポート
-import { useFileHandlers } from './hooks/useFileHandlers';
-import { useMapHandlers } from './hooks/useMapHandlers';
-import { useNodeHandlers } from './hooks/useNodeHandlers';
+import { useFileHandlers, useMapHandlers, useNodeHandlers } from '../../hooks';
 
 // Types
-import type { MindMapNode, Position, FileAttachment } from '../../../../shared/types';
+import type { MindMapNode, Position, FileAttachment } from '../../../../shared';
 
 const MindMapApp: React.FC = () => {
   const [isAppReady] = useState(true);
@@ -154,7 +151,7 @@ const MindMapApp: React.FC = () => {
     hasMindMap: !!mindMap,
     hasChangeSiblingOrder: !!mindMap?.changeSiblingOrder,
     changeSiblingOrderType: typeof mindMap?.changeSiblingOrder,
-    hasChangeParent: !!mindMap?.changeParent,
+    hasChangeParent: !!mindMap?.moveNode,
     hasMoveNode: !!mindMap?.moveNode
   });
 
