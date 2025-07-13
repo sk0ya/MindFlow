@@ -1,5 +1,5 @@
 import React, { useCallback, memo } from 'react';
-import type { MindMapNode, FileAttachment } from '../../../../shared/types';
+import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeAttachmentsProps {
   node: MindMapNode;

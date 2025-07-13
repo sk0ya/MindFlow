@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface MousePosition {
   x: number;

@@ -3,7 +3,7 @@ import SidebarHeader from './sidebar/SidebarHeader';
 import CategoryGroup from './sidebar/CategoryGroup';
 import SidebarCollapsed from './sidebar/SidebarCollapsed';
 import SidebarStyles from './sidebar/SidebarStyles';
-import type { MindMapData } from '../../../../shared/types';
+import type { MindMapData } from '@shared/types';
 
 interface MindMapSidebarProps {
   mindMaps: MindMapData[];

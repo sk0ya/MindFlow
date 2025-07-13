@@ -20,7 +20,7 @@ export type {
   MapEvent,
   AppError,
   MindMapHookReturn,
-} from '../../../shared/types';
+} from '@shared/types';
 
 // Import local types
 export type {
@@ -45,14 +45,14 @@ export {
   KEYBOARD_SHORTCUTS,
   THEME_CONSTANTS,
   PERFORMANCE_CONSTANTS
-} from '../../../shared/types';
+} from '@shared/types';
 
 // Re-export type guards
 export {
   isValidMindMapNode,
   isValidMindMapData,
   isValidFileAttachment,
-} from '../../../shared/types';
+} from '@shared/types';
 
 // Export new type safety modules
 export type { NodeId, MapId, FileId } from './brandedTypes';

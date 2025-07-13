@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
-import type { MindMapNode, MindMapData, Position } from '../../../shared/types';
-import { createInitialData } from '../../shared/types/dataTypes';
-import type { ImageFile } from '../../shared/types';
+import type { MindMapNode, MindMapData, Position } from '@shared/types';
+import { createInitialData } from '@local/shared/types/dataTypes';
+import type { ImageFile } from '@local/shared/types';
 
 // 型検証関数
 const isMindMapData = (data: unknown): data is MindMapData => {

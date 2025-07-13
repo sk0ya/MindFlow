@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import type { MindMapNode } from '../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface KeyboardShortcutHandlers {
   selectedNodeId: string | null;

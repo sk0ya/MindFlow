@@ -1,4 +1,4 @@
-import type { MindMapData } from '../../../../shared/types';
+import type { MindMapData } from '@shared/types';
 
 // Type definitions
 interface MapHandlersReturn {

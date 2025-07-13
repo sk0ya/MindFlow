@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { Position, FileAttachment, MindMapNode } from '../../../../shared/types';
-import type { ImageFile } from '../../../shared/types';
+import type { Position, FileAttachment, MindMapNode } from '@shared/types';
+import type { ImageFile } from '@local/shared/types';
 import type { MindMapStore, UIState } from './types';
 
 export interface UISlice {

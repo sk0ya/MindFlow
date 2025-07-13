@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import Connection from '../../../../shared/components/ui/Connection';
-import type { MindMapNode, MindMapData } from '../../../../shared/types';
+import Connection from '@local/shared/components/ui/Connection';
+import type { MindMapNode, MindMapData } from '@shared/types';
 
 interface ConnectionData {
   from: MindMapNode | { x: number; y: number };

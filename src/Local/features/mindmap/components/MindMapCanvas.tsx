@@ -3,7 +3,7 @@ import CanvasRenderer from './canvas/CanvasRenderer';
 import { useCanvasDragHandler } from './canvas/CanvasDragHandler';
 import { useCanvasViewportHandler } from './canvas/CanvasViewportHandler';
 import { useCanvasEventHandler } from './canvas/CanvasEventHandler';
-import type { MindMapData, MindMapNode, FileAttachment } from '../../../../shared/types';
+import type { MindMapData, MindMapNode, FileAttachment } from '@shared/types';
 
 interface MindMapCanvasProps {
   data: MindMapData;

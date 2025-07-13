@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMindMapSimplified, useKeyboardShortcuts } from '../../../../core';
+import { useMindMapSimplified, useKeyboardShortcuts } from '@local/core';
 import MindMapSidebar from '../MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
@@ -11,7 +11,7 @@ import './MindMapApp.css';
 import { useFileHandlers, useMapHandlers, useNodeHandlers } from '../../hooks';
 
 // Types
-import type { MindMapNode, Position, FileAttachment } from '../../../../shared';
+import type { MindMapNode, Position, FileAttachment } from '@local/shared';
 
 const MindMapApp: React.FC = () => {
   const [isAppReady] = useState(true);

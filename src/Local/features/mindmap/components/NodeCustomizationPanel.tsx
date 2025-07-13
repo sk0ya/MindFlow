@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 import NodeFontPanel from './NodeFontPanel';
 import NodeBorderPanel from './NodeBorderPanel';
 import NodePresetPanel from './NodePresetPanel';

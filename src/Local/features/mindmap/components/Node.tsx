@@ -5,7 +5,7 @@ import NodeAttachments from './node/NodeAttachments';
 import NodeActions from './node/NodeActions';
 import NodeMapLinkIndicator from './node/NodeMapLinkIndicator';
 import { useNodeDragHandler } from './node/NodeDragHandler';
-import type { MindMapNode, FileAttachment } from '../../../../shared/types';
+import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeProps {
   node: MindMapNode;

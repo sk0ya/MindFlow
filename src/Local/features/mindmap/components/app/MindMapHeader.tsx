@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import Toolbar from '../../../../shared/components/ui/Toolbar';
-import type { MindMapData } from '../../../../shared/types';
+import Toolbar from '@local/shared/components/ui/Toolbar';
+import type { MindMapData } from '@shared/types';
 
 interface MindMapHeaderProps {
   data: MindMapData;

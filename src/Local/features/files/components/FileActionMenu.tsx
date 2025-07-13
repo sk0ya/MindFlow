@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import type { FileAttachment } from '../../../../shared/types';
+import type { FileAttachment } from '@shared/types';
 
 interface Position {
   x: number;

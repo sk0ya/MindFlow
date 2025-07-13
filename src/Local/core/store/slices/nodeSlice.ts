@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { MindMapNode, Position } from '../../../../shared/types';
+import type { MindMapNode, Position } from '@shared/types';
 import { 
   updateNormalizedNode,
   deleteNormalizedNode,
@@ -8,9 +8,9 @@ import {
   changeSiblingOrderNormalized,
   denormalizeTreeData
 } from '../../data';
-import { createNewNode } from '../../../shared/types/dataTypes';
-import { COLORS } from '../../../shared';
-import { LAYOUT } from '../../../shared';
+import { createNewNode } from '@local/shared/types/dataTypes';
+import { COLORS } from '@local/shared';
+import { LAYOUT } from '@local/shared';
 import type { MindMapStore } from './types';
 
 export interface NodeSlice {

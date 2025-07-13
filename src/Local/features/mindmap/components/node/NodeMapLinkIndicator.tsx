@@ -1,5 +1,5 @@
 import React, { useCallback, memo } from 'react';
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface NodeMapLinkIndicatorProps {
   node: MindMapNode;

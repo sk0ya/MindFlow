@@ -1,5 +1,5 @@
 import React from 'react';
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface NodeCustomizations {
   fontSize: string;

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import type { MindMapData } from '../../../../shared/types';
+import type { MindMapData } from '@shared/types';
 
 interface MindMapFooterProps {
   data: MindMapData;

@@ -1,4 +1,4 @@
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 // Type definitions for the hook parameters and returns
 interface Position {

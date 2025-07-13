@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Node } from '../..';
 import { CanvasConnections, CanvasDragGuide } from '.';
-import type { MindMapData, MindMapNode, FileAttachment } from '../../../../shared';
+import type { MindMapData, MindMapNode, FileAttachment } from '@local/shared';
 
 interface DragState {
   isDragging: boolean;

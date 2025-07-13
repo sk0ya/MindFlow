@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import type { FileAttachment } from '../../../../shared/types';
+import type { FileAttachment } from '@shared/types';
 
 interface ImageModalProps {
   isOpen: boolean;

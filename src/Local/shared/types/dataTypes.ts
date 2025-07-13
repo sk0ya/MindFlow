@@ -7,9 +7,8 @@ import type {
   MindMapData as SharedMindMapData,
   MindMapSettings as SharedMindMapSettings,
   FileAttachment as SharedFileAttachment,
-  NodeMapLink as SharedNodeMapLink,
-  Position as SharedPosition
-} from '../../../shared/types';
+  NodeMapLink as SharedNodeMapLink
+} from '@shared/types';
 
 // Re-export shared types for compatibility
 export type MindMapNode = SharedMindMapNode;
@@ -17,7 +16,11 @@ export type FileAttachment = SharedFileAttachment;
 export type NodeMapLink = SharedNodeMapLink;
 export type MindMapSettings = SharedMindMapSettings;
 export type MindMapData = SharedMindMapData;
-export type Position = SharedPosition;
+// Position type definition
+export interface Position {
+  x: number;
+  y: number;
+}
 
 export interface Theme {
   name: string;

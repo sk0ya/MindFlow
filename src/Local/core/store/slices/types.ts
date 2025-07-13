@@ -1,6 +1,6 @@
-import type { MindMapData, MindMapNode, Position, FileAttachment } from '../../../../shared/types';
-import type { ImageFile } from '../../../shared/types';
-import type { NormalizedData } from '../../data/normalizedStore';
+import type { MindMapData, MindMapNode, Position, FileAttachment } from '@shared/types';
+import type { ImageFile } from '@local/shared/types';
+import type { NormalizedData } from '@local/core/data/normalizedStore';
 
 // UI State types
 export interface UIState {

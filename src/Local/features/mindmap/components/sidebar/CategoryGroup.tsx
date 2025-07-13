@@ -1,6 +1,6 @@
 import React from 'react';
 import MapItemList from './MapItemList';
-import type { MindMapData } from '../../../../shared/types';
+import type { MindMapData } from '@shared/types';
 
 interface CategoryGroupProps {
   categories: string[];

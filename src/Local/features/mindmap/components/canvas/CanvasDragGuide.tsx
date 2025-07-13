@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import type { MindMapNode } from '../../../../shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface DragState {
   isDragging: boolean;

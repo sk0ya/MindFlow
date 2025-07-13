@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
-import type { MindMapData } from '../../../../shared/types';
+import type { MindMapData } from '@shared/types';
 import { normalizeTreeData, denormalizeTreeData } from '../../data';
-import { autoSelectLayout } from '../../../shared';
+import { autoSelectLayout } from '@local/shared';
 import type { MindMapStore, DataState } from './types';
 
 export interface DataSlice extends DataState {

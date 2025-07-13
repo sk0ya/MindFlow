@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import type { MindMapData, MindMapNode } from '../../../../shared/types';
+import type { MindMapData, MindMapNode } from '@shared/types';
 
 interface MapItemListProps {
   maps: MindMapData[];
