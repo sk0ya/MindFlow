@@ -155,9 +155,8 @@ async function handleSendMagicLink(request, env) {
       response.debugEmailResult = emailResult;
     }
     
-    // トークンをレスポンスに含める（本番・開発共通）
-    // フロントエンドでトークン入力機能を使えるようにする
-    response.token = authToken.token;
+    // セキュリティのため、トークンはレスポンスに含めない
+    // トークンはメールでのみ提供する
     
     return response;
   } catch (error) {

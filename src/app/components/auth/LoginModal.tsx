@@ -14,7 +14,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [receivedToken, setReceivedToken] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
 
@@ -25,7 +24,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
       setMessage('');
       setIsSuccess(false);
       setIsLoading(false);
-      setReceivedToken('');
       setShowTokenInput(false);
       setTokenInput('');
     }
@@ -49,14 +47,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
         setIsSuccess(true);
         setShowTokenInput(true);
         
-        if (result.token) {
-          setReceivedToken(result.token);
-        }
-        
         if (result.magicLink) {
           setMessage(`開発モード: マジックリンクが生成されました。\n${result.magicLink}`);
         } else {
-          setMessage('マジックリンクをメールに送信しました。メールを確認してリンクをクリックするか、下記にトークンを入力してください。');
+          setMessage('マジックリンクをメールに送信しました。メールを確認してリンクをクリックするか、メール内のトークンを下記に入力してください。');
         }
       } else {
         setMessage(result.message || 'ログインに失敗しました');
@@ -103,15 +97,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
     }
   };
 
-  const copyToken = () => {
-    if (receivedToken) {
-      navigator.clipboard.writeText(receivedToken).then(() => {
-        setMessage('トークンをクリップボードにコピーしました');
-      }).catch(() => {
-        setMessage('コピーに失敗しました');
-      });
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -281,48 +266,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
               </div>
             </div>
 
-            {/* トークン表示セクション（利用可能な場合） */}
-            {receivedToken && (
-              <div style={{
-                marginBottom: '20px',
-                padding: '16px',
-                backgroundColor: '#fffbeb',
-                border: '1px solid #fed7aa',
-                borderRadius: '8px'
-              }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#92400e', fontSize: '14px', fontWeight: '500' }}>
-                  🔑 トークン（コピー用）
-                </h4>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <code style={{
-                    flex: 1,
-                    padding: '8px',
-                    backgroundColor: '#fef3c7',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    wordBreak: 'break-all',
-                    color: '#92400e'
-                  }}>
-                    {receivedToken}
-                  </code>
-                  <button
-                    onClick={copyToken}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    コピー
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* トークン入力セクション */}
             {showTokenInput && (
@@ -334,7 +277,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
                 borderRadius: '8px'
               }}>
                 <h4 style={{ margin: '0 0 12px 0', color: '#0c4a6e', fontSize: '14px', fontWeight: '500' }}>
-                  💬 トークンでログイン
+                  🔑 メール内のトークンでログイン
                 </h4>
                 <form onSubmit={handleTokenSubmit}>
                   <div style={{ marginBottom: '12px' }}>
@@ -399,7 +342,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
                   setIsSuccess(false);
                   setMessage('');
                   setEmail('');
-                  setReceivedToken('');
                   setShowTokenInput(false);
                   setTokenInput('');
                 }}
