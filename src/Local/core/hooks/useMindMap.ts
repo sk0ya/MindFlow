@@ -17,17 +17,20 @@ export const useMindMap = (isAppReady: boolean = true) => {
   const actionsHook = useMindMapActions();
   const persistenceHook = useMindMapPersistence();
 
-  // 初期データ読み込み
+  // 初期データ読み込み（非同期対応）
   useEffect(() => {
-    if (isAppReady && !dataHook.data) {
-      const initialData = persistenceHook.loadInitialData();
-      dataHook.setData(initialData);
+    if (isAppReady && !dataHook.data && persistenceHook.isInitialized) {
+      const loadData = async () => {
+        const initialData = await persistenceHook.loadInitialData();
+        dataHook.setData(initialData);
+      };
+      loadData();
     }
-  }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook]);
+  }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
 
-  // データ変更時の自動保存
+  // データ変更時の自動保存（非同期対応）
   useEffect(() => {
-    if (dataHook.data) {
+    if (dataHook.data && persistenceHook.isInitialized) {
       // デバウンス付きで保存（500ms）
       const timeoutId = setTimeout(() => {
         if (dataHook.data) {
@@ -38,13 +41,13 @@ export const useMindMap = (isAppReady: boolean = true) => {
       return () => clearTimeout(timeoutId);
     }
     return undefined;
-  }, [dataHook.data, persistenceHook.saveData]);
+  }, [dataHook.data, persistenceHook.saveData, persistenceHook.isInitialized]);
 
-  // マップ管理の高レベル操作
+  // マップ管理の高レベル操作（非同期対応）
   const mapOperations = {
-    createAndSelectMap: useCallback((title: string, category?: string) => {
+    createAndSelectMap: useCallback(async (title: string, category?: string): Promise<string> => {
       const newMap = actionsHook.createMap(title, category);
-      persistenceHook.addMapToList(newMap);
+      await persistenceHook.addMapToList(newMap);
       actionsHook.selectMap(newMap);
       return newMap.id;
     }, [actionsHook.createMap, actionsHook.selectMap, persistenceHook.addMapToList]),
@@ -58,8 +61,8 @@ export const useMindMap = (isAppReady: boolean = true) => {
       return false;
     }, [persistenceHook.allMindMaps, actionsHook.selectMap]),
 
-    deleteMap: useCallback((mapId: string) => {
-      persistenceHook.removeMapFromList(mapId);
+    deleteMap: useCallback(async (mapId: string): Promise<void> => {
+      await persistenceHook.removeMapFromList(mapId);
       // 現在のマップが削除された場合は新しいマップを作成
       if (dataHook.data?.id === mapId) {
         const newMap = actionsHook.createMap('新しいマインドマップ');
@@ -67,11 +70,11 @@ export const useMindMap = (isAppReady: boolean = true) => {
       }
     }, [persistenceHook.removeMapFromList, dataHook.data?.id, actionsHook.createMap, actionsHook.selectMap]),
 
-    updateMapMetadata: useCallback((mapId: string, updates: { title?: string; category?: string }) => {
+    updateMapMetadata: useCallback(async (mapId: string, updates: { title?: string; category?: string }): Promise<void> => {
       actionsHook.updateMapMetadata(mapId, updates);
       // リストも更新
       if (dataHook.data?.id === mapId) {
-        persistenceHook.updateMapInList(dataHook.data);
+        await persistenceHook.updateMapInList(dataHook.data);
       }
     }, [actionsHook.updateMapMetadata, dataHook.data, persistenceHook.updateMapInList])
   };
@@ -82,21 +85,17 @@ export const useMindMap = (isAppReady: boolean = true) => {
       return actionsHook.exportData();
     }, [actionsHook.exportData]),
 
-    importMap: useCallback((jsonData: string) => {
+    importMap: useCallback(async (jsonData: string): Promise<boolean> => {
       const success = actionsHook.importData(jsonData);
       if (success && dataHook.data) {
-        persistenceHook.addMapToList(dataHook.data);
+        await persistenceHook.addMapToList(dataHook.data);
       }
       return success;
     }, [actionsHook.importData, dataHook.data, persistenceHook.addMapToList])
   };
 
-  // 永続化操作の修正
-  useEffect(() => {
-    if (dataHook.data) {
-      persistenceHook.saveData(dataHook.data);
-    }
-  }, [dataHook.data, persistenceHook]);
+  // マップ一覧の初期化状態も返す
+  const isReady = persistenceHook.isInitialized;
 
 
   return {
@@ -118,6 +117,7 @@ export const useMindMap = (isAppReady: boolean = true) => {
     // マップ一覧
     allMindMaps: persistenceHook.allMindMaps,
     currentMapId: actionsHook.currentMapId,
+    isReady,
 
     // === 操作 ===
     // データ操作（ノード・編集・選択）
