@@ -245,7 +245,7 @@ const exportToCSV = (data: MindMapData, options: ExportOptions): string => {
     depth: number;
     x: number;
     y: number;
-    color?: string;
+    color: string | undefined;
     attachmentCount: number;
     mapLinkCount: number;
   }> => {
