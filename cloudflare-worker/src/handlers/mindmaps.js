@@ -75,7 +75,14 @@ export async function handleRequest(request, env) {
         throw new Error(`Method ${method} not allowed`);
     }
 
-    return new Response(JSON.stringify(response), {
+    // APIレスポンス形式で統一
+    const apiResponse = {
+      success: true,
+      data: response,
+      timestamp: new Date().toISOString()
+    };
+
+    return new Response(JSON.stringify(apiResponse), {
       headers: {
         'Content-Type': 'application/json',
         ...corsHeaders(env.CORS_ORIGIN)
@@ -84,7 +91,14 @@ export async function handleRequest(request, env) {
 
   } catch (error) {
     console.error('API Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    
+    const errorResponse = {
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+    
+    return new Response(JSON.stringify(errorResponse), {
       status: error.status || 500,
       headers: {
         'Content-Type': 'application/json',
@@ -138,7 +152,7 @@ async function getAllMindMaps(db, userId) {
     } : null
   });
   
-  return { mindmaps };
+  return mindmaps;
 }
 
 async function getMindMap(db, userId, mindmapId) {

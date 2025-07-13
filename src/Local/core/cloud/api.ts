@@ -81,7 +81,11 @@ export class CloudflareAPI {
     });
     
     const headers = this.getAuthHeaders();
-    console.log('🔑 API: Auth headers:', { hasAuth: !!headers.Authorization, headers });
+    console.log('🔑 API: Auth headers:', { 
+      hasAuth: !!headers.Authorization, 
+      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
+      contentType: headers['Content-Type']
+    });
     
     const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
       method: 'POST',
@@ -100,6 +104,7 @@ export class CloudflareAPI {
     }
 
     const result: MindMapApiResponse = await response.json();
+    console.log('📥 API: Create response:', result);
     
     if (!result.success) {
       console.error('❌ API: Create mindmap API error:', result.error);
@@ -125,7 +130,11 @@ export class CloudflareAPI {
     });
     
     const headers = this.getAuthHeaders();
-    console.log('🔑 API: Auth headers:', { hasAuth: !!headers.Authorization, headers });
+    console.log('🔑 API: Auth headers:', { 
+      hasAuth: !!headers.Authorization, 
+      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
+      contentType: headers['Content-Type']
+    });
     
     const response = await fetch(`${API_BASE_URL}/api/mindmaps/${data.id}`, {
       method: 'PUT',
@@ -144,6 +153,7 @@ export class CloudflareAPI {
     }
 
     const result: MindMapApiResponse = await response.json();
+    console.log('📥 API: Update response:', result);
     
     if (!result.success) {
       console.error('❌ API: Update mindmap API error:', result.error);

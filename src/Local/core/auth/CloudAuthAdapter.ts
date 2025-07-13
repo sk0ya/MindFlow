@@ -49,7 +49,14 @@ export class CloudAuthAdapter implements AuthAdapter {
       // 保存されたトークンをチェック
       const token = this.getStoredToken();
       if (token) {
-        await this.validateToken(token);
+        try {
+          await this.validateToken(token);
+          console.log('✅ CloudAuthAdapter: Stored token validated');
+        } catch (validationError) {
+          console.warn('⚠️ CloudAuthAdapter: Stored token invalid, clearing:', validationError);
+          this.clearStoredTokens();
+          this.clearAuthState();
+        }
       }
       
       this._isInitialized = true;

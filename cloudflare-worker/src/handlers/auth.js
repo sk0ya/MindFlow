@@ -34,6 +34,8 @@ export async function handleAuthRequest(request, env) {
           response = await handleGetCurrentUser(request, env);
         } else if (action === 'verify') {
           response = await handleVerifyMagicLink(request, env);
+        } else if (action === 'validate') {
+          response = await handleValidateToken(request, env);
         } else if (action === 'google') {
           response = await handleGoogleAuth(request, env);
         } else if (action === 'google-callback') {
@@ -218,6 +220,38 @@ async function handleRefreshToken(request, env) {
   return {
     success: true,
     token: newToken
+  };
+}
+
+// トークン検証エンドポイント
+async function handleValidateToken(request, env) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const error = new Error('Authorization header required');
+    error.status = 401;
+    throw error;
+  }
+  
+  const token = authHeader.substring(7);
+  const verification = await verifyJWT(token);
+  
+  if (!verification.valid) {
+    console.error('❌ Token validation failed:', verification.error);
+    const error = new Error('Invalid or expired token');
+    error.status = 400;
+    throw error;
+  }
+  
+  const userId = verification.payload.userId;
+  console.log('✅ Token validated for user:', userId);
+  
+  return {
+    success: true,
+    user: {
+      id: userId,
+      email: userId, // id = email in our schema
+      validated: true
+    }
   };
 }
 
