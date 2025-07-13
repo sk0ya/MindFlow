@@ -118,7 +118,13 @@ Magic Link: ${magicLink}
 Error: ${error.message}
 ==========================================
     `);
-    return { success: true, messageId: 'fallback-mode' };
+    return { 
+      success: true, 
+      messageId: 'fallback-mode',
+      error: error.message,
+      errorName: error.name,
+      errorStack: error.stack
+    };
   }
 }
 

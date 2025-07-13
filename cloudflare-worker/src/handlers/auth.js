@@ -67,7 +67,14 @@ export async function handleAuthRequest(request, env) {
 
   } catch (error) {
     console.error('Auth Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorResponse = { error: error.message };
+    
+    // デバッグ情報がある場合は含める（一時的）
+    if (error.debugInfo) {
+      errorResponse.debugInfo = error.debugInfo;
+    }
+    
+    return new Response(JSON.stringify(errorResponse), {
       status: error.status || 400,
       headers: {
         'Content-Type': 'application/json',
@@ -114,23 +121,38 @@ async function handleSendMagicLink(request, env) {
     
     // メッセージを送信結果に応じて調整
     let message;
-    if (emailResult.messageId === 'dev-mode' || emailResult.messageId === 'fallback-mode') {
-      message = 'Magic Linkを生成しました\n本番環境ではメールが送信されますが、\n現在はテスト環境のためリンクを直接表示しています。';
+    if (emailResult.messageId === 'dev-mode') {
+      // 開発環境（APIキーが設定されていない）
+      message = 'Magic Linkを生成しました\n開発環境のためメールは送信されず、\nリンクを直接表示しています。';
+    } else if (emailResult.messageId === 'fallback-mode') {
+      // 本番環境でメール送信に失敗した場合
+      message = 'メール送信に失敗しました。\nしばらく時間をおいて再度お試しいただくか、\n管理者にお問い合わせください。';
     } else {
+      // メール送信成功
       message = `${email}にログインリンクを送信しました。\nメールを確認してログインしてください。`;
+    }
+    
+    // メール送信に失敗した場合はエラーを投げる
+    if (emailResult.messageId === 'fallback-mode') {
+      // 一時的にデバッグ情報を含める
+      const error = new Error(message);
+      error.status = 503; // Service Unavailable
+      error.debugInfo = emailResult;
+      throw error;
     }
     
     const response = {
       success: true,
       message: message,
       expiresIn: 600, // 10分
-      emailSent: emailResult.messageId !== 'dev-mode' && emailResult.messageId !== 'fallback-mode',
-      debugEmailResult: emailResult // 一時的にデバッグ情報を含める
+      emailSent: emailResult.messageId !== 'dev-mode'
     };
     
-    // メール送信に失敗した場合のみ Magic Link を返す
-    if (!response.emailSent) {
+    // セキュリティ上、Magic Linkは直接表示しない
+    // 開発環境でのみデバッグ情報を含める
+    if (env.NODE_ENV === 'development' && emailResult.messageId === 'dev-mode') {
       response.magicLink = magicLink;
+      response.debugEmailResult = emailResult;
     }
     
     return response;
