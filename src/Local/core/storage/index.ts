@@ -1,0 +1,24 @@
+// Storage abstraction barrel exports
+export type {
+  StorageAdapter,
+  AuthAdapter,
+  AuthUser,
+  StorageConfig,
+  StorageMode,
+  SyncStatus,
+  StorageEvents,
+  StorageAdapterFactory as IStorageAdapterFactory
+} from './types';
+
+export { LocalStorageAdapter } from './adapters/LocalStorageAdapter';
+export { CloudStorageAdapter } from './adapters/CloudStorageAdapter';
+export { HybridStorageAdapter } from './adapters/HybridStorageAdapter';
+
+export {
+  StorageAdapterFactory,
+  defaultStorageAdapterFactory,
+  createStorageAdapter,
+  createLocalStorageAdapter,
+  createCloudStorageAdapter,
+  createHybridStorageAdapter
+} from './StorageAdapterFactory';
