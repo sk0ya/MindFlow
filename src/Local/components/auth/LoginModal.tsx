@@ -1,5 +1,6 @@
 // Login modal component for cloud authentication
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { AuthAdapter } from '@local/core/auth';
 
 interface LoginModalProps {
@@ -13,13 +14,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [shouldAutoFocus, setShouldAutoFocus] = useState(false);
 
-  // Auto focus email input when modal opens
   useEffect(() => {
     if (isOpen) {
-      setShouldAutoFocus(true);
-      // Clear previous state when modal opens
+      console.log('🔓 LoginModal: Modal opened');
       setEmail('');
       setMessage('');
       setIsSuccess(false);
@@ -30,12 +28,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
-      setMessage('メールアドレスを入力してください');
-      return;
-    }
-
-    if (!isValidEmail(email)) {
+    if (!email || !email.includes('@')) {
       setMessage('有効なメールアドレスを入力してください');
       return;
     }
@@ -49,7 +42,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
       if (result.success) {
         setIsSuccess(true);
         if (result.magicLink) {
-          // Development mode - show magic link
           setMessage(`開発モード: マジックリンクが生成されました。\n${result.magicLink}`);
         } else {
           setMessage('マジックリンクをメールに送信しました。メールを確認してリンクをクリックしてください。');
@@ -67,110 +59,147 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
     }
   };
 
-  const handleClose = () => {
-    setEmail('');
-    setMessage('');
-    setIsSuccess(false);
-    setIsLoading(false);
-    onClose();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleClose();
-    }
-  };
-
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleTryAnotherEmail = () => {
-    setIsSuccess(false);
-    setMessage('');
-    setEmail('');
-    setShouldAutoFocus(true);
-  };
-
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div 
-        className="bg-white rounded-xl p-6 w-96 max-w-md mx-4 shadow-2xl transform transition-all duration-200 scale-100"
-        onKeyDown={handleKeyDown}
-        tabIndex={-1}
+        style={{
+          backgroundColor: 'white',
+          padding: '30px',
+          borderRadius: '12px',
+          maxWidth: '400px',
+          width: '100%',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-lg">☁️</span>
-            </div>
-            <h2 className="text-xl font-semibold text-gray-800">クラウドログイン</h2>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            backgroundColor: '#dbeafe', 
+            borderRadius: '50%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            marginRight: '12px'
+          }}>
+            <span style={{ fontSize: '18px' }}>☁️</span>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-            aria-label="閉じる"
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
+            クラウドログイン
+          </h2>
+          <button 
+            onClick={onClose}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: '#6b7280',
+              padding: '4px'
+            }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            ✕
           </button>
         </div>
 
         {!isSuccess ? (
           <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#374151',
+                marginBottom: '8px'
+              }}>
                 メールアドレス
               </label>
               <input
                 type="email"
-                id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="your-email@example.com"
                 disabled={isLoading}
-                autoFocus={shouldAutoFocus}
-                onFocus={() => setShouldAutoFocus(false)}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
               />
             </div>
 
             {message && !isSuccess && (
-              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
-                <div className="flex items-start gap-2">
-                  <span className="text-red-500 text-sm">⚠️</span>
-                  <span className="text-red-700 text-sm whitespace-pre-line">{message}</span>
-                </div>
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                color: '#dc2626',
+                fontSize: '14px'
+              }}>
+                ⚠️ {message}
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 type="submit"
                 disabled={isLoading || !email}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors font-medium"
+                style={{
+                  flex: 1,
+                  backgroundColor: isLoading || !email ? '#9ca3af' : '#3b82f6',
+                  color: 'white',
+                  padding: '12px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: isLoading || !email ? 'not-allowed' : 'pointer'
+                }}
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>送信中...</span>
-                  </div>
-                ) : (
-                  'マジックリンクを送信'
-                )}
+                {isLoading ? '送信中...' : 'マジックリンクを送信'}
               </button>
               <button
                 type="button"
-                onClick={handleClose}
-                className="px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={onClose}
                 disabled={isLoading}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: 'white',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                }}
               >
                 キャンセル
               </button>
@@ -178,35 +207,74 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
           </form>
         ) : (
           <div>
-            <div className="mb-6 p-4 rounded-lg bg-green-50 border border-green-200">
-              <div className="flex items-start gap-2">
-                <span className="text-green-500 text-lg">✅</span>
+            <div style={{
+              marginBottom: '20px',
+              padding: '16px',
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>✅</span>
                 <div>
-                  <h3 className="text-green-800 font-medium mb-1">メール送信完了</h3>
-                  <p className="text-green-700 text-sm whitespace-pre-line">{message}</p>
+                  <h3 style={{ margin: '0 0 4px 0', color: '#166534', fontSize: '16px', fontWeight: '500' }}>
+                    メール送信完了
+                  </h3>
+                  <p style={{ margin: 0, color: '#166534', fontSize: '14px', whiteSpace: 'pre-line' }}>
+                    {message}
+                  </p>
                 </div>
               </div>
             </div>
             
-            <div className="text-sm text-gray-600 mb-6 bg-gray-50 p-4 rounded-lg">
-              <p className="font-medium mb-2">📧 メールが届かない場合は：</p>
-              <ul className="list-disc list-inside space-y-1">
+            <div style={{
+              marginBottom: '20px',
+              padding: '16px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#4b5563'
+            }}>
+              <p style={{ margin: '0 0 8px 0', fontWeight: '500' }}>📧 メールが届かない場合は：</p>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
                 <li>迷惑メールフォルダを確認してください</li>
                 <li>数分後に再度お試しください</li>
                 <li>メールアドレスが正しく入力されているか確認してください</li>
               </ul>
             </div>
 
-            <div className="flex gap-3">
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button
-                onClick={handleTryAnotherEmail}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                onClick={() => {
+                  setIsSuccess(false);
+                  setMessage('');
+                  setEmail('');
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  padding: '12px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
               >
                 別のメールアドレスで試す
               </button>
               <button
-                onClick={handleClose}
-                className="px-4 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={onClose}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: 'white',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
               >
                 閉じる
               </button>
@@ -214,13 +282,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
           </div>
         )}
 
-        <div className="mt-6 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-          <div className="flex items-center gap-2">
-            <span>🔒</span>
-            <span>マジックリンクログインは、パスワード不要で安全にログインできます。</span>
-          </div>
+        <div style={{
+          marginTop: '20px',
+          padding: '12px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#6b7280',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span>🔒</span>
+          <span>マジックリンクログインは、パスワード不要で安全にログインできます。</span>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
