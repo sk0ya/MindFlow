@@ -4,23 +4,26 @@ import type { StorageAdapter, AuthAdapter } from '../types';
 import { createInitialData } from '@local/shared/types/dataTypes';
 import {
   initCloudIndexedDB,
-  saveToIndexedDB,
-  getAllFromIndexedDB,
-  markAsSynced,
-  getDirtyData
-} from '../../../../Cloud/utils/indexedDB';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api.shigekazukoya.workers.dev';
+  saveToCloudIndexedDB,
+  getAllFromCloudIndexedDB,
+  markAsCloudSynced,
+  getCloudDirtyData,
+  deleteFromCloudIndexedDB
+} from '../../cloud/indexedDB';
+import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI } from '../../cloud/api';
 
 /**
  * クラウドストレージアダプター
- * Cloud modeの機能をLocal architectureで使用するためのアダプター
+ * IndexedDB + Cloudflare Workers APIのハイブリッド永続化
  */
 export class CloudStorageAdapter implements StorageAdapter {
   private _isInitialized = false;
   private syncInterval: NodeJS.Timeout | null = null;
+  private apiClient: CloudflareAPI;
 
-  constructor(private authAdapter: AuthAdapter) {}
+  constructor(private authAdapter: AuthAdapter) {
+    this.apiClient = createCloudflareAPIClient(() => this.authAdapter.getAuthHeaders());
+  }
 
   get isInitialized(): boolean {
     return this._isInitialized && this.authAdapter.isInitialized;
@@ -33,10 +36,10 @@ export class CloudStorageAdapter implements StorageAdapter {
     try {
       // 認証の初期化を待つ
       if (!this.authAdapter.isInitialized) {
-        await new Promise(resolve => {
+        await new Promise<void>(resolve => {
           const checkAuth = () => {
             if (this.authAdapter.isInitialized) {
-              resolve(undefined);
+              resolve();
             } else {
               setTimeout(checkAuth, 100);
             }
@@ -52,7 +55,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       // バックグラウンド同期を開始
       this.startBackgroundSync();
       
-      console.log('✅ CloudStorageAdapter: Initialized with auth');
+      console.log('✅ CloudStorageAdapter: Initialized with auth and API');
     } catch (error) {
       console.error('❌ CloudStorageAdapter: Initialization failed:', error);
       throw error;
@@ -68,7 +71,8 @@ export class CloudStorageAdapter implements StorageAdapter {
     }
 
     if (!this.authAdapter.isAuthenticated) {
-      throw new Error('Authentication required for cloud storage');
+      console.log('🔑 CloudStorageAdapter: User not authenticated, returning initial data');
+      return createInitialData();
     }
 
     try {
@@ -76,13 +80,21 @@ export class CloudStorageAdapter implements StorageAdapter {
       const localData = await this.getLocalData();
       
       // 2. APIからサーバーデータを取得
-      const serverData = await this.fetchFromAPI();
+      let serverData: MindMapData | null = null;
+      try {
+        const serverMaps = await this.apiClient.getMindMaps();
+        if (serverMaps.length > 0) {
+          serverData = cleanEmptyNodesFromData(serverMaps[0]);
+        }
+      } catch (apiError) {
+        console.warn('⚠️ CloudStorageAdapter: API fetch failed, using local data:', apiError);
+      }
       
       // 3. サーバーデータがある場合はそれを使用、なければローカルデータ
       if (serverData) {
         // サーバーデータをローカルに保存
         await this.saveToLocal(serverData);
-        await markAsSynced(serverData.id);
+        await markAsCloudSynced(serverData.id);
         console.log('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
         return serverData;
       } else if (localData) {
@@ -94,10 +106,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       const initialData = createInitialData();
       console.log('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
       
-      // すぐにサーバーに保存
-      await this.saveToAPI(initialData);
+      // すぐにサーバーに保存（非同期）
+      this.saveToAPIAsync(initialData);
       await this.saveToLocal(initialData);
-      await markAsSynced(initialData.id);
       
       return initialData;
     } catch (error) {
@@ -123,21 +134,18 @@ export class CloudStorageAdapter implements StorageAdapter {
     }
 
     try {
+      // 認証されている場合のみ保存
+      if (!this.authAdapter.isAuthenticated) {
+        console.warn('CloudStorageAdapter: User not authenticated, skipping save');
+        return;
+      }
+
       // 1. まずローカルに保存（即座の応答性）
       await this.saveToLocal(data);
       console.log('💾 CloudStorageAdapter: Data saved locally:', data.title);
 
-      // 2. 認証されている場合はAPIにも保存
-      if (this.authAdapter.isAuthenticated) {
-        try {
-          await this.saveToAPI(data);
-          await markAsSynced(data.id);
-          console.log('☁️ CloudStorageAdapter: Data synced to cloud:', data.title);
-        } catch (apiError) {
-          console.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', apiError);
-          // ローカルには保存されているので、エラーは投げない
-        }
-      }
+      // 2. APIにも保存（非同期）
+      this.saveToAPIAsync(data);
     } catch (error) {
       console.error('❌ CloudStorageAdapter: Failed to save data:', error);
       throw error;
@@ -158,10 +166,15 @@ export class CloudStorageAdapter implements StorageAdapter {
 
     try {
       // APIから全マップを取得
-      const serverMaps = await this.fetchAllFromAPI();
+      const serverMaps = await this.apiClient.getMindMaps();
       if (serverMaps.length > 0) {
-        console.log(`📋 CloudStorageAdapter: Loaded ${serverMaps.length} maps from API`);
-        return serverMaps;
+        const cleanedMaps = serverMaps.map(map => cleanEmptyNodesFromData(map));
+        console.log(`📋 CloudStorageAdapter: Loaded ${cleanedMaps.length} maps from API`);
+        
+        // ローカルキャッシュも更新
+        await Promise.all(cleanedMaps.map(map => this.saveToLocal(map)));
+        
+        return cleanedMaps;
       }
 
       // サーバーにデータがない場合はローカルキャッシュを確認
@@ -214,19 +227,11 @@ export class CloudStorageAdapter implements StorageAdapter {
     try {
       // APIから削除
       if (this.authAdapter.isAuthenticated) {
-        const headers = this.authAdapter.getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/mindmaps/${mapId}`, {
-          method: 'DELETE',
-          headers: headers,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete map from API: ${response.statusText}`);
-        }
+        await this.apiClient.deleteMindMap(mapId);
       }
 
-      // ローカルからも削除（実装が必要な場合）
-      // Note: Cloud IndexedDBにはremove機能がないため、必要に応じて実装
+      // ローカルからも削除
+      await deleteFromCloudIndexedDB(mapId);
       
       console.log('🗑️ CloudStorageAdapter: Removed map:', mapId);
     } catch (error) {
@@ -258,10 +263,10 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   private async getLocalData(): Promise<MindMapData | null> {
     try {
-      const userEmail = this.authAdapter.user?.email;
-      if (!userEmail) return null;
+      const userId = this.authAdapter.user?.id;
+      if (!userId) return null;
 
-      const allLocalData = await getAllFromIndexedDB(userEmail);
+      const allLocalData = await getAllFromCloudIndexedDB(userId);
       if (allLocalData.length > 0) {
         const { _metadata, ...cleanData } = allLocalData[0];
         return cleanData as MindMapData;
@@ -278,14 +283,11 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   private async getAllLocalMaps(): Promise<MindMapData[]> {
     try {
-      const userEmail = this.authAdapter.user?.email;
-      if (!userEmail) return [];
+      const userId = this.authAdapter.user?.id;
+      if (!userId) return [];
 
-      const allLocalData = await getAllFromIndexedDB(userEmail);
-      return allLocalData.map((cachedMap: any) => {
-        const { _metadata, ...cleanData } = cachedMap;
-        return cleanData as MindMapData;
-      });
+      const allLocalData = await getAllFromCloudIndexedDB(userId);
+      return allLocalData.map(({ _metadata, ...cleanData }) => cleanData as MindMapData);
     } catch (error) {
       console.warn('⚠️ CloudStorageAdapter: Failed to get all local maps:', error);
       return [];
@@ -296,73 +298,28 @@ export class CloudStorageAdapter implements StorageAdapter {
    * ローカルに保存
    */
   private async saveToLocal(data: MindMapData): Promise<void> {
-    const userEmail = this.authAdapter.user?.email;
-    if (!userEmail) {
-      throw new Error('User email required for local storage');
+    const userId = this.authAdapter.user?.id;
+    if (!userId) {
+      throw new Error('User ID required for local storage');
     }
-    await saveToIndexedDB(data, userEmail);
+    await saveToCloudIndexedDB(data, userId);
   }
 
   /**
-   * APIからデータを取得
+   * 非同期でAPIに保存
    */
-  private async fetchFromAPI(): Promise<MindMapData | null> {
-    const headers = this.authAdapter.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
-      method: 'GET',
-      headers: headers,
-    });
+  private saveToAPIAsync(data: MindMapData): void {
+    if (!this.authAdapter.isAuthenticated) return;
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null; // データなし
-      }
-      throw new Error(`API fetch failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    if (result.mindmaps && result.mindmaps.length > 0) {
-      return result.mindmaps[0]; // 最初のマップを返す
-    }
-    
-    return null;
-  }
-
-  /**
-   * APIから全マップを取得
-   */
-  private async fetchAllFromAPI(): Promise<MindMapData[]> {
-    const headers = this.authAdapter.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
-      method: 'GET',
-      headers: headers,
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return []; // データなし
-      }
-      throw new Error(`API fetch all failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result.mindmaps || [];
-  }
-
-  /**
-   * APIにデータを保存
-   */
-  private async saveToAPI(data: MindMapData): Promise<void> {
-    const headers = this.authAdapter.getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API save failed: ${response.statusText}`);
-    }
+    // 非同期でAPI保存を実行
+    this.apiClient.updateMindMap(data)
+      .then(async (updatedData) => {
+        await markAsCloudSynced(updatedData.id);
+        console.log('☁️ CloudStorageAdapter: Data synced to cloud:', updatedData.title);
+      })
+      .catch((error) => {
+        console.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
+      });
   }
 
   /**
@@ -374,11 +331,12 @@ export class CloudStorageAdapter implements StorageAdapter {
       if (!this.authAdapter.isAuthenticated) return;
 
       try {
-        const dirtyMaps = await getDirtyData();
+        const dirtyMaps = await getCloudDirtyData();
         for (const dirtyMap of dirtyMaps) {
           try {
-            await this.saveToAPI(dirtyMap);
-            await markAsSynced(dirtyMap.id);
+            const { _metadata, ...cleanData } = dirtyMap;
+            await this.apiClient.updateMindMap(cleanData as MindMapData);
+            await markAsCloudSynced(dirtyMap.id);
             console.log('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
           } catch (syncError) {
             console.warn('⚠️ CloudStorageAdapter: Background sync failed:', syncError);

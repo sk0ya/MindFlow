@@ -1,29 +1,25 @@
-// Cloud Mode IndexedDB Utility
-// ローカルキャッシュとオフライン対応のためのIndexedDB管理
+// Cloud-specific IndexedDB utilities for Local architecture
+import type { MindMapData } from '@shared/types';
 
-import { MindMapData as SharedMindMapData } from '../../shared/types/core';
-
-interface MindMapData extends SharedMindMapData {
-  userId?: string;
-}
-
-interface CacheMetadata {
+interface CloudCacheMetadata {
   lastSync: string;
   version: number;
   isDirty: boolean; // ローカル変更があるかどうか
+  userId: string;
 }
 
-interface CachedMindMap extends MindMapData {
-  _metadata: CacheMetadata;
+interface CachedCloudMindMap extends MindMapData {
+  _metadata: CloudCacheMetadata;
 }
 
 class CloudIndexedDB {
-  private dbName = 'MindFlow-Cloud';
+  private dbName = 'MindFlow-Cloud-Local';
   private version = 1;
   private db: IDBDatabase | null = null;
   
   private readonly STORES = {
-    MINDMAPS: 'mindmaps'
+    MINDMAPS: 'mindmaps',
+    SYNC_QUEUE: 'syncQueue'
   } as const;
 
   // データベース初期化
@@ -32,7 +28,7 @@ class CloudIndexedDB {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('IndexedDB initialization failed:', request.error);
+        console.error('Cloud IndexedDB initialization failed:', request.error);
         reject(request.error);
       };
 
@@ -48,8 +44,16 @@ class CloudIndexedDB {
         // マインドマップストア
         if (!db.objectStoreNames.contains(this.STORES.MINDMAPS)) {
           const mindmapsStore = db.createObjectStore(this.STORES.MINDMAPS, { keyPath: 'id' });
-          mindmapsStore.createIndex('userId', 'userId', { unique: false });
+          mindmapsStore.createIndex('userId', '_metadata.userId', { unique: false });
           mindmapsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+          mindmapsStore.createIndex('isDirty', '_metadata.isDirty', { unique: false });
+        }
+
+        // 同期キューストア
+        if (!db.objectStoreNames.contains(this.STORES.SYNC_QUEUE)) {
+          const syncStore = db.createObjectStore(this.STORES.SYNC_QUEUE, { keyPath: 'id' });
+          syncStore.createIndex('timestamp', 'timestamp', { unique: false });
+          syncStore.createIndex('operation', 'operation', { unique: false });
         }
 
         console.log('📋 Cloud IndexedDB schema upgraded');
@@ -58,18 +62,18 @@ class CloudIndexedDB {
   }
 
   // マインドマップを保存
-  async saveMindMap(data: MindMapData, userId?: string): Promise<void> {
+  async saveMindMap(data: MindMapData, userId: string): Promise<void> {
     if (!this.db) {
       await this.init();
     }
 
-    const cachedData: CachedMindMap = {
+    const cachedData: CachedCloudMindMap = {
       ...data,
-      userId: userId || 'anonymous',
       _metadata: {
         lastSync: new Date().toISOString(),
         version: 1,
-        isDirty: true // ローカル変更として記録
+        isDirty: true,
+        userId
       }
     };
 
@@ -79,25 +83,23 @@ class CloudIndexedDB {
       const request = store.put(cachedData);
 
       request.onsuccess = () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('💾 IndexedDB: マインドマップ保存完了', { 
-            id: data.id, 
-            title: data.title,
-            isDirty: true
-          });
-        }
+        console.log('💾 Cloud IndexedDB: マインドマップ保存完了', { 
+          id: data.id, 
+          title: data.title,
+          userId
+        });
         resolve();
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: マインドマップ保存失敗', request.error);
+        console.error('❌ Cloud IndexedDB: マインドマップ保存失敗', request.error);
         reject(request.error);
       };
     });
   }
 
   // マインドマップを取得
-  async getMindMap(id: string): Promise<CachedMindMap | null> {
+  async getMindMap(id: string): Promise<CachedCloudMindMap | null> {
     if (!this.db) {
       await this.init();
     }
@@ -109,25 +111,23 @@ class CloudIndexedDB {
 
       request.onsuccess = () => {
         const result = request.result;
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📋 IndexedDB: マインドマップ取得', { 
-            id, 
-            found: !!result,
-            isDirty: result?._metadata?.isDirty
-          });
-        }
+        console.log('📋 Cloud IndexedDB: マインドマップ取得', { 
+          id, 
+          found: !!result,
+          isDirty: result?._metadata?.isDirty
+        });
         resolve(result || null);
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: マインドマップ取得失敗', request.error);
+        console.error('❌ Cloud IndexedDB: マインドマップ取得失敗', request.error);
         reject(request.error);
       };
     });
   }
 
   // ユーザーの全マインドマップを取得
-  async getAllMindMaps(userId?: string): Promise<CachedMindMap[]> {
+  async getAllMindMaps(userId: string): Promise<CachedCloudMindMap[]> {
     if (!this.db) {
       await this.init();
     }
@@ -135,28 +135,20 @@ class CloudIndexedDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readonly');
       const store = transaction.objectStore(this.STORES.MINDMAPS);
-      
-      let request: IDBRequest;
-      if (userId) {
-        const index = store.index('userId');
-        request = index.getAll(userId);
-      } else {
-        request = store.getAll();
-      }
+      const index = store.index('userId');
+      const request = index.getAll(userId);
 
       request.onsuccess = () => {
         const results = request.result || [];
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📋 IndexedDB: 全マインドマップ取得', { 
-            count: results.length,
-            userId
-          });
-        }
+        console.log('📋 Cloud IndexedDB: 全マインドマップ取得', { 
+          count: results.length,
+          userId
+        });
         resolve(results);
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: 全マインドマップ取得失敗', request.error);
+        console.error('❌ Cloud IndexedDB: 全マインドマップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -181,9 +173,7 @@ class CloudIndexedDB {
           
           const putRequest = store.put(data);
           putRequest.onsuccess = () => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ IndexedDB: 同期完了マーク', { id });
-            }
+            console.log('✅ Cloud IndexedDB: 同期完了マーク', { id });
             resolve();
           };
           putRequest.onerror = () => reject(putRequest.error);
@@ -197,7 +187,7 @@ class CloudIndexedDB {
   }
 
   // 未同期データを取得
-  async getDirtyMindMaps(): Promise<CachedMindMap[]> {
+  async getDirtyMindMaps(): Promise<CachedCloudMindMap[]> {
     if (!this.db) {
       await this.init();
     }
@@ -205,18 +195,14 @@ class CloudIndexedDB {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readonly');
       const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.getAll();
+      const index = store.index('isDirty');
+      const request = index.getAll(IDBKeyRange.only(true));
 
       request.onsuccess = () => {
-        const allData = request.result || [];
-        const dirtyData = allData.filter(item => item._metadata?.isDirty);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔄 IndexedDB: 未同期データ取得', { 
-            total: allData.length,
-            dirty: dirtyData.length
-          });
-        }
+        const dirtyData = request.result || [];
+        console.log('🔄 Cloud IndexedDB: 未同期データ取得', { 
+          dirty: dirtyData.length
+        });
         resolve(dirtyData);
       };
 
@@ -224,7 +210,28 @@ class CloudIndexedDB {
     });
   }
 
+  // マインドマップを削除
+  async deleteMindMap(id: string): Promise<void> {
+    if (!this.db) {
+      await this.init();
+    }
 
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
+      const store = transaction.objectStore(this.STORES.MINDMAPS);
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        console.log('🗑️ Cloud IndexedDB: マインドマップ削除完了', { id });
+        resolve();
+      };
+
+      request.onerror = () => {
+        console.error('❌ Cloud IndexedDB: マインドマップ削除失敗', request.error);
+        reject(request.error);
+      };
+    });
+  }
 
   // データベースクリア（開発用）
   async clearAll(): Promise<void> {
@@ -233,16 +240,27 @@ class CloudIndexedDB {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.clear();
+      const transaction = this.db!.transaction([this.STORES.MINDMAPS, this.STORES.SYNC_QUEUE], 'readwrite');
       
-      request.onsuccess = () => {
-        console.log('🗑️ IndexedDB: 全データクリア完了');
-        resolve();
+      const clearMindmaps = transaction.objectStore(this.STORES.MINDMAPS).clear();
+      const clearSyncQueue = transaction.objectStore(this.STORES.SYNC_QUEUE).clear();
+
+      let completedStores = 0;
+      const totalStores = 2;
+
+      const checkCompletion = () => {
+        completedStores++;
+        if (completedStores === totalStores) {
+          console.log('🗑️ Cloud IndexedDB: 全データクリア完了');
+          resolve();
+        }
       };
+
+      clearMindmaps.onsuccess = checkCompletion;
+      clearSyncQueue.onsuccess = checkCompletion;
       
-      request.onerror = () => reject(request.error);
+      clearMindmaps.onerror = () => reject(clearMindmaps.error);
+      clearSyncQueue.onerror = () => reject(clearSyncQueue.error);
     });
   }
 
@@ -264,29 +282,32 @@ export async function initCloudIndexedDB(): Promise<void> {
   return cloudIndexedDB.init();
 }
 
-export async function saveToIndexedDB(data: MindMapData, userId?: string): Promise<void> {
+export async function saveToCloudIndexedDB(data: MindMapData, userId: string): Promise<void> {
   return cloudIndexedDB.saveMindMap(data, userId);
 }
 
-export async function getFromIndexedDB(id: string): Promise<CachedMindMap | null> {
+export async function getFromCloudIndexedDB(id: string): Promise<CachedCloudMindMap | null> {
   return cloudIndexedDB.getMindMap(id);
 }
 
-export async function getAllFromIndexedDB(userId?: string): Promise<CachedMindMap[]> {
+export async function getAllFromCloudIndexedDB(userId: string): Promise<CachedCloudMindMap[]> {
   return cloudIndexedDB.getAllMindMaps(userId);
 }
 
-export async function markAsSynced(id: string): Promise<void> {
+export async function markAsCloudSynced(id: string): Promise<void> {
   return cloudIndexedDB.markSynced(id);
 }
 
-export async function getDirtyData(): Promise<CachedMindMap[]> {
+export async function getCloudDirtyData(): Promise<CachedCloudMindMap[]> {
   return cloudIndexedDB.getDirtyMindMaps();
+}
+
+export async function deleteFromCloudIndexedDB(id: string): Promise<void> {
+  return cloudIndexedDB.deleteMindMap(id);
 }
 
 export async function clearCloudIndexedDB(): Promise<void> {
   return cloudIndexedDB.clearAll();
 }
 
-
-export type { MindMapData, CachedMindMap, CacheMetadata };
+export type { CachedCloudMindMap, CloudCacheMetadata };

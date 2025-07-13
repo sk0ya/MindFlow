@@ -3,6 +3,7 @@ import { useMindMapData } from './useMindMapData';
 import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
 import { useMindMapPersistence } from './useMindMapPersistence';
+import type { StorageConfig } from '../storage/types';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -10,12 +11,15 @@ import { useMindMapPersistence } from './useMindMapPersistence';
  * 専門化されたHookを組み合わせて完全なMindMap機能を提供
  * Single Responsibility Principleに従い、テスタブルで保守しやすい構造
  */
-export const useMindMap = (isAppReady: boolean = true) => {
+export const useMindMap = (
+  isAppReady: boolean = true, 
+  storageConfig?: StorageConfig
+) => {
   // 専門化されたHookを使用
   const dataHook = useMindMapData();
   const uiHook = useMindMapUI();
   const actionsHook = useMindMapActions();
-  const persistenceHook = useMindMapPersistence();
+  const persistenceHook = useMindMapPersistence(storageConfig);
 
   // 初期データ読み込み（非同期対応）
   useEffect(() => {

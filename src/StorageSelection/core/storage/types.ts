@@ -1,1 +1,1 @@
-export type StorageMode = 'local' | 'cloud';
+export type StorageMode = 'local' | 'cloud' | 'hybrid';

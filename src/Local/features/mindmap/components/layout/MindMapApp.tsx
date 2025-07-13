@@ -9,11 +9,60 @@ import './MindMapApp.css';
 
 // Types
 import type { MindMapNode, FileAttachment } from '@local/shared';
+import type { StorageConfig } from '@local/core/storage/types';
+import { useAuth, LoginModal } from '../../../../components/auth';
 
-const MindMapApp: React.FC = () => {
+interface MindMapAppProps {
+  storageMode?: 'local' | 'cloud' | 'hybrid';
+  onModeChange?: (mode: string) => void;
+}
+
+const MindMapApp: React.FC<MindMapAppProps> = ({ 
+  storageMode = 'local', 
+  onModeChange: _ // Mark as unused but keep for future use
+}) => {
   const [isAppReady] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const store = useMindMapStore();
-  const mindMap = useMindMap(isAppReady);
+  
+  // Get auth adapter for cloud/hybrid modes
+  let auth;
+  let authAdapter;
+  try {
+    auth = useAuth();
+    authAdapter = auth.authAdapter;
+  } catch {
+    // useAuth throws if not within AuthProvider (local mode)
+    auth = undefined;
+    authAdapter = undefined;
+  }
+  
+  // For cloud/hybrid modes, check if user is authenticated
+  const isCloudMode = storageMode === 'cloud' || storageMode === 'hybrid';
+  const needsAuth = isCloudMode && auth && !auth.authState.isAuthenticated;
+  
+  // Show login modal when cloud mode requires auth
+  React.useEffect(() => {
+    if (needsAuth && auth?.isReady) {
+      setShowLoginModal(true);
+    }
+  }, [needsAuth, auth?.isReady]);
+
+  // Close login modal when user becomes authenticated
+  React.useEffect(() => {
+    if (auth?.authState.isAuthenticated) {
+      setShowLoginModal(false);
+    }
+  }, [auth?.authState.isAuthenticated]);
+  
+  // Create storage configuration based on selected mode
+  const storageConfig: StorageConfig = {
+    mode: storageMode,
+    autoSave: true,
+    authAdapter: authAdapter || undefined
+  };
+  
+  const mindMap = useMindMap(isAppReady, storageConfig);
   const { 
     data, 
     selectedNodeId, 
@@ -158,6 +207,25 @@ const MindMapApp: React.FC = () => {
       console.error('Failed to import file');
     }
   };
+
+  // Show loading while auth is initializing in cloud mode
+  if (isCloudMode && auth && !auth.isReady) {
+    return <div>Initializing authentication...</div>;
+  }
+
+  // Show login modal if authentication is required
+  if (needsAuth && authAdapter) {
+    return (
+      <>
+        <div>Please log in to access cloud features.</div>
+        <LoginModal 
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          authAdapter={authAdapter}
+        />
+      </>
+    );
+  }
 
   if (!data) {
     return <div>Loading...</div>;
