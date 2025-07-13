@@ -73,19 +73,36 @@ export class CloudflareAPI {
    * マインドマップを作成
    */
   async createMindMap(data: MindMapData): Promise<MindMapData> {
+    console.log('🆕 API: Creating mindmap:', { id: data.id, title: data.title });
+    console.log('📤 API: Request data:', { 
+      url: `${API_BASE_URL}/api/mindmaps`,
+      dataKeys: Object.keys(data),
+      dataSize: JSON.stringify(data).length
+    });
+    
+    const headers = this.getAuthHeaders();
+    console.log('🔑 API: Auth headers:', { hasAuth: !!headers.Authorization, headers });
+    
     const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
+      headers,
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create mindmap: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('❌ API: Create mindmap failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        body: errorText 
+      });
+      throw new Error(`Failed to create mindmap: ${response.statusText} - ${errorText}`);
     }
 
     const result: MindMapApiResponse = await response.json();
     
     if (!result.success) {
+      console.error('❌ API: Create mindmap API error:', result.error);
       throw new Error(result.error || 'Failed to create mindmap');
     }
 
@@ -101,10 +118,18 @@ export class CloudflareAPI {
    */
   async updateMindMap(data: MindMapData): Promise<MindMapData> {
     console.log('🔄 API: Updating mindmap:', { id: data.id, title: data.title });
+    console.log('📤 API: Update request data:', { 
+      url: `${API_BASE_URL}/api/mindmaps/${data.id}`,
+      dataKeys: Object.keys(data),
+      dataSize: JSON.stringify(data).length
+    });
+    
+    const headers = this.getAuthHeaders();
+    console.log('🔑 API: Auth headers:', { hasAuth: !!headers.Authorization, headers });
     
     const response = await fetch(`${API_BASE_URL}/api/mindmaps/${data.id}`, {
       method: 'PUT',
-      headers: this.getAuthHeaders(),
+      headers,
       body: JSON.stringify(data),
     });
 
