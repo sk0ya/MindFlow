@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, memo } from 'react';
-import SidebarHeader from './sidebar/SidebarHeader';
-import CategoryGroup from './sidebar/CategoryGroup';
-import SidebarCollapsed from './sidebar/SidebarCollapsed';
-import SidebarStyles from './sidebar/SidebarStyles';
+import SidebarHeader from './SidebarHeader';
+import CategoryGroup from './CategoryGroup';
+import SidebarCollapsed from './SidebarCollapsed';
+import SidebarStyles from './SidebarStyles';
 import type { MindMapData } from '@shared/types';
 
 interface MindMapSidebarProps {

@@ -1,11 +1,16 @@
-// Main export for App.tsx dynamic import
-export { default } from './features/mindmap/components/app/MindMapApp';
+// Local Mode - 新しいモジュラーアーキテクチャ
 
-// Core
-export * from './core';
+// App.tsxの動的インポート用のdefaultエクスポート
+export { default } from './features/mindmap/components/layout/MindMapApp';
 
-// Features
+// メインアプリコンポーネント
+export { MindMapApp } from './features/mindmap';
+
+// コアHookアーキテクチャ
+export * from './core/hooks';
+
+// フィーチャー
 export * from './features';
 
-// Shared
+// 共有ユーティリティ
 export * from './shared';

@@ -1,10 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
-import NodeRenderer from './node/NodeRenderer';
-import NodeEditor from './node/NodeEditor';
-import NodeAttachments from './node/NodeAttachments';
-import NodeActions from './node/NodeActions';
-import NodeMapLinkIndicator from './node/NodeMapLinkIndicator';
-import { useNodeDragHandler } from './node/NodeDragHandler';
+import NodeRenderer from './NodeRenderer';
+import NodeEditor from './NodeEditor';
+import NodeAttachments from './NodeAttachments';
+import NodeActions from './NodeActions';
+import NodeMapLinkIndicator from './NodeMapLinkIndicator';
+import { useNodeDragHandler } from './NodeDragHandler';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeProps {

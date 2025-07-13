@@ -1,8 +1,8 @@
 import React, { useRef, memo } from 'react';
-import CanvasRenderer from './canvas/CanvasRenderer';
-import { useCanvasDragHandler } from './canvas/CanvasDragHandler';
-import { useCanvasViewportHandler } from './canvas/CanvasViewportHandler';
-import { useCanvasEventHandler } from './canvas/CanvasEventHandler';
+import CanvasRenderer from '../core/CanvasRenderer';
+import { useCanvasDragHandler } from '../core/CanvasDragHandler';
+import { useCanvasViewportHandler } from '../core/CanvasViewportHandler';
+import { useCanvasEventHandler } from '../core/CanvasEventHandler';
 import type { MindMapData, MindMapNode, FileAttachment } from '@shared/types';
 
 interface MindMapCanvasProps {

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { ContextMenu, MapLinksPanel } from '@local/shared';
-import NodeCustomizationPanel from './NodeCustomizationPanel';
-import { ImageModal, FileActionMenu } from '../../files';
+import NodeCustomizationPanel from '../panels/NodeCustomizationPanel';
+import { ImageModal, FileActionMenu } from '@local/features/files';
 import type { MindMapNode, FileAttachment } from '@local/shared';
 
 interface MindMapModalsProps {
