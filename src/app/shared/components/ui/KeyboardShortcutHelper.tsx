@@ -41,9 +41,8 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
       ]
     },
     {
-      category: 'ファイル操作',
+      category: '編集操作',
       items: [
-        { keys: ['Ctrl', 'S'], description: 'マインドマップを保存', context: 'いつでも' },
         { keys: ['Ctrl', 'Z'], description: '元に戻す', context: 'いつでも' },
         { keys: ['Ctrl', 'Y'], description: 'やり直し', context: 'いつでも' },
         { keys: ['Ctrl', 'Shift', 'Z'], description: 'やり直し', context: 'いつでも' },
@@ -73,19 +72,9 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
       if (e.key === 'Escape' && isVisible) {
         onClose();
       }
-      if (e.key === '?' && !isVisible) {
-        e.preventDefault();
-        onClose(); // トグル動作のため、表示状態を切り替え
-      }
-      if (e.key === 'F1') {
-        e.preventDefault();
-        onClose(); // トグル動作のため、表示状態を切り替え
-      }
     };
 
-    if (isVisible) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);

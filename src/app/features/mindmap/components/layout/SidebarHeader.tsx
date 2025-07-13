@@ -4,14 +4,12 @@ interface SidebarHeaderProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onCreateMap: (title: string, category?: string) => void;
-  onToggleCollapse: () => void;
 }
 
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   searchTerm,
   onSearchChange,
-  onCreateMap,
-  onToggleCollapse
+  onCreateMap
 }) => {
   const handleCreateCategory = () => {
     // eslint-disable-next-line no-alert
@@ -52,13 +50,6 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           📁
         </button>
         
-        <button 
-          className="toggle-button"
-          onClick={onToggleCollapse}
-          title="サイドバーを折りたたむ"
-        >
-          ◀
-        </button>
       </div>
       
       <div className="search-container">

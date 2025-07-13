@@ -5,6 +5,7 @@ import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
 import MindMapFooter from './MindMapFooter';
+import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import './MindMapApp.css';
 
 // Types
@@ -129,10 +130,6 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
     deleteMap,
     updateMapMetadata,
     
-    // ファイル操作
-    exportCurrentMap,
-    importMap,
-    
     // 履歴操作
     undo,
     redo
@@ -181,6 +178,12 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
     setShowKeyboardHelper: (show: boolean) => store.setShowShortcutHelper(show)
   });
 
+  // UI state から個別に取得
+  const { showKeyboardHelper, setShowKeyboardHelper } = {
+    showKeyboardHelper: ui.showShortcutHelper,
+    setShowKeyboardHelper: (show: boolean) => store.setShowShortcutHelper(show)
+  };
+
   // ファイルハンドラー（簡素化）
   const handleFileUpload = async (nodeId: string, file: File): Promise<void> => {
     const fileAttachment: FileAttachment = {
@@ -222,26 +225,6 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
     }
   };
 
-  const handleExport = () => {
-    const jsonData = exportCurrentMap();
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${data?.title || 'mindmap'}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImport = async (file: File): Promise<void> => {
-    const text = await file.text();
-    const success = importMap(text);
-    if (!success) {
-      console.error('Failed to import file');
-    }
-  };
 
   // Show loading while auth is initializing in cloud mode
   if (isCloudMode && auth && !auth.isReady) {
@@ -271,16 +254,13 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
       <MindMapHeader 
         data={data}
         onTitleChange={handleTitleChange}
-        onExport={handleExport}
-        onImport={handleImport}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
         zoom={ui.zoom}
         onZoomReset={() => {}}
-        onShowLocalStoragePanel={() => {}}
-        onShowShortcutHelper={() => {}}
+        onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
         onToggleSidebar={toggleSidebar}
         showSidebar={!ui.sidebarCollapsed}
         storageMode={storageMode}
@@ -360,6 +340,12 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
         onCloseFileActionMenu={closeAllPanels}
         onCloseNodeMapLinksPanel={closeAllPanels}
         onShowImageModal={showImageModal}
+      />
+      
+      {/* Keyboard Shortcut Helper */}
+      <KeyboardShortcutHelper
+        isVisible={showKeyboardHelper}
+        onClose={() => setShowKeyboardHelper(false)}
       />
       
       {/* Authentication Modal - Shows when cloud mode requires login */}

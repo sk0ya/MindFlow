@@ -8,8 +8,6 @@ import ToolbarStyles from './toolbar/ToolbarStyles';
 interface ToolbarProps {
   title: string;
   onTitleChange: (title: string) => void;
-  onExport: () => void;
-  onImport: (file: File) => Promise<void>;
   onUndo: () => Promise<void>;
   onRedo: () => Promise<void>;
   canUndo: boolean;
@@ -17,9 +15,7 @@ interface ToolbarProps {
   zoom: number;
   onZoomReset: () => void;
   onShowShortcutHelper: () => void;
-  onShowLocalStoragePanel?: () => void;
   onAutoLayout?: () => void;
-  isLocalMode?: boolean;
   onToggleSidebar?: () => void;
   showSidebar?: boolean;
   storageMode?: 'local' | 'cloud' | 'hybrid';
@@ -29,8 +25,6 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   title,
   onTitleChange,
-  onExport,
-  onImport,
   onUndo,
   onRedo,
   canUndo,
@@ -38,9 +32,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   zoom,
   onZoomReset,
   onShowShortcutHelper,
-  onShowLocalStoragePanel,
   onAutoLayout,
-  isLocalMode = true,
   onToggleSidebar,
   showSidebar = true,
   storageMode = 'local',
@@ -59,8 +51,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
       />
       
       <ActionButtons
-        onExport={onExport}
-        onImport={onImport}
         onUndo={onUndo}
         onRedo={onRedo}
         canUndo={canUndo}
@@ -68,9 +58,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         zoom={zoom}
         onZoomReset={onZoomReset}
         onShowShortcutHelper={onShowShortcutHelper}
-        onShowLocalStoragePanel={onShowLocalStoragePanel}
         onAutoLayout={onAutoLayout}
-        isLocalMode={isLocalMode}
       />
 
       {onStorageModeChange && (

@@ -22,12 +22,8 @@ const ToolbarLogo: React.FC<ToolbarLogoProps> = ({
       )}
       
       <div className="logo">
-        <div className="logo-icon">
-          🗺️
-        </div>
         <div className="logo-text">
           <span className="logo-title">MindFlow</span>
-          <span className="logo-subtitle">Local</span>
         </div>
       </div>
     </div>

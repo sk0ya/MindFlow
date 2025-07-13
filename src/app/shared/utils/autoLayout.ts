@@ -524,26 +524,10 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
 };
 
 /**
- * 自動レイアウト選択 - ノード数に基づいて最適なレイアウトを選択
+ * 自動レイアウト選択 - 常にシンプルな右側階層レイアウトを使用
  */
 export const autoSelectLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
-  const flattenNodes = (node: MindMapNode, nodes: MindMapNode[] = []): MindMapNode[] => {
-    nodes.push(node);
-    if (node.children) {
-      node.children.forEach((child: MindMapNode) => flattenNodes(child, nodes));
-    }
-    return nodes;
-  };
-
-  const allNodes = flattenNodes(rootNode);
-  const nodeCount = allNodes.length;
-
-  if (nodeCount <= 3) {
-    return radialLayout(rootNode, options);
-  } else {
-    // 4ノード以上は常にシンプルな右側階層レイアウト
-    return simpleHierarchicalLayout(rootNode, options);
-  }
+  return simpleHierarchicalLayout(rootNode, options);
 };
 
 /**
@@ -607,7 +591,7 @@ export const layoutPresets: { [key: string]: LayoutPreset } = {
   },
   auto: {
     name: '自動選択',
-    description: 'ノード数に応じて最適化',
+    description: 'シンプルな右側階層レイアウト',
     icon: '🤖',
     func: autoSelectLayout
   }
