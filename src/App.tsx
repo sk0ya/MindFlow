@@ -10,6 +10,13 @@ const App: React.FC = () => {
   const { storageMode, isInitialized, changeStorageMode } = useAppInitialization();
   const [selectedStorageMode, setSelectedStorageMode] = useState<'local' | 'cloud' | 'hybrid'>('local');
 
+  // Sync selectedStorageMode with the actual storageMode
+  React.useEffect(() => {
+    if (storageMode) {
+      setSelectedStorageMode(storageMode as 'local' | 'cloud' | 'hybrid');
+    }
+  }, [storageMode]);
+
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">

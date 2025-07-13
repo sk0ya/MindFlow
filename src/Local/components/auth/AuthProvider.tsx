@@ -53,25 +53,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     
-    if (token && isReady) {
-      const verifyToken = async () => {
-        try {
-          const result = await authAdapter.verifyMagicLink(token);
-          
-          if (result.success) {
-            console.log('✅ Magic link verified successfully');
-            // URLからトークンを削除
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, document.title, newUrl);
-          } else {
-            console.error('❌ Magic link verification failed:', result.error);
+    if (token) {
+      console.log('🔗 Magic link token detected in AuthProvider:', token);
+      
+      if (isReady) {
+        const verifyToken = async () => {
+          try {
+            console.log('🔑 Attempting to verify magic link token');
+            const result = await authAdapter.verifyMagicLink(token);
+            
+            if (result.success) {
+              console.log('✅ Magic link verified successfully');
+              // URLからトークンを削除
+              const newUrl = window.location.pathname + window.location.hash;
+              window.history.replaceState({}, document.title, newUrl);
+            } else {
+              console.error('❌ Magic link verification failed:', result.error);
+            }
+          } catch (error) {
+            console.error('❌ Magic link verification error:', error);
           }
-        } catch (error) {
-          console.error('❌ Magic link verification error:', error);
-        }
-      };
+        };
 
-      verifyToken();
+        verifyToken();
+      } else {
+        console.log('⏳ AuthProvider not ready yet, will verify token when ready');
+      }
     }
   }, [authAdapter, isReady]);
 

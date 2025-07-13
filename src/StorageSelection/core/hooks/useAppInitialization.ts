@@ -7,8 +7,21 @@ export function useAppInitialization() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const mode = StorageManager.getStorageMode() as StorageMode | null;
-    setStorageMode(mode);
+    // Check if there's a magic link token in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const magicLinkToken = urlParams.get('token');
+    
+    if (magicLinkToken) {
+      // If there's a magic link token, force cloud mode
+      console.log('🔗 Magic link detected, switching to cloud mode');
+      StorageManager.setStorageMode('cloud');
+      setStorageMode('cloud');
+    } else {
+      // Otherwise, use the saved storage mode
+      const mode = StorageManager.getStorageMode() as StorageMode | null;
+      setStorageMode(mode);
+    }
+    
     setIsInitialized(true);
   }, []);
 
