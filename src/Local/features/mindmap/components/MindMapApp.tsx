@@ -226,7 +226,7 @@ const MindMapApp: React.FC = () => {
               zoom={ui.zoom}
               setZoom={mindMap.setZoom}
               pan={ui.pan}
-              setPan={(pan: Position | ((prev: Position) => Position)) => {
+              setPan={(pan: Position | ((_prev: Position) => Position)) => {
                 if (typeof pan === 'function') {
                   const currentPan = ui.pan;
                   mindMap.setPan(pan(currentPan));
