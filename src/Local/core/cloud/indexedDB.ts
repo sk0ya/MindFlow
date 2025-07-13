@@ -61,41 +61,10 @@ class CloudIndexedDB {
     });
   }
 
-  // マインドマップを保存
-  async saveMindMap(data: MindMapData, userId: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    const cachedData: CachedCloudMindMap = {
-      ...data,
-      _metadata: {
-        lastSync: new Date().toISOString(),
-        version: 1,
-        isDirty: true,
-        userId
-      }
-    };
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.put(cachedData);
-
-      request.onsuccess = () => {
-        console.log('💾 Cloud IndexedDB: マインドマップ保存完了', { 
-          id: data.id, 
-          title: data.title,
-          userId
-        });
-        resolve();
-      };
-
-      request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: マインドマップ保存失敗', request.error);
-        reject(request.error);
-      };
-    });
+  // マインドマップを保存（読み取り専用 - indexedDB.tsで実装）
+  async saveMindMap(_data: MindMapData, _userId: string): Promise<void> {
+    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
   // マインドマップを取得
@@ -154,36 +123,10 @@ class CloudIndexedDB {
     });
   }
 
-  // 同期完了をマーク（dirtyフラグをクリア）
-  async markSynced(id: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const getRequest = store.get(id);
-
-      getRequest.onsuccess = () => {
-        const data = getRequest.result;
-        if (data) {
-          data._metadata.isDirty = false;
-          data._metadata.lastSync = new Date().toISOString();
-          
-          const putRequest = store.put(data);
-          putRequest.onsuccess = () => {
-            console.log('✅ Cloud IndexedDB: 同期完了マーク', { id });
-            resolve();
-          };
-          putRequest.onerror = () => reject(putRequest.error);
-        } else {
-          resolve(); // データが存在しない場合はそのまま完了
-        }
-      };
-
-      getRequest.onerror = () => reject(getRequest.error);
-    });
+  // 同期完了をマーク（読み取り専用 - indexedDB.tsで実装）
+  async markSynced(_id: string): Promise<void> {
+    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
   // 未同期データを取得
@@ -214,58 +157,16 @@ class CloudIndexedDB {
     });
   }
 
-  // マインドマップを削除
-  async deleteMindMap(id: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.delete(id);
-
-      request.onsuccess = () => {
-        console.log('🗑️ Cloud IndexedDB: マインドマップ削除完了', { id });
-        resolve();
-      };
-
-      request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: マインドマップ削除失敗', request.error);
-        reject(request.error);
-      };
-    });
+  // マインドマップを削除（読み取り専用 - indexedDB.tsで実装）
+  async deleteMindMap(_id: string): Promise<void> {
+    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
-  // データベースクリア（開発用）
+  // データベースクリア（読み取り専用 - indexedDB.tsで実装）
   async clearAll(): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS, this.STORES.SYNC_QUEUE], 'readwrite');
-      
-      const clearMindmaps = transaction.objectStore(this.STORES.MINDMAPS).clear();
-      const clearSyncQueue = transaction.objectStore(this.STORES.SYNC_QUEUE).clear();
-
-      let completedStores = 0;
-      const totalStores = 2;
-
-      const checkCompletion = () => {
-        completedStores++;
-        if (completedStores === totalStores) {
-          console.log('🗑️ Cloud IndexedDB: 全データクリア完了');
-          resolve();
-        }
-      };
-
-      clearMindmaps.onsuccess = checkCompletion;
-      clearSyncQueue.onsuccess = checkCompletion;
-      
-      clearMindmaps.onerror = () => reject(clearMindmaps.error);
-      clearSyncQueue.onerror = () => reject(clearSyncQueue.error);
-    });
+    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
   // 接続クローズ
@@ -286,8 +187,9 @@ export async function initCloudIndexedDB(): Promise<void> {
   return cloudIndexedDB.init();
 }
 
-export async function saveToCloudIndexedDB(data: MindMapData, userId: string): Promise<void> {
-  return cloudIndexedDB.saveMindMap(data, userId);
+export async function saveToCloudIndexedDB(_data: MindMapData, _userId: string): Promise<void> {
+  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
 export async function getFromCloudIndexedDB(id: string): Promise<CachedCloudMindMap | null> {
@@ -298,20 +200,23 @@ export async function getAllFromCloudIndexedDB(userId: string): Promise<CachedCl
   return cloudIndexedDB.getAllMindMaps(userId);
 }
 
-export async function markAsCloudSynced(id: string): Promise<void> {
-  return cloudIndexedDB.markSynced(id);
+export async function markAsCloudSynced(_id: string): Promise<void> {
+  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
 export async function getCloudDirtyData(): Promise<CachedCloudMindMap[]> {
   return cloudIndexedDB.getDirtyMindMaps();
 }
 
-export async function deleteFromCloudIndexedDB(id: string): Promise<void> {
-  return cloudIndexedDB.deleteMindMap(id);
+export async function deleteFromCloudIndexedDB(_id: string): Promise<void> {
+  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
 export async function clearCloudIndexedDB(): Promise<void> {
-  return cloudIndexedDB.clearAll();
+  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
 export type { CachedCloudMindMap, CloudCacheMetadata };

@@ -151,13 +151,19 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
     },
     editText,
     updateNode,
-    addChildNode: async (parentId: string, text?: string) => {
-      addNode(parentId, text);
-      return null;
+    addChildNode: async (parentId: string, text?: string, autoEdit?: boolean) => {
+      const newNodeId = store.addChildNode(parentId, text);
+      if (autoEdit && newNodeId) {
+        startEditing(newNodeId);
+      }
+      return newNodeId || null;
     },
-    addSiblingNode: async (nodeId: string, text?: string) => {
-      addNode(nodeId, text);
-      return null;
+    addSiblingNode: async (nodeId: string, text?: string, autoEdit?: boolean) => {
+      const newNodeId = store.addSiblingNode(nodeId, text);
+      if (autoEdit && newNodeId) {
+        startEditing(newNodeId);
+      }
+      return newNodeId || null;
     },
     deleteNode,
     undo,
@@ -275,6 +281,8 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
         onZoomReset={() => {}}
         onShowLocalStoragePanel={() => {}}
         onShowShortcutHelper={() => {}}
+        onToggleSidebar={toggleSidebar}
+        showSidebar={!ui.sidebarCollapsed}
         storageMode={storageMode}
         onStorageModeChange={onModeChange}
       />

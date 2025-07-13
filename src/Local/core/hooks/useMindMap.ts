@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useMindMapData } from './useMindMapData';
 import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
@@ -32,20 +32,43 @@ export const useMindMap = (
     }
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
 
-  // データ変更時の自動保存（非同期対応）
+  // 手動保存関数 - ノード操作後に明示的に呼び出す
+  const saveCurrentMap = useCallback(async () => {
+    if (dataHook.data && persistenceHook.isInitialized) {
+      try {
+        await persistenceHook.saveData(dataHook.data);
+        await persistenceHook.updateMapInList(dataHook.data);
+        console.log('💾 Manual save completed:', dataHook.data.title);
+      } catch (error) {
+        console.error('❌ Manual save failed:', error);
+      }
+    }
+  }, [dataHook.data, persistenceHook]);
+
+  // ノード操作時のみの自動保存 - updatedAtの変更を検知してデバウンス保存
+  const [lastMapSwitchTime, setLastMapSwitchTime] = useState<number>(0);
+  
   useEffect(() => {
     if (dataHook.data && persistenceHook.isInitialized) {
-      // デバウンス付きで保存（500ms）
-      const timeoutId = setTimeout(() => {
-        if (dataHook.data) {
-          persistenceHook.saveData(dataHook.data);
-        }
-      }, 500);
+      const now = Date.now();
+      // マップ切り替え後500ms以内は保存しない（切り替え時の誤保存を防ぐ）
+      if (now - lastMapSwitchTime > 500) {
+        const timeoutId = setTimeout(() => {
+          if (dataHook.data) {
+            saveCurrentMap();
+          }
+        }, 300); // 短いデバウンス時間
 
-      return () => clearTimeout(timeoutId);
+        return () => clearTimeout(timeoutId);
+      }
     }
     return undefined;
-  }, [dataHook.data, persistenceHook.saveData, persistenceHook.isInitialized]);
+  }, [dataHook.data?.updatedAt, persistenceHook.isInitialized, saveCurrentMap, lastMapSwitchTime]);
+
+  // マップ切り替え時にタイムスタンプを記録
+  useEffect(() => {
+    setLastMapSwitchTime(Date.now());
+  }, [dataHook.data?.id]);
 
   // マップ管理の高レベル操作（非同期対応）
   const mapOperations = {
@@ -137,6 +160,9 @@ export const useMindMap = (
     selectNode: dataHook.selectNode,
     setData: dataHook.setData,
     applyAutoLayout: dataHook.applyAutoLayout,
+    
+    // 手動保存
+    saveCurrentMap,
 
     // UI操作
     setZoom: uiHook.setZoom,
