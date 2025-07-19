@@ -7,6 +7,7 @@ import MindMapModals from '../modals/MindMapModals';
 import MindMapFooter from './MindMapFooter';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
+import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
 import './MindMapApp.css';
 
 // Types
@@ -30,6 +31,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   onModeChange
 }) => {
   const { showNotification } = useNotification();
+  const { handleError, handleAsyncError } = useErrorHandler();
+  
+  // グローバルエラーハンドラーの設定
+  React.useEffect(() => {
+    setupGlobalErrorHandlers(handleError);
+  }, [handleError]);
   const [isAppReady] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const store = useMindMapStore();
@@ -190,7 +197,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // ファイルハンドラー（クラウド対応）
   const handleFileUpload = async (nodeId: string, file: File): Promise<void> => {
     if (!data) {
-      console.error('No mindmap data available for file upload');
+      handleError(new Error('マインドマップデータが利用できません'), 'ファイルアップロード', 'データチェック');
       return;
     }
 
@@ -201,7 +208,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       return;
     }
 
-    try {
+    await handleAsyncError((async () => {
       let fileAttachment: FileAttachment;
 
       if (storageMode === 'cloud' || storageMode === 'hybrid') {
@@ -212,7 +219,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
         
         if (!auth) {
-          throw new Error('Authentication required for cloud file upload');
+          throw new Error('クラウドファイルアップロードには認証が必要です');
         }
         
         const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
@@ -272,14 +279,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         updateNode(nodeId, updatedNode);
         console.log('📎 File attached to node:', nodeId);
       } else {
-        console.error('Node not found for file attachment:', nodeId);
-        showNotification('error', 'ファイルを添付するノードが見つかりませんでした');
+        throw new Error(`ノードが見つかりません: ${nodeId}`);
       }
-    } catch (error) {
-      console.error('❌ File upload failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'ファイルのアップロードに失敗しました';
-      showNotification('error', errorMessage);
-    }
+    })(), 'ファイルアップロード', `${file.name}のアップロード`);
   };
 
   // ユーティリティ関数
@@ -446,7 +448,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 const MindMapApp: React.FC<MindMapAppProps> = (props) => {
   return (
     <NotificationProvider>
-      <MindMapAppContent {...props} />
+      <ErrorHandlerProvider>
+        <MindMapAppContent {...props} />
+      </ErrorHandlerProvider>
     </NotificationProvider>
   );
 };

@@ -33,13 +33,13 @@ export class CloudflareAPI {
       if (response.status === 404) {
         return []; // データなし
       }
-      throw new Error(`Failed to fetch mindmaps: ${response.statusText}`);
+      throw new Error(`マインドマップの取得に失敗しました: ${response.statusText}`);
     }
 
     const result: MindMapListApiResponse = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch mindmaps');
+      throw new Error(result.error || 'マインドマップの取得に失敗しました');
     }
 
     return result.data || [];
@@ -58,13 +58,13 @@ export class CloudflareAPI {
       if (response.status === 404) {
         return null; // データなし
       }
-      throw new Error(`Failed to fetch mindmap: ${response.statusText}`);
+      throw new Error(`マインドマップの取得に失敗しました: ${response.statusText}`);
     }
 
     const result: MindMapApiResponse = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch mindmap');
+      throw new Error(result.error || 'マインドマップの取得に失敗しました');
     }
 
     return result.data || null;
@@ -101,7 +101,7 @@ export class CloudflareAPI {
         statusText: response.statusText,
         body: errorText 
       });
-      throw new Error(`Failed to create mindmap: ${response.statusText} - ${errorText}`);
+      throw new Error(`マインドマップの作成に失敗しました: ${response.statusText}`);
     }
 
     const result: MindMapApiResponse = await response.json();
@@ -109,11 +109,11 @@ export class CloudflareAPI {
     
     if (!result.success) {
       logger.error('❌ API: Create mindmap API error:', result.error);
-      throw new Error(result.error || 'Failed to create mindmap');
+      throw new Error(result.error || 'マインドマップの作成に失敗しました');
     }
 
     if (!result.data) {
-      throw new Error('No data returned from create mindmap');
+      throw new Error('マインドマップ作成レスポンスにデータがありません');
     }
 
     return result.data;
@@ -150,7 +150,7 @@ export class CloudflareAPI {
         statusText: response.statusText,
         body: errorText 
       });
-      throw new Error(`Failed to update mindmap: ${response.statusText} - ${errorText}`);
+      throw new Error(`マインドマップの更新に失敗しました: ${response.statusText}`);
     }
 
     const result: MindMapApiResponse = await response.json();
@@ -158,11 +158,11 @@ export class CloudflareAPI {
     
     if (!result.success) {
       logger.error('❌ API: Update mindmap API error:', result.error);
-      throw new Error(result.error || 'Failed to update mindmap');
+      throw new Error(result.error || 'マインドマップの更新に失敗しました');
     }
 
     if (!result.data) {
-      throw new Error('No data returned from update mindmap');
+      throw new Error('マインドマップ更新レスポンスにデータがありません');
     }
 
     return result.data;
@@ -178,13 +178,13 @@ export class CloudflareAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to delete mindmap: ${response.statusText}`);
+      throw new Error(`マインドマップの削除に失敗しました: ${response.statusText}`);
     }
 
     const result: ApiResponse = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to delete mindmap');
+      throw new Error(result.error || 'マインドマップの削除に失敗しました');
     }
   }
 
@@ -199,13 +199,13 @@ export class CloudflareAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to sync mindmaps: ${response.statusText}`);
+      throw new Error(`マインドマップの同期に失敗しました: ${response.statusText}`);
     }
 
     const result: MindMapListApiResponse = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to sync mindmaps');
+      throw new Error(result.error || 'マインドマップの同期に失敗しました');
     }
 
     return result.data || [];
@@ -221,13 +221,13 @@ export class CloudflareAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch user profile: ${response.statusText}`);
+      throw new Error(`ユーザープロファイルの取得に失敗しました: ${response.statusText}`);
     }
 
     const result: ApiResponse = await response.json();
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch user profile');
+      throw new Error(result.error || 'ユーザープロファイルの取得に失敗しました');
     }
 
     return result.data;
@@ -264,7 +264,7 @@ export class CloudflareAPI {
         statusText: response.statusText,
         body: errorText 
       });
-      throw new Error(`Failed to upload file: ${response.statusText} - ${errorText}`);
+      throw new Error(`ファイルのアップロードに失敗しました: ${response.statusText}`);
     }
 
     const result = await response.json();
@@ -291,7 +291,7 @@ export class CloudflareAPI {
         statusText: response.statusText,
         body: errorText 
       });
-      throw new Error(`Failed to delete file: ${response.statusText} - ${errorText}`);
+      throw new Error(`ファイルの削除に失敗しました: ${response.statusText}`);
     }
 
     const result = await response.json();
@@ -311,7 +311,7 @@ export class CloudflareAPI {
       if (response.status === 404) {
         return null;
       }
-      throw new Error(`Failed to get file info: ${response.statusText}`);
+      throw new Error(`ファイル情報の取得に失敗しました: ${response.statusText}`);
     }
 
     const result = await response.json();
