@@ -58,7 +58,6 @@ const Node: React.FC<NodeProps> = ({
   pan,
   svgRef
 }) => {
-  const [isComposing, setIsComposing] = useState(false);
   const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previousPosition = useRef({ x: node.x, y: node.y });
@@ -173,8 +172,6 @@ const Node: React.FC<NodeProps> = ({
         onFinishEdit={onFinishEdit}
         nodeWidth={nodeWidth}
         imageHeight={imageHeight}
-        isComposing={isComposing}
-        setIsComposing={setIsComposing}
         blurTimeoutRef={blurTimeoutRef}
       />
 

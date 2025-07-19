@@ -9,8 +9,6 @@ interface NodeEditorProps {
   onFinishEdit: (nodeId: string, text: string) => void;
   nodeWidth: number;
   imageHeight: number;
-  isComposing: boolean;
-  setIsComposing: (composing: boolean) => void;
   blurTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
 }
 
@@ -22,8 +20,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   onFinishEdit,
   nodeWidth,
   imageHeight,
-  isComposing,
-  setIsComposing,
   blurTimeoutRef
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,25 +32,15 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
-          console.log('🎯 フォーカス設定完了:', { nodeId: node.id, focused: document.activeElement === inputRef.current });
         }
       }, 10);
     }
   }, [isEditing, node.id]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log('🎹 NodeEditor handleKeyDown:', { key: e.key, isComposing, editText });
-    
-    // IME変換中は何もしない
-    if (isComposing) {
-      console.log('🎹 IME変換中のためスキップ');
-      return;
-    }
-    
     // 編集中の入力フィールドでは、Escapeのみ処理（他はuseKeyboardShortcutsに委任）
     if (e.key === 'Escape') {
       e.preventDefault();
-      console.log('🎹 Escape処理: 元のテキストに戻す');
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
@@ -62,45 +48,20 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       onFinishEdit(node.id, node.text);
     }
     // Tab/EnterはuseKeyboardShortcutsで統一処理
-  }, [node.id, node.text, isComposing, onFinishEdit, blurTimeoutRef, editText]);
-
-  const handleCompositionStart = useCallback(() => {
-    setIsComposing(true);
-  }, [setIsComposing]);
-
-  const handleCompositionEnd = useCallback(() => {
-    setIsComposing(false);
-  }, [setIsComposing]);
+  }, [node.id, node.text, onFinishEdit, blurTimeoutRef]);
 
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    // IME変換中でない場合のみ編集を終了
-    if (!isComposing) {
-      console.log('🎹 NodeEditor blur処理:', { 
-        nodeId: node.id, 
-        originalText: node.text, 
-        editText, 
-        targetValue: e.target.value,
-        timestamp: Date.now()
-      });
-      
-      // 既存のタイマーをクリア
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
-      }
-      
-      // 最新の入力値を即座に取得（DOM要素から直接取得）
-      const currentValue = e.target ? e.target.value : editText;
-      console.log('🎹 NodeEditor blur実行:', { 
-        nodeId: node.id,
-        finalValue: currentValue,
-        isEmpty: !currentValue || currentValue.trim() === '',
-        isRoot: node.id === 'root'
-      });
-      
-      // 即座に編集完了処理を実行（finishEditが削除判定を行う）
-      onFinishEdit(node.id, currentValue);
+    // 既存のタイマーをクリア
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
     }
-  }, [node.id, node.text, editText, onFinishEdit, isComposing, blurTimeoutRef]);
+    
+    // 最新の入力値を取得
+    const currentValue = e.target ? e.target.value : editText;
+    
+    // 編集完了処理を実行
+    onFinishEdit(node.id, currentValue);
+  }, [node.id, editText, onFinishEdit, blurTimeoutRef]);
 
   if (!isEditing) {
     return (
@@ -136,8 +97,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
         value={editText}
         onChange={(e) => setEditText(e.target.value)}
         onKeyDown={handleKeyDown}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
         onBlur={handleInputBlur}
         style={{
           width: '100%',
