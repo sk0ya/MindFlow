@@ -38,8 +38,12 @@ export const AuthResponseSchema = z.object({
   user: z.object({
     id: z.string().email(),
     email: z.string().email(),
+    displayName: z.string().optional(),
+    createdAt: z.string(),
+    lastLoginAt: z.string(),
   }).optional(),
   accessToken: z.string().optional(),
+  token: z.string().optional(), // フロントエンド互換性のため
   magicLink: z.string().url().optional(), // 開発環境のみ
   emailSent: z.boolean().optional(),
 });

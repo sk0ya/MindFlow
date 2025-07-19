@@ -9,6 +9,7 @@ import {
   getAllMindMapsFromCloudIndexedDB,
   removeMindMapFromCloudIndexedDB,
   getUserMapsFromCloudIndexedDB,
+  cleanupCloudIndexedDB,
   type CloudCachedMindMap
 } from '../../utils/cloudIndexedDB';
 import { logger } from '../../../shared/utils/logger';
@@ -359,6 +360,8 @@ export class CloudStorageAdapter implements StorageAdapter {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
+    // IndexedDB接続もクリーンアップ
+    cleanupCloudIndexedDB();
     logger.info('🧹 CloudStorageAdapter: Cleanup completed');
   }
 
