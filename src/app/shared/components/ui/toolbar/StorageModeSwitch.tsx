@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 
 interface StorageModeSwitchProps {
-  currentMode: 'local' | 'cloud' | 'hybrid';
-  onModeChange: (mode: 'local' | 'cloud' | 'hybrid') => void;
+  currentMode: 'local' | 'cloud';
+  onModeChange: (mode: 'local' | 'cloud') => void;
 }
 
 const STORAGE_MODES = [
   { id: 'local' as const, label: 'ローカル', icon: '💾', description: 'このデバイスのみ' },
-  { id: 'cloud' as const, label: 'クラウド', icon: '☁️', description: 'デバイス間同期' },
-  { id: 'hybrid' as const, label: 'ハイブリッド', icon: '🔄', description: 'ローカル+クラウド' }
+  { id: 'cloud' as const, label: 'クラウド', icon: '☁️', description: 'デバイス間同期' }
 ];
 
 const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
@@ -19,7 +18,7 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
 
   const currentModeInfo = STORAGE_MODES.find(mode => mode.id === currentMode);
 
-  const handleModeSelect = (mode: 'local' | 'cloud' | 'hybrid') => {
+  const handleModeSelect = (mode: 'local' | 'cloud') => {
     onModeChange(mode);
     setIsOpen(false);
   };

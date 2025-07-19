@@ -18,8 +18,8 @@ interface ToolbarProps {
   onAutoLayout?: () => void;
   onToggleSidebar?: () => void;
   showSidebar?: boolean;
-  storageMode?: 'local' | 'cloud' | 'hybrid';
-  onStorageModeChange?: (mode: 'local' | 'cloud' | 'hybrid') => void;
+  storageMode?: 'local' | 'cloud';
+  onStorageModeChange?: (mode: 'local' | 'cloud') => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({

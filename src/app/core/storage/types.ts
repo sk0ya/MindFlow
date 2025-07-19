@@ -4,7 +4,7 @@ import type { AuthAdapter } from '../auth/types';
 
 /**
  * 統一ストレージインターフェース
- * Local/Cloud/Hybridモードで共通の操作を提供
+ * Local/Cloudモードで共通の操作を提供
  */
 export interface StorageAdapter {
   // 初期化状態
@@ -47,7 +47,7 @@ export interface StorageConfig {
 /**
  * ストレージモード
  */
-export type StorageMode = 'local' | 'cloud' | 'hybrid';
+export type StorageMode = 'local' | 'cloud';
 
 /**
  * 同期状態

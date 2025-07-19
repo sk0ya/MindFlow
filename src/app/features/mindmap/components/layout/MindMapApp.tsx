@@ -18,14 +18,14 @@ import type { StorageConfig } from '../../../../core/storage/types';
 import { 
   localModeConfig, 
   createCloudModeConfig, 
-  createHybridModeConfig 
+ 
 } from '../../../../examples/StorageConfigExamples';
 import { useAuth, LoginModal } from '../../../../components/auth';
 import { validateFile } from '../../../../shared/types/dataTypes';
 
 interface MindMapAppProps {
-  storageMode?: 'local' | 'cloud' | 'hybrid';
-  onModeChange?: (mode: 'local' | 'cloud' | 'hybrid') => void;
+  storageMode?: 'local' | 'cloud';
+  onModeChange?: (mode: 'local' | 'cloud') => void;
 }
 
 const MindMapAppContent: React.FC<MindMapAppProps> = ({ 
@@ -48,7 +48,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const [showLoginModal, setShowLoginModal] = useState(false);
   const store = useMindMapStore();
   
-  // Get auth adapter for cloud/hybrid modes
+  // Get auth adapter for cloud mode
   let auth;
   let authAdapter;
   try {
@@ -60,8 +60,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     authAdapter = undefined;
   }
   
-  // For cloud/hybrid modes, check if user is authenticated
-  const isCloudMode = storageMode === 'cloud' || storageMode === 'hybrid';
+  // For cloud mode, check if user is authenticated
+  const isCloudMode = storageMode === 'cloud';
   const needsAuth = isCloudMode && auth && !auth.authState.isAuthenticated;
   
   // Show login modal when cloud mode requires auth
@@ -102,8 +102,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         return localModeConfig;
       case 'cloud':
         return authAdapter ? createCloudModeConfig(authAdapter) : localModeConfig;
-      case 'hybrid':
-        return authAdapter ? createHybridModeConfig(authAdapter) : localModeConfig;
       default:
         return localModeConfig;
     }
@@ -222,7 +220,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         uploadKey,
         file.name,
         async (): Promise<FileAttachment> => {
-          if (storageMode === 'cloud' || storageMode === 'hybrid') {
+          if (storageMode === 'cloud') {
             // クラウドモード: APIにアップロードしてCloudflareに保存
             console.log('🌐 Uploading file to cloud storage...');
             

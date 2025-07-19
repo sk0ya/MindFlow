@@ -24,18 +24,6 @@ export const createCloudModeConfig = (authAdapter: AuthAdapter): StorageConfig =
   enableOfflineMode: true
 });
 
-/**
- * ハイブリッドモード設定例
- * ローカル優先、クラウドバックアップ
- */
-export const createHybridModeConfig = (authAdapter: AuthAdapter): StorageConfig => ({
-  mode: 'hybrid',
-  authAdapter,
-  autoSave: true,
-  syncInterval: 60000, // 1分間隔で同期
-  retryAttempts: 5,
-  enableOfflineMode: true
-});
 
 /**
  * パフォーマンス重視設定
@@ -51,7 +39,7 @@ export const performanceModeConfig: StorageConfig = {
  * 頻繁な同期とデバッグ情報
  */
 export const developmentModeConfig = (authAdapter: AuthAdapter): StorageConfig => ({
-  mode: 'hybrid',
+  mode: 'cloud',
   authAdapter,
   autoSave: true,
   syncInterval: 10000, // 10秒間隔（開発用）
@@ -69,6 +57,4 @@ export const developmentModeConfig = (authAdapter: AuthAdapter): StorageConfig =
  * const authAdapter = new MyAuthAdapter();
  * const persistence = useMindMapPersistence(createCloudModeConfig(authAdapter));
  * 
- * // ハイブリッドモード
- * const persistence = useMindMapPersistence(createHybridModeConfig(authAdapter));
  */

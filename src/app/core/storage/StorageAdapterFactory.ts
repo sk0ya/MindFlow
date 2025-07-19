@@ -2,7 +2,6 @@
 import type { StorageAdapter, StorageConfig, StorageMode, StorageAdapterFactory as IStorageAdapterFactory } from './types';
 import { LocalStorageAdapter } from './adapters/LocalStorageAdapter';
 import { CloudStorageAdapter } from './adapters/CloudStorageAdapter';
-import { HybridStorageAdapter } from './adapters/HybridStorageAdapter';
 
 /**
  * ストレージアダプターファクトリー
@@ -23,8 +22,6 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
       case 'cloud':
         return this.createCloudAdapter(config);
         
-      case 'hybrid':
-        return this.createHybridAdapter(config);
         
       default:
         throw new Error(`Unsupported storage mode: ${config.mode}`);
@@ -35,7 +32,7 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
    * 指定されたモードがサポートされているかチェック
    */
   isSupported(mode: StorageMode): boolean {
-    const supportedModes: StorageMode[] = ['local', 'cloud', 'hybrid'];
+    const supportedModes: StorageMode[] = ['local', 'cloud'];
     return supportedModes.includes(mode);
   }
 
@@ -58,7 +55,7 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
       throw new Error(`Unsupported storage mode: ${config.mode}`);
     }
 
-    if ((config.mode === 'cloud' || config.mode === 'hybrid') && !config.authAdapter) {
+    if (config.mode === 'cloud' && !config.authAdapter) {
       throw new Error(`Auth adapter is required for ${config.mode} mode`);
     }
 
@@ -91,19 +88,6 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
     return adapter;
   }
 
-  /**
-   * ハイブリッドストレージアダプターを作成
-   */
-  private async createHybridAdapter(config: StorageConfig): Promise<StorageAdapter> {
-    if (!config.authAdapter) {
-      throw new Error('Auth adapter is required for hybrid mode');
-    }
-
-    const adapter = new HybridStorageAdapter(config.authAdapter);
-    await adapter.initialize();
-    console.log('✅ StorageAdapterFactory: Hybrid adapter created');
-    return adapter;
-  }
 }
 
 /**
@@ -135,12 +119,3 @@ export async function createCloudStorageAdapter(authAdapter: any): Promise<Stora
   });
 }
 
-/**
- * 便利な関数 - 認証アダプターを使ってハイブリッドアダプターを作成
- */
-export async function createHybridStorageAdapter(authAdapter: any): Promise<StorageAdapter> {
-  return defaultStorageAdapterFactory.create({ 
-    mode: 'hybrid', 
-    authAdapter 
-  });
-}

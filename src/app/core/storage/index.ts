@@ -10,7 +10,6 @@ export type {
 
 export { LocalStorageAdapter } from './adapters/LocalStorageAdapter';
 export { CloudStorageAdapter } from './adapters/CloudStorageAdapter';
-export { HybridStorageAdapter } from './adapters/HybridStorageAdapter';
 
 export {
   StorageAdapterFactory,
@@ -18,5 +17,4 @@ export {
   createStorageAdapter,
   createLocalStorageAdapter,
   createCloudStorageAdapter,
-  createHybridStorageAdapter
 } from './StorageAdapterFactory';

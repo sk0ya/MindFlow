@@ -4,7 +4,7 @@ import { AuthProvider } from './app/components/auth';
 // Dynamic import for Local mode with storage configuration
 const LocalMindMapApp = React.lazy(() => import('./app'));
 
-type StorageMode = 'local' | 'cloud' | 'hybrid';
+type StorageMode = 'local' | 'cloud';
 
 const App: React.FC = () => {
   const [storageMode, setStorageMode] = useState<StorageMode>('local');
@@ -20,7 +20,7 @@ const App: React.FC = () => {
     } else {
       // Load saved mode from localStorage, default to local
       const savedMode = localStorage.getItem('mindflow_storage_mode') as StorageMode;
-      if (savedMode && ['local', 'cloud', 'hybrid'].includes(savedMode)) {
+      if (savedMode && ['local', 'cloud'].includes(savedMode)) {
         setStorageMode(savedMode);
       }
     }
@@ -46,8 +46,8 @@ const App: React.FC = () => {
     </React.Suspense>
   );
 
-  // Wrap with AuthProvider for cloud/hybrid modes
-  if (storageMode === 'cloud' || storageMode === 'hybrid') {
+  // Wrap with AuthProvider for cloud mode
+  if (storageMode === 'cloud') {
     return (
       <AuthProvider>
         {AppContent}
