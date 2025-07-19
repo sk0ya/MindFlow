@@ -160,23 +160,26 @@ export const FileUploadProvider: React.FC<FileUploadProviderProps> = ({ children
   }, []);
 
   const completeUpload = useCallback((id: string) => {
-    setUploads(prev => prev.map(upload =>
-      upload.id === id
-        ? { ...upload, progress: 100, status: 'completed', endTime: Date.now() }
-        : upload
-    ));
-
-    const upload = uploads.find(u => u.id === id);
-    if (upload) {
-      showNotification('success', `${upload.fileName} のアップロードが完了しました`);
-      logger.info('Upload completed:', { id, fileName: upload.fileName });
+    setUploads(prev => {
+      const updatedUploads = prev.map(upload =>
+        upload.id === id
+          ? { ...upload, progress: 100, status: 'completed' as const, endTime: Date.now() }
+          : upload
+      );
       
-      // 3秒後に完了したアップロードを自動で削除
-      setTimeout(() => {
-        setUploads(prev => prev.filter(u => u.id !== id));
-      }, 3000);
-    }
-  }, [uploads, showNotification]);
+      const upload = updatedUploads.find(u => u.id === id);
+      if (upload) {
+        logger.info('Upload completed:', { id, fileName: upload.fileName });
+        
+        // 1秒後に完了したアップロードを自動で削除
+        setTimeout(() => {
+          setUploads(current => current.filter(u => u.id !== id));
+        }, 1000);
+      }
+      
+      return updatedUploads;
+    });
+  }, []);
 
   const errorUpload = useCallback((id: string, error: string) => {
     setUploads(prev => prev.map(upload =>
