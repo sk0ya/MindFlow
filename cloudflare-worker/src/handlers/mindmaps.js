@@ -128,13 +128,34 @@ async function getAllMindMaps(db, userId) {
   // dataフィールドをパースして、完全なマインドマップデータを返す
   const mindmaps = results.map(row => {
     const data = JSON.parse(row.data);
-    return {
-      ...data,
+    
+    // フロントエンド期待形式に合わせる
+    const mindmapData = {
       id: row.id,
       title: row.title,
+      rootNode: data.rootNode || {
+        id: 'root',
+        text: row.title || 'Untitled Mind Map',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      category: data.category || undefined,
+      theme: data.theme || undefined,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      settings: data.settings || {
+        autoSave: true,
+        autoLayout: true,
+        snapToGrid: false,
+        showGrid: false,
+        animationEnabled: true
+      },
+      // その他のデータも含める
+      ...data
     };
+    
+    return mindmapData;
   });
   
   console.log('📋 完全なマップデータ:', { 
@@ -168,12 +189,34 @@ async function getMindMap(db, userId, mindmapId) {
   }
   
   const data = JSON.parse(mindmap.data);
-  return {
-    ...data,
+  
+  // フロントエンド期待形式に合わせる
+  const mindmapData = {
     id: mindmap.id,
+    title: mindmap.title,
+    rootNode: data.rootNode || {
+      id: 'root',
+      text: mindmap.title || 'Untitled Mind Map',
+      x: 0,
+      y: 0,
+      children: []
+    },
+    category: data.category || undefined,
+    theme: data.theme || undefined,
     createdAt: mindmap.created_at,
-    updatedAt: mindmap.updated_at
+    updatedAt: mindmap.updated_at,
+    settings: data.settings || {
+      autoSave: true,
+      autoLayout: true,
+      snapToGrid: false,
+      showGrid: false,
+      animationEnabled: true
+    },
+    // その他のデータも含める
+    ...data
   };
+  
+  return mindmapData;
 }
 
 async function createMindMap(db, userId, mindmapData) {
@@ -202,12 +245,33 @@ async function createMindMap(db, userId, mindmapData) {
       userId
     ).run();
     
-    return {
-      ...mindmapData,
+    // フロントエンド期待形式に合わせる
+    const responseData = {
       id: id,
+      title: mindmapData.title || 'Untitled Mind Map',
+      rootNode: mindmapData.rootNode || {
+        id: 'root',
+        text: mindmapData.title || 'Untitled Mind Map',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      category: mindmapData.category || undefined,
+      theme: mindmapData.theme || undefined,
       createdAt: existing[0].created_at,
-      updatedAt: now
+      updatedAt: now,
+      settings: mindmapData.settings || {
+        autoSave: true,
+        autoLayout: true,
+        snapToGrid: false,
+        showGrid: false,
+        animationEnabled: true
+      },
+      // その他のデータも含める
+      ...mindmapData
     };
+    
+    return responseData;
   } else {
     // 新規作成
     console.log('🆕 新規マップを作成:', { id });
@@ -222,12 +286,33 @@ async function createMindMap(db, userId, mindmapData) {
       now
     ).run();
     
-    return {
-      ...mindmapData,
+    // フロントエンド期待形式に合わせる
+    const responseData = {
       id: id,
+      title: mindmapData.title || 'Untitled Mind Map',
+      rootNode: mindmapData.rootNode || {
+        id: 'root',
+        text: mindmapData.title || 'Untitled Mind Map',
+        x: 0,
+        y: 0,
+        children: []
+      },
+      category: mindmapData.category || undefined,
+      theme: mindmapData.theme || undefined,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      settings: mindmapData.settings || {
+        autoSave: true,
+        autoLayout: true,
+        snapToGrid: false,
+        showGrid: false,
+        animationEnabled: true
+      },
+      // その他のデータも含める
+      ...mindmapData
     };
+    
+    return responseData;
   }
 }
 
@@ -250,11 +335,33 @@ async function updateMindMap(db, userId, mindmapId, mindmapData) {
     throw error;
   }
   
-  return {
-    ...mindmapData,
+  // フロントエンド期待形式に合わせる
+  const responseData = {
     id: mindmapId,
-    updatedAt: now
+    title: mindmapData.title || 'Untitled Mind Map',
+    rootNode: mindmapData.rootNode || {
+      id: 'root',
+      text: mindmapData.title || 'Untitled Mind Map',
+      x: 0,
+      y: 0,
+      children: []
+    },
+    category: mindmapData.category || undefined,
+    theme: mindmapData.theme || undefined,
+    createdAt: mindmapData.createdAt || new Date().toISOString(),
+    updatedAt: now,
+    settings: mindmapData.settings || {
+      autoSave: true,
+      autoLayout: true,
+      snapToGrid: false,
+      showGrid: false,
+      animationEnabled: true
+    },
+    // その他のデータも含める
+    ...mindmapData
   };
+  
+  return responseData;
 }
 
 async function deleteMindMap(db, userId, mindmapId) {

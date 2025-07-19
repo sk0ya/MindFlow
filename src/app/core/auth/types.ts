@@ -3,8 +3,8 @@ export interface AuthUser {
   id: string;
   email: string;
   displayName?: string;
-  createdAt: string;
-  lastLoginAt: string;
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
 export interface AuthState {

@@ -108,8 +108,11 @@ export interface NodeMapLink {
 export interface AuthUser {
   id: string;
   email: string;
+  displayName?: string;
   name?: string;
   avatar?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
 export interface AuthState {
