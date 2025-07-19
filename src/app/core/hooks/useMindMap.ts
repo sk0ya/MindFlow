@@ -23,21 +23,29 @@ export const useMindMap = (
   const actionsHook = useMindMapActions();
   const persistenceHook = useMindMapPersistence(storageConfig);
 
-  // 初期データ読み込み（非同期対応）
+  // 初期データ読み込み（認証状態も考慮）
   useEffect(() => {
-    console.log('🔍 useMindMap: Initial data load effect triggered', {
+    if (!storageConfig) return;
+    
+    const isCloudMode = storageConfig.mode === 'cloud';
+    const isAuthenticated = isCloudMode ? storageConfig.authAdapter?.isAuthenticated : true;
+    const shouldLoadData = isAppReady && !dataHook.data && persistenceHook.isInitialized && isAuthenticated;
+    
+    console.log('🔍 useMindMap: Initial data load check', {
       isAppReady,
       hasData: !!dataHook.data,
       persistenceInitialized: persistenceHook.isInitialized,
-      shouldLoad: isAppReady && !dataHook.data && persistenceHook.isInitialized
+      isCloudMode,
+      isAuthenticated,
+      shouldLoadData
     });
     
-    if (isAppReady && !dataHook.data && persistenceHook.isInitialized) {
+    if (shouldLoadData) {
       console.log('📥 useMindMap: Loading initial data...');
       const loadData = async () => {
         try {
           const initialData = await persistenceHook.loadInitialData();
-          console.log('✅ useMindMap: Initial data loaded successfully:', { title: initialData.title });
+          console.log('✅ useMindMap: Initial data loaded:', { title: initialData.title });
           dataHook.setData(initialData);
         } catch (error) {
           console.error('❌ useMindMap: Failed to load initial data:', error);
@@ -45,7 +53,7 @@ export const useMindMap = (
       };
       loadData();
     }
-  }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
+  }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData, storageConfig?.mode, storageConfig?.authAdapter?.isAuthenticated]);
   
   // リセットキー変更時の強制リセット
   const prevResetKeyRef = useRef(0);
