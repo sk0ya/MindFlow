@@ -106,8 +106,9 @@ async function handleSendMagicLink(request, env) {
     const authToken = await createAuthToken(email, request, env);
     console.log('✅ 認証トークン生成完了:', { tokenLength: authToken.token.length });
     
-    // Magic Linkを生成
-    const magicLink = `${env.FRONTEND_URL}/MindFlow/?token=${authToken.token}&type=magic-link`;
+    // Magic Linkを生成（パスの重複を避ける）
+    const baseUrl = env.FRONTEND_URL.endsWith('/') ? env.FRONTEND_URL.slice(0, -1) : env.FRONTEND_URL;
+    const magicLink = `${baseUrl}/?token=${authToken.token}&type=magic-link`;
     
     console.log('🔍 メール送信開始');
     // メール送信（トークンも渡す）
