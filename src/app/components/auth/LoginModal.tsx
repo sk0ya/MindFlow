@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { AuthAdapter } from '../../core/auth';
-import type { TokenStorageType } from '../../core/auth/types';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -17,8 +16,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
   const [isSuccess, setIsSuccess] = useState(false);
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
-  const [storageType, setStorageType] = useState<TokenStorageType>('localStorage');
-  const [showStorageOptions, setShowStorageOptions] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -29,30 +26,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
       setIsLoading(false);
       setShowTokenInput(false);
       setTokenInput('');
-      setShowStorageOptions(false);
-      
-      // 現在のストレージタイプを取得
-      if (authAdapter.getStorageType) {
-        setStorageType(authAdapter.getStorageType());
-      }
     }
-  }, [isOpen, authAdapter]);
-
-  const handleStorageTypeChange = (newStorageType: TokenStorageType) => {
-    setStorageType(newStorageType);
-    if (authAdapter.setStorageType) {
-      authAdapter.setStorageType(newStorageType);
-    }
-    setShowStorageOptions(false);
-    
-    // 設定変更メッセージを表示
-    const storageNames = {
-      'localStorage': '標準セキュリティ',
-      'sessionStorage': '中セキュリティ', 
-      'memory': '高セキュリティ'
-    };
-    console.log(`🔐 セキュリティレベルを「${storageNames[newStorageType]}」に変更しました`);
-  };
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,10 +49,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
         
         if (result.magicLink) {
           setMessage(`開発モード: マジックリンクが生成されました。\n${result.magicLink}`);
-        } else if (result.emailSent === false || result.message?.includes('メール送信に問題')) {
-          setMessage('⚠️ メール送信に問題が発生している可能性があります。\nサーバー設定の確認が必要です。\n管理者にお問い合わせください。');
         } else {
-          setMessage('マジックリンクをメールに送信しました。\nメールを確認してリンクをクリックするか、メール内のトークンを下記に入力してください。');
+          setMessage('マジックリンクをメールに送信しました。メールを確認してリンクをクリックするか、メール内のトークンを下記に入力してください。');
         }
       } else {
         setMessage(result.message || 'ログインに失敗しました');
@@ -221,66 +194,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
               />
             </div>
 
-            {/* セキュリティオプション */}
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151', flex: 1 }}>
-                  🔐 セキュリティレベル
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowStorageOptions(!showStorageOptions)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '12px',
-                    color: '#3b82f6',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  {showStorageOptions ? '隠す' : '変更'}
-                </button>
-              </div>
-              
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                現在: {
-                  storageType === 'localStorage' ? '標準（ブラウザ再起動後も自動ログイン）' :
-                  storageType === 'sessionStorage' ? '中（タブを閉じるとログアウト）' :
-                  '高（ページリロードでログアウト）'
-                }
-              </div>
-
-              {showStorageOptions && (
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    { value: 'localStorage' as TokenStorageType, label: '🟢 標準セキュリティ', desc: 'ブラウザ再起動後も自動ログイン' },
-                    { value: 'sessionStorage' as TokenStorageType, label: '🟡 中セキュリティ', desc: 'タブを閉じるとログアウト' },
-                    { value: 'memory' as TokenStorageType, label: '🔴 高セキュリティ', desc: 'ページリロードでログアウト' }
-                  ].map(option => (
-                    <label key={option.value} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name="storageType"
-                        value={option.value}
-                        checked={storageType === option.value}
-                        onChange={() => handleStorageTypeChange(option.value)}
-                        style={{ marginRight: '8px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>
-                          {option.label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>
-                          {option.desc}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {message && !isSuccess && (
               <div style={{
                 marginBottom: '16px',
@@ -407,66 +320,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
               </div>
             )}
             
-            {/* セキュリティレベル設定（ログイン成功後） */}
-            <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151', flex: 1 }}>
-                  🔐 セキュリティレベル
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowStorageOptions(!showStorageOptions)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '12px',
-                    color: '#3b82f6',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  {showStorageOptions ? '隠す' : '変更'}
-                </button>
-              </div>
-              
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                現在: {
-                  storageType === 'localStorage' ? '標準（ブラウザ再起動後も自動ログイン）' :
-                  storageType === 'sessionStorage' ? '中（タブを閉じるとログアウト）' :
-                  '高（ページリロードでログアウト）'
-                }
-              </div>
-
-              {showStorageOptions && (
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    { value: 'localStorage' as TokenStorageType, label: '🟢 標準セキュリティ', desc: 'ブラウザ再起動後も自動ログイン' },
-                    { value: 'sessionStorage' as TokenStorageType, label: '🟡 中セキュリティ', desc: 'タブを閉じるとログアウト' },
-                    { value: 'memory' as TokenStorageType, label: '🔴 高セキュリティ', desc: 'ページリロードでログアウト' }
-                  ].map(option => (
-                    <label key={option.value} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name="storageTypeSuccess"
-                        value={option.value}
-                        checked={storageType === option.value}
-                        onChange={() => handleStorageTypeChange(option.value)}
-                        style={{ marginRight: '8px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>
-                          {option.label}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>
-                          {option.desc}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <div style={{
               marginBottom: '20px',
               padding: '16px',

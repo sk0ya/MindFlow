@@ -1,11 +1,10 @@
 // Cloud authentication adapter for Local architecture
-import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse, TokenStorageType } from './types';
+import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse } from './types';
 
 const DEFAULT_CONFIG: AuthConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
   tokenKey: 'mindflow_auth_token',
-  refreshTokenKey: 'mindflow_refresh_token',
-  storageType: 'localStorage'
+  refreshTokenKey: 'mindflow_refresh_token'
 };
 
 /**
@@ -23,7 +22,6 @@ export class CloudAuthAdapter implements AuthAdapter {
   private _isInitialized = false;
   private authChangeCallbacks: ((user: AuthUser | null) => void)[] = [];
   private refreshTimer: NodeJS.Timeout | null = null;
-  private memoryToken: string | null = null;
 
   constructor(private config: AuthConfig = DEFAULT_CONFIG) {}
 
@@ -100,28 +98,15 @@ export class CloudAuthAdapter implements AuthAdapter {
         throw new Error(result.message || 'Login failed');
       }
 
-      // emailSentフィールドが存在しない場合は、メッセージの内容で判断
-      const isEmailSent = result.emailSent !== false && 
-        !result.message?.includes('開発環境') && 
-        !result.message?.includes('development') &&
-        !result.magicLink; // magicLinkが直接返される場合は開発モード
-
-      if (isEmailSent) {
+      if (result.emailSent) {
         console.log('✅ Magic link email sent to:', email);
       } else {
-        console.log('⚠️ Email not sent (dev mode or server issue), magic link:', result.magicLink);
+        console.log('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
         
-        // 開発モードまたはメール送信失敗の場合
-        if (result.magicLink) {
-          // eslint-disable-next-line no-alert
-          if (confirm('メールが送信されませんでした。Magic Linkを直接開きますか？')) {
-            window.location.href = result.magicLink;
-          }
-        } else {
-          // メール送信が期待されているが、サーバー側の問題で送信されていない可能性
-          console.warn('⚠️ メールが送信されていない可能性があります。サーバー設定を確認してください。');
-          // eslint-disable-next-line no-alert
-          alert('メールの送信に問題がある可能性があります。\nメールが届かない場合は、管理者にお問い合わせください。');
+        // 開発モードの場合、Magic Linkを自動的に開く
+        // eslint-disable-next-line no-alert
+        if (result.magicLink && confirm('メールが送信されませんでした。Magic Linkを直接開きますか？')) {
+          window.location.href = result.magicLink;
         }
       }
       
@@ -319,128 +304,52 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * ストレージタイプを設定/取得
-   */
-  setStorageType(storageType: TokenStorageType): void {
-    // 現在のトークンを退避
-    const currentToken = this.getStoredToken();
-    
-    // 古いストレージタイプから削除
-    this.clearStoredTokens();
-    
-    // 新しいストレージタイプを設定
-    this.config.storageType = storageType;
-    
-    // トークンが存在する場合は新しいストレージに移行
-    if (currentToken) {
-      this.storeToken(currentToken);
-      console.log(`🔐 認証ストレージを${storageType}に変更し、トークンを移行しました`);
-    } else {
-      console.log(`🔐 認証ストレージを${storageType}に変更しました`);
-    }
-  }
-
-  getStorageType(): TokenStorageType {
-    return this.config.storageType || 'localStorage';
-  }
-
-  /**
    * トークンを保存
    */
   private storeToken(token: string): void {
-    switch (this.config.storageType) {
-      case 'localStorage':
-        localStorage.setItem(this.config.tokenKey, token);
-        break;
-      case 'sessionStorage':
-        sessionStorage.setItem(this.config.tokenKey, token);
-        break;
-      case 'memory':
-        this.memoryToken = token;
-        break;
-      default:
-        localStorage.setItem(this.config.tokenKey, token);
-    }
+    localStorage.setItem(this.config.tokenKey, token);
   }
 
   /**
    * 保存されたトークンを取得
    */
   private getStoredToken(): string | null {
-    switch (this.config.storageType) {
-      case 'localStorage':
-        return localStorage.getItem(this.config.tokenKey);
-      case 'sessionStorage':
-        return sessionStorage.getItem(this.config.tokenKey);
-      case 'memory':
-        return this.memoryToken;
-      default:
-        return localStorage.getItem(this.config.tokenKey);
-    }
+    return localStorage.getItem(this.config.tokenKey);
   }
 
   /**
    * リフレッシュトークンを取得
    */
   private getStoredRefreshToken(): string | null {
-    switch (this.config.storageType) {
-      case 'localStorage':
-        return localStorage.getItem(this.config.refreshTokenKey);
-      case 'sessionStorage':
-        return sessionStorage.getItem(this.config.refreshTokenKey);
-      case 'memory':
-        return null; // メモリモードではリフレッシュトークンなし
-      default:
-        return localStorage.getItem(this.config.refreshTokenKey);
-    }
+    return localStorage.getItem(this.config.refreshTokenKey);
   }
 
   /**
    * 保存されたトークンをクリア
    */
   private clearStoredTokens(): void {
-    // 全てのストレージから削除
     localStorage.removeItem(this.config.tokenKey);
     localStorage.removeItem(this.config.refreshTokenKey);
-    sessionStorage.removeItem(this.config.tokenKey);
-    sessionStorage.removeItem(this.config.refreshTokenKey);
-    this.memoryToken = null;
   }
 
   /**
    * トークンを検証
    */
   private async validateToken(token: string): Promise<void> {
-    try {
-      // まずAPIサーバーの健康状態をチェック
-      const healthResponse = await fetch(`${this.config.apiBaseUrl}/api/health`);
-      if (!healthResponse.ok) {
-        throw new Error('API server unhealthy');
-      }
-      
-      const healthResult = await healthResponse.json();
-      if (healthResult.status === 'unhealthy') {
-        throw new Error('API server reports unhealthy status');
-      }
+    const response = await fetch(`${this.config.apiBaseUrl}/api/auth/validate`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/auth/validate`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.user) {
-          this.setAuthenticatedUser(result.user, token);
-        }
-      } else {
-        throw new Error(`Token validation failed: ${response.status} ${response.statusText}`);
+    if (response.ok) {
+      const result = await response.json();
+      if (result.user) {
+        this.setAuthenticatedUser(result.user, token);
       }
-    } catch (error) {
-      console.warn('⚠️ CloudAuthAdapter: Token validation error:', error);
-      throw error;
+    } else {
+      throw new Error('Token validation failed');
     }
   }
 

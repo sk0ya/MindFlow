@@ -23,13 +23,10 @@ export interface LoginResponse {
   magicLink?: string;
 }
 
-export type TokenStorageType = 'localStorage' | 'sessionStorage' | 'memory';
-
 export interface AuthConfig {
   apiBaseUrl: string;
   tokenKey: string;
   refreshTokenKey: string;
-  storageType?: TokenStorageType;
 }
 
 export interface AuthAdapter {
@@ -46,10 +43,6 @@ export interface AuthAdapter {
   // Token management
   getAuthHeaders(): Record<string, string>;
   refreshToken(): Promise<boolean>;
-  
-  // Storage management
-  setStorageType?(storageType: TokenStorageType): void;
-  getStorageType?(): TokenStorageType;
   
   // Event handlers
   onAuthChange(callback: (user: AuthUser | null) => void): () => void;
