@@ -286,16 +286,33 @@ export class CloudStorageAdapter implements StorageAdapter {
    * ファイルをアップロード
    */
   async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<any> {
+    logger.info('🚀 CloudStorageAdapter: uploadFile called', { 
+      mindmapId, 
+      nodeId, 
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      isInitialized: this.isInitialized
+    });
+
     if (!this.isInitialized) {
+      logger.info('🔄 CloudStorageAdapter: Not initialized, initializing...');
       await this.initialize();
     }
 
+    logger.info('🔐 CloudStorageAdapter: Auth check', {
+      isAuthenticated: this.authAdapter.isAuthenticated,
+      hasUser: !!this.authAdapter.user,
+      userId: this.authAdapter.user?.id
+    });
+
     if (!this.authAdapter.isAuthenticated) {
+      logger.error('❌ CloudStorageAdapter: User not authenticated');
       throw new Error('User not authenticated for file upload');
     }
 
     try {
-      logger.info('☁️ CloudStorageAdapter: Uploading file to cloud:', { mindmapId, nodeId, fileName: file.name });
+      logger.info('☁️ CloudStorageAdapter: Calling API client uploadFile...');
       
       const uploadResult = await this.apiClient.uploadFile(mindmapId, nodeId, file);
       
@@ -303,6 +320,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       return uploadResult;
     } catch (error) {
       logger.error('❌ CloudStorageAdapter: File upload failed:', error);
+      logger.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   }

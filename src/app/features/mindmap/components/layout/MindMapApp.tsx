@@ -247,20 +247,40 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           async (): Promise<FileAttachment> => {
             if (storageMode === 'cloud') {
               // クラウドモード: APIにアップロードしてCloudflareに保存
-              console.log('🌐 Uploading file to cloud storage...');
+              console.log('🌐 Uploading file to cloud storage...', { 
+                fileName: file.name, 
+                fileSize: file.size, 
+                fileType: file.type,
+                nodeId,
+                mapId: data.id
+              });
               
               // CloudStorageAdapterを直接使用
               const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
+              console.log('📦 CloudStorageAdapter imported successfully');
               
               if (!auth) {
+                console.error('❌ Authentication not available for cloud upload');
                 throw new Error('クラウドファイルアップロードには認証が必要です');
               }
               
+              console.log('🔐 Auth state:', {
+                hasAuth: !!auth,
+                hasAuthAdapter: !!auth.authAdapter,
+                isAuthenticated: auth.authAdapter?.isAuthenticated,
+                userId: auth.authAdapter?.user?.id
+              });
+              
               const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
+              console.log('🏗️ CloudStorageAdapter created, initializing...');
+              
               await storageAdapter.initialize();
+              console.log('✅ CloudStorageAdapter initialized');
               
               if (typeof storageAdapter.uploadFile === 'function') {
+                console.log('📤 Calling uploadFile method...');
                 const uploadResult = await storageAdapter.uploadFile(data.id, nodeId, file);
+                console.log('📥 Upload result received:', uploadResult);
                 
                 const fileAttachment = {
                   id: uploadResult.id,
@@ -273,9 +293,10 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                   storagePath: uploadResult.storagePath,
                   r2FileId: uploadResult.id
                 };
-                console.log('✅ File uploaded to cloud:', fileAttachment);
+                console.log('✅ File uploaded to cloud successfully:', fileAttachment);
                 return fileAttachment;
               } else {
+                console.error('❌ uploadFile method not available on storage adapter');
                 throw new Error('Cloud storage adapter not available or uploadFile method missing');
               }
             } else {
@@ -332,7 +353,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // ファイルダウンロードハンドラー
   const handleFileDownload = async (file: FileAttachment): Promise<void> => {
     try {
-      console.log('🔍 Downloading file:', file);
       let downloadUrl: string;
       let fileName = file.name;
 
@@ -367,7 +387,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
       }
 
-      showNotification('success', `${fileName} をダウンロードしました`);
+      // ブラウザネイティブのダウンロード機能で十分なため、成功通知は不要
     } catch (error) {
       console.error('File download failed:', error);
       showNotification('error', `${file.name} のダウンロードに失敗しました`);

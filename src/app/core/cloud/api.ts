@@ -241,20 +241,32 @@ export class CloudflareAPI {
     
     const formData = new FormData();
     formData.append('file', file);
+    logger.info('📋 API: FormData created with file');
     
     const headers = this.getAuthHeaders();
     // FormDataを使用する場合はContent-Typeを削除（ブラウザが自動設定）
     delete headers['Content-Type'];
     
-    logger.debug('🔑 API: Upload headers:', { 
+    logger.info('🔑 API: Upload headers prepared:', { 
       hasAuth: !!headers.Authorization, 
-      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none'
+      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
+      headersCount: Object.keys(headers).length
     });
     
-    const response = await fetch(`${API_BASE_URL}/api/files/${mindmapId}/${nodeId}`, {
+    const uploadUrl = `${API_BASE_URL}/api/files/${mindmapId}/${nodeId}`;
+    logger.info('🌐 API: Making fetch request to:', uploadUrl);
+    
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       headers,
       body: formData,
+    });
+
+    logger.info('📡 API: Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
     });
 
     if (!response.ok) {
@@ -262,13 +274,14 @@ export class CloudflareAPI {
       logger.error('❌ API: File upload failed:', { 
         status: response.status, 
         statusText: response.statusText,
-        body: errorText 
+        body: errorText,
+        url: uploadUrl
       });
-      throw new Error(`ファイルのアップロードに失敗しました: ${response.statusText}`);
+      throw new Error(`ファイルのアップロードに失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const result = await response.json();
-    logger.debug('📥 API: Upload response:', result);
+    logger.info('📥 API: Upload response:', result);
     
     return result;
   }
