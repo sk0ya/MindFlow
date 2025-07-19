@@ -272,14 +272,6 @@ export async function getOrCreateUser(
         created_at: now,
         updated_at: now,
       };
-    } else {
-      // 既存ユーザーの場合、last_login_atを更新
-      const now = new Date().toISOString();
-      await db.prepare(`
-        UPDATE users SET updated_at = ? WHERE id = ?
-      `).bind(now, email).run();
-      
-      user.updated_at = now;
     }
 
     return user;

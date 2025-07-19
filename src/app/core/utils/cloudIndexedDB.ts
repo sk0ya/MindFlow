@@ -22,26 +22,13 @@ class CloudIndexedDBManager {
     CURRENT_MAP: 'currentMap',
     ALL_MAPS: 'allMaps'
   } as const;
-  private initPromise: Promise<void> | null = null;
 
   async init(): Promise<void> {
-    // 既に初期化中の場合は、その Promise を返す
-    if (this.initPromise) {
-      return this.initPromise;
-    }
-
-    // 既に初期化済みの場合は即座に resolve
-    if (this.db) {
-      return Promise.resolve();
-    }
-
-    // 新しい初期化を開始
-    this.initPromise = new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
         console.error('❌ Cloud IndexedDB: 初期化エラー', request.error);
-        this.initPromise = null; // エラー時はリセット
         reject(request.error);
       };
 
@@ -69,48 +56,40 @@ class CloudIndexedDBManager {
         console.log('🔧 Cloud IndexedDB: データベース構造作成完了');
       };
     });
-
-    return this.initPromise;
   }
 
   // 現在のマップを保存
   async saveCurrentMap(data: CloudCachedMindMap): Promise<void> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readwrite');
-        const store = transaction.objectStore(this.STORES.CURRENT_MAP);
-        const request = store.put(data, 'currentMap');
+      const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readwrite');
+      const store = transaction.objectStore(this.STORES.CURRENT_MAP);
+      const request = store.put(data, 'currentMap');
 
-        request.onsuccess = () => {
-          console.log('💾 Cloud IndexedDB: 現在のマップ保存完了', { 
-            id: data.id, 
-            title: data.title,
-            userId: data._metadata.userId
-          });
-          resolve();
-        };
+      request.onsuccess = () => {
+        console.log('💾 Cloud IndexedDB: 現在のマップ保存完了', { 
+          id: data.id, 
+          title: data.title,
+          userId: data._metadata.userId
+        });
+        resolve();
+      };
 
-        request.onerror = () => {
-          console.error('❌ Cloud IndexedDB: 現在のマップ保存失敗', request.error);
-          reject(request.error);
-        };
-
-        transaction.onerror = () => {
-          console.error('❌ Cloud IndexedDB: トランザクションエラー', transaction.error);
-          reject(transaction.error);
-        };
-      } catch (error) {
-        console.error('❌ Cloud IndexedDB: 保存操作でエラー発生', error);
-        reject(error);
-      }
+      request.onerror = () => {
+        console.error('❌ Cloud IndexedDB: 現在のマップ保存失敗', request.error);
+        reject(request.error);
+      };
     });
   }
 
   // 現在のマップを取得
   async getCurrentMap(): Promise<CloudCachedMindMap | null> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readonly');
@@ -137,7 +116,9 @@ class CloudIndexedDBManager {
 
   // マップをリストに保存
   async saveMindMapToList(data: CloudCachedMindMap): Promise<void> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       try {
@@ -185,7 +166,9 @@ class CloudIndexedDBManager {
 
   // 全マップを取得
   async getAllMindMaps(): Promise<CloudCachedMindMap[]> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readonly');
@@ -210,7 +193,9 @@ class CloudIndexedDBManager {
 
   // マップをリストから削除
   async removeMindMapFromList(id: string): Promise<void> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readwrite');
@@ -231,7 +216,9 @@ class CloudIndexedDBManager {
 
   // データベース全体をクリア
   async clearAll(): Promise<void> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.CURRENT_MAP, this.STORES.ALL_MAPS], 'readwrite');
@@ -253,7 +240,9 @@ class CloudIndexedDBManager {
 
   // ユーザー専用のマップを取得
   async getUserMaps(userId: string): Promise<CloudCachedMindMap[]> {
-    await this.init(); // 必ず初期化を待つ
+    if (!this.db) {
+      await this.init();
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readonly');
@@ -275,16 +264,6 @@ class CloudIndexedDBManager {
         reject(request.error);
       };
     });
-  }
-
-  // データベース接続をクリーンアップ
-  cleanup(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-      this.initPromise = null;
-      console.log('🧹 Cloud IndexedDB: 接続クローズ');
-    }
   }
 }
 
@@ -322,8 +301,4 @@ export async function clearCloudIndexedDB(): Promise<void> {
 
 export async function getUserMapsFromCloudIndexedDB(userId: string): Promise<CloudCachedMindMap[]> {
   return cloudIndexedDB.getUserMaps(userId);
-}
-
-export function cleanupCloudIndexedDB(): void {
-  cloudIndexedDB.cleanup();
 }

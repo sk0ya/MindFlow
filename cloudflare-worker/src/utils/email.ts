@@ -22,17 +22,18 @@ export async function sendMagicLinkEmail(
   magicLink: string
 ): Promise<EmailResponse> {
   try {
+    // 開発環境の場合は実際にメールを送信しない
+    if (env.NODE_ENV === 'development') {
+      console.log(`[DEV] Magic link for ${toEmail}: ${magicLink}`);
+      return {
+        success: true,
+        messageId: 'dev-mode',
+      };
+    }
+
     // Resend APIキーの確認
     if (!env.RESEND_KEY) {
       console.error('RESEND_KEY is not configured');
-      // 開発環境でもAPIキーがない場合のみコンソール出力
-      if (env.NODE_ENV === 'development') {
-        console.log(`[DEV] Magic link for ${toEmail}: ${magicLink}`);
-        return {
-          success: true,
-          messageId: 'dev-mode-no-api-key',
-        };
-      }
       return {
         success: false,
         error: 'Email service not configured',

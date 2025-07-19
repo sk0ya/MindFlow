@@ -162,8 +162,8 @@ async function handleLogin(
       emailSent: emailResult.success,
     };
 
-    // Resendが設定されていない場合のみMagic Linkを含める
-    if (!env.RESEND_KEY) {
+    // 開発環境または本番環境でもResendが設定されていない場合はMagic Linkを含める
+    if (env.NODE_ENV === 'development' || !env.RESEND_KEY) {
       response.magicLink = magicLink;
     }
 
@@ -247,12 +247,8 @@ async function handleVerifyToken(
       user: {
         id: user.id,
         email: user.id,
-        displayName: user.id.split('@')[0], // メールアドレスからディスプレイ名を生成
-        createdAt: user.created_at,
-        lastLoginAt: new Date().toISOString(),
       },
       accessToken,
-      token: accessToken, // フロントエンド互換性のため
     };
 
     return new Response(JSON.stringify(response), {
