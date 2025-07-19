@@ -64,6 +64,10 @@ class LocalIndexedDB {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
+    }
+
     const cachedData: CachedLocalMindMap = {
       ...data,
       _metadata: {
@@ -98,6 +102,10 @@ class LocalIndexedDB {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readonly');
       const store = transaction.objectStore(this.STORES.CURRENT_MAP);
@@ -124,6 +132,10 @@ class LocalIndexedDB {
   async saveMindMapToList(data: MindMapData): Promise<void> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
     }
 
     const cachedData: CachedLocalMindMap = {
@@ -160,6 +172,10 @@ class LocalIndexedDB {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readonly');
       const store = transaction.objectStore(this.STORES.MINDMAPS);
@@ -184,6 +200,10 @@ class LocalIndexedDB {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
       const store = transaction.objectStore(this.STORES.MINDMAPS);
@@ -205,6 +225,10 @@ class LocalIndexedDB {
   async clearAll(): Promise<void> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize IndexedDB');
     }
 
     return new Promise((resolve, reject) => {

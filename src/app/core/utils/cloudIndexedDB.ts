@@ -64,6 +64,10 @@ class CloudIndexedDBManager {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readwrite');
       const store = transaction.objectStore(this.STORES.CURRENT_MAP);
@@ -89,6 +93,10 @@ class CloudIndexedDBManager {
   async getCurrentMap(): Promise<CloudCachedMindMap | null> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
     }
 
     return new Promise((resolve, reject) => {
@@ -120,6 +128,10 @@ class CloudIndexedDBManager {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readwrite');
       const store = transaction.objectStore(this.STORES.ALL_MAPS);
@@ -145,6 +157,10 @@ class CloudIndexedDBManager {
   async getAllMindMaps(): Promise<CloudCachedMindMap[]> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
     }
 
     return new Promise((resolve, reject) => {
@@ -174,6 +190,10 @@ class CloudIndexedDBManager {
       await this.init();
     }
 
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readwrite');
       const store = transaction.objectStore(this.STORES.ALL_MAPS);
@@ -195,6 +215,10 @@ class CloudIndexedDBManager {
   async clearAll(): Promise<void> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
     }
 
     return new Promise((resolve, reject) => {
@@ -219,6 +243,10 @@ class CloudIndexedDBManager {
   async getUserMaps(userId: string): Promise<CloudCachedMindMap[]> {
     if (!this.db) {
       await this.init();
+    }
+
+    if (!this.db) {
+      throw new Error('Failed to initialize Cloud IndexedDB');
     }
 
     return new Promise((resolve, reject) => {

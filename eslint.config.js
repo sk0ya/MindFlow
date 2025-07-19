@@ -7,8 +7,8 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 export default [
   js.configs.recommended,
   {
-    files: ['src/Local/**/*.{ts,tsx}'],
-    ignores: ['node_modules/**', 'dist/**', '.vite/**', 'build/**', 'src/Cloud/**', 'src/shared/**'],
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['node_modules/**', 'dist/**', '.vite/**', 'build/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -33,8 +33,8 @@ export default [
       '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
       '@typescript-eslint/prefer-as-const': 'warn',
       
-      // null/undefined安全性
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      // null/undefined安全性 (IndexedDBでは初期化チェック後に!を使用)
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'error',
       
       // 未使用変数・関数

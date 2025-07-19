@@ -16,13 +16,12 @@ const App: React.FC = () => {
     const magicLinkToken = urlParams.get('token');
     
     if (magicLinkToken) {
-      console.log('🔗 Magic link detected, switching to cloud mode');
       setStorageMode('cloud');
     } else {
       // Load saved mode from localStorage, default to local
-      const savedMode = localStorage.getItem('mindflow_storage_mode') as StorageMode;
+      const savedMode = localStorage.getItem('mindflow_storage_mode');
       if (savedMode && ['local', 'cloud'].includes(savedMode)) {
-        setStorageMode(savedMode);
+        setStorageMode(savedMode as StorageMode);
       }
     }
   }, []);

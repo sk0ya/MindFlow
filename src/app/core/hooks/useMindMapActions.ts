@@ -104,12 +104,25 @@ export const useMindMapActions = () => {
     importData: useCallback((jsonData: string): boolean => {
       try {
         const parsedData = JSON.parse(jsonData);
-        if (parsedData && typeof parsedData === 'object' && 'id' in parsedData) {
-          store.setData(parsedData as MindMapData);
-          console.log('Data imported successfully');
-          return true;
+        
+        // データの妥当性検証
+        if (!parsedData || typeof parsedData !== 'object') {
+          return false;
         }
-        return false;
+        
+        // MindMapDataの必要な属性をチェック
+        if (!('id' in parsedData) || !('title' in parsedData) || !('rootNode' in parsedData)) {
+          return false;
+        }
+        
+        // 型安全性を保つため、明示的にチェック
+        const { id, title, rootNode } = parsedData;
+        if (typeof id !== 'string' || typeof title !== 'string' || !rootNode) {
+          return false;
+        }
+        
+        store.setData(parsedData as MindMapData);
+        return true;
       } catch (error) {
         console.error('Failed to import data:', error);
         return false;
