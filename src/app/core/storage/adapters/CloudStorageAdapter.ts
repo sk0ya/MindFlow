@@ -2,6 +2,7 @@
 import type { MindMapData } from '@shared/types';
 import type { StorageAdapter } from '../types';
 import type { AuthAdapter } from '../../auth/types';
+import type { FileInfo } from '../../cloud/api';
 import { createInitialData } from '../../../shared/types/dataTypes';
 import {
   initCloudIndexedDB,
@@ -285,7 +286,7 @@ export class CloudStorageAdapter implements StorageAdapter {
   /**
    * ファイルをアップロード
    */
-  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<any> {
+  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<FileInfo> {
     logger.info('🚀 CloudStorageAdapter: uploadFile called', { 
       mindmapId, 
       nodeId, 
@@ -352,7 +353,7 @@ export class CloudStorageAdapter implements StorageAdapter {
   /**
    * ファイル情報を取得
    */
-  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<any> {
+  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<FileInfo> {
     if (!this.isInitialized) {
       await this.initialize();
     }

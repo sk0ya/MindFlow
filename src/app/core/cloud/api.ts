@@ -1,10 +1,34 @@
 // Cloudflare Workers API integration
-import type { MindMapData } from '@shared/types';
+import type { MindMapData, MindMapNode } from '@shared/types';
 import { logger } from '../../shared/utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
-export interface ApiResponse<T = any> {
+export interface UserProfile {
+  id: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FileInfo {
+  id: string;
+  name: string;
+  fileName: string;
+  type: string;
+  mimeType: string;
+  size: number;
+  fileSize: number;
+  url: string;
+  downloadUrl: string;
+  storagePath: string;
+  attachmentType: string;
+  uploadedAt: string;
+  isImage: boolean;
+}
+
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -214,7 +238,7 @@ export class CloudflareAPI {
   /**
    * ユーザープロファイルを取得
    */
-  async getUserProfile(): Promise<any> {
+  async getUserProfile(): Promise<UserProfile> {
     const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
@@ -224,9 +248,9 @@ export class CloudflareAPI {
       throw new Error(`ユーザープロファイルの取得に失敗しました: ${response.statusText}`);
     }
 
-    const result: ApiResponse = await response.json();
+    const result: ApiResponse<UserProfile> = await response.json();
     
-    if (!result.success) {
+    if (!result.success || !result.data) {
       throw new Error(result.error || 'ユーザープロファイルの取得に失敗しました');
     }
 
@@ -236,7 +260,7 @@ export class CloudflareAPI {
   /**
    * ファイルをアップロード
    */
-  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<any> {
+  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<FileInfo> {
     logger.info('📤 API: Uploading file:', { mindmapId, nodeId, fileName: file.name, fileSize: file.size });
     
     const formData = new FormData();
@@ -314,7 +338,7 @@ export class CloudflareAPI {
   /**
    * ファイル情報を取得
    */
-  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<any> {
+  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<FileInfo> {
     const response = await fetch(`${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}?type=info`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
@@ -322,7 +346,7 @@ export class CloudflareAPI {
 
     if (!response.ok) {
       if (response.status === 404) {
-        return null;
+        throw new Error('File not found');
       }
       throw new Error(`ファイル情報の取得に失敗しました: ${response.statusText}`);
     }
@@ -360,12 +384,12 @@ export function createCloudflareAPIClient(getAuthHeaders: () => Record<string, s
  * データ清理ユーティリティ
  */
 export function cleanEmptyNodesFromData(data: MindMapData): MindMapData {
-  const cleanNode = (node: any): any => {
+  const cleanNode = (node: MindMapNode): MindMapNode => {
     const cleanedNode = {
       ...node,
       text: node.text || '',
       children: (node.children || [])
-        .filter((child: any) => child.text && child.text.trim() !== '')
+        .filter((child: MindMapNode) => child.text && child.text.trim() !== '')
         .map(cleanNode)
     };
     
@@ -381,12 +405,12 @@ export function cleanEmptyNodesFromData(data: MindMapData): MindMapData {
 /**
  * ノード数をカウント
  */
-export function countNodes(node: any): number {
+export function countNodes(node: MindMapNode): number {
   if (!node) return 0;
   
   let count = 1; // 現在のノード
   if (node.children) {
-    count += node.children.reduce((sum: number, child: any) => sum + countNodes(child), 0);
+    count += node.children.reduce((sum: number, child: MindMapNode) => sum + countNodes(child), 0);
   }
   
   return count;

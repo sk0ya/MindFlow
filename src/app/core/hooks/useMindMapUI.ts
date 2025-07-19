@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
-import type { MindMapNode, Position } from '@shared/types';
+import type { MindMapNode, Position, FileAttachment } from '@shared/types';
 import type { ImageFile } from '../../shared/types';
 
 /**
@@ -71,7 +71,7 @@ export const useMindMapUI = () => {
     }, [store]),
 
     // ファイルアクションメニュー
-    showFileActionMenu: useCallback((fileAttachment: any, position: Position) => {
+    showFileActionMenu: useCallback((fileAttachment: FileAttachment, position: Position) => {
       store.setSelectedFile(fileAttachment);
       store.setFileMenuPosition(position);
       store.setShowFileActionMenu(true);

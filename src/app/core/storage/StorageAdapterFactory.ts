@@ -1,5 +1,6 @@
 // Storage adapter factory - creates appropriate storage adapter based on configuration
 import type { StorageAdapter, StorageConfig, StorageMode, StorageAdapterFactory as IStorageAdapterFactory } from './types';
+import type { AuthAdapter } from '../auth/types';
 import { LocalStorageAdapter } from './adapters/LocalStorageAdapter';
 import { CloudStorageAdapter } from './adapters/CloudStorageAdapter';
 
@@ -112,7 +113,7 @@ export async function createLocalStorageAdapter(): Promise<StorageAdapter> {
 /**
  * 便利な関数 - 認証アダプターを使ってクラウドアダプターを作成
  */
-export async function createCloudStorageAdapter(authAdapter: any): Promise<StorageAdapter> {
+export async function createCloudStorageAdapter(authAdapter: AuthAdapter): Promise<StorageAdapter> {
   return defaultStorageAdapterFactory.create({ 
     mode: 'cloud', 
     authAdapter 

@@ -1,6 +1,7 @@
 // Storage abstraction types for dual Local/Cloud architecture
 import type { MindMapData } from '@shared/types';
 import type { AuthAdapter } from '../auth/types';
+import type { FileInfo } from '../cloud/api';
 
 /**
  * 統一ストレージインターフェース
@@ -22,9 +23,9 @@ export interface StorageAdapter {
   updateMapInList(map: MindMapData): Promise<void>;
   
   // ファイル操作（オプショナル - クラウドモードのみ）
-  uploadFile?(mindmapId: string, nodeId: string, file: File): Promise<any>;
+  uploadFile?(mindmapId: string, nodeId: string, file: File): Promise<FileInfo>;
   deleteFile?(mindmapId: string, nodeId: string, fileId: string): Promise<void>;
-  getFileInfo?(mindmapId: string, nodeId: string, fileId: string): Promise<any>;
+  getFileInfo?(mindmapId: string, nodeId: string, fileId: string): Promise<FileInfo>;
   
   // ライフサイクル
   initialize(): Promise<void>;

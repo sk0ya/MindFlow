@@ -12,7 +12,7 @@ export interface ErrorInfo {
 
 export interface ErrorHandlerContextType {
   handleError: (error: Error, context?: string, action?: string) => void;
-  handleAsyncError: (promise: Promise<any>, context?: string, action?: string) => Promise<any>;
+  handleAsyncError: (promise: Promise<unknown>, context?: string, action?: string) => Promise<unknown>;
 }
 
 const ErrorHandlerContext = createContext<ErrorHandlerContextType | undefined>(undefined);
@@ -108,7 +108,7 @@ export const ErrorHandlerProvider: React.FC<ErrorHandlerProviderProps> = ({ chil
     }
   }, [showNotification, userId]);
 
-  const handleAsyncError = useCallback(async (promise: Promise<any>, context?: string, action?: string): Promise<any> => {
+  const handleAsyncError = useCallback(async (promise: Promise<unknown>, context?: string, action?: string): Promise<unknown> => {
     try {
       return await promise;
     } catch (error) {

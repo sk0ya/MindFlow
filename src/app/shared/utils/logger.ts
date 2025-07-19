@@ -29,40 +29,44 @@ class Logger {
     return this.levels[level] >= this.levels[this.config.level];
   }
 
-  private maskSensitiveData(data: any): any {
+  private maskSensitiveData(data: unknown): unknown {
     if (typeof data === 'string') {
       // Mask JWT tokens
-      data = data.replace(/Bearer\s+[\w-]+\.[\w-]+\.[\w-]+/gi, 'Bearer [MASKED]');
+      let maskedData = data.replace(/Bearer\s+[\w-]+\.[\w-]+\.[\w-]+/gi, 'Bearer [MASKED]');
       // Mask tokens in URLs
-      data = data.replace(/(\?|&)token=[\w-]+/gi, '$1token=[MASKED]');
+      maskedData = maskedData.replace(/(\?|&)token=[\w-]+/gi, '$1token=[MASKED]');
       // Mask API keys
-      data = data.replace(/([aA]pi[_-]?[kK]ey|apikey)[:=]\s*[\w-]+/gi, '$1=[MASKED]');
+      maskedData = maskedData.replace(/([aA]pi[_-]?[kK]ey|apikey)[:=]\s*[\w-]+/gi, '$1=[MASKED]');
       // Mask authorization headers
-      data = data.replace(/(authorization|x-api-key):\s*[\w-]+/gi, '$1: [MASKED]');
+      maskedData = maskedData.replace(/(authorization|x-api-key):\s*[\w-]+/gi, '$1: [MASKED]');
+      return maskedData;
     } else if (typeof data === 'object' && data !== null) {
-      const masked = Array.isArray(data) ? [...data] : { ...data };
+      const masked = Array.isArray(data) ? [...data] as unknown[] : { ...data as Record<string, unknown> };
       
-      for (const key in masked) {
+      if (Array.isArray(masked)) {
+        return masked.map(item => this.maskSensitiveData(item));
+      }
+      
+      const maskedRecord = masked as Record<string, unknown>;
+      for (const key in maskedRecord) {
         if (key.toLowerCase().includes('token') || 
             key.toLowerCase().includes('auth') || 
             key.toLowerCase().includes('key') ||
             key.toLowerCase().includes('password') ||
             key.toLowerCase().includes('secret')) {
-          masked[key] = '[MASKED]';
-        } else if (typeof masked[key] === 'object') {
-          masked[key] = this.maskSensitiveData(masked[key]);
-        } else if (typeof masked[key] === 'string') {
-          masked[key] = this.maskSensitiveData(masked[key]);
+          maskedRecord[key] = '[MASKED]';
+        } else {
+          maskedRecord[key] = this.maskSensitiveData(maskedRecord[key]);
         }
       }
       
-      return masked;
+      return maskedRecord;
     }
     
     return data;
   }
 
-  private formatMessage(level: LogLevel, message: string, ...args: any[]): void {
+  private formatMessage(level: LogLevel, message: string, ...args: unknown[]): void {
     if (!this.shouldLog(level)) return;
 
     const timestamp = new Date().toISOString();
@@ -87,19 +91,19 @@ class Logger {
     }
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     this.formatMessage('debug', message, ...args);
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     this.formatMessage('info', message, ...args);
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     this.formatMessage('warn', message, ...args);
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     this.formatMessage('error', message, ...args);
   }
 
