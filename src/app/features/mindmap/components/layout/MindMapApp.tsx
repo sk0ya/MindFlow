@@ -8,6 +8,7 @@ import MindMapFooter from './MindMapFooter';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
 import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
+import { FileUploadProvider, useFileUpload, createUploadId } from '../../../../shared/hooks/useFileUpload';
 import './MindMapApp.css';
 
 // Types
@@ -32,6 +33,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 }) => {
   const { showNotification } = useNotification();
   const { handleError, handleAsyncError } = useErrorHandler();
+  const { startUpload, updateProgress, completeUpload, errorUpload } = useFileUpload();
   
   // グローバルエラーハンドラーの設定
   React.useEffect(() => {
@@ -208,6 +210,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       return;
     }
 
+    const uploadId = createUploadId(file.name);
+    startUpload(uploadId, file.name);
+    
     await handleAsyncError((async () => {
       let fileAttachment: FileAttachment;
 
@@ -215,58 +220,87 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         // クラウドモード: APIにアップロードしてCloudflareに保存
         console.log('🌐 Uploading file to cloud storage...');
         
-        // CloudStorageAdapterを直接使用
-        const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
-        
-        if (!auth) {
-          throw new Error('クラウドファイルアップロードには認証が必要です');
-        }
-        
-        const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
-        await storageAdapter.initialize();
-        
-        if (typeof storageAdapter.uploadFile === 'function') {
-          const uploadResult = await storageAdapter.uploadFile(data.id, nodeId, file);
+        try {
+          updateProgress(uploadId, 10); // 初期化完了
           
-          fileAttachment = {
-            id: uploadResult.id,
-            name: uploadResult.fileName,
-            type: uploadResult.mimeType,
-            size: uploadResult.fileSize,
-            isImage: uploadResult.attachmentType === 'image',
-            createdAt: uploadResult.uploadedAt,
-            downloadUrl: uploadResult.downloadUrl,
-            storagePath: uploadResult.storagePath,
-            r2FileId: uploadResult.id
-          };
-          console.log('✅ File uploaded to cloud:', fileAttachment);
-          showNotification('success', `${file.name} をクラウドにアップロードしました`);
-        } else {
-          throw new Error('Cloud storage adapter not available or uploadFile method missing');
+          // CloudStorageAdapterを直接使用
+          const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
+          
+          if (!auth) {
+            throw new Error('クラウドファイルアップロードには認証が必要です');
+          }
+          
+          updateProgress(uploadId, 20); // 認証確認完了
+          
+          const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
+          await storageAdapter.initialize();
+          
+          updateProgress(uploadId, 30); // アダプター初期化完了
+          
+          if (typeof storageAdapter.uploadFile === 'function') {
+            updateProgress(uploadId, 50); // アップロード開始
+            
+            const uploadResult = await storageAdapter.uploadFile(data.id, nodeId, file);
+            
+            updateProgress(uploadId, 90); // アップロード完了、データ処理中
+            
+            fileAttachment = {
+              id: uploadResult.id,
+              name: uploadResult.fileName,
+              type: uploadResult.mimeType,
+              size: uploadResult.fileSize,
+              isImage: uploadResult.attachmentType === 'image',
+              createdAt: uploadResult.uploadedAt,
+              downloadUrl: uploadResult.downloadUrl,
+              storagePath: uploadResult.storagePath,
+              r2FileId: uploadResult.id
+            };
+            console.log('✅ File uploaded to cloud:', fileAttachment);
+          } else {
+            throw new Error('Cloud storage adapter not available or uploadFile method missing');
+          }
+        } catch (error) {
+          errorUpload(uploadId, error instanceof Error ? error.message : 'アップロードに失敗しました');
+          throw error;
         }
       } else {
         // ローカルモード: Base64エンコードしてローカル保存
         console.log('💾 Processing file for local storage...');
         
-        const reader = new FileReader();
-        const dataURL = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        try {
+          updateProgress(uploadId, 20); // 処理開始
+          
+          const reader = new FileReader();
+          reader.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = 20 + (e.loaded / e.total) * 60; // 20-80%の範囲
+              updateProgress(uploadId, progress);
+            }
+          };
+          
+          const dataURL = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          
+          updateProgress(uploadId, 90); // データURL生成完了
 
-        fileAttachment = {
-          id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          isImage: file.type.startsWith('image/'),
-          createdAt: new Date().toISOString(),
-          dataURL: dataURL,
-          data: dataURL.split(',')[1] // Base64 part only
-        };
-        console.log('✅ File processed for local storage:', fileAttachment.name);
-        showNotification('success', `${file.name} をローカルに保存しました`);
+          fileAttachment = {
+            id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            isImage: file.type.startsWith('image/'),
+            createdAt: new Date().toISOString(),
+            dataURL: dataURL,
+            data: dataURL.split(',')[1] // Base64 part only
+          };
+          console.log('✅ File processed for local storage:', fileAttachment.name);
+        } catch (error) {
+          errorUpload(uploadId, error instanceof Error ? error.message : 'ローカル保存に失敗しました');
+          throw error;
+        }
       }
       
       // ノードにファイルを添付
@@ -278,10 +312,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         };
         updateNode(nodeId, updatedNode);
         console.log('📎 File attached to node:', nodeId);
+        updateProgress(uploadId, 95); // ノード添付処理中
+        completeUpload(uploadId); // アップロード完了
       } else {
+        errorUpload(uploadId, 'ノードが見つかりません');
         throw new Error(`ノードが見つかりません: ${nodeId}`);
       }
-    })(), 'ファイルアップロード', `${file.name}のアップロード`);
+    })(), 'ファイルアップロード', `${file.name}のアップロード`).catch(() => {
+      // エラーは既にerrorUploadで処理されているため、ここでは何もしない
+    });
   };
 
   // ユーティリティ関数
@@ -449,7 +488,9 @@ const MindMapApp: React.FC<MindMapAppProps> = (props) => {
   return (
     <NotificationProvider>
       <ErrorHandlerProvider>
-        <MindMapAppContent {...props} />
+        <FileUploadProvider>
+          <MindMapAppContent {...props} />
+        </FileUploadProvider>
       </ErrorHandlerProvider>
     </NotificationProvider>
   );
