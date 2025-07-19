@@ -32,6 +32,16 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   storageMode = 'local', 
   onModeChange
 }) => {
+  // ストレージモード変更時のリセットキー
+  const [resetKey, setResetKey] = React.useState(0);
+  
+  // ストレージモード変更時の処理
+  React.useEffect(() => {
+    console.log('🔄 MindMapApp: Storage mode changed to:', storageMode);
+    setResetKey(prev => prev + 1);
+  }, [storageMode]);
+  
+  console.log('🔑 MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
   const { showNotification } = useNotification();
   const { handleError, handleAsyncError } = useErrorHandler();
   const { retryableUpload } = useRetryableUpload({
@@ -97,17 +107,36 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   
   // Create storage configuration based on selected mode
   const storageConfig: StorageConfig = React.useMemo(() => {
+    console.log('🔧 MindMapApp: Creating storageConfig', {
+      storageMode,
+      hasAuthAdapter: !!authAdapter,
+      authAdapterRef: authAdapter ? authAdapter.constructor.name : 'none'
+    });
+    
+    let config: StorageConfig;
     switch (storageMode) {
       case 'local':
-        return localModeConfig;
+        config = localModeConfig;
+        break;
       case 'cloud':
-        return authAdapter ? createCloudModeConfig(authAdapter) : localModeConfig;
+        config = authAdapter ? createCloudModeConfig(authAdapter) : localModeConfig;
+        break;
       default:
-        return localModeConfig;
+        config = localModeConfig;
+        break;
     }
+    
+    console.log('🔧 MindMapApp: StorageConfig created', {
+      mode: config.mode,
+      hasAuthAdapter: !!config.authAdapter,
+      configHash: JSON.stringify(config).slice(0, 50) + '...'
+    });
+    
+    return config;
   }, [storageMode, authAdapter]);
   
-  const mindMap = useMindMap(isAppReady, storageConfig);
+  // リセットキーでuseMindMapを強制リセット
+  const mindMap = useMindMap(isAppReady, storageConfig, resetKey);
   const { 
     data, 
     selectedNodeId, 

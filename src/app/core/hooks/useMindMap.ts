@@ -4,6 +4,7 @@ import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
 import { useMindMapPersistence } from './useMindMapPersistence';
 import type { StorageConfig } from '../storage/types';
+import { createInitialData } from '../../shared/types/dataTypes';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -13,7 +14,8 @@ import type { StorageConfig } from '../storage/types';
  */
 export const useMindMap = (
   isAppReady: boolean = true, 
-  storageConfig?: StorageConfig
+  storageConfig?: StorageConfig,
+  resetKey: number = 0
 ) => {
   // 専門化されたHookを使用
   const dataHook = useMindMapData();
@@ -32,6 +34,35 @@ export const useMindMap = (
     }
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
   
+  // リセットキー変更時の強制リセット
+  useEffect(() => {
+    if (resetKey > 0) {
+      console.log('🔄 useMindMap: Reset key changed, forcing data reload:', resetKey);
+      
+      // データを一時的な初期状態にリセット
+      dataHook.setData(createInitialData());
+      
+      // 初期化完了後にデータを読み込み
+      if (persistenceHook.isInitialized) {
+        const reloadData = async () => {
+          try {
+            console.log('💾 useMindMap: Loading data after reset...');
+            const initialData = await persistenceHook.loadInitialData();
+            dataHook.setData(initialData);
+            
+            // マップ一覧も再読み込み
+            await persistenceHook.refreshMapList();
+            
+            console.log('✅ useMindMap: Data reloaded after reset:', initialData.title);
+          } catch (error) {
+            console.error('❌ useMindMap: Failed to reload data after reset:', error);
+          }
+        };
+        reloadData();
+      }
+    }
+  }, [resetKey, persistenceHook.isInitialized, persistenceHook.loadInitialData, persistenceHook.refreshMapList, dataHook.setData]);
+  
   // ストレージ設定変更時の強制再読み込み
   const prevStorageConfigRef = useRef<StorageConfig | null>(storageConfig || null);
   useEffect(() => {
@@ -42,8 +73,22 @@ export const useMindMap = (
     const modeChanged = currentConfig?.mode !== prevConfig?.mode;
     const authChanged = currentConfig?.authAdapter !== prevConfig?.authAdapter;
     
+    console.log('🔍 useMindMap: Storage config change check', {
+      prevConfig: prevConfig ? {
+        mode: prevConfig.mode,
+        hasAuthAdapter: !!prevConfig.authAdapter
+      } : 'null',
+      currentConfig: currentConfig ? {
+        mode: currentConfig.mode,
+        hasAuthAdapter: !!currentConfig.authAdapter
+      } : 'null',
+      modeChanged,
+      authChanged,
+      persistenceInitialized: persistenceHook.isInitialized
+    });
+    
     if ((modeChanged || authChanged) && persistenceHook.isInitialized) {
-      console.log('🔄 Storage config changed, reloading data:', {
+      console.log('🔄 useMindMap: Storage config changed, reloading data:', {
         prevMode: prevConfig?.mode,
         newMode: currentConfig?.mode,
         modeChanged,
@@ -53,27 +98,29 @@ export const useMindMap = (
       // 現在のデータをクリアして新しいストレージから読み込み
       const reloadData = async () => {
         try {
+          console.log('📥 useMindMap: Loading initial data from new storage...');
           const initialData = await persistenceHook.loadInitialData();
           dataHook.setData(initialData);
           
           // マップ一覧も再読み込み
           try {
+            console.log('🗂️ useMindMap: Refreshing map list...');
             await persistenceHook.refreshMapList();
-            console.log('✅ All maps refreshed from new storage');
+            console.log('✅ useMindMap: All maps refreshed from new storage');
           } catch (mapError) {
-            console.warn('⚠️ Failed to refresh map list:', mapError);
+            console.warn('⚠️ useMindMap: Failed to refresh map list:', mapError);
           }
           
-          console.log('✅ Data reloaded from new storage:', initialData.title);
+          console.log('✅ useMindMap: Data reloaded from new storage:', initialData.title);
         } catch (error) {
-          console.error('❌ Failed to reload data from new storage:', error);
+          console.error('❌ useMindMap: Failed to reload data from new storage:', error);
         }
       };
       reloadData();
     }
     
     prevStorageConfigRef.current = currentConfig || null;
-  }, [storageConfig, persistenceHook.isInitialized, persistenceHook.loadInitialData, dataHook.setData]);
+  }, [storageConfig]);
 
   // 手動保存関数 - ノード操作後に明示的に呼び出す
   const saveCurrentMap = useCallback(async () => {

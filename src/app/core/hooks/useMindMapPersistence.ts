@@ -30,13 +30,23 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
 
   // ストレージアダプター初期化
   useEffect(() => {
+    console.log('🔄 useMindMapPersistence: useEffect triggered', {
+      mode: config.mode,
+      hasAuthAdapter: !!config.authAdapter,
+      configHash: JSON.stringify(config).slice(0, 50) + '...',
+      currentAdapterMode: storageAdapter ? 'exists' : 'null',
+      isInitialized
+    });
+
     const initStorage = async () => {
       try {
         setError(null);
+        
+        console.log(`🚀 useMindMapPersistence: Creating ${config.mode} storage adapter`);
         const adapter = await createStorageAdapter(config);
         setStorageAdapter(adapter);
         setIsInitialized(true);
-        console.log(`✅ useMindMapPersistence: ${config.mode} storage initialized`);
+        console.log(`✅ useMindMapPersistence: ${config.mode} storage initialized successfully`);
       } catch (initError) {
         const errorMessage = initError instanceof Error ? initError.message : 'Storage initialization failed';
         console.error('❌ useMindMapPersistence: Storage initialization failed:', initError);
@@ -46,6 +56,16 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     };
     initStorage();
   }, [config.mode, config.authAdapter]);
+
+  // ストレージアダプターのクリーンアップを単独のuseEffectで管理
+  useEffect(() => {
+    return () => {
+      if (storageAdapter) {
+        console.log('🧹 useMindMapPersistence: Cleaning up adapter on unmount/change');
+        storageAdapter.cleanup();
+      }
+    };
+  }, [storageAdapter]);
 
   // 初期データ読み込み
   const loadInitialData = useCallback(async (): Promise<MindMapData> => {
@@ -175,14 +195,6 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     }
   }, [isInitialized, storageAdapter, loadAllMaps]);
 
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (storageAdapter) {
-        storageAdapter.cleanup();
-      }
-    };
-  }, [storageAdapter]);
 
   // マップ一覧を強制リフレッシュする関数
   const refreshMapList = useCallback(async () => {

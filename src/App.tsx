@@ -28,8 +28,13 @@ const App: React.FC = () => {
 
   // Save mode changes to localStorage
   const handleModeChange = (mode: StorageMode) => {
+    console.log('🔄 App: Storage mode change requested', {
+      from: storageMode,
+      to: mode
+    });
     setStorageMode(mode);
     localStorage.setItem('mindflow_storage_mode', mode);
+    console.log('✅ App: Storage mode changed and saved to localStorage');
   };
 
   // App content with storage mode configuration
