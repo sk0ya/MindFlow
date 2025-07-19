@@ -8,6 +8,7 @@ type StorageMode = 'local' | 'cloud';
 
 const App: React.FC = () => {
   const [storageMode, setStorageMode] = useState<StorageMode>('local');
+  const [resetKey, setResetKey] = useState(0);
 
   // Check for magic link token to switch to cloud mode
   useEffect(() => {
@@ -32,9 +33,13 @@ const App: React.FC = () => {
       from: storageMode,
       to: mode
     });
-    setStorageMode(mode);
-    localStorage.setItem('mindflow_storage_mode', mode);
-    console.log('✅ App: Storage mode changed and saved to localStorage');
+    
+    if (storageMode !== mode) {
+      setStorageMode(mode);
+      setResetKey(prev => prev + 1);
+      localStorage.setItem('mindflow_storage_mode', mode);
+      console.log('✅ App: Storage mode changed and saved to localStorage, resetKey incremented');
+    }
   };
 
   // App content with storage mode configuration
@@ -47,6 +52,7 @@ const App: React.FC = () => {
       <LocalMindMapApp 
         storageMode={storageMode} 
         onModeChange={handleModeChange}
+        resetKey={resetKey}
       />
     </React.Suspense>
   );

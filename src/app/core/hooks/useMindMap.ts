@@ -4,6 +4,7 @@ import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
 import { useMindMapPersistence } from './useMindMapPersistence';
 import type { StorageConfig } from '../storage/types';
+import { createInitialData } from '../../shared/types/dataTypes';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -34,20 +35,41 @@ export const useMindMap = (
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
   
   // リセットキー変更時の強制リセット
-  const prevResetKeyRef = useRef(resetKey);
+  const prevResetKeyRef = useRef(0);
+  const pendingResetKeyRef = useRef<number | null>(null);
   useEffect(() => {
     const currentResetKey = resetKey;
     const prevResetKey = prevResetKeyRef.current;
     
-    if (currentResetKey > 0 && currentResetKey !== prevResetKey) {
+    console.log('🔍 useMindMap: Reset key effect triggered', {
+      currentResetKey,
+      prevResetKey,
+      shouldReset: currentResetKey !== prevResetKey,
+      persistenceInitialized: persistenceHook.isInitialized
+    });
+    
+    if (currentResetKey !== prevResetKey) {
       console.log('🔄 useMindMap: Reset key changed, forcing data reload:', currentResetKey);
       
-      // 初期化完了後にデータを読み込み
-      if (persistenceHook.isInitialized) {
+      // データ読み込み関数を定義
+      const executeDataReload = async () => {
         const reloadData = async () => {
           try {
+            console.log('🔄 useMindMap: Clearing data before reset reload...');
+            
+            // 現在のデータを明示的にクリア（一時的な空のマップで置き換え）
+            const tempClearData = createInitialData();
+            tempClearData.title = '読み込み中...';
+            dataHook.setData(tempClearData);
+            
             console.log('💾 useMindMap: Loading data after reset...');
             const initialData = await persistenceHook.loadInitialData();
+            console.log('📋 useMindMap: Reset data loaded:', {
+              id: initialData.id,
+              title: initialData.title,
+              resetKey: currentResetKey
+            });
+            
             dataHook.setData(initialData);
             
             // マップ一覧も再読み込み
@@ -59,11 +81,76 @@ export const useMindMap = (
           }
         };
         reloadData();
+      };
+      
+      // 初期化完了後にデータを読み込み（初期化完了を待機）
+      if (persistenceHook.isInitialized) {
+        console.log('✅ useMindMap: Persistence already initialized, executing reload immediately');
+        executeDataReload();
+        pendingResetKeyRef.current = null; // クリア
+      } else {
+        console.log('⏳ useMindMap: Waiting for persistence initialization before reload...');
+        pendingResetKeyRef.current = currentResetKey; // 待機中のリセットキーを記録
       }
     }
     
+    // 初期化完了時に待機中のリセットがあれば実行
+    if (persistenceHook.isInitialized && pendingResetKeyRef.current !== null && currentResetKey === pendingResetKeyRef.current) {
+      console.log('✅ useMindMap: Persistence initialized, executing delayed reload for resetKey:', pendingResetKeyRef.current);
+      
+      // データ読み込み関数を再定義（既存のexecuteDataReloadと同じ内容）
+      const executeDelayedReload = async () => {
+        const reloadData = async () => {
+          try {
+            console.log('🔄 useMindMap: Clearing data before delayed reset reload...');
+            
+            // 現在のデータを明示的にクリア（一時的な空のマップで置き換え）
+            const tempClearData = createInitialData();
+            tempClearData.title = '読み込み中...';
+            dataHook.setData(tempClearData);
+            
+            // persistenceHookの初期化を待機
+            if (!persistenceHook.isInitialized) {
+              console.log('⏳ useMindMap: Waiting for storage initialization...');
+              await new Promise<void>((resolve) => {
+                const checkInit = () => {
+                  if (persistenceHook.isInitialized) {
+                    resolve();
+                  } else {
+                    setTimeout(checkInit, 100);
+                  }
+                };
+                checkInit();
+              });
+            }
+            
+            console.log('📥 useMindMap: Loading initial data from new storage (delayed)...');
+            const initialData = await persistenceHook.loadInitialData();
+            console.log('📋 useMindMap: Delayed reset data loaded:', {
+              id: initialData.id,
+              title: initialData.title,
+              resetKey: pendingResetKeyRef.current
+            });
+            
+            dataHook.setData(initialData);
+            
+            // マップ一覧も再読み込み
+            await persistenceHook.refreshMapList();
+            
+            console.log('✅ useMindMap: Delayed data reloaded after reset:', initialData.title);
+          } catch (error) {
+            console.error('❌ useMindMap: Failed to reload delayed data after reset:', error);
+          }
+        };
+        reloadData();
+      };
+      
+      executeDelayedReload();
+      pendingResetKeyRef.current = null; // クリア
+    }
+    
     prevResetKeyRef.current = currentResetKey;
-  }, [resetKey]);
+  }, [resetKey, persistenceHook.isInitialized]);
   
   // ストレージ設定変更時の強制再読み込み
   const prevStorageConfigRef = useRef<StorageConfig | null>(storageConfig || null);
@@ -89,7 +176,7 @@ export const useMindMap = (
       persistenceInitialized: persistenceHook.isInitialized
     });
     
-    if ((modeChanged || authChanged) && persistenceHook.isInitialized) {
+    if (modeChanged || authChanged) {
       console.log('🔄 useMindMap: Storage config changed, reloading data:', {
         prevMode: prevConfig?.mode,
         newMode: currentConfig?.mode,
@@ -100,8 +187,36 @@ export const useMindMap = (
       // 現在のデータをクリアして新しいストレージから読み込み
       const reloadData = async () => {
         try {
+          console.log('🔄 useMindMap: Clearing current data before loading from new storage...');
+          
+          // 現在のデータを明示的にクリア（一時的な空のマップで置き換え）
+          const tempClearData = createInitialData();
+          tempClearData.title = '読み込み中...';
+          dataHook.setData(tempClearData);
+          
+          // persistenceHookの初期化を待機
+          if (!persistenceHook.isInitialized) {
+            console.log('⏳ useMindMap: Waiting for storage initialization...');
+            await new Promise<void>((resolve) => {
+              const checkInit = () => {
+                if (persistenceHook.isInitialized) {
+                  resolve();
+                } else {
+                  setTimeout(checkInit, 100);
+                }
+              };
+              checkInit();
+            });
+          }
+          
           console.log('📥 useMindMap: Loading initial data from new storage...');
           const initialData = await persistenceHook.loadInitialData();
+          console.log('📋 useMindMap: New storage data loaded:', {
+            id: initialData.id,
+            title: initialData.title,
+            mode: currentConfig?.mode
+          });
+          
           dataHook.setData(initialData);
           
           // マップ一覧も再読み込み
@@ -113,7 +228,7 @@ export const useMindMap = (
             console.warn('⚠️ useMindMap: Failed to refresh map list:', mapError);
           }
           
-          console.log('✅ useMindMap: Data reloaded from new storage:', initialData.title);
+          console.log('✅ useMindMap: Data completely reloaded from new storage:', initialData.title);
         } catch (error) {
           console.error('❌ useMindMap: Failed to reload data from new storage:', error);
         }
@@ -122,7 +237,7 @@ export const useMindMap = (
     }
     
     prevStorageConfigRef.current = currentConfig || null;
-  }, [storageConfig]);
+  }, [storageConfig?.mode, storageConfig?.authAdapter]);
 
   // 手動保存関数 - ノード操作後に明示的に呼び出す
   const saveCurrentMap = useCallback(async () => {

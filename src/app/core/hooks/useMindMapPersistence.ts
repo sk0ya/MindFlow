@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import type { MindMapData } from '@shared/types';
 import { createInitialData } from '../../shared/types/dataTypes';
 import type { StorageAdapter, StorageConfig } from '../storage/types';
@@ -28,33 +28,61 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
   const [storageAdapter, setStorageAdapter] = useState<StorageAdapter | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 前回の設定を記録して無用な再初期化を防ぐ
+  const prevConfigRef = useRef<StorageConfig | null>(null);
+  
   // ストレージアダプター初期化
   useEffect(() => {
+    const prevConfig = prevConfigRef.current;
+    const modeChanged = prevConfig?.mode !== config.mode;
+    const authAdapterChanged = prevConfig?.authAdapter !== config.authAdapter;
+    
     console.log('🔄 useMindMapPersistence: useEffect triggered', {
       mode: config.mode,
       hasAuthAdapter: !!config.authAdapter,
       configHash: JSON.stringify(config).slice(0, 50) + '...',
       currentAdapterMode: storageAdapter ? 'exists' : 'null',
-      isInitialized
+      isInitialized,
+      modeChanged,
+      authAdapterChanged
     });
 
-    const initStorage = async () => {
-      try {
-        setError(null);
-        
-        console.log(`🚀 useMindMapPersistence: Creating ${config.mode} storage adapter`);
-        const adapter = await createStorageAdapter(config);
-        setStorageAdapter(adapter);
-        setIsInitialized(true);
-        console.log(`✅ useMindMapPersistence: ${config.mode} storage initialized successfully`);
-      } catch (initError) {
-        const errorMessage = initError instanceof Error ? initError.message : 'Storage initialization failed';
-        console.error('❌ useMindMapPersistence: Storage initialization failed:', initError);
-        setError(errorMessage);
-        setIsInitialized(true); // エラーでも初期化完了扱いにして処理を続行
-      }
-    };
-    initStorage();
+    // 設定が実際に変更された場合のみ再初期化
+    if (!prevConfig || modeChanged || authAdapterChanged) {
+      console.log(`🚀 useMindMapPersistence: (Re)initializing ${config.mode} storage adapter`, {
+        reason: !prevConfig ? 'first-init' : modeChanged ? 'mode-changed' : 'auth-changed'
+      });
+      
+      // 初期化状態をリセット
+      setIsInitialized(false);
+      setAllMindMaps([]);
+      
+      const initStorage = async () => {
+        try {
+          setError(null);
+          
+          // 前のアダプターをクリーンアップ
+          if (storageAdapter) {
+            console.log('🧹 useMindMapPersistence: Cleaning up previous adapter');
+            storageAdapter.cleanup();
+          }
+          
+          console.log(`🚀 useMindMapPersistence: Creating ${config.mode} storage adapter`);
+          const adapter = await createStorageAdapter(config);
+          setStorageAdapter(adapter);
+          setIsInitialized(true);
+          console.log(`✅ useMindMapPersistence: ${config.mode} storage initialized successfully`);
+        } catch (initError) {
+          const errorMessage = initError instanceof Error ? initError.message : 'Storage initialization failed';
+          console.error('❌ useMindMapPersistence: Storage initialization failed:', initError);
+          setError(errorMessage);
+          setIsInitialized(true); // エラーでも初期化完了扱いにして処理を続行
+        }
+      };
+      initStorage();
+      
+      prevConfigRef.current = config;
+    }
   }, [config.mode, config.authAdapter]);
 
   // ストレージアダプターのクリーンアップを単独のuseEffectで管理

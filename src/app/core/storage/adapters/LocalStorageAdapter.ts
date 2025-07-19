@@ -46,9 +46,20 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
 
     try {
+      // まず利用可能なマップ一覧を取得
+      const allMaps = await getAllMindMapsFromIndexedDB();
+      
+      if (allMaps.length > 0) {
+        // 最初のマップを取得
+        const firstMap = allMaps[0];
+        console.log('📋 LocalStorageAdapter: Loading first available map:', firstMap.title);
+        return firstMap;
+      }
+      
+      // 利用可能なマップがない場合は現在のマップを試す
       const savedData = await getCurrentMapFromIndexedDB();
       if (savedData && this.isValidMindMapData(savedData)) {
-        console.log('📋 LocalStorageAdapter: Loaded saved data:', savedData.title);
+        console.log('📋 LocalStorageAdapter: Loaded current map:', savedData.title);
         return savedData;
       }
     } catch (error) {
