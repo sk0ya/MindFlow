@@ -85,38 +85,6 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     }
   }, [config.mode, config.authAdapter]);
 
-  // 認証状態変更の監視（クラウドモード限定）
-  useEffect(() => {
-    if (config.mode === 'cloud' && config.authAdapter && storageAdapter) {
-      console.log('👁️ useMindMapPersistence: Setting up auth state monitoring');
-      
-      const unsubscribe = config.authAdapter.onAuthChange((user) => {
-        console.log('🔄 useMindMapPersistence: Auth state changed', { 
-          hasUser: !!user, 
-          userEmail: user?.email,
-          isInitialized 
-        });
-        
-        // 認証が完了し、ストレージアダプターも初期化済みの場合
-        // データロードを強制的にトリガー（useMindMapの初期化条件を満たすため）
-        if (user && isInitialized) {
-          console.log('✅ useMindMapPersistence: User authenticated and storage ready - triggering data reload');
-          // データロードのトリガーとして、isInitializedを一度falseにしてからtrueに戻す
-          setTimeout(() => {
-            setIsInitialized(false);
-            setTimeout(() => {
-              setIsInitialized(true);
-            }, 50);
-          }, 100);
-        }
-      });
-      
-      return unsubscribe;
-    }
-    
-    return undefined;
-  }, [config.mode, config.authAdapter, storageAdapter, isInitialized]);
-
   // ストレージアダプターのクリーンアップを単独のuseEffectで管理
   useEffect(() => {
     return () => {
