@@ -184,6 +184,13 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     };
   }, [storageAdapter]);
 
+  // マップ一覧を強制リフレッシュする関数
+  const refreshMapList = useCallback(async () => {
+    if (storageAdapter) {
+      await loadAllMaps();
+    }
+  }, [storageAdapter, loadAllMaps]);
+
   return {
     // 状態
     allMindMaps,
@@ -195,6 +202,7 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     loadInitialData,
     saveData,
     loadAllMaps,
+    refreshMapList,
     saveAllMaps,
     addMapToList,
     removeMapFromList,

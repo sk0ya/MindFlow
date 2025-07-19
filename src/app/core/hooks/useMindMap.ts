@@ -31,6 +31,49 @@ export const useMindMap = (
       loadData();
     }
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
+  
+  // ストレージ設定変更時の強制再読み込み
+  const prevStorageConfigRef = useRef<StorageConfig | null>(storageConfig || null);
+  useEffect(() => {
+    const currentConfig = storageConfig;
+    const prevConfig = prevStorageConfigRef.current;
+    
+    // ストレージモードが変更されたかチェック
+    const modeChanged = currentConfig?.mode !== prevConfig?.mode;
+    const authChanged = currentConfig?.authAdapter !== prevConfig?.authAdapter;
+    
+    if ((modeChanged || authChanged) && persistenceHook.isInitialized) {
+      console.log('🔄 Storage config changed, reloading data:', {
+        prevMode: prevConfig?.mode,
+        newMode: currentConfig?.mode,
+        modeChanged,
+        authChanged
+      });
+      
+      // 現在のデータをクリアして新しいストレージから読み込み
+      const reloadData = async () => {
+        try {
+          const initialData = await persistenceHook.loadInitialData();
+          dataHook.setData(initialData);
+          
+          // マップ一覧も再読み込み
+          try {
+            await persistenceHook.refreshMapList();
+            console.log('✅ All maps refreshed from new storage');
+          } catch (mapError) {
+            console.warn('⚠️ Failed to refresh map list:', mapError);
+          }
+          
+          console.log('✅ Data reloaded from new storage:', initialData.title);
+        } catch (error) {
+          console.error('❌ Failed to reload data from new storage:', error);
+        }
+      };
+      reloadData();
+    }
+    
+    prevStorageConfigRef.current = currentConfig || null;
+  }, [storageConfig, persistenceHook.isInitialized, persistenceHook.loadInitialData, dataHook.setData]);
 
   // 手動保存関数 - ノード操作後に明示的に呼び出す
   const saveCurrentMap = useCallback(async () => {
