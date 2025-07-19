@@ -1,5 +1,6 @@
 // Cloudflare Workers API integration
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
@@ -73,15 +74,15 @@ export class CloudflareAPI {
    * マインドマップを作成
    */
   async createMindMap(data: MindMapData): Promise<MindMapData> {
-    console.log('🆕 API: Creating mindmap:', { id: data.id, title: data.title });
-    console.log('📤 API: Request data:', { 
+    logger.debug('🆕 API: Creating mindmap:', { id: data.id, title: data.title });
+    logger.debug('📤 API: Request data:', { 
       url: `${API_BASE_URL}/api/mindmaps`,
       dataKeys: Object.keys(data),
       dataSize: JSON.stringify(data).length
     });
     
     const headers = this.getAuthHeaders();
-    console.log('🔑 API: Auth headers:', { 
+    logger.debug('🔑 API: Auth headers:', { 
       hasAuth: !!headers.Authorization, 
       authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
       contentType: headers['Content-Type']
@@ -95,7 +96,7 @@ export class CloudflareAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ API: Create mindmap failed:', { 
+      logger.error('❌ API: Create mindmap failed:', { 
         status: response.status, 
         statusText: response.statusText,
         body: errorText 
@@ -104,10 +105,10 @@ export class CloudflareAPI {
     }
 
     const result: MindMapApiResponse = await response.json();
-    console.log('📥 API: Create response:', result);
+    logger.debug('📥 API: Create response:', result);
     
     if (!result.success) {
-      console.error('❌ API: Create mindmap API error:', result.error);
+      logger.error('❌ API: Create mindmap API error:', result.error);
       throw new Error(result.error || 'Failed to create mindmap');
     }
 
@@ -122,15 +123,15 @@ export class CloudflareAPI {
    * マインドマップを更新
    */
   async updateMindMap(data: MindMapData): Promise<MindMapData> {
-    console.log('🔄 API: Updating mindmap:', { id: data.id, title: data.title });
-    console.log('📤 API: Update request data:', { 
+    logger.debug('🔄 API: Updating mindmap:', { id: data.id, title: data.title });
+    logger.debug('📤 API: Update request data:', { 
       url: `${API_BASE_URL}/api/mindmaps/${data.id}`,
       dataKeys: Object.keys(data),
       dataSize: JSON.stringify(data).length
     });
     
     const headers = this.getAuthHeaders();
-    console.log('🔑 API: Auth headers:', { 
+    logger.debug('🔑 API: Auth headers:', { 
       hasAuth: !!headers.Authorization, 
       authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
       contentType: headers['Content-Type']
@@ -144,7 +145,7 @@ export class CloudflareAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ API: Update mindmap failed:', { 
+      logger.error('❌ API: Update mindmap failed:', { 
         status: response.status, 
         statusText: response.statusText,
         body: errorText 
@@ -153,10 +154,10 @@ export class CloudflareAPI {
     }
 
     const result: MindMapApiResponse = await response.json();
-    console.log('📥 API: Update response:', result);
+    logger.debug('📥 API: Update response:', result);
     
     if (!result.success) {
-      console.error('❌ API: Update mindmap API error:', result.error);
+      logger.error('❌ API: Update mindmap API error:', result.error);
       throw new Error(result.error || 'Failed to update mindmap');
     }
 
@@ -233,6 +234,91 @@ export class CloudflareAPI {
   }
 
   /**
+   * ファイルをアップロード
+   */
+  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<any> {
+    logger.info('📤 API: Uploading file:', { mindmapId, nodeId, fileName: file.name, fileSize: file.size });
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const headers = this.getAuthHeaders();
+    // FormDataを使用する場合はContent-Typeを削除（ブラウザが自動設定）
+    delete headers['Content-Type'];
+    
+    logger.debug('🔑 API: Upload headers:', { 
+      hasAuth: !!headers.Authorization, 
+      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none'
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/api/files/${mindmapId}/${nodeId}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('❌ API: File upload failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        body: errorText 
+      });
+      throw new Error(`Failed to upload file: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    logger.debug('📥 API: Upload response:', result);
+    
+    return result;
+  }
+
+  /**
+   * ファイルを削除
+   */
+  async deleteFile(mindmapId: string, nodeId: string, fileId: string): Promise<void> {
+    logger.info('🗑️ API: Deleting file:', { mindmapId, nodeId, fileId });
+    
+    const response = await fetch(`${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('❌ API: File delete failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        body: errorText 
+      });
+      throw new Error(`Failed to delete file: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    logger.debug('📥 API: Delete response:', result);
+  }
+
+  /**
+   * ファイル情報を取得
+   */
+  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}?type=info`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to get file info: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  }
+
+  /**
    * ヘルスチェック
    */
   async healthCheck(): Promise<boolean> {
@@ -244,7 +330,7 @@ export class CloudflareAPI {
 
       return response.ok;
     } catch (error) {
-      console.error('Health check failed:', error);
+      logger.error('Health check failed:', error);
       return false;
     }
   }

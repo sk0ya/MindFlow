@@ -8,6 +8,7 @@ import { requireAuth } from '../utils/auth.js';
 export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const method = request.method;
+  const requestOrigin = request.headers.get('Origin');
   
   // 認証チェック（JWT認証またはX-User-IDを受け入れ）
   let userId = 'default-user';
@@ -31,7 +32,7 @@ export async function handleRequest(request, env) {
         status: authResult.status,
         headers: {
           'Content-Type': 'application/json',
-          ...corsHeaders(env.CORS_ORIGIN)
+          ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
         }
       });
     }
@@ -103,14 +104,14 @@ export async function handleRequest(request, env) {
     }
 
     return new Response(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders(env.CORS_ORIGIN) }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(env.CORS_ORIGIN, requestOrigin) }
     });
 
   } catch (error) {
     console.error('Files API error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: error.status || 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders(env.CORS_ORIGIN) }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(env.CORS_ORIGIN, requestOrigin) }
     });
   }
 }
@@ -171,11 +172,11 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
     const now = new Date().toISOString();
     await env.DB.prepare(`
       INSERT INTO attachments 
-      (id, node_id, file_name, original_name, file_size, mime_type, 
+      (id, mindmap_id, node_id, file_name, original_name, file_size, mime_type, 
        storage_path, thumbnail_path, attachment_type, uploaded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      fileId, nodeId, file.name, file.name, file.size, file.type,
+      fileId, mindmapId, nodeId, file.name, file.name, file.size, file.type,
       storagePath, thumbnailPath, attachmentType, now
     ).run();
 
@@ -226,8 +227,8 @@ async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
   try {
     console.log('Querying attachment:', { fileId, nodeId });
     attachment = await env.DB.prepare(
-      'SELECT * FROM attachments WHERE id = ? AND node_id = ?'
-    ).bind(fileId, nodeId).first();
+      'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
+    ).bind(fileId, mindmapId, nodeId).first();
     console.log('Attachment query result:', attachment);
   } catch (dbError) {
     console.error('Database query failed:', dbError);
@@ -247,7 +248,7 @@ async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
             headers: {
               'Content-Type': 'application/octet-stream',
               'Content-Disposition': `attachment; filename="${fileId}"`,
-              ...corsHeaders(env.CORS_ORIGIN)
+              ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
             }
           });
         }
@@ -279,7 +280,7 @@ async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
           'Content-Type': attachment.mime_type,
           'Content-Disposition': `attachment; filename="${attachment.original_name}"`,
           'Content-Length': attachment.file_size.toString(),
-          ...corsHeaders(env.CORS_ORIGIN)
+          ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
         }
       });
     
@@ -296,7 +297,7 @@ async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
           headers: {
             'Content-Type': attachment.mime_type,
             'Cache-Control': 'public, max-age=3600',
-            ...corsHeaders(env.CORS_ORIGIN)
+            ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
           }
         });
       } else {
@@ -329,8 +330,8 @@ async function getNodeFiles(db, userId, mindmapId, nodeId) {
   await verifyOwnership(db, userId, mindmapId, nodeId);
 
   const { results: attachments } = await db.prepare(
-    'SELECT * FROM attachments WHERE node_id = ? ORDER BY uploaded_at DESC'
-  ).bind(nodeId).all();
+    'SELECT * FROM attachments WHERE mindmap_id = ? AND node_id = ? ORDER BY uploaded_at DESC'
+  ).bind(mindmapId, nodeId).all();
 
   return attachments.map(att => ({
     id: att.id,
@@ -360,17 +361,15 @@ async function getMindmapFiles(db, userId, mindmapId) {
   }
 
   const { results: attachments } = await db.prepare(`
-    SELECT a.*, n.text as node_text 
-    FROM attachments a 
-    JOIN nodes n ON a.node_id = n.id 
-    WHERE n.mindmap_id = ? 
-    ORDER BY a.uploaded_at DESC
+    SELECT * 
+    FROM attachments 
+    WHERE mindmap_id = ? 
+    ORDER BY uploaded_at DESC
   `).bind(mindmapId).all();
 
   return attachments.map(att => ({
     id: att.id,
     nodeId: att.node_id,
-    nodeText: att.node_text,
     fileName: att.file_name,
     originalName: att.original_name,
     fileSize: att.file_size,
@@ -398,12 +397,12 @@ async function updateFileInfo(db, userId, mindmapId, nodeId, fileId, updateData)
 
   updateFields.push('updated_at = ?');
   values.push(now);
-  values.push(fileId, nodeId);
+  values.push(fileId, mindmapId, nodeId);
 
   if (updateFields.length > 1) {
     await db.prepare(`
       UPDATE attachments SET ${updateFields.join(', ')} 
-      WHERE id = ? AND node_id = ?
+      WHERE id = ? AND mindmap_id = ? AND node_id = ?
     `).bind(...values).run();
   }
 
@@ -418,8 +417,8 @@ async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
 
   // ファイル情報取得
   const attachment = await env.DB.prepare(
-    'SELECT * FROM attachments WHERE id = ? AND node_id = ?'
-  ).bind(fileId, nodeId).first();
+    'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
+  ).bind(fileId, mindmapId, nodeId).first();
 
   if (!attachment) {
     const error = new Error('File not found');
@@ -438,8 +437,8 @@ async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
 
     // データベースから削除
     await env.DB.prepare(
-      'DELETE FROM attachments WHERE id = ? AND node_id = ?'
-    ).bind(fileId, nodeId).run();
+      'DELETE FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
+    ).bind(fileId, mindmapId, nodeId).run();
 
     const now = new Date().toISOString();
     await env.DB.prepare(
@@ -462,12 +461,12 @@ async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
 async function verifyOwnership(db, userId, mindmapId, nodeId) {
   console.log('verifyOwnership check:', { userId, mindmapId, nodeId });
   
+  // マインドマップの所有権のみをチェック（ノードはマインドマップデータ内で管理）
   const result = await db.prepare(`
-    SELECT m.id 
-    FROM mindmaps m 
-    JOIN nodes n ON m.id = n.mindmap_id 
-    WHERE m.id = ? AND m.user_id = ? AND n.id = ?
-  `).bind(mindmapId, userId, nodeId).first();
+    SELECT id 
+    FROM mindmaps 
+    WHERE id = ? AND user_id = ?
+  `).bind(mindmapId, userId).first();
   
   console.log('verifyOwnership result:', result);
   

@@ -21,6 +21,11 @@ export interface StorageAdapter {
   removeMapFromList(mapId: string): Promise<void>;
   updateMapInList(map: MindMapData): Promise<void>;
   
+  // ファイル操作（オプショナル - クラウドモードのみ）
+  uploadFile?(mindmapId: string, nodeId: string, file: File): Promise<any>;
+  deleteFile?(mindmapId: string, nodeId: string, fileId: string): Promise<void>;
+  getFileInfo?(mindmapId: string, nodeId: string, fileId: string): Promise<any>;
+  
   // ライフサイクル
   initialize(): Promise<void>;
   cleanup(): void;

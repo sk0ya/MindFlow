@@ -184,25 +184,87 @@ const MindMapApp: React.FC<MindMapAppProps> = ({
     setShowKeyboardHelper: (show: boolean) => store.setShowShortcutHelper(show)
   };
 
-  // ファイルハンドラー（簡素化）
+  // ファイルハンドラー（クラウド対応）
   const handleFileUpload = async (nodeId: string, file: File): Promise<void> => {
-    const fileAttachment: FileAttachment = {
-      id: `file_${Date.now()}`,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      isImage: file.type.startsWith('image/'),
-      createdAt: new Date().toISOString()
-    };
-    
-    // ノードにファイルを添付
-    const node = data?.rootNode && findNodeById(data.rootNode, nodeId);
-    if (node) {
-      const updatedNode = {
-        ...node,
-        attachments: [...(node.attachments || []), fileAttachment]
-      };
-      updateNode(nodeId, updatedNode);
+    if (!data) {
+      console.error('No mindmap data available for file upload');
+      return;
+    }
+
+    try {
+      let fileAttachment: FileAttachment;
+
+      if (storageMode === 'cloud' || storageMode === 'hybrid') {
+        // クラウドモード: APIにアップロードしてCloudflareに保存
+        console.log('🌐 Uploading file to cloud storage...');
+        
+        // CloudStorageAdapterを直接使用
+        const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
+        
+        if (!auth) {
+          throw new Error('Authentication required for cloud file upload');
+        }
+        
+        const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
+        await storageAdapter.initialize();
+        
+        if (typeof storageAdapter.uploadFile === 'function') {
+          const uploadResult = await storageAdapter.uploadFile(data.id, nodeId, file);
+          
+          fileAttachment = {
+            id: uploadResult.id,
+            name: uploadResult.fileName,
+            type: uploadResult.mimeType,
+            size: uploadResult.fileSize,
+            isImage: uploadResult.attachmentType === 'image',
+            createdAt: uploadResult.uploadedAt,
+            downloadUrl: uploadResult.downloadUrl,
+            storagePath: uploadResult.storagePath,
+            r2FileId: uploadResult.id
+          };
+          console.log('✅ File uploaded to cloud:', fileAttachment);
+        } else {
+          throw new Error('Cloud storage adapter not available or uploadFile method missing');
+        }
+      } else {
+        // ローカルモード: Base64エンコードしてローカル保存
+        console.log('💾 Processing file for local storage...');
+        
+        const reader = new FileReader();
+        const dataURL = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        fileAttachment = {
+          id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          isImage: file.type.startsWith('image/'),
+          createdAt: new Date().toISOString(),
+          dataURL: dataURL,
+          data: dataURL.split(',')[1] // Base64 part only
+        };
+        console.log('✅ File processed for local storage:', fileAttachment.name);
+      }
+      
+      // ノードにファイルを添付
+      const node = data?.rootNode && findNodeById(data.rootNode, nodeId);
+      if (node) {
+        const updatedNode = {
+          ...node,
+          attachments: [...(node.attachments || []), fileAttachment]
+        };
+        updateNode(nodeId, updatedNode);
+        console.log('📎 File attached to node:', nodeId);
+      } else {
+        console.error('Node not found for file attachment:', nodeId);
+      }
+    } catch (error) {
+      console.error('❌ File upload failed:', error);
+      // TODO: ユーザーにエラーを表示
     }
   };
 

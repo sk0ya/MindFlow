@@ -9,6 +9,7 @@ import {
   getAllMindMapsFromIndexedDB,
   removeMindMapFromIndexedDB
 } from '../../utils/indexedDB';
+import { logger } from '../../../shared/utils/logger';
 
 // Bridge functions to map cloud-specific calls to working local IndexedDB
 const initCloudIndexedDB = initLocalIndexedDB;
@@ -32,7 +33,7 @@ const getAllFromCloudIndexedDB = async (userId: string): Promise<any[]> => {
 
 const markAsCloudSynced = async (id: string): Promise<void> => {
   // No-op for now, could be implemented with metadata updates
-  console.log('📋 Marked as synced:', id);
+  logger.debug('📋 Marked as synced:', id);
 };
 
 const getCloudDirtyData = async (_userId: string): Promise<any[]> => {
@@ -88,9 +89,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       // バックグラウンド同期を開始
       this.startBackgroundSync();
       
-      console.log('✅ CloudStorageAdapter: Initialized with auth and API');
+      logger.info('✅ CloudStorageAdapter: Initialized with auth and API');
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Initialization failed:', error);
+      logger.error('❌ CloudStorageAdapter: Initialization failed:', error);
       throw error;
     }
   }
@@ -104,7 +105,7 @@ export class CloudStorageAdapter implements StorageAdapter {
     }
 
     if (!this.authAdapter.isAuthenticated) {
-      console.log('🔑 CloudStorageAdapter: User not authenticated, returning initial data');
+      logger.debug('🔑 CloudStorageAdapter: User not authenticated, returning initial data');
       return createInitialData();
     }
 
@@ -120,21 +121,21 @@ export class CloudStorageAdapter implements StorageAdapter {
           serverData = cleanEmptyNodesFromData(serverMaps[0]);
         }
       } catch (apiError) {
-        console.warn('⚠️ CloudStorageAdapter: API fetch failed, using local data:', apiError);
+        logger.warn('⚠️ CloudStorageAdapter: API fetch failed, using local data:', apiError);
       }
       
       // 3. サーバーデータがある場合はそれを使用、なければローカルデータ
       if (serverData) {
-        console.log('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
+        logger.info('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
         return serverData;
       } else if (localData) {
-        console.log('📋 CloudStorageAdapter: Using local cached data:', localData.title);
+        logger.info('📋 CloudStorageAdapter: Using local cached data:', localData.title);
         return localData;
       }
 
       // データがない場合はデフォルトデータを作成
       const initialData = createInitialData();
-      console.log('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
+      logger.info('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
       
       // すぐにサーバーに保存（非同期）
       this.saveToAPIAsync(initialData);
@@ -142,7 +143,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       
       return initialData;
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Failed to load initial data:', error);
+      logger.error('❌ CloudStorageAdapter: Failed to load initial data:', error);
       
       // エラー時はローカルデータまたはデフォルトデータを返す
       const localData = await this.getLocalData();
@@ -159,27 +160,27 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   async saveData(data: MindMapData): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('CloudStorageAdapter: Not initialized, skipping save');
+      logger.warn('CloudStorageAdapter: Not initialized, skipping save');
       return;
     }
 
     try {
       // 認証されている場合のみ保存
       if (!this.authAdapter.isAuthenticated) {
-        console.warn('CloudStorageAdapter: User not authenticated, skipping save');
+        logger.warn('CloudStorageAdapter: User not authenticated, skipping save');
         return;
       }
 
       // 1. まずローカルに保存（即座の応答性）
       await this.saveToLocal(data);
-      console.log('💾 CloudStorageAdapter: Data saved locally:', data.title);
+      logger.debug('💾 CloudStorageAdapter: Data saved locally:', data.title);
 
       // 2. APIにも保存（非同期）
       this.saveToAPIAsync(data).catch(error => {
-        console.warn('⚠️ CloudStorageAdapter: Background API save failed:', error);
+        logger.warn('⚠️ CloudStorageAdapter: Background API save failed:', error);
       });
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Failed to save data:', error);
+      logger.error('❌ CloudStorageAdapter: Failed to save data:', error);
       throw error;
     }
   }
@@ -201,7 +202,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       const serverMaps = await this.apiClient.getMindMaps();
       if (serverMaps.length > 0) {
         const cleanedMaps = serverMaps.map(map => cleanEmptyNodesFromData(map));
-        console.log(`📋 CloudStorageAdapter: Loaded ${cleanedMaps.length} maps from API`);
+        logger.info(`📋 CloudStorageAdapter: Loaded ${cleanedMaps.length} maps from API`);
         
         // Note: ローカルキャッシュの更新は明示的な保存時のみ行う（読み込み時は不要）
         
@@ -210,10 +211,10 @@ export class CloudStorageAdapter implements StorageAdapter {
 
       // サーバーにデータがない場合はローカルキャッシュを確認
       const localMaps = await this.getAllLocalMaps();
-      console.log(`📋 CloudStorageAdapter: Loaded ${localMaps.length} maps from local cache`);
+      logger.info(`📋 CloudStorageAdapter: Loaded ${localMaps.length} maps from local cache`);
       return localMaps;
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Failed to load maps:', error);
+      logger.error('❌ CloudStorageAdapter: Failed to load maps:', error);
       
       // エラー時はローカルキャッシュを返す
       return this.getAllLocalMaps();
@@ -225,16 +226,16 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   async saveAllMaps(maps: MindMapData[]): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('CloudStorageAdapter: Not initialized, skipping save all maps');
+      logger.warn('CloudStorageAdapter: Not initialized, skipping save all maps');
       return;
     }
 
     try {
       // 各マップを個別に保存
       await Promise.all(maps.map(map => this.saveData(map)));
-      console.log(`💾 CloudStorageAdapter: Saved ${maps.length} maps`);
+      logger.info(`💾 CloudStorageAdapter: Saved ${maps.length} maps`);
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Failed to save maps:', error);
+      logger.error('❌ CloudStorageAdapter: Failed to save maps:', error);
       throw error;
     }
   }
@@ -251,7 +252,7 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   async removeMapFromList(mapId: string): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('CloudStorageAdapter: Not initialized, skipping remove map');
+      logger.warn('CloudStorageAdapter: Not initialized, skipping remove map');
       return;
     }
 
@@ -264,9 +265,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       // ローカルからも削除
       await deleteFromCloudIndexedDB(mapId);
       
-      console.log('🗑️ CloudStorageAdapter: Removed map:', mapId);
+      logger.info('🗑️ CloudStorageAdapter: Removed map:', mapId);
     } catch (error) {
-      console.error('❌ CloudStorageAdapter: Failed to remove map:', error);
+      logger.error('❌ CloudStorageAdapter: Failed to remove map:', error);
       throw error;
     }
   }
@@ -279,6 +280,75 @@ export class CloudStorageAdapter implements StorageAdapter {
   }
 
   /**
+   * ファイルをアップロード
+   */
+  async uploadFile(mindmapId: string, nodeId: string, file: File): Promise<any> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (!this.authAdapter.isAuthenticated) {
+      throw new Error('User not authenticated for file upload');
+    }
+
+    try {
+      logger.info('☁️ CloudStorageAdapter: Uploading file to cloud:', { mindmapId, nodeId, fileName: file.name });
+      
+      const uploadResult = await this.apiClient.uploadFile(mindmapId, nodeId, file);
+      
+      logger.info('✅ CloudStorageAdapter: File uploaded successfully:', uploadResult);
+      return uploadResult;
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: File upload failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ファイルを削除
+   */
+  async deleteFile(mindmapId: string, nodeId: string, fileId: string): Promise<void> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (!this.authAdapter.isAuthenticated) {
+      throw new Error('User not authenticated for file deletion');
+    }
+
+    try {
+      logger.info('🗑️ CloudStorageAdapter: Deleting file from cloud:', { mindmapId, nodeId, fileId });
+      
+      await this.apiClient.deleteFile(mindmapId, nodeId, fileId);
+      
+      logger.info('✅ CloudStorageAdapter: File deleted successfully');
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: File deletion failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ファイル情報を取得
+   */
+  async getFileInfo(mindmapId: string, nodeId: string, fileId: string): Promise<any> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (!this.authAdapter.isAuthenticated) {
+      throw new Error('User not authenticated for file access');
+    }
+
+    try {
+      return await this.apiClient.getFileInfo(mindmapId, nodeId, fileId);
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: Failed to get file info:', error);
+      throw error;
+    }
+  }
+
+  /**
    * クリーンアップ
    */
   cleanup(): void {
@@ -286,7 +356,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
-    console.log('🧹 CloudStorageAdapter: Cleanup completed');
+    logger.info('🧹 CloudStorageAdapter: Cleanup completed');
   }
 
   /**
@@ -304,7 +374,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       }
       return null;
     } catch (error) {
-      console.warn('⚠️ CloudStorageAdapter: Failed to get local data:', error);
+      logger.warn('⚠️ CloudStorageAdapter: Failed to get local data:', error);
       return null;
     }
   }
@@ -320,7 +390,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       const allLocalData = await getAllFromCloudIndexedDB(userId);
       return allLocalData.map(({ _metadata, ...cleanData }) => cleanData as MindMapData);
     } catch (error) {
-      console.warn('⚠️ CloudStorageAdapter: Failed to get all local maps:', error);
+      logger.warn('⚠️ CloudStorageAdapter: Failed to get all local maps:', error);
       return [];
     }
   }
@@ -349,17 +419,17 @@ export class CloudStorageAdapter implements StorageAdapter {
       try {
         // 既存のマップを更新を試行
         updatedData = await this.apiClient.updateMindMap(data);
-        console.log('☁️ CloudStorageAdapter: Data updated in cloud:', updatedData.title);
+        logger.debug('☁️ CloudStorageAdapter: Data updated in cloud:', updatedData.title);
       } catch (updateError) {
         // 更新が失敗した場合は新規作成を試行
-        console.log('🆕 CloudStorageAdapter: Creating new mindmap in cloud');
+        logger.debug('🆕 CloudStorageAdapter: Creating new mindmap in cloud');
         updatedData = await this.apiClient.createMindMap(data);
-        console.log('☁️ CloudStorageAdapter: Data created in cloud:', updatedData.title);
+        logger.debug('☁️ CloudStorageAdapter: Data created in cloud:', updatedData.title);
       }
       
       await markAsCloudSynced(updatedData.id);
     } catch (error) {
-      console.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
+      logger.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
     }
   }
 
@@ -379,13 +449,13 @@ export class CloudStorageAdapter implements StorageAdapter {
             const { _metadata, ...cleanData } = dirtyMap;
             await this.apiClient.updateMindMap(cleanData as MindMapData);
             await markAsCloudSynced(dirtyMap.id);
-            console.log('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
+            logger.debug('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
           } catch (syncError) {
-            console.warn('⚠️ CloudStorageAdapter: Background sync failed:', syncError);
+            logger.warn('⚠️ CloudStorageAdapter: Background sync failed:', syncError);
           }
         }
       } catch (error) {
-        console.warn('⚠️ CloudStorageAdapter: Background sync error:', error);
+        logger.warn('⚠️ CloudStorageAdapter: Background sync error:', error);
       }
     }, 30000);
   }

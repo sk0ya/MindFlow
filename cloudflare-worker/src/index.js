@@ -30,6 +30,11 @@ export default {
         return await handleRequest(request, env);
       }
 
+      if (path.startsWith('/api/files')) {
+        const { handleRequest } = await import('./handlers/files.js');
+        return await handleRequest(request, env);
+      }
+
       // Health check
       if (path === '/api/health') {
         return new Response(JSON.stringify({
@@ -110,8 +115,26 @@ async function initializeDatabase(env) {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
 
+      CREATE TABLE IF NOT EXISTS attachments (
+        id TEXT PRIMARY KEY,
+        mindmap_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type TEXT NOT NULL,
+        storage_path TEXT NOT NULL,
+        thumbnail_path TEXT,
+        attachment_type TEXT NOT NULL,
+        uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (mindmap_id) REFERENCES mindmaps (id) ON DELETE CASCADE
+      );
+
       CREATE INDEX IF NOT EXISTS idx_mindmaps_user_id ON mindmaps(user_id);
       CREATE INDEX IF NOT EXISTS idx_mindmaps_updated_at ON mindmaps(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_attachments_mindmap_id ON attachments(mindmap_id);
+      CREATE INDEX IF NOT EXISTS idx_attachments_node_id ON attachments(node_id);
       CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
       CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires ON auth_tokens(expires_at);
     `;
