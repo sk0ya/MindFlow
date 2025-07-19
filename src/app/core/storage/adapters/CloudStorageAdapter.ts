@@ -117,7 +117,19 @@ export class CloudStorageAdapter implements StorageAdapter {
       // 1. まずIndexedDBからローカルキャッシュを確認
       const localData = await this.getLocalData();
       
-      // 2. APIからサーバーデータを取得
+      // 2. APIサーバーのヘルスチェック
+      const isHealthy = await this.apiClient.healthCheck();
+      if (!isHealthy) {
+        logger.warn('⚠️ CloudStorageAdapter: API server unhealthy, using local data');
+        if (localData) {
+          return localData;
+        }
+        const initialData = createInitialData();
+        await this.saveToLocal(initialData);
+        return initialData;
+      }
+      
+      // 3. APIからサーバーデータを取得
       let serverData: MindMapData | null = null;
       try {
         const serverMaps = await this.apiClient.getMindMaps();
@@ -128,7 +140,7 @@ export class CloudStorageAdapter implements StorageAdapter {
         logger.warn('⚠️ CloudStorageAdapter: API fetch failed, using local data:', apiError);
       }
       
-      // 3. サーバーデータがある場合はそれを使用、なければローカルデータ
+      // 4. サーバーデータがある場合はそれを使用、なければローカルデータ
       if (serverData) {
         logger.info('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
         return serverData;
@@ -141,8 +153,10 @@ export class CloudStorageAdapter implements StorageAdapter {
       const initialData = createInitialData();
       logger.info('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
       
-      // すぐにサーバーに保存（非同期）
-      this.saveToAPIAsync(initialData);
+      // サーバーが健康な場合のみサーバーに保存を試行
+      if (isHealthy) {
+        this.saveToAPIAsync(initialData);
+      }
       await this.saveToLocal(initialData);
       
       return initialData;
@@ -179,8 +193,8 @@ export class CloudStorageAdapter implements StorageAdapter {
       await this.saveToLocal(data);
       logger.debug('💾 CloudStorageAdapter: Data saved locally:', data.title);
 
-      // 2. APIにも保存（非同期）
-      this.saveToAPIAsync(data).catch(error => {
+      // 2. サーバーヘルスチェック後にAPIに保存（非同期）
+      this.saveToAPIWithHealthCheck(data).catch(error => {
         logger.warn('⚠️ CloudStorageAdapter: Background API save failed:', error);
       });
     } catch (error) {
@@ -436,6 +450,26 @@ export class CloudStorageAdapter implements StorageAdapter {
       await markAsCloudSynced(updatedData.id);
     } catch (error) {
       logger.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
+    }
+  }
+
+  /**
+   * ヘルスチェック付きでAPIに保存
+   */
+  private async saveToAPIWithHealthCheck(data: MindMapData): Promise<void> {
+    if (!this.authAdapter.isAuthenticated) return;
+
+    try {
+      // サーバーヘルスチェック
+      const isHealthy = await this.apiClient.healthCheck();
+      if (!isHealthy) {
+        logger.warn('⚠️ CloudStorageAdapter: API server unhealthy, skipping API save');
+        return;
+      }
+
+      await this.saveToAPIAsync(data);
+    } catch (error) {
+      logger.warn('⚠️ CloudStorageAdapter: Health check or API save failed:', error);
     }
   }
 
