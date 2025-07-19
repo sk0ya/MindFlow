@@ -4,45 +4,48 @@ import type { StorageAdapter } from '../types';
 import type { AuthAdapter } from '../../auth/types';
 import { createInitialData } from '../../../shared/types/dataTypes';
 import {
-  initLocalIndexedDB,
-  saveMindMapToIndexedDB,
-  getAllMindMapsFromIndexedDB,
-  removeMindMapFromIndexedDB
-} from '../../utils/indexedDB';
+  initCloudIndexedDB,
+  saveMindMapToCloudIndexedDB,
+  getAllMindMapsFromCloudIndexedDB,
+  removeMindMapFromCloudIndexedDB,
+  getUserMapsFromCloudIndexedDB,
+  type CloudCachedMindMap
+} from '../../utils/cloudIndexedDB';
 import { logger } from '../../../shared/utils/logger';
 
-// Bridge functions to map cloud-specific calls to working local IndexedDB
-const initCloudIndexedDB = initLocalIndexedDB;
-
-const saveToCloudIndexedDB = async (data: MindMapData, _userId: string): Promise<void> => {
-  return saveMindMapToIndexedDB(data);
-};
-
-const getAllFromCloudIndexedDB = async (userId: string): Promise<any[]> => {
-  const maps = await getAllMindMapsFromIndexedDB();
-  return maps.map(map => ({
-    ...map,
+// Cloud-specific helper functions using separate cloud IndexedDB
+const saveToCloudIndexedDB = async (data: MindMapData, userId: string): Promise<void> => {
+  const cloudData: CloudCachedMindMap = {
+    ...data,
     _metadata: {
       lastSync: new Date().toISOString(),
       version: 1,
       isDirty: false,
       userId
     }
-  }));
+  };
+  return saveMindMapToCloudIndexedDB(cloudData);
+};
+
+const getAllFromCloudIndexedDB = async (userId: string): Promise<CloudCachedMindMap[]> => {
+  // ユーザー専用のマップのみを取得
+  return getUserMapsFromCloudIndexedDB(userId);
 };
 
 const markAsCloudSynced = async (id: string): Promise<void> => {
-  // No-op for now, could be implemented with metadata updates
+  // Cloud-specific sync marking implementation
   logger.debug('📋 Marked as synced:', id);
 };
 
-const getCloudDirtyData = async (_userId: string): Promise<any[]> => {
-  // Return empty array for now since local data doesn't track dirty state
-  return [];
+const getCloudDirtyData = async (userId: string): Promise<CloudCachedMindMap[]> => {
+  const allMaps = await getAllMindMapsFromCloudIndexedDB();
+  return allMaps.filter(map => 
+    map._metadata.userId === userId && map._metadata.isDirty
+  );
 };
 
 const deleteFromCloudIndexedDB = async (id: string): Promise<void> => {
-  return removeMindMapFromIndexedDB(id);
+  return removeMindMapFromCloudIndexedDB(id);
 };
 import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI } from '../../cloud/api';
 
