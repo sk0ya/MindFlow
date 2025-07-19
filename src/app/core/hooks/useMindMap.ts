@@ -25,10 +25,23 @@ export const useMindMap = (
 
   // 初期データ読み込み（非同期対応）
   useEffect(() => {
+    console.log('🔍 useMindMap: Initial data load effect triggered', {
+      isAppReady,
+      hasData: !!dataHook.data,
+      persistenceInitialized: persistenceHook.isInitialized,
+      shouldLoad: isAppReady && !dataHook.data && persistenceHook.isInitialized
+    });
+    
     if (isAppReady && !dataHook.data && persistenceHook.isInitialized) {
+      console.log('📥 useMindMap: Loading initial data...');
       const loadData = async () => {
-        const initialData = await persistenceHook.loadInitialData();
-        dataHook.setData(initialData);
+        try {
+          const initialData = await persistenceHook.loadInitialData();
+          console.log('✅ useMindMap: Initial data loaded successfully:', { title: initialData.title });
+          dataHook.setData(initialData);
+        } catch (error) {
+          console.error('❌ useMindMap: Failed to load initial data:', error);
+        }
       };
       loadData();
     }

@@ -72,11 +72,20 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   async initialize(): Promise<void> {
     try {
-      // 認証の初期化を待つ
+      logger.info('🔧 CloudStorageAdapter: Initialize started');
+      
+      // 認証の初期化を待つ（タイムアウト付き）
       if (!this.authAdapter.isInitialized) {
-        await new Promise<void>(resolve => {
+        logger.info('⏳ CloudStorageAdapter: Waiting for auth adapter initialization...');
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Auth adapter initialization timeout (10s)'));
+          }, 10000); // 10秒タイムアウト
+          
           const checkAuth = () => {
             if (this.authAdapter.isInitialized) {
+              clearTimeout(timeout);
+              logger.info('✅ CloudStorageAdapter: Auth adapter initialized');
               resolve();
             } else {
               setTimeout(checkAuth, 100);
@@ -87,6 +96,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       }
 
       // Cloud IndexedDBを初期化
+      logger.info('🗄️ CloudStorageAdapter: Initializing Cloud IndexedDB...');
       await initCloudIndexedDB();
       this._isInitialized = true;
       
@@ -96,6 +106,8 @@ export class CloudStorageAdapter implements StorageAdapter {
       logger.info('✅ CloudStorageAdapter: Initialized with auth and API');
     } catch (error) {
       logger.error('❌ CloudStorageAdapter: Initialization failed:', error);
+      // 初期化に失敗してもアプリは続行可能にする
+      this._isInitialized = true;
       throw error;
     }
   }
@@ -104,7 +116,10 @@ export class CloudStorageAdapter implements StorageAdapter {
    * 初期データを読み込み（IndexedDB -> API）
    */
   async loadInitialData(): Promise<MindMapData> {
+    logger.info('🚀 CloudStorageAdapter: loadInitialData started');
+    
     if (!this.isInitialized) {
+      logger.info('🔧 CloudStorageAdapter: Not initialized, initializing...');
       await this.initialize();
     }
 
@@ -113,52 +128,69 @@ export class CloudStorageAdapter implements StorageAdapter {
       return createInitialData();
     }
 
+    logger.info('✅ CloudStorageAdapter: User authenticated, proceeding with data load');
+
     try {
       // 1. まずIndexedDBからローカルキャッシュを確認
+      logger.info('📋 CloudStorageAdapter: Step 1 - Checking local cache...');
       const localData = await this.getLocalData();
+      logger.info('📋 CloudStorageAdapter: Local data check complete', { hasLocalData: !!localData });
       
       // 2. APIサーバーのヘルスチェック
+      logger.info('🏥 CloudStorageAdapter: Step 2 - API health check...');
       const isHealthy = await this.apiClient.healthCheck();
+      logger.info('🏥 CloudStorageAdapter: Health check complete', { isHealthy });
+      
       if (!isHealthy) {
         logger.warn('⚠️ CloudStorageAdapter: API server unhealthy, using local data');
         if (localData) {
+          logger.info('📋 CloudStorageAdapter: Returning local data (server unhealthy)');
           return localData;
         }
+        logger.info('🆕 CloudStorageAdapter: Creating initial data (no local data, server unhealthy)');
         const initialData = createInitialData();
         await this.saveToLocal(initialData);
         return initialData;
       }
       
       // 3. APIからサーバーデータを取得
+      logger.info('☁️ CloudStorageAdapter: Step 3 - Fetching server data...');
       let serverData: MindMapData | null = null;
       try {
         const serverMaps = await this.apiClient.getMindMaps();
+        logger.info('☁️ CloudStorageAdapter: Server fetch complete', { mapCount: serverMaps.length });
         if (serverMaps.length > 0) {
           serverData = cleanEmptyNodesFromData(serverMaps[0]);
+          logger.info('☁️ CloudStorageAdapter: Server data processed', { title: serverData.title });
         }
       } catch (apiError) {
         logger.warn('⚠️ CloudStorageAdapter: API fetch failed, using local data:', apiError);
       }
       
       // 4. サーバーデータがある場合はそれを使用、なければローカルデータ
+      logger.info('🔄 CloudStorageAdapter: Step 4 - Deciding data source...');
       if (serverData) {
-        logger.info('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
+        logger.info('📋 CloudStorageAdapter: Returning server data:', serverData.title);
         return serverData;
       } else if (localData) {
-        logger.info('📋 CloudStorageAdapter: Using local cached data:', localData.title);
+        logger.info('📋 CloudStorageAdapter: Returning local cached data:', localData.title);
         return localData;
       }
 
       // データがない場合はデフォルトデータを作成
+      logger.info('🆕 CloudStorageAdapter: Step 5 - Creating initial data...');
       const initialData = createInitialData();
-      logger.info('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
+      logger.info('🆕 CloudStorageAdapter: Initial data created:', initialData.title);
       
       // サーバーが健康な場合のみサーバーに保存を試行
       if (isHealthy) {
+        logger.info('💾 CloudStorageAdapter: Saving to API (async)...');
         this.saveToAPIAsync(initialData);
       }
+      logger.info('💾 CloudStorageAdapter: Saving to local...');
       await this.saveToLocal(initialData);
       
+      logger.info('✅ CloudStorageAdapter: loadInitialData completed successfully');
       return initialData;
     } catch (error) {
       logger.error('❌ CloudStorageAdapter: Failed to load initial data:', error);
