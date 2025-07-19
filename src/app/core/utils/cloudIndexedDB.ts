@@ -17,7 +17,7 @@ export interface CloudCachedMindMap extends MindMapData {
 class CloudIndexedDBManager {
   private db: IDBDatabase | null = null;
   private readonly dbName = 'MindFlow-Cloud'; // ローカルとは異なるDB名
-  private readonly version = 1;
+  private readonly version = 2; // バージョンを上げて強制的にアップグレード
   private readonly STORES = {
     CURRENT_MAP: 'currentMap',
     ALL_MAPS: 'allMaps'
@@ -140,9 +140,22 @@ class CloudIndexedDBManager {
     await this.init(); // 必ず初期化を待つ
 
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.ALL_MAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.ALL_MAPS);
-      const request = store.put(data);
+      try {
+        if (!this.db) {
+          throw new Error('Database not initialized');
+        }
+        
+        // 利用可能なオブジェクトストアを確認
+        const storeNames = Array.from(this.db.objectStoreNames);
+        console.log('📦 Available object stores:', storeNames);
+        
+        if (!storeNames.includes(this.STORES.ALL_MAPS)) {
+          throw new Error(`Object store '${this.STORES.ALL_MAPS}' not found. Available stores: ${storeNames.join(', ')}`);
+        }
+        
+        const transaction = this.db.transaction([this.STORES.ALL_MAPS], 'readwrite');
+        const store = transaction.objectStore(this.STORES.ALL_MAPS);
+        const request = store.put(data);
 
       request.onsuccess = () => {
         console.log('💾 Cloud IndexedDB: マップリスト保存完了', { 
@@ -157,6 +170,16 @@ class CloudIndexedDBManager {
         console.error('❌ Cloud IndexedDB: マップリスト保存失敗', request.error);
         reject(request.error);
       };
+      
+      transaction.onerror = () => {
+        console.error('❌ Cloud IndexedDB: トランザクションエラー', transaction.error);
+        reject(transaction.error);
+      };
+      
+      } catch (error) {
+        console.error('❌ Cloud IndexedDB: 保存処理エラー', error);
+        reject(error);
+      }
     });
   }
 
