@@ -69,14 +69,35 @@ export const createDataSlice: StateCreator<
   applyAutoLayout: () => {
     const state = get();
     if (!state.data?.rootNode) {
-      console.log('No root node found for auto layout');
+      console.warn('⚠️ Auto layout: No root node found');
+      return;
+    }
+    
+    // Validate autoSelectLayout function exists
+    if (typeof autoSelectLayout !== 'function') {
+      console.error('❌ Auto layout: autoSelectLayout function not found');
       return;
     }
     
     try {
-      console.log('Applying auto layout to root node:', state.data.rootNode);
+      console.log('🎯 Applying auto layout to root node:', {
+        nodeId: state.data.rootNode.id,
+        hasChildren: state.data.rootNode.children && state.data.rootNode.children.length > 0,
+        childrenCount: state.data.rootNode.children?.length || 0
+      });
+      
       const layoutedRootNode = autoSelectLayout(state.data.rootNode);
-      console.log('Auto layout result:', layoutedRootNode);
+      
+      if (!layoutedRootNode) {
+        console.error('❌ Auto layout: layoutedRootNode is null or undefined');
+        return;
+      }
+      
+      console.log('✅ Auto layout result:', {
+        nodeId: layoutedRootNode.id,
+        childrenCount: layoutedRootNode.children?.length || 0,
+        rootPosition: { x: layoutedRootNode.x, y: layoutedRootNode.y }
+      });
       
       set((draft) => {
         if (draft.data) {
@@ -87,16 +108,26 @@ export const createDataSlice: StateCreator<
           };
           
           // Update normalized data
-          draft.normalizedData = normalizeTreeData(layoutedRootNode);
+          try {
+            draft.normalizedData = normalizeTreeData(layoutedRootNode);
+          } catch (normalizeError) {
+            console.error('❌ Auto layout: Failed to normalize data:', normalizeError);
+          }
           
           // Add to history
-          draft.history = [...draft.history.slice(0, draft.historyIndex + 1), draft.data];
-          draft.historyIndex = draft.history.length - 1;
+          try {
+            draft.history = [...draft.history.slice(0, draft.historyIndex + 1), draft.data];
+            draft.historyIndex = draft.history.length - 1;
+          } catch (historyError) {
+            console.error('❌ Auto layout: Failed to update history:', historyError);
+          }
         }
       });
-      console.log('Auto layout applied successfully');
+      console.log('🎉 Auto layout applied successfully');
     } catch (error) {
-      console.error('Auto layout failed:', error);
+      console.error('❌ Auto layout failed:', error);
+      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     }
   },
 });

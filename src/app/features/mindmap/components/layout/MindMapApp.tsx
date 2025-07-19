@@ -161,6 +161,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     toggleSidebar,
     setEditText,
     changeSiblingOrder,
+    toggleNodeCollapse,
     
     // マップ操作
     createAndSelectMap,
@@ -429,6 +430,14 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         zoom={ui.zoom}
         onZoomReset={() => {}}
         onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
+        onAutoLayout={() => {
+          console.log('🎯 Manual auto layout triggered');
+          if (typeof mindMap.applyAutoLayout === 'function') {
+            mindMap.applyAutoLayout();
+          } else {
+            console.error('❌ applyAutoLayout function not available');
+          }
+        }}
         onToggleSidebar={toggleSidebar}
         showSidebar={!ui.sidebarCollapsed}
         storageMode={storageMode}
@@ -464,7 +473,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onAddSibling={(nodeId) => addNode(nodeId)}
           onDeleteNode={deleteNode}
           onRightClick={() => {}}
-          onToggleCollapse={() => {}}
+          onToggleCollapse={toggleNodeCollapse}
           onFileUpload={(nodeId, files) => {
             if (files.length > 0) {
               handleFileUpload(nodeId, files[0]);

@@ -60,6 +60,7 @@ export interface MindMapStore extends DataState, HistoryState {
   deleteNode: (nodeId: string) => void;
   moveNode: (nodeId: string, newParentId: string) => void;
   changeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore?: boolean) => void;
+  toggleNodeCollapse: (nodeId: string) => void;
   
   // Node operations (O(1) with normalized data)
   findNode: (nodeId: string) => MindMapNode | null;

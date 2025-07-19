@@ -25,6 +25,7 @@ export interface NodeSlice {
   deleteNode: (nodeId: string) => void;
   moveNode: (nodeId: string, newParentId: string) => void;
   changeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore?: boolean) => void;
+  toggleNodeCollapse: (nodeId: string) => void;
   
   // Selection & Editing
   selectNode: (nodeId: string | null) => void;
@@ -145,8 +146,22 @@ export const createNodeSlice: StateCreator<
     
     // Apply auto layout if enabled
     const { data } = get();
+    console.log('🔍 Auto layout check (addChildNode):', {
+      hasData: !!data,
+      hasSettings: !!data?.settings,
+      autoLayoutEnabled: data?.settings?.autoLayout,
+      settingsObject: data?.settings
+    });
     if (data?.settings?.autoLayout) {
-      get().applyAutoLayout();
+      console.log('✅ Applying auto layout after addChildNode');
+      const applyAutoLayout = get().applyAutoLayout;
+      if (typeof applyAutoLayout === 'function') {
+        applyAutoLayout();
+      } else {
+        console.error('❌ applyAutoLayout function not found');
+      }
+    } else {
+      console.log('❌ Auto layout disabled or settings missing');
     }
     
     return newNodeId;
@@ -194,8 +209,16 @@ export const createNodeSlice: StateCreator<
     
     // Apply auto layout if enabled
     const { data } = get();
+    console.log('🔍 Auto layout check (deleteNode):', {
+      hasData: !!data,
+      hasSettings: !!data?.settings,
+      autoLayoutEnabled: data?.settings?.autoLayout
+    });
     if (data?.settings?.autoLayout) {
+      console.log('✅ Applying auto layout after deleteNode');
       get().applyAutoLayout();
+    } else {
+      console.log('❌ Auto layout disabled or settings missing');
     }
   },
 
@@ -310,5 +333,40 @@ export const createNodeSlice: StateCreator<
     set((state) => {
       state.editText = text;
     });
+  },
+
+  toggleNodeCollapse: (nodeId: string) => {
+    set((state) => {
+      if (!state.normalizedData) return;
+      
+      try {
+        const node = state.normalizedData.nodes[nodeId];
+        if (!node) return;
+        
+        // Toggle collapsed state
+        const newCollapsedState = !node.collapsed;
+        state.normalizedData = updateNormalizedNode(state.normalizedData, nodeId, { 
+          collapsed: newCollapsedState 
+        });
+        
+        // Sync back to tree structure
+        const newRootNode = denormalizeTreeData(state.normalizedData);
+        if (state.data) {
+          state.data = {
+            ...state.data,
+            rootNode: newRootNode,
+            updatedAt: new Date().toISOString()
+          };
+        }
+      } catch (error) {
+        console.error('toggleNodeCollapse error:', error);
+      }
+    });
+    
+    // Apply auto layout if enabled
+    const { data } = get();
+    if (data?.settings?.autoLayout) {
+      get().applyAutoLayout();
+    }
   },
 });

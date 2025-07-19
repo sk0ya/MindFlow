@@ -384,6 +384,7 @@ export const useMindMap = (
     deleteNode: dataHook.deleteNode,
     moveNode: dataHook.moveNode,
     changeSiblingOrder: dataHook.changeSiblingOrder,
+    toggleNodeCollapse: dataHook.toggleNodeCollapse,
     startEditing: dataHook.startEditing,
     finishEditing: dataHook.finishEditing,
     cancelEditing: dataHook.cancelEditing,

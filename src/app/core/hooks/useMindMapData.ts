@@ -31,6 +31,10 @@ export const useMindMapData = () => {
       store.changeSiblingOrder(draggedNodeId, targetNodeId, insertBefore);
     }, [store]),
 
+    toggleNodeCollapse: useCallback((nodeId: string) => {
+      store.toggleNodeCollapse(nodeId);
+    }, [store]),
+
     // 編集状態
     startEditing: useCallback((nodeId: string) => {
       store.startEditing(nodeId);
