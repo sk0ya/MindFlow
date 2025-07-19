@@ -147,7 +147,14 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
   const storagePath = `${userId}/${mindmapId}/${nodeId}/${fileId}`;
 
   try {
+    // R2バインディングの確認
+    if (!env.FILES) {
+      console.error('❌ R2 bucket binding "FILES" is not configured');
+      throw new Error('R2 storage is not properly configured. Please check the bucket binding.');
+    }
+
     // R2にファイルアップロード
+    console.log('📤 Uploading file to R2:', { storagePath, fileSize: file.size, fileType: file.type });
     const fileBuffer = await file.arrayBuffer();
     await env.FILES.put(storagePath, fileBuffer, {
       httpMetadata: {
@@ -161,6 +168,7 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
         mindmapId: mindmapId
       }
     });
+    console.log('✅ File uploaded to R2 successfully:', storagePath);
 
     // サムネイル生成（画像の場合）
     let thumbnailPath = null;
@@ -169,7 +177,13 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
     }
 
     // データベースに記録
+    if (!env.DB) {
+      console.error('❌ D1 database binding "DB" is not configured');
+      throw new Error('Database is not properly configured. Please check the D1 binding.');
+    }
+
     const now = new Date().toISOString();
+    console.log('💾 Saving file metadata to database...');
     await env.DB.prepare(`
       INSERT INTO attachments 
       (id, mindmap_id, node_id, file_name, original_name, file_size, mime_type, 

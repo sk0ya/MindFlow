@@ -49,6 +49,27 @@ export default {
         });
       }
 
+      // バインディング確認用エンドポイント
+      if (path === '/api/status') {
+        const status = {
+          timestamp: new Date().toISOString(),
+          bindings: {
+            DB: !!env.DB,
+            FILES: !!env.FILES
+          },
+          env: {
+            ENABLE_AUTH: env.ENABLE_AUTH,
+            CORS_ORIGIN: env.CORS_ORIGIN
+          }
+        };
+        return new Response(JSON.stringify(status, null, 2), {
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
+          }
+        });
+      }
+
       // Database initialization for development
       if (path === '/api/init-db' && env.ENVIRONMENT === 'development') {
         return await initializeDatabase(env);
