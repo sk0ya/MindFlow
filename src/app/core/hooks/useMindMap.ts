@@ -4,7 +4,6 @@ import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
 import { useMindMapPersistence } from './useMindMapPersistence';
 import type { StorageConfig } from '../storage/types';
-import { createInitialData } from '../../shared/types/dataTypes';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -35,12 +34,13 @@ export const useMindMap = (
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
   
   // リセットキー変更時の強制リセット
+  const prevResetKeyRef = useRef(resetKey);
   useEffect(() => {
-    if (resetKey > 0) {
-      console.log('🔄 useMindMap: Reset key changed, forcing data reload:', resetKey);
-      
-      // データを一時的な初期状態にリセット
-      dataHook.setData(createInitialData());
+    const currentResetKey = resetKey;
+    const prevResetKey = prevResetKeyRef.current;
+    
+    if (currentResetKey > 0 && currentResetKey !== prevResetKey) {
+      console.log('🔄 useMindMap: Reset key changed, forcing data reload:', currentResetKey);
       
       // 初期化完了後にデータを読み込み
       if (persistenceHook.isInitialized) {
@@ -61,7 +61,9 @@ export const useMindMap = (
         reloadData();
       }
     }
-  }, [resetKey, persistenceHook.isInitialized, persistenceHook.loadInitialData, persistenceHook.refreshMapList, dataHook.setData]);
+    
+    prevResetKeyRef.current = currentResetKey;
+  }, [resetKey]);
   
   // ストレージ設定変更時の強制再読み込み
   const prevStorageConfigRef = useRef<StorageConfig | null>(storageConfig || null);

@@ -35,8 +35,13 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // ストレージモード変更時のリセットキー
   const [resetKey, setResetKey] = React.useState(0);
   
-  // ストレージモード変更時の処理
+  // ストレージモード変更時の処理（初回レンダリングを除く）
+  const isFirstRender = React.useRef(true);
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     console.log('🔄 MindMapApp: Storage mode changed to:', storageMode);
     setResetKey(prev => prev + 1);
   }, [storageMode]);
