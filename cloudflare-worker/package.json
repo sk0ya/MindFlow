@@ -1,17 +1,29 @@
 {
   "name": "mindflow-api",
   "version": "1.0.0",
-  "description": "Cloudflare Worker API for MindFlow",
+  "description": "Cloudflare Worker API for MindFlow (TypeScript)",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit --skipLibCheck",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
     "db:create": "wrangler d1 create mindflow-db",
     "db:migrate": "wrangler d1 migrations apply mindflow-db --local",
     "db:migrate:prod": "wrangler d1 migrations apply mindflow-db"
   },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20231121.0",
+    "jose": "^5.2.0",
+    "zod": "^3.22.4"
+  },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
     "wrangler": "^3.0.0"
   }
 }
