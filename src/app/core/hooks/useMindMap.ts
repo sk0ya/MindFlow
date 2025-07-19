@@ -34,11 +34,9 @@ export const useMindMap = (
     console.log('🔍 useMindMap: Initial data load check', {
       isAppReady,
       hasData: !!dataHook.data,
-      dataTitle: dataHook.data?.title,
       persistenceInitialized: persistenceHook.isInitialized,
       isCloudMode,
       isAuthenticated,
-      authAdapterExists: !!storageConfig.authAdapter,
       shouldLoadData
     });
     
@@ -56,35 +54,6 @@ export const useMindMap = (
       loadData();
     }
   }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData, storageConfig?.mode, storageConfig?.authAdapter?.isAuthenticated]);
-
-  // クラウドモード専用：認証完了時のデータロード
-  useEffect(() => {
-    if (!storageConfig || storageConfig.mode !== 'cloud') return;
-    
-    const authAdapter = storageConfig.authAdapter;
-    if (!authAdapter || !persistenceHook.isInitialized) return;
-    
-    console.log('🔐 useMindMap: Cloud auth state monitoring', {
-      isAuthenticated: authAdapter.isAuthenticated,
-      hasData: !!dataHook.data,
-      userEmail: authAdapter.user?.email
-    });
-    
-    // 認証済みでデータがない場合、強制的にデータロード
-    if (authAdapter.isAuthenticated && !dataHook.data) {
-      console.log('🚀 useMindMap: Force loading data after cloud authentication');
-      const forceLoadData = async () => {
-        try {
-          const initialData = await persistenceHook.loadInitialData();
-          console.log('✅ useMindMap: Force load completed:', { title: initialData.title });
-          dataHook.setData(initialData);
-        } catch (error) {
-          console.error('❌ useMindMap: Force load failed:', error);
-        }
-      };
-      forceLoadData();
-    }
-  }, [storageConfig?.authAdapter?.isAuthenticated, storageConfig?.authAdapter?.user, persistenceHook.isInitialized, dataHook.data, dataHook.setData, persistenceHook.loadInitialData, storageConfig?.mode]);
   
   // リセットキー変更時の強制リセット
   const prevResetKeyRef = useRef(0);

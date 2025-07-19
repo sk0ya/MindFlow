@@ -110,10 +110,7 @@ export class CloudStorageAdapter implements StorageAdapter {
    * 初期データを読み込み（IndexedDB -> API）
    */
   async loadInitialData(): Promise<MindMapData> {
-    logger.info('🚀 CloudStorageAdapter: loadInitialData called');
-    
     if (!this.isInitialized) {
-      logger.info('🔧 CloudStorageAdapter: Initializing...');
       await this.initialize();
     }
 
@@ -122,7 +119,6 @@ export class CloudStorageAdapter implements StorageAdapter {
       return createInitialData();
     }
 
-    logger.info('✅ CloudStorageAdapter: User authenticated, loading data...');
     try {
       // 1. ローカルキャッシュを確認
       const localData = await this.getLocalData();

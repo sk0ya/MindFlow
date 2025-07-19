@@ -273,9 +273,7 @@ export class CloudAuthAdapter implements AuthAdapter {
       error: null
     };
     
-    console.log('🔐 CloudAuthAdapter: Storing token for user:', user.email);
     this.storeToken(token);
-    console.log('🔐 CloudAuthAdapter: Token stored, storage type:', this.getStorageType());
     this.notifyAuthChange(user);
   }
 
