@@ -50,6 +50,24 @@ const deleteFromCloudIndexedDB = async (id: string): Promise<void> => {
 };
 import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI } from '../../cloud/api';
 
+function isMindMapData(data: unknown): data is MindMapData {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as any;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.title === 'string' &&
+    typeof obj.version === 'number' &&
+    obj.rootNode &&
+    typeof obj.rootNode === 'object' &&
+    typeof obj.rootNode.id === 'string'
+  );
+}
+
+function validateAndCleanData(data: unknown): MindMapData | null {
+  if (!isMindMapData(data)) return null;
+  return cleanEmptyNodesFromData(data);
+}
+
 /**
  * クラウドストレージアダプター
  * IndexedDB + Cloudflare Workers APIのハイブリッド永続化
@@ -58,6 +76,7 @@ export class CloudStorageAdapter implements StorageAdapter {
   private _isInitialized = false;
   private syncInterval: NodeJS.Timeout | null = null;
   private apiClient: CloudflareAPI;
+  private abortController: AbortController | null = null;
 
   constructor(private authAdapter: AuthAdapter) {
     this.apiClient = createCloudflareAPIClient(() => this.authAdapter.getAuthHeaders());
@@ -72,10 +91,18 @@ export class CloudStorageAdapter implements StorageAdapter {
    */
   async initialize(): Promise<void> {
     try {
+      // Create abort controller for initialization
+      this.abortController = new AbortController();
+      
       // 認証の初期化を待つ
       if (!this.authAdapter.isInitialized) {
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve, reject) => {
           const checkAuth = () => {
+            if (this.abortController?.signal.aborted) {
+              reject(new Error('Initialization aborted'));
+              return;
+            }
+            
             if (this.authAdapter.isInitialized) {
               resolve();
             } else {
@@ -374,6 +401,12 @@ export class CloudStorageAdapter implements StorageAdapter {
    * クリーンアップ
    */
   cleanup(): void {
+    // Cancel any ongoing async operations
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
@@ -392,7 +425,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       const allLocalData = await getAllFromCloudIndexedDB(userId);
       if (allLocalData.length > 0) {
         const { _metadata, ...cleanData } = allLocalData[0];
-        return cleanData as MindMapData;
+        return validateAndCleanData(cleanData);
       }
       return null;
     } catch (error) {
@@ -410,7 +443,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       if (!userId) return [];
 
       const allLocalData = await getAllFromCloudIndexedDB(userId);
-      return allLocalData.map(({ _metadata, ...cleanData }) => cleanData as MindMapData);
+      return allLocalData
+        .map(({ _metadata, ...cleanData }) => validateAndCleanData(cleanData))
+        .filter((data): data is MindMapData => data !== null);
     } catch (error) {
       logger.warn('⚠️ CloudStorageAdapter: Failed to get all local maps:', error);
       return [];
@@ -463,13 +498,26 @@ export class CloudStorageAdapter implements StorageAdapter {
     this.syncInterval = setInterval(async () => {
       if (!this.authAdapter.isAuthenticated) return;
 
+      // Create a new AbortController for this sync cycle
+      const syncAbortController = new AbortController();
+      
       try {
         const userId = this.authAdapter.user?.id || '';
         const dirtyMaps = await getCloudDirtyData(userId);
+        
         for (const dirtyMap of dirtyMaps) {
+          // Check if we should abort
+          if (syncAbortController.signal.aborted) {
+            logger.debug('🚫 CloudStorageAdapter: Background sync aborted');
+            break;
+          }
+          
           try {
             const { _metadata, ...cleanData } = dirtyMap;
-            await this.apiClient.updateMindMap(cleanData as MindMapData);
+            const validData = validateAndCleanData(cleanData);
+            if (validData) {
+              await this.apiClient.updateMindMap(validData);
+            }
             await markAsCloudSynced(dirtyMap.id);
             logger.debug('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
           } catch (syncError) {

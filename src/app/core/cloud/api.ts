@@ -1,6 +1,7 @@
 // Cloudflare Workers API integration
 import type { MindMapData, MindMapNode } from '@shared/types';
 import { logger } from '../../shared/utils/logger';
+import { ApiErrorHandler } from '../utils/apiErrorHandler';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev';
 
@@ -48,50 +49,52 @@ export class CloudflareAPI {
    * 全マインドマップを取得
    */
   async getMindMaps(): Promise<MindMapData[]> {
-    const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+    return ApiErrorHandler.withRetry(async () => {
+      const response = await fetch(`${API_BASE_URL}/api/mindmaps`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
 
-    if (!response.ok) {
       if (response.status === 404) {
         return []; // データなし
       }
-      throw new Error(`マインドマップの取得に失敗しました: ${response.statusText}`);
-    }
 
-    const result: MindMapListApiResponse = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'マインドマップの取得に失敗しました');
-    }
+      await ApiErrorHandler.handleResponse(response, 'マインドマップの取得');
 
-    return result.data || [];
+      const result: MindMapListApiResponse = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'マインドマップの取得に失敗しました');
+      }
+
+      return result.data || [];
+    }, 'getMindMaps');
   }
 
   /**
    * 特定のマインドマップを取得
    */
   async getMindMap(id: string): Promise<MindMapData | null> {
-    const response = await fetch(`${API_BASE_URL}/api/mindmaps/${id}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
+    return ApiErrorHandler.withRetry(async () => {
+      const response = await fetch(`${API_BASE_URL}/api/mindmaps/${id}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
 
-    if (!response.ok) {
       if (response.status === 404) {
         return null; // データなし
       }
-      throw new Error(`マインドマップの取得に失敗しました: ${response.statusText}`);
-    }
 
-    const result: MindMapApiResponse = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'マインドマップの取得に失敗しました');
-    }
+      await ApiErrorHandler.handleResponse(response, 'マインドマップの取得');
 
-    return result.data || null;
+      const result: MindMapApiResponse = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'マインドマップの取得に失敗しました');
+      }
+
+      return result.data || null;
+    }, 'getMindMap');
   }
 
   /**
@@ -118,15 +121,7 @@ export class CloudflareAPI {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('❌ API: Create mindmap failed:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        body: errorText 
-      });
-      throw new Error(`マインドマップの作成に失敗しました: ${response.statusText}`);
-    }
+    await ApiErrorHandler.handleResponse(response, 'マインドマップの作成');
 
     const result: MindMapApiResponse = await response.json();
     logger.debug('📥 API: Create response:', result);
@@ -167,15 +162,7 @@ export class CloudflareAPI {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('❌ API: Update mindmap failed:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        body: errorText 
-      });
-      throw new Error(`マインドマップの更新に失敗しました: ${response.statusText}`);
-    }
+    await ApiErrorHandler.handleResponse(response, 'マインドマップの更新');
 
     const result: MindMapApiResponse = await response.json();
     logger.debug('📥 API: Update response:', result);
@@ -410,7 +397,7 @@ export function countNodes(node: MindMapNode): number {
   
   let count = 1; // 現在のノード
   if (node.children) {
-    count += node.children.reduce((sum: number, child: MindMapNode) => sum + countNodes(child), 0);
+    count += node.children.reduce<number>((sum, child) => sum + countNodes(child), 0);
   }
   
   return count;

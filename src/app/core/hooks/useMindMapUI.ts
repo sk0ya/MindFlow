@@ -8,83 +8,100 @@ import type { ImageFile } from '../../shared/types';
  * パネル、モーダル、ビューポート等のUI制御を担当
  */
 export const useMindMapUI = () => {
-  const store = useMindMapStore();
+  const {
+    setZoom,
+    setPan: storeSetPan,
+    resetZoom,
+    setShowCustomizationPanel,
+    closeAllPanels,
+    toggleSidebar,
+    setSidebarCollapsed,
+    setSelectedImage,
+    setShowImageModal,
+    showCustomization,
+    showNodeMapLinks,
+    closeNodeMapLinksPanel,
+    setSelectedFile,
+    setFileMenuPosition,
+    setShowFileActionMenu,
+    ui
+  } = useMindMapStore();
 
   const uiOperations = {
     // ズームとパン
     setZoom: useCallback((zoom: number) => {
-      store.setZoom(zoom);
-    }, [store]),
+      setZoom(zoom);
+    }, [setZoom]),
 
     setPan: useCallback((pan: Position | ((prev: Position) => Position)) => {
       if (typeof pan === 'function') {
-        store.setPan(pan(store.ui.pan));
+        storeSetPan(pan(ui.pan));
       } else {
-        store.setPan(pan);
+        storeSetPan(pan);
       }
-    }, [store]),
+    }, [storeSetPan, ui.pan]),
 
     resetZoom: useCallback(() => {
-      store.resetZoom();
-    }, [store]),
+      resetZoom();
+    }, [resetZoom]),
 
     // パネル管理
     setShowCustomizationPanel: useCallback((show: boolean) => {
-      store.setShowCustomizationPanel(show);
-    }, [store]),
+      setShowCustomizationPanel(show);
+    }, [setShowCustomizationPanel]),
 
     closeAllPanels: useCallback(() => {
-      store.closeAllPanels();
-    }, [store]),
+      closeAllPanels();
+    }, [closeAllPanels]),
 
     // サイドバー
     toggleSidebar: useCallback(() => {
-      store.toggleSidebar();
-    }, [store]),
+      toggleSidebar();
+    }, [toggleSidebar]),
 
     setSidebarCollapsed: useCallback((collapsed: boolean) => {
-      store.setSidebarCollapsed(collapsed);
-    }, [store]),
+      setSidebarCollapsed(collapsed);
+    }, [setSidebarCollapsed]),
 
     // モーダル制御
     showImageModal: useCallback((image: ImageFile) => {
-      store.setSelectedImage(image);
-      store.setShowImageModal(true);
-    }, [store]),
+      setSelectedImage(image);
+      setShowImageModal(true);
+    }, [setSelectedImage, setShowImageModal]),
 
     hideImageModal: useCallback(() => {
-      store.setShowImageModal(false);
-    }, [store]),
+      setShowImageModal(false);
+    }, [setShowImageModal]),
 
     // カスタマイズパネル
     showCustomization: useCallback((_node: MindMapNode, position: Position) => {
-      store.showCustomization(position);
-    }, [store]),
+      showCustomization(position);
+    }, [showCustomization]),
 
     // ノードマップリンクパネル
     showNodeMapLinks: useCallback((node: MindMapNode, position: Position) => {
-      store.showNodeMapLinks(node, position);
-    }, [store]),
+      showNodeMapLinks(node, position);
+    }, [showNodeMapLinks]),
 
     closeNodeMapLinksPanel: useCallback(() => {
-      store.closeNodeMapLinksPanel();
-    }, [store]),
+      closeNodeMapLinksPanel();
+    }, [closeNodeMapLinksPanel]),
 
     // ファイルアクションメニュー
     showFileActionMenu: useCallback((fileAttachment: FileAttachment, position: Position) => {
-      store.setSelectedFile(fileAttachment);
-      store.setFileMenuPosition(position);
-      store.setShowFileActionMenu(true);
-    }, [store]),
+      setSelectedFile(fileAttachment);
+      setFileMenuPosition(position);
+      setShowFileActionMenu(true);
+    }, [setSelectedFile, setFileMenuPosition, setShowFileActionMenu]),
 
     hideFileActionMenu: useCallback(() => {
-      store.setShowFileActionMenu(false);
-    }, [store])
+      setShowFileActionMenu(false);
+    }, [setShowFileActionMenu])
   };
 
   return {
     // UI状態
-    ui: store.ui,
+    ui,
     
     // 操作
     ...uiOperations
