@@ -1,6 +1,6 @@
 .mindmap-app {
   min-height: 100vh;
-  background: white;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   position: relative;
   overflow-x: hidden;
   display: flex;
@@ -41,6 +41,9 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  height: calc(100vh - 60px);
 }
 
 .mindmap-content.with-sidebar {
@@ -53,6 +56,7 @@
   z-index: 1;
   transition: margin-left 0.3s ease;
   padding: 2px;
+  height: 100%;
 }
 
 .container.sidebar-expanded {
@@ -63,37 +67,6 @@
   margin-left: 50px;
 }
 
-.footer {
-  margin-top: 2px;
-  padding: 6px;
-  text-align: center;
-  background: #f8f9fa;
-  border: 1px solid #e1e5e9;
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-}
-
-.footer p {
-  margin: 0;
-  font-size: 10px;
-  color: #64748b;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.footer-brand {
-  color: #374151;
-  font-weight: 600;
-}
-
-.stats {
-  display: flex;
-}
 
 .sync-status {
   display: flex;
@@ -122,15 +95,6 @@
     margin-left: 250px;
   }
 
-  .footer {
-    margin-top: 6px;
-    padding: 8px;
-  }
-
-  .footer p {
-    flex-direction: column;
-    gap: 12px;
-  }
 
   .stats {
     width: 100%;
@@ -147,14 +111,6 @@
     margin-left: 250px;
   }
 
-  .footer {
-    margin-top: 4px;
-    padding: 6px;
-  }
-
-  .footer p {
-    font-size: 11px;
-  }
 
   .stats {
     font-size: 13px;
@@ -163,13 +119,15 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: white;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   overflow-x: hidden;
+  color: #1f2937;
+  line-height: 1.6;
 }
 
 * {

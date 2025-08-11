@@ -136,6 +136,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onCreateMap={onCreateMap}
+        onToggleCollapse={onToggleCollapse}
       />
 
       {filteredMaps.length === 0 ? (

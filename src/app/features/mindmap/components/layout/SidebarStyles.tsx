@@ -5,8 +5,8 @@ const SidebarStyles: React.FC = () => (
     .mindmap-sidebar {
       width: 280px;
       height: 100vh;
-      background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-      border-right: 2px solid #dee2e6;
+      background: #ffffff;
+      border-right: 1px solid rgba(148, 163, 184, 0.2);
       display: flex;
       flex-direction: column;
       position: fixed;
@@ -14,6 +14,7 @@ const SidebarStyles: React.FC = () => (
       top: 0;
       z-index: 100;
       overflow: hidden;
+      box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.05);
     }
 
     .mindmap-sidebar.collapsed {
@@ -34,8 +35,9 @@ const SidebarStyles: React.FC = () => (
 
     .sidebar-header {
       padding: 20px;
-      border-bottom: 1px solid #dee2e6;
-      background: white;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(248, 250, 252, 0.5);
+      backdrop-filter: blur(10px);
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -57,6 +59,49 @@ const SidebarStyles: React.FC = () => (
       align-items: center;
     }
 
+    .sidebar-collapse-toggle {
+      background: rgba(51, 65, 85, 0.08);
+      border: 1px solid rgba(51, 65, 85, 0.12);
+      color: #475569;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-collapse-toggle:hover {
+      background: rgba(51, 65, 85, 0.12);
+      color: #1e293b;
+      transform: scale(1.05);
+    }
+
+    .sidebar-expand-toggle {
+      background: rgba(51, 65, 85, 0.08);
+      border: 1px solid rgba(51, 65, 85, 0.12);
+      color: #475569;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-expand-toggle:hover {
+      background: rgba(51, 65, 85, 0.12);
+      color: #1e293b;
+      transform: scale(1.05);
+    }
+
     .search-container {
       display: flex;
       gap: 8px;
@@ -64,25 +109,28 @@ const SidebarStyles: React.FC = () => (
 
     .search-input {
       flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
+      padding: 10px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 10px;
       font-size: 14px;
+      background: rgba(248, 250, 252, 0.8);
+      transition: all 0.2s ease;
     }
 
     .search-input:focus {
       outline: none;
-      border-color: #4285f4;
-      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      background: white;
     }
 
     .action-button {
-      background: #34a853;
+      background: linear-gradient(135deg, #10b981, #059669);
       color: white;
       border: none;
-      border-radius: 6px;
-      width: 32px;
-      height: 32px;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -90,11 +138,13 @@ const SidebarStyles: React.FC = () => (
       font-size: 16px;
       font-weight: bold;
       transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
     }
 
     .action-button:hover {
-      background: #2d8a47;
-      transform: scale(1.05);
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
 
     .action-button.category {
@@ -138,28 +188,35 @@ const SidebarStyles: React.FC = () => (
     }
 
     .category-group {
-      border-bottom: 1px solid #dee2e6;
-      transition: background-color 0.2s ease;
+      margin: 8px 12px;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s ease;
+      overflow: hidden;
     }
 
     .category-group.drag-over {
-      background-color: rgba(66, 133, 244, 0.1);
+      background-color: rgba(59, 130, 246, 0.05);
+      border: 2px dashed rgba(59, 130, 246, 0.3);
     }
 
     .category-header {
-      padding: 12px 20px;
-      background: #f8f9fa;
+      padding: 14px 16px;
+      background: rgba(248, 250, 252, 0.8);
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-weight: 500;
-      color: #495057;
-      transition: background-color 0.2s ease;
+      gap: 10px;
+      font-weight: 600;
+      color: #374151;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
     }
 
     .category-header:hover {
-      background: #e9ecef;
+      background: rgba(243, 244, 246, 0.9);
+      color: #1f2937;
     }
 
     .category-icon {
@@ -182,8 +239,9 @@ const SidebarStyles: React.FC = () => (
     }
 
     .map-item {
-      padding: 12px 20px;
-      border-bottom: 1px solid #f1f3f4;
+      padding: 12px 16px;
+      margin: 4px 8px;
+      border-radius: 8px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
@@ -193,12 +251,14 @@ const SidebarStyles: React.FC = () => (
     }
 
     .map-item:hover {
-      background: #f8f9fa;
+      background: rgba(59, 130, 246, 0.05);
+      transform: translateX(2px);
     }
 
     .map-item.active {
-      background: #e3f2fd;
-      border-left: 4px solid #2196f3;
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
     }
 
     .map-info {
@@ -208,8 +268,8 @@ const SidebarStyles: React.FC = () => (
 
     .map-title {
       font-size: 14px;
-      font-weight: 500;
-      color: #333;
+      font-weight: 600;
+      color: #1f2937;
       margin-bottom: 4px;
       white-space: nowrap;
       overflow: hidden;
@@ -220,7 +280,7 @@ const SidebarStyles: React.FC = () => (
       display: flex;
       gap: 12px;
       font-size: 12px;
-      color: #6c757d;
+      color: #6b7280;
     }
 
     .node-count,
@@ -242,19 +302,23 @@ const SidebarStyles: React.FC = () => (
     .action-btn {
       background: none;
       border: none;
-      padding: 4px;
-      border-radius: 4px;
+      padding: 6px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 12px;
-      transition: background-color 0.2s ease;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      color: #6b7280;
     }
 
     .action-btn:hover {
-      background: #f0f0f0;
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+      transform: scale(1.1);
     }
 
     .action-btn.delete:hover {
-      background: #ffebee;
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
     }
 
     .title-input {

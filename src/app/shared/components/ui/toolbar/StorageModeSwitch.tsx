@@ -65,19 +65,19 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
           align-items: center;
           gap: 0.5rem;
           padding: 0.5rem 0.75rem;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 6px;
-          color: white;
+          background: rgba(51, 65, 85, 0.08);
+          border: 1px solid rgba(51, 65, 85, 0.12);
+          border-radius: 8px;
+          color: #374151;
           font-size: 0.875rem;
           cursor: pointer;
           transition: all 0.2s ease;
-          backdrop-filter: blur(10px);
         }
 
         .storage-mode-button:hover {
-          background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.3);
+          background: rgba(51, 65, 85, 0.12);
+          border-color: rgba(51, 65, 85, 0.2);
+          color: #1f2937;
         }
 
         .storage-mode-icon {

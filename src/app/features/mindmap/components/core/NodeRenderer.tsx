@@ -34,12 +34,12 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
       y={node.y - nodeHeight / 2}
       width={nodeWidth}
       height={nodeHeight}
-      fill="white"
-      stroke={isDragTarget ? "#ff9800" : (isSelected ? "#4285f4" : "#ddd")}
-      strokeWidth={isDragTarget ? "3" : (isSelected ? "2" : "1")}
+      fill="rgba(255, 255, 255, 0.9)"
+      stroke={isDragTarget ? "#f59e0b" : (isSelected ? "#3b82f6" : "rgba(148, 163, 184, 0.4)")}
+      strokeWidth={isDragTarget ? "3" : (isSelected ? "2.5" : "1.5")}
       strokeDasharray={isDragTarget ? "5,5" : "none"}
-      rx="8"
-      ry="8"
+      rx="12"
+      ry="12"
       role="button"
       tabIndex={0}
       aria-label={`Mind map node: ${node.text}`}
@@ -47,10 +47,10 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
       style={{
         cursor: isDragging ? 'grabbing' : 'pointer',
         filter: isDragTarget 
-          ? 'drop-shadow(0 4px 12px rgba(255,152,0,0.5))' 
+          ? 'drop-shadow(0 8px 25px rgba(245, 158, 11, 0.4))' 
           : isDragging
-          ? 'drop-shadow(0 6px 20px rgba(0,0,0,0.3))'
-          : (isSelected ? 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))' : 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))'),
+          ? 'drop-shadow(0 12px 30px rgba(0,0,0,0.2))'
+          : (isSelected ? 'drop-shadow(0 4px 20px rgba(59, 130, 246, 0.25))' : 'drop-shadow(0 2px 8px rgba(0,0,0,0.08))'),
         opacity: isDragging ? 0.8 : 1,
         transform: isDragging ? 'scale(1.05)' : 'scale(1)',
         transition: (isDragging || isLayoutTransitioning) ? 'none' : 'filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease'

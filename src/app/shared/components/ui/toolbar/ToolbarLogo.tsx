@@ -11,16 +11,6 @@ const ToolbarLogo: React.FC<ToolbarLogoProps> = ({
 }) => {
   return (
     <div className="logo-section">
-      {onToggleSidebar && (
-        <button
-          className="sidebar-toggle"
-          onClick={onToggleSidebar}
-          title={showSidebar ? "サイドバーを隠す" : "サイドバーを表示"}
-        >
-          {showSidebar ? '◀' : '▶'}
-        </button>
-      )}
-      
       <div className="logo">
         <div className="logo-text">
           <span className="logo-title">MindFlow</span>

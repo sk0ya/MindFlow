@@ -4,12 +4,14 @@ interface SidebarHeaderProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onCreateMap: (title: string, category?: string) => void;
+  onToggleCollapse?: () => void;
 }
 
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   searchTerm,
   onSearchChange,
-  onCreateMap
+  onCreateMap,
+  onToggleCollapse
 }) => {
   const handleCreateCategory = () => {
     // eslint-disable-next-line no-alert
@@ -25,9 +27,16 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
 
   return (
     <div className="sidebar-header">
-      <h2 className="sidebar-title">マインドマップ</h2>
-      
       <div className="header-actions">
+        {onToggleCollapse && (
+          <button
+            className="sidebar-collapse-toggle"
+            onClick={onToggleCollapse}
+            title="サイドバーを隠す"
+          >
+            ◀
+          </button>
+        )}
         <button 
           className="action-button create"
           onClick={() => {

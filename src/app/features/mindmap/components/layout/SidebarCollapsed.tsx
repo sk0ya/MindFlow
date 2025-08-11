@@ -24,9 +24,9 @@ const SidebarCollapsed: React.FC<SidebarCollapsedProps> = ({
   return (
     <div className="mindmap-sidebar collapsed">
       <button 
-        className="toggle-button"
+        className="sidebar-expand-toggle"
         onClick={onToggleCollapse}
-        aria-label="サイドバーを展開"
+        title="サイドバーを表示"
       >
         ▶
       </button>

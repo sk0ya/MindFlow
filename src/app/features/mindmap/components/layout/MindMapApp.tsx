@@ -4,7 +4,6 @@ import MindMapSidebar from './MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
-import MindMapFooter from './MindMapFooter';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
 import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
@@ -510,10 +509,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           setPan={setPan}
         />
       </div>
-      
-      <MindMapFooter 
-        data={data}
-      />
       
       <MindMapModals 
         ui={ui}

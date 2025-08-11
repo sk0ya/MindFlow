@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { Node } from '../..';
 import { CanvasConnections, CanvasDragGuide } from '.';
-import type { MindMapData, MindMapNode, FileAttachment } from '../../../../shared';
+import { Node } from '../..';
+import type { FileAttachment, MindMapData, MindMapNode } from '../../../../shared';
 
 interface DragState {
   isDragging: boolean;
@@ -24,7 +24,7 @@ interface CanvasRendererProps {
   pan: { x: number; y: number };
   cursor: string;
   dragState: DragState;
-  
+
   // Event handlers
   onWheel: (e: React.WheelEvent) => void;
   onMouseDown: (e: React.MouseEvent) => void;
@@ -43,7 +43,7 @@ interface CanvasRendererProps {
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
   onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
-  
+
   // Drag handlers
   onDragStart: (nodeId: string) => void;
   onDragMove: (x: number, y: number) => void;
@@ -88,7 +88,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       <svg
         ref={svgRef}
         width="100%"
-        height="calc(100vh - 150px)"
+        height="calc(100vh)"
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onClick={onBackgroundClick}
@@ -149,45 +149,21 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
         </g>
       </svg>
 
-      <div className="help-text">
-        <p>
-          <strong>操作方法:</strong> 
-          クリック=選択 | ダブルクリック=編集 | Tab=子追加 | Enter=兄弟追加 | Delete=削除 | 
-          Space=編集 | マウスホイール=ズーム | 背景ドラッグ=パン | 
-          <span style={{color: '#ff9800', fontWeight: 'bold'}}>ノードドラッグ=親変更</span> | 
-          接続線のボタン=開閉
-        </p>
-      </div>
 
       <style>{`
         .mindmap-canvas-container {
           position: relative;
+          height: 100%;
+          width: 100%;
         }
 
         svg {
           display: block;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          width: 100%;
+          height: 100%;
         }
 
-        .help-text {
-          margin-top: 4px;
-          padding: 4px 8px;
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 8px;
-          border-left: 4px solid #4285f4;
-          backdrop-filter: blur(10px);
-        }
-
-        .help-text p {
-          margin: 0;
-          font-size: 10px;
-          color: #555;
-          line-height: 1.5;
-        }
-
-        .help-text strong {
-          color: #333;
-        }
 
         .connections path {
           stroke: black;
@@ -218,13 +194,6 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
         }
 
         @media (max-width: 768px) {
-          .help-text {
-            font-size: 12px;
-          }
-          
-          .help-text p {
-            font-size: 11px;
-          }
         }
       `}</style>
     </div>
