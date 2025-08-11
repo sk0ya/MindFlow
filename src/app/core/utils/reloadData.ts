@@ -21,10 +21,9 @@ export async function executeDataReload(
     tempClearData.title = '読み込み中...';
     dependencies.setData(tempClearData);
     
-    // persistenceの初期化を待機
+    // 初期化済みでない場合はエラーとして扱う
     if (!dependencies.isInitialized) {
-      logger.info(`⏳ ${context}: Waiting for storage initialization...`);
-      await waitForInitialization(() => dependencies.isInitialized);
+      throw new Error(`${context}: Storage not initialized`);
     }
     
     logger.info(`📥 ${context}: Loading initial data from storage...`);
@@ -48,23 +47,4 @@ export async function executeDataReload(
   }
 }
 
-async function waitForInitialization(
-  checkFn: () => boolean,
-  timeout: number = 10000,
-  interval: number = 100
-): Promise<void> {
-  const startTime = Date.now();
-  
-  return new Promise<void>((resolve, reject) => {
-    const check = () => {
-      if (checkFn()) {
-        resolve();
-      } else if (Date.now() - startTime > timeout) {
-        reject(new Error('Initialization timeout'));
-      } else {
-        setTimeout(check, interval);
-      }
-    };
-    check();
-  });
-}
+// 初期化待機は useInitializationWaiter フックを使用するように変更

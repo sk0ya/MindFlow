@@ -1,11 +1,13 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { useMindMapData } from './useMindMapData';
 import { useMindMapUI } from './useMindMapUI';
 import { useMindMapActions } from './useMindMapActions';
 import { useMindMapPersistence } from './useMindMapPersistence';
+import { useInitialDataLoad } from './useInitialDataLoad';
+import { useDataReset } from './useDataReset';
+import { useStorageConfigChange } from './useStorageConfigChange';
+import { useAutoSave } from './useAutoSave';
 import type { StorageConfig } from '../storage/types';
-import { createInitialData } from '../../shared/types/dataTypes';
-import { executeDataReload } from '../utils/reloadData';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -24,214 +26,39 @@ export const useMindMap = (
   const actionsHook = useMindMapActions();
   const persistenceHook = useMindMapPersistence(storageConfig);
 
-  // 初期データ読み込み（非同期対応）
-  useEffect(() => {
-    if (isAppReady && !dataHook.data && persistenceHook.isInitialized) {
-      const loadData = async () => {
-        const initialData = await persistenceHook.loadInitialData();
-        dataHook.setData(initialData);
-      };
-      loadData();
-    }
-  }, [isAppReady, dataHook.data, dataHook.setData, persistenceHook.isInitialized, persistenceHook.loadInitialData]);
-  
-  // リセットキー変更時の強制リセット
-  const prevResetKeyRef = useRef(0);
-  const pendingResetKeyRef = useRef<number | null>(null);
-  useEffect(() => {
-    const currentResetKey = resetKey;
-    const prevResetKey = prevResetKeyRef.current;
-    
-    console.log('🔍 useMindMap: Reset key effect triggered', {
-      currentResetKey,
-      prevResetKey,
-      shouldReset: currentResetKey !== prevResetKey,
-      persistenceInitialized: persistenceHook.isInitialized
-    });
-    
-    if (currentResetKey !== prevResetKey) {
-      console.log('🔄 useMindMap: Reset key changed, forcing data reload:', currentResetKey);
-      
-      // データ読み込み関数を定義
-      const executeDataReload = async () => {
-        const reloadData = async () => {
-          try {
-            console.log('🔄 useMindMap: Clearing data before reset reload...');
-            
-            // 現在のデータを明示的にクリア（一時的な空のマップで置き換え）
-            const tempClearData = createInitialData();
-            tempClearData.title = '読み込み中...';
-            dataHook.setData(tempClearData);
-            
-            console.log('💾 useMindMap: Loading data after reset...');
-            const initialData = await persistenceHook.loadInitialData();
-            console.log('📋 useMindMap: Reset data loaded:', {
-              id: initialData.id,
-              title: initialData.title,
-              resetKey: currentResetKey
-            });
-            
-            dataHook.setData(initialData);
-            
-            // マップ一覧も再読み込み
-            await persistenceHook.refreshMapList();
-            
-            console.log('✅ useMindMap: Data reloaded after reset:', initialData.title);
-          } catch (error) {
-            console.error('❌ useMindMap: Failed to reload data after reset:', error);
-          }
-        };
-        reloadData();
-      };
-      
-      // 初期化完了後にデータを読み込み（初期化完了を待機）
-      if (persistenceHook.isInitialized) {
-        console.log('✅ useMindMap: Persistence already initialized, executing reload immediately');
-        executeDataReload();
-        pendingResetKeyRef.current = null; // クリア
-      } else {
-        console.log('⏳ useMindMap: Waiting for persistence initialization before reload...');
-        pendingResetKeyRef.current = currentResetKey; // 待機中のリセットキーを記録
-      }
-    }
-    
-    // 初期化完了時に待機中のリセットがあれば実行
-    if (persistenceHook.isInitialized && pendingResetKeyRef.current !== null && currentResetKey === pendingResetKeyRef.current) {
-      console.log('✅ useMindMap: Persistence initialized, executing delayed reload for resetKey:', pendingResetKeyRef.current);
-      
-      // 共通のデータ読み込み関数を使用
-      executeDataReload({
-        setData: dataHook.setData,
-        isInitialized: persistenceHook.isInitialized,
-        loadInitialData: persistenceHook.loadInitialData,
-        refreshMapList: persistenceHook.refreshMapList
-      }, 'useMindMap-delayed').then(() => {
-        console.log('📋 useMindMap: Delayed reset data loaded with resetKey:', pendingResetKeyRef.current);
-      }).catch(error => {
-        console.error('❌ useMindMap: Failed to reload delayed data after reset:', error);
-      });
-      pendingResetKeyRef.current = null; // クリア
-    }
-    
-    prevResetKeyRef.current = currentResetKey;
-  }, [resetKey, persistenceHook.isInitialized]);
-  
-  // ストレージ設定変更時の強制再読み込み
-  const prevStorageConfigRef = useRef<StorageConfig | null>(storageConfig || null);
-  useEffect(() => {
-    const currentConfig = storageConfig;
-    const prevConfig = prevStorageConfigRef.current;
-    
-    // ストレージモードが変更されたかチェック
-    const modeChanged = currentConfig?.mode !== prevConfig?.mode;
-    const authChanged = currentConfig?.authAdapter !== prevConfig?.authAdapter;
-    
-    console.log('🔍 useMindMap: Storage config change check', {
-      prevConfig: prevConfig ? {
-        mode: prevConfig.mode,
-        hasAuthAdapter: !!prevConfig.authAdapter
-      } : 'null',
-      currentConfig: currentConfig ? {
-        mode: currentConfig.mode,
-        hasAuthAdapter: !!currentConfig.authAdapter
-      } : 'null',
-      modeChanged,
-      authChanged,
-      persistenceInitialized: persistenceHook.isInitialized
-    });
-    
-    if (modeChanged || authChanged) {
-      console.log('🔄 useMindMap: Storage config changed, reloading data:', {
-        prevMode: prevConfig?.mode,
-        newMode: currentConfig?.mode,
-        modeChanged,
-        authChanged
-      });
-      
-      // 現在のデータをクリアして新しいストレージから読み込み
-      const reloadData = async () => {
-        try {
-          console.log('🔄 useMindMap: Clearing current data before loading from new storage...');
-          
-          await executeDataReload({
-            setData: dataHook.setData,
-            isInitialized: persistenceHook.isInitialized,
-            loadInitialData: persistenceHook.loadInitialData,
-            refreshMapList: persistenceHook.refreshMapList
-          }, 'useMindMap-storage-change');
-          
-          console.log('📋 useMindMap: New storage data loaded with mode:', currentConfig?.mode);
-        } catch (error) {
-          console.error('❌ useMindMap: Failed to reload data from new storage:', error);
-        }
-      };
-      reloadData();
-    }
-    
-    prevStorageConfigRef.current = currentConfig || null;
-  }, [storageConfig?.mode, storageConfig?.authAdapter]);
+  // 各種データ処理を分離されたhookで管理
+  useInitialDataLoad(isAppReady, {
+    data: dataHook.data,
+    setData: dataHook.setData,
+    isInitialized: persistenceHook.isInitialized,
+    loadInitialData: persistenceHook.loadInitialData
+  });
 
-  // 手動保存関数 - ノード操作後に明示的に呼び出す
-  const saveCurrentMap = useCallback(async () => {
-    if (dataHook.data && persistenceHook.isInitialized) {
-      try {
-        await persistenceHook.saveData(dataHook.data);
-        await persistenceHook.updateMapInList(dataHook.data);
-        console.log('💾 Manual save completed:', dataHook.data.title);
-      } catch (error) {
-        console.error('❌ Manual save failed:', error);
-      }
-    }
-  }, [dataHook.data, persistenceHook]);
+  useDataReset(resetKey, {
+    setData: dataHook.setData,
+    isInitialized: persistenceHook.isInitialized,
+    loadInitialData: persistenceHook.loadInitialData,
+    refreshMapList: persistenceHook.refreshMapList
+  });
 
-  // 自動保存のロジック - useRefを使って無限ループを防ぐ
-  const lastSaveTimeRef = useRef<string>('');
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastMapIdRef = useRef<string>('');
-  
-  useEffect(() => {
-    const currentData = dataHook.data;
-    const currentUpdatedAt = currentData?.updatedAt || '';
-    const currentMapId = currentData?.id || '';
-    
-    // マップが切り替わった場合は保存しない
-    if (currentMapId !== lastMapIdRef.current) {
-      lastMapIdRef.current = currentMapId;
-      lastSaveTimeRef.current = currentUpdatedAt;
-      return;
+  useStorageConfigChange(storageConfig, {
+    setData: dataHook.setData,
+    isInitialized: persistenceHook.isInitialized,
+    loadInitialData: persistenceHook.loadInitialData,
+    refreshMapList: persistenceHook.refreshMapList
+  });
+
+  // 自動保存機能
+  const { saveManually } = useAutoSave(
+    dataHook.data,
+    {
+      saveData: persistenceHook.saveData,
+      updateMapInList: persistenceHook.updateMapInList
+    },
+    {
+      enabled: persistenceHook.isInitialized
     }
-    
-    // updatedAtが変更されていない場合は保存しない
-    if (currentUpdatedAt === lastSaveTimeRef.current || !currentUpdatedAt) {
-      return;
-    }
-    
-    // 既存のタイマーをクリア
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    // デバウンス保存
-    if (currentData && persistenceHook.isInitialized) {
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          await persistenceHook.saveData(currentData);
-          await persistenceHook.updateMapInList(currentData);
-          console.log('💾 Auto save completed:', currentData.title);
-          lastSaveTimeRef.current = currentUpdatedAt;
-        } catch (error) {
-          console.error('❌ Auto save failed:', error);
-        }
-      }, 300);
-    }
-    
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
-      }
-    };
-  }, [dataHook.data?.updatedAt, dataHook.data?.id, persistenceHook.isInitialized]);
+  );
 
   // マップ管理の高レベル操作（非同期対応）
   const mapOperations = {
@@ -240,7 +67,7 @@ export const useMindMap = (
       await persistenceHook.addMapToList(newMap);
       actionsHook.selectMap(newMap);
       return newMap.id;
-    }, [actionsHook.createMap, actionsHook.selectMap, persistenceHook.addMapToList]),
+    }, [actionsHook, persistenceHook]),
 
     selectMapById: useCallback((mapId: string) => {
       const targetMap = persistenceHook.allMindMaps.find(map => map.id === mapId);
@@ -249,7 +76,7 @@ export const useMindMap = (
         return true;
       }
       return false;
-    }, [persistenceHook.allMindMaps, actionsHook.selectMap]),
+    }, [persistenceHook, actionsHook]),
 
     deleteMap: useCallback(async (mapId: string): Promise<void> => {
       await persistenceHook.removeMapFromList(mapId);
@@ -258,7 +85,7 @@ export const useMindMap = (
         const newMap = actionsHook.createMap('新しいマインドマップ');
         actionsHook.selectMap(newMap);
       }
-    }, [persistenceHook.removeMapFromList, dataHook.data?.id, actionsHook.createMap, actionsHook.selectMap]),
+    }, [persistenceHook, dataHook, actionsHook]),
 
     updateMapMetadata: useCallback(async (mapId: string, updates: { title?: string; category?: string }): Promise<void> => {
       actionsHook.updateMapMetadata(mapId, updates);
@@ -266,14 +93,14 @@ export const useMindMap = (
       if (dataHook.data?.id === mapId) {
         await persistenceHook.updateMapInList(dataHook.data);
       }
-    }, [actionsHook.updateMapMetadata, dataHook.data, persistenceHook.updateMapInList])
+    }, [actionsHook, dataHook, persistenceHook])
   };
 
   // ファイル操作の統合
   const fileOperations = {
     exportCurrentMap: useCallback(() => {
       return actionsHook.exportData();
-    }, [actionsHook.exportData]),
+    }, [actionsHook]),
 
     importMap: useCallback(async (jsonData: string): Promise<boolean> => {
       const success = actionsHook.importData(jsonData);
@@ -281,7 +108,7 @@ export const useMindMap = (
         await persistenceHook.addMapToList(dataHook.data);
       }
       return success;
-    }, [actionsHook.importData, dataHook.data, persistenceHook.addMapToList])
+    }, [actionsHook, dataHook, persistenceHook])
   };
 
   // マップ一覧の初期化状態も返す
@@ -326,7 +153,7 @@ export const useMindMap = (
     applyAutoLayout: dataHook.applyAutoLayout,
     
     // 手動保存
-    saveCurrentMap,
+    saveCurrentMap: saveManually,
 
     // UI操作
     setZoom: uiHook.setZoom,

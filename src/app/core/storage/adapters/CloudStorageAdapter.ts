@@ -2,7 +2,6 @@
 import type { MindMapData } from '@shared/types';
 import type { StorageAdapter } from '../types';
 import type { AuthAdapter } from '../../auth/types';
-import type { FileInfo } from '../../cloud/api';
 import { createInitialData } from '../../../shared/types/dataTypes';
 import {
   initCloudIndexedDB,
@@ -13,6 +12,7 @@ import {
   type CloudCachedMindMap
 } from '../../utils/cloudIndexedDB';
 import { logger } from '../../../shared/utils/logger';
+import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI, type FileInfo } from '../../cloud/api';
 
 // Cloud-specific helper functions using separate cloud IndexedDB
 const saveToCloudIndexedDB = async (data: MindMapData, userId: string): Promise<void> => {
@@ -48,19 +48,21 @@ const getCloudDirtyData = async (userId: string): Promise<CloudCachedMindMap[]> 
 const deleteFromCloudIndexedDB = async (id: string): Promise<void> => {
   return removeMindMapFromCloudIndexedDB(id);
 };
-import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI } from '../../cloud/api';
 
 function isMindMapData(data: unknown): data is MindMapData {
   if (!data || typeof data !== 'object') return false;
-  const obj = data as any;
-  return (
-    typeof obj.id === 'string' &&
-    typeof obj.title === 'string' &&
-    typeof obj.version === 'number' &&
-    obj.rootNode &&
-    typeof obj.rootNode === 'object' &&
-    typeof obj.rootNode.id === 'string'
-  );
+  const obj = data as Record<string, unknown>;
+  
+  if (typeof obj.id !== 'string' ||
+      typeof obj.title !== 'string' ||
+      typeof obj.version !== 'number' ||
+      !obj.rootNode ||
+      typeof obj.rootNode !== 'object') {
+    return false;
+  }
+  
+  const rootNode = obj.rootNode as Record<string, unknown>;
+  return typeof rootNode.id === 'string';
 }
 
 function validateAndCleanData(data: unknown): MindMapData | null {

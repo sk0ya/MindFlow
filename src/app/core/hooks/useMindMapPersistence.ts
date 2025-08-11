@@ -3,19 +3,11 @@ import type { MindMapData } from '@shared/types';
 import { createInitialData } from '../../shared/types/dataTypes';
 import type { StorageAdapter, StorageConfig } from '../storage/types';
 import { createStorageAdapter } from '../storage/StorageAdapterFactory';
+import { logger } from '../../shared/utils/logger';
+import { useInitializationWaiter } from './useInitializationWaiter';
+import { isMindMapData, validateMindMapData } from '../../shared/utils/validation';
 
-// 型検証関数
-const isMindMapData = (data: unknown): data is MindMapData => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'id' in data &&
-    'title' in data &&
-    'rootNode' in data &&
-    typeof (data as { id: unknown; title: unknown }).id === 'string' &&
-    typeof (data as { id: unknown; title: unknown }).title === 'string'
-  );
-};
+// 型検証は shared/utils/validation から import
 
 
 /**
@@ -37,11 +29,10 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     const modeChanged = prevConfig?.mode !== config.mode;
     const authAdapterChanged = prevConfig?.authAdapter !== config.authAdapter;
     
-    console.log('🔄 useMindMapPersistence: useEffect triggered', {
+    logger.info('useMindMapPersistence: useEffect triggered', {
       mode: config.mode,
       hasAuthAdapter: !!config.authAdapter,
-      configHash: JSON.stringify(config).slice(0, 50) + '...',
-      currentAdapterMode: storageAdapter ? 'exists' : 'null',
+      currentAdapterExists: !!storageAdapter,
       isInitialized,
       modeChanged,
       authAdapterChanged
@@ -49,7 +40,7 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
 
     // 設定が実際に変更された場合のみ再初期化
     if (!prevConfig || modeChanged || authAdapterChanged) {
-      console.log(`🚀 useMindMapPersistence: (Re)initializing ${config.mode} storage adapter`, {
+      logger.info(`(Re)initializing ${config.mode} storage adapter`, {
         reason: !prevConfig ? 'first-init' : modeChanged ? 'mode-changed' : 'auth-changed'
       });
       
@@ -63,18 +54,18 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
           
           // 前のアダプターをクリーンアップ
           if (storageAdapter) {
-            console.log('🧹 useMindMapPersistence: Cleaning up previous adapter');
+            logger.info('Cleaning up previous adapter');
             storageAdapter.cleanup();
           }
           
-          console.log(`🚀 useMindMapPersistence: Creating ${config.mode} storage adapter`);
+          logger.info(`Creating ${config.mode} storage adapter`);
           const adapter = await createStorageAdapter(config);
           setStorageAdapter(adapter);
           setIsInitialized(true);
-          console.log(`✅ useMindMapPersistence: ${config.mode} storage initialized successfully`);
+          logger.info(`${config.mode} storage initialized successfully`);
         } catch (initError) {
           const errorMessage = initError instanceof Error ? initError.message : 'Storage initialization failed';
-          console.error('❌ useMindMapPersistence: Storage initialization failed:', initError);
+          logger.error('Storage initialization failed:', initError);
           setError(errorMessage);
           setIsInitialized(true); // エラーでも初期化完了扱いにして処理を続行
         }
@@ -83,54 +74,51 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
       
       prevConfigRef.current = config;
     }
-  }, [config.mode, config.authAdapter]);
+  }, [config, storageAdapter, isInitialized]);
 
   // ストレージアダプターのクリーンアップを単独のuseEffectで管理
   useEffect(() => {
     return () => {
       if (storageAdapter) {
-        console.log('🧹 useMindMapPersistence: Cleaning up adapter on unmount/change');
+        logger.info('Cleaning up adapter on unmount/change');
         storageAdapter.cleanup();
       }
     };
   }, [storageAdapter]);
 
+  const { waitForInitialization } = useInitializationWaiter();
+
   // 初期データ読み込み
   const loadInitialData = useCallback(async (): Promise<MindMapData> => {
     if (!isInitialized || !storageAdapter) {
-      // 初期化完了まで待機
-      await new Promise(resolve => {
-        const checkInit = () => {
-          if (isInitialized && storageAdapter) {
-            resolve(undefined);
-          } else {
-            setTimeout(checkInit, 10);
-          }
-        };
-        checkInit();
-      });
+      await waitForInitialization(() => isInitialized && !!storageAdapter);
     }
 
     if (!storageAdapter) {
-      console.warn('Storage adapter not available, creating default data');
+      logger.warn('Storage adapter not available, creating default data');
       return createInitialData();
     }
 
     try {
       const savedData = await storageAdapter.loadInitialData();
       if (savedData && isMindMapData(savedData)) {
-        console.log(`📋 Loaded saved data from ${config.mode} storage:`, savedData.title);
-        return savedData;
+        const validation = validateMindMapData(savedData);
+        if (validation.isValid) {
+          logger.info(`Loaded saved data from ${config.mode} storage:`, savedData.title);
+          return savedData;
+        } else {
+          logger.warn('Loaded data failed validation:', validation.errors);
+        }
       }
     } catch (loadError) {
-      console.error(`Failed to load saved data from ${config.mode} storage:`, loadError);
+      logger.error(`Failed to load saved data from ${config.mode} storage:`, loadError);
     }
     
     // デフォルトデータを作成して返す
     const initialData = createInitialData();
-    console.log('Created initial data:', initialData);
+    logger.info('Created initial data:', initialData.title);
     return initialData;
-  }, [isInitialized, storageAdapter, config.mode]);
+  }, [isInitialized, storageAdapter, config.mode, waitForInitialization]);
 
   // データ保存
   const saveData = useCallback(async (data: MindMapData): Promise<void> => {
@@ -138,9 +126,9 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     
     try {
       await storageAdapter.saveData(data);
-      console.log(`💾 Data saved successfully to ${config.mode} storage`);
+      logger.info(`Data saved successfully to ${config.mode} storage`);
     } catch (saveError) {
-      console.error(`❌ Failed to save data to ${config.mode} storage:`, saveError);
+      logger.error(`Failed to save data to ${config.mode} storage:`, saveError);
     }
   }, [isInitialized, storageAdapter, config.mode]);
 
@@ -152,13 +140,13 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
       const savedMaps = await storageAdapter.loadAllMaps();
       if (savedMaps && savedMaps.length > 0) {
         setAllMindMaps(savedMaps);
-        console.log(`📋 Loaded ${savedMaps.length} maps from ${config.mode} storage`);
+        logger.info(`Loaded ${savedMaps.length} maps from ${config.mode} storage`);
       } else {
-        console.log(`No saved maps found in ${config.mode} storage`);
+        logger.info(`No saved maps found in ${config.mode} storage`);
         setAllMindMaps([]);
       }
     } catch (loadError) {
-      console.error(`❌ Failed to load maps from ${config.mode} storage:`, loadError);
+      logger.error(`Failed to load maps from ${config.mode} storage:`, loadError);
       setAllMindMaps([]);
     }
   }, [isInitialized, storageAdapter, config.mode]);
@@ -169,9 +157,9 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     
     try {
       await storageAdapter.saveAllMaps(maps);
-      console.log(`💾 Saved ${maps.length} maps to ${config.mode} storage`);
+      logger.info(`Saved ${maps.length} maps to ${config.mode} storage`);
     } catch (saveError) {
-      console.error(`❌ Failed to save maps to ${config.mode} storage:`, saveError);
+      logger.error(`Failed to save maps to ${config.mode} storage:`, saveError);
     }
   }, [isInitialized, storageAdapter, config.mode]);
 
@@ -182,9 +170,9 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     try {
       await storageAdapter.addMapToList(newMap);
       setAllMindMaps(prevMaps => [...prevMaps, newMap]);
-      console.log(`📋 Added map to list (${config.mode}):`, newMap.title);
+      logger.info(`Added map to list (${config.mode}):`, newMap.title);
     } catch (addError) {
-      console.error(`❌ Failed to add map to list (${config.mode}):`, addError);
+      logger.error(`Failed to add map to list (${config.mode}):`, addError);
     }
   }, [isInitialized, storageAdapter, config.mode]);
 
@@ -195,9 +183,9 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     try {
       await storageAdapter.removeMapFromList(mapId);
       setAllMindMaps(prevMaps => prevMaps.filter(map => map.id !== mapId));
-      console.log(`🗑️ Removed map from list (${config.mode}):`, mapId);
+      logger.info(`Removed map from list (${config.mode}):`, mapId);
     } catch (removeError) {
-      console.error(`❌ Failed to remove map from list (${config.mode}):`, removeError);
+      logger.error(`Failed to remove map from list (${config.mode}):`, removeError);
     }
   }, [isInitialized, storageAdapter, config.mode]);
 
@@ -210,9 +198,9 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
       setAllMindMaps(prevMaps => 
         prevMaps.map(map => map.id === updatedMap.id ? updatedMap : map)
       );
-      console.log(`📋 Updated map in list (${config.mode}):`, updatedMap.title);
+      logger.info(`Updated map in list (${config.mode}):`, updatedMap.title);
     } catch (updateError) {
-      console.error(`❌ Failed to update map in list (${config.mode}):`, updateError);
+      logger.error(`Failed to update map in list (${config.mode}):`, updateError);
     }
   }, [isInitialized, storageAdapter, config.mode]);
 

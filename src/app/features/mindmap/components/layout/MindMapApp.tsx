@@ -354,7 +354,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const handleFileDownload = async (file: FileAttachment): Promise<void> => {
     try {
       let downloadUrl: string;
-      let fileName = file.name;
+      const fileName = file.name;
 
       if (storageMode === 'cloud' && file.downloadUrl) {
         // クラウドモード: downloadUrlを直接使用
