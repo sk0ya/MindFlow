@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './app/components/auth';
+import { logger } from './app/shared/utils/logger';
 
 // Dynamic import for Local mode with storage configuration
 const LocalMindMapApp = React.lazy(() => import('./app'));
@@ -28,7 +29,7 @@ const App: React.FC = () => {
 
   // Save mode changes to localStorage
   const handleModeChange = (mode: StorageMode) => {
-    console.log('🔄 App: Storage mode change requested', {
+    logger.info('🔄 App: Storage mode change requested', {
       from: storageMode,
       to: mode
     });
@@ -37,7 +38,7 @@ const App: React.FC = () => {
       setStorageMode(mode);
       setResetKey(prev => prev + 1);
       localStorage.setItem('mindflow_storage_mode', mode);
-      console.log('✅ App: Storage mode changed and saved to localStorage, resetKey incremented');
+      logger.info('✅ App: Storage mode changed and saved to localStorage, resetKey incremented');
     }
   };
 

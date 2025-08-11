@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { MindMapNode } from '@shared/types';
+import { logger } from '../../../../shared/utils/logger';
 
 interface MousePosition {
   x: number;
@@ -54,7 +55,7 @@ export const useNodeDragHandler = ({
       );
       
       if (distance > 5) {
-        console.log('📱 Node ドラッグ開始:', { nodeId: node.id, distance });
+        logger.debug('Node ドラッグ開始:', { nodeId: node.id, distance });
         setIsDragging(true);
         // ドラッグ開始を通知
         if (onDragStart) {
@@ -63,18 +64,18 @@ export const useNodeDragHandler = ({
       }
     } else if (isDragging) {
       // ドラッグ中の位置を通知（ドロップターゲット検出用）
-      console.log('📱 Node ドラッグ中:', { nodeId: node.id, clientX: e.clientX, clientY: e.clientY, hasOnDragMove: !!onDragMove });
+      logger.debug('Node ドラッグ中:', { nodeId: node.id, clientX: e.clientX, clientY: e.clientY, hasOnDragMove: !!onDragMove });
       if (onDragMove) {
-        console.log('📱 Node: onDragMove呼び出し');
+        logger.debug('Node: onDragMove呼び出し');
         onDragMove(e.clientX, e.clientY);
       } else {
-        console.log('❌ Node: onDragMoveが未定義');
+        logger.warn('Node: onDragMoveが未定義');
       }
     }
   }, [isDragging, mouseDownPos, onDragMove, onDragStart, node.id]);
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
-    console.log('📱 Node マウスアップ:', { nodeId: node.id, isDragging });
+    logger.debug('Node マウスアップ:', { nodeId: node.id, isDragging });
     if (isDragging && svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
       const svgX = (e.clientX - svgRect.left) / zoom;
@@ -83,7 +84,7 @@ export const useNodeDragHandler = ({
       const newX = svgX - dragStart.x;
       const newY = svgY - dragStart.y;
       
-      console.log('📱 Node ドラッグ終了通知:', { nodeId: node.id, newX, newY, clientX: e.clientX, clientY: e.clientY });
+      logger.debug('Node ドラッグ終了通知:', { nodeId: node.id, newX, newY, clientX: e.clientX, clientY: e.clientY });
       // ドラッグ終了を通知（親要素変更またはノード移動）
       if (onDragEnd) {
         onDragEnd(node.id, newX, newY);

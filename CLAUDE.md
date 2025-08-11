@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### High-Level Structure
 This is a React-based mindmap application with a modular architecture supporting multiple storage modes:
 
-- **Storage Modes**: Local (localStorage/IndexedDB), Cloud, and Hybrid
+- **Storage Modes**: Local (localStorage/IndexedDB) and Cloud
 - **Entry Point**: `src/App.tsx` dynamically imports the main app based on storage mode
 - **Main App**: Located in `src/app/` with modular feature-based organization
 
@@ -42,11 +42,10 @@ This is a React-based mindmap application with a modular architecture supporting
 
 #### Storage System (`src/app/core/storage/`)
 - **StorageAdapterFactory**: Creates appropriate storage adapters based on configuration
-- **Adapters**: LocalStorageAdapter, CloudStorageAdapter, HybridStorageAdapter
-- Three storage modes support different use cases:
+- **Adapters**: LocalStorageAdapter, CloudStorageAdapter
+- Two storage modes support different use cases:
   - `local`: Pure local storage using localStorage and IndexedDB
   - `cloud`: Cloud-based storage with authentication
-  - `hybrid`: Combination of local and cloud storage
 
 #### State Management (`src/app/core/`)
 - **Hooks-based Architecture**: Specialized hooks for different concerns
@@ -89,7 +88,7 @@ Storage mode selection is persisted in localStorage as `mindflow_storage_mode`.
 After recent refactoring, the project uses relative imports instead of path aliases. When editing files in `src/app/`, use relative paths like `../../shared/types` instead of absolute imports.
 
 #### Authentication Flow
-Cloud and hybrid modes wrap the app with `AuthProvider`. Local mode bypasses authentication entirely.
+Cloud mode wraps the app with `AuthProvider`. Local mode bypasses authentication entirely.
 
 #### Component Lazy Loading
 The main app component is lazy-loaded to support the dynamic storage mode switching pattern.

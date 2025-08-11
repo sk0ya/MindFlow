@@ -10,6 +10,7 @@ import { NotificationProvider, useNotification } from '../../../../shared/hooks/
 import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
 import { FileUploadProvider } from '../../../../shared/hooks/useFileUpload';
 import { useRetryableUpload } from '../../../../shared/hooks/useRetryableUpload';
+import { logger } from '../../../../shared/utils/logger';
 import './MindMapApp.css';
 
 // Types
@@ -35,7 +36,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   resetKey = 0
 }) => {
   
-  console.log('🔑 MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
+  logger.debug('MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
   const { showNotification } = useNotification();
   const { handleError, handleAsyncError } = useErrorHandler();
   const { retryableUpload, clearUploadState } = useRetryableUpload({
@@ -70,7 +71,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   
   // Show login modal when cloud mode requires auth
   React.useEffect(() => {
-    console.log('🔍 Auth check:', {
+    logger.debug('Auth check:', {
       isCloudMode,
       hasAuth: !!auth,
       authIsReady: auth?.isReady,
@@ -80,10 +81,10 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     });
 
     if (needsAuth && auth?.isReady) {
-      console.log('🚪 Showing login modal');
+      logger.info('Showing login modal');
       setShowLoginModal(true);
     } else if (isCloudMode && auth?.authState.isAuthenticated) {
-      console.log('✅ User authenticated, hiding login modal');
+      logger.info('User authenticated, hiding login modal');
       setShowLoginModal(false);
     }
   }, [needsAuth, auth?.isReady, auth?.authState.isAuthenticated, isCloudMode, showLoginModal]);
@@ -91,17 +92,17 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // Handle mode changes - reset modal state when switching to cloud mode
   React.useEffect(() => {
     if (isCloudMode && auth && !auth.authState.isAuthenticated && auth.isReady) {
-      console.log('🔄 Mode switched to cloud, user not authenticated');
+      logger.info('Mode switched to cloud, user not authenticated');
       setShowLoginModal(true);
     } else if (!isCloudMode) {
-      console.log('🔄 Mode switched to local, hiding login modal');
+      logger.info('Mode switched to local, hiding login modal');
       setShowLoginModal(false);
     }
   }, [storageMode, isCloudMode, auth?.authState.isAuthenticated, auth?.isReady]);
   
   // Create storage configuration based on selected mode
   const storageConfig: StorageConfig = React.useMemo(() => {
-    console.log('🔧 MindMapApp: Creating storageConfig', {
+    logger.debug('MindMapApp: Creating storageConfig', {
       storageMode,
       hasAuthAdapter: !!authAdapter,
       authAdapterRef: authAdapter ? authAdapter.constructor.name : 'none'
@@ -120,7 +121,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         break;
     }
     
-    console.log('🔧 MindMapApp: StorageConfig created', {
+    logger.debug('MindMapApp: StorageConfig created', {
       mode: config.mode,
       hasAuthAdapter: !!config.authAdapter,
       configHash: JSON.stringify(config).slice(0, 50) + '...'
@@ -247,7 +248,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           async (): Promise<FileAttachment> => {
             if (storageMode === 'cloud') {
               // クラウドモード: APIにアップロードしてCloudflareに保存
-              console.log('🌐 Uploading file to cloud storage...', { 
+              logger.info('Uploading file to cloud storage...', { 
                 fileName: file.name, 
                 fileSize: file.size, 
                 fileType: file.type,
@@ -257,14 +258,14 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
               
               // CloudStorageAdapterを直接使用
               const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
-              console.log('📦 CloudStorageAdapter imported successfully');
+              logger.debug('CloudStorageAdapter imported successfully');
               
               if (!auth) {
-                console.error('❌ Authentication not available for cloud upload');
+                logger.error('Authentication not available for cloud upload');
                 throw new Error('クラウドファイルアップロードには認証が必要です');
               }
               
-              console.log('🔐 Auth state:', {
+              logger.debug('Auth state:', {
                 hasAuth: !!auth,
                 hasAuthAdapter: !!auth.authAdapter,
                 isAuthenticated: auth.authAdapter?.isAuthenticated,
@@ -272,15 +273,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
               });
               
               const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
-              console.log('🏗️ CloudStorageAdapter created, initializing...');
+              logger.debug('CloudStorageAdapter created, initializing...');
               
               await storageAdapter.initialize();
-              console.log('✅ CloudStorageAdapter initialized');
+              logger.debug('CloudStorageAdapter initialized');
               
               if (typeof storageAdapter.uploadFile === 'function') {
-                console.log('📤 Calling uploadFile method...');
+                logger.debug('Calling uploadFile method...');
                 const uploadResult = await storageAdapter.uploadFile(data.id, nodeId, file);
-                console.log('📥 Upload result received:', uploadResult);
+                logger.debug('Upload result received:', uploadResult);
                 
                 const fileAttachment = {
                   id: uploadResult.id,
@@ -293,15 +294,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                   storagePath: uploadResult.storagePath,
                   r2FileId: uploadResult.id
                 };
-                console.log('✅ File uploaded to cloud successfully:', fileAttachment);
+                logger.info('File uploaded to cloud successfully:', fileAttachment);
                 return fileAttachment;
               } else {
-                console.error('❌ uploadFile method not available on storage adapter');
+                logger.error('uploadFile method not available on storage adapter');
                 throw new Error('Cloud storage adapter not available or uploadFile method missing');
               }
             } else {
               // ローカルモード: Base64エンコードしてローカル保存
-              console.log('💾 Processing file for local storage...');
+              logger.debug('Processing file for local storage...');
               
               const reader = new FileReader();
               const dataURL = await new Promise<string>((resolve, reject) => {
@@ -320,7 +321,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                 dataURL: dataURL,
                 data: dataURL.split(',')[1] // Base64 part only
               };
-              console.log('✅ File processed for local storage:', fileAttachment.name);
+              logger.debug('File processed for local storage:', fileAttachment.name);
               return fileAttachment;
             }
           }
@@ -334,18 +335,18 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             attachments: [...(node.attachments || []), fileAttachment]
           };
           updateNode(nodeId, updatedNode);
-          console.log('📎 File attached to node:', nodeId);
+          logger.debug('File attached to node:', nodeId);
         } else {
           throw new Error(`ノードが見つかりません: ${nodeId}`);
         }
       })(), 'ファイルアップロード', `${file.name}のアップロード`);
       
       // 成功時は自動削除に任せる（useFileUploadで1秒後に削除される）
-      console.log('✅ Upload completed successfully, waiting for auto-cleanup');
+      logger.debug('Upload completed successfully, waiting for auto-cleanup');
     } catch (error) {
       // エラー時のみ即座にクリア
       clearUploadState(uploadKey);
-      console.log('🧹 Upload state cleared due to error:', uploadKey);
+      logger.debug('Upload state cleared due to error:', uploadKey);
       throw error;
     }
   };
@@ -369,7 +370,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         // storagePath がある場合
         downloadUrl = file.storagePath;
       } else {
-        console.error('❌ No download data found in file:', file);
+        logger.error('No download data found in file:', file);
         throw new Error('ダウンロード可能なファイルデータが見つかりません');
       }
 
@@ -389,7 +390,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 
       // ブラウザネイティブのダウンロード機能で十分なため、成功通知は不要
     } catch (error) {
-      console.error('File download failed:', error);
+      logger.error('File download failed:', error);
       showNotification('error', `${file.name} のダウンロードに失敗しました`);
       handleError(error as Error, 'ファイルダウンロード', file.name);
     }
@@ -451,11 +452,11 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onZoomReset={() => {}}
         onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
         onAutoLayout={() => {
-          console.log('🎯 Manual auto layout triggered');
+          logger.info('Manual auto layout triggered');
           if (typeof mindMap.applyAutoLayout === 'function') {
             mindMap.applyAutoLayout();
           } else {
-            console.error('❌ applyAutoLayout function not available');
+            logger.error('applyAutoLayout function not available');
           }
         }}
         onToggleSidebar={toggleSidebar}
@@ -550,7 +551,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         <LoginModal 
           isOpen={showLoginModal}
           onClose={() => {
-            console.log('🔙 Login modal closed, switching to local mode');
+            logger.info('Login modal closed, switching to local mode');
             setShowLoginModal(false);
             // Switch back to local mode when user cancels login
             if (onModeChange) {

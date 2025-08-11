@@ -97,14 +97,12 @@ export const ErrorHandlerProvider: React.FC<ErrorHandlerProviderProps> = ({ chil
     const userMessage = generateUserFriendlyMessage(error, context, action);
     showNotification('error', userMessage);
 
-    // 開発環境ではコンソールにも詳細を出力
+    // 開発環境では詳細なデバッグ情報を出力
     if (import.meta.env.DEV) {
-      console.group('🚨 Error Details');
-      console.error('Original error:', error);
-      console.log('Context:', context);
-      console.log('Action:', action);
-      console.log('Error report:', errorReport);
-      console.groupEnd();
+      logger.debug('Error Details - Original error:', error);
+      logger.debug('Error Details - Context:', context);
+      logger.debug('Error Details - Action:', action);
+      logger.debug('Error Details - Full report:', errorReport);
     }
   }, [showNotification, userId]);
 

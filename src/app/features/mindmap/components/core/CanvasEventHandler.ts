@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { logger } from '../../../../shared/utils/logger';
 
 interface CanvasEventHandlerProps {
   editingNodeId: string | null;
@@ -42,7 +43,7 @@ export const useCanvasEventHandler = ({
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     // 編集中で、異なるノードが選択された場合は編集を確定
     if (editingNodeId && editingNodeId !== nodeId) {
-      console.log('🖱️ Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
+      logger.debug('Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
     }
     onSelectNode(nodeId);
   }, [editingNodeId, onSelectNode]);

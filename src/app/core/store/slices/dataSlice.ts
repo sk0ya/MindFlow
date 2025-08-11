@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../../shared/utils/logger';
 import { normalizeTreeData, denormalizeTreeData } from '../../data';
 import { autoSelectLayout } from '../../../shared';
 import type { MindMapStore, DataState } from './types';
@@ -69,18 +70,18 @@ export const createDataSlice: StateCreator<
   applyAutoLayout: () => {
     const state = get();
     if (!state.data?.rootNode) {
-      console.warn('⚠️ Auto layout: No root node found');
+      logger.warn('⚠️ Auto layout: No root node found');
       return;
     }
     
     // Validate autoSelectLayout function exists
     if (typeof autoSelectLayout !== 'function') {
-      console.error('❌ Auto layout: autoSelectLayout function not found');
+      logger.error('❌ Auto layout: autoSelectLayout function not found');
       return;
     }
     
     try {
-      console.log('🎯 Applying auto layout to root node:', {
+      logger.debug('🎯 Applying auto layout to root node:', {
         nodeId: state.data.rootNode.id,
         hasChildren: state.data.rootNode.children && state.data.rootNode.children.length > 0,
         childrenCount: state.data.rootNode.children?.length || 0
@@ -89,11 +90,11 @@ export const createDataSlice: StateCreator<
       const layoutedRootNode = autoSelectLayout(state.data.rootNode);
       
       if (!layoutedRootNode) {
-        console.error('❌ Auto layout: layoutedRootNode is null or undefined');
+        logger.error('❌ Auto layout: layoutedRootNode is null or undefined');
         return;
       }
       
-      console.log('✅ Auto layout result:', {
+      logger.debug('✅ Auto layout result:', {
         nodeId: layoutedRootNode.id,
         childrenCount: layoutedRootNode.children?.length || 0,
         rootPosition: { x: layoutedRootNode.x, y: layoutedRootNode.y }
@@ -111,7 +112,7 @@ export const createDataSlice: StateCreator<
           try {
             draft.normalizedData = normalizeTreeData(layoutedRootNode);
           } catch (normalizeError) {
-            console.error('❌ Auto layout: Failed to normalize data:', normalizeError);
+            logger.error('❌ Auto layout: Failed to normalize data:', normalizeError);
           }
           
           // Add to history
@@ -119,15 +120,15 @@ export const createDataSlice: StateCreator<
             draft.history = [...draft.history.slice(0, draft.historyIndex + 1), draft.data];
             draft.historyIndex = draft.history.length - 1;
           } catch (historyError) {
-            console.error('❌ Auto layout: Failed to update history:', historyError);
+            logger.error('❌ Auto layout: Failed to update history:', historyError);
           }
         }
       });
-      console.log('🎉 Auto layout applied successfully');
+      logger.debug('🎉 Auto layout applied successfully');
     } catch (error) {
-      console.error('❌ Auto layout failed:', error);
-      console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      logger.error('❌ Auto layout failed:', error);
+      logger.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+      logger.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     }
   },
 });

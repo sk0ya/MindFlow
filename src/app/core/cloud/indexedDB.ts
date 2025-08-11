@@ -1,5 +1,6 @@
 // Cloud-specific IndexedDB utilities for Local architecture
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 interface CloudCacheMetadata {
   lastSync: string;
@@ -28,13 +29,13 @@ class CloudIndexedDB {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('Cloud IndexedDB initialization failed:', request.error);
+        logger.error('Cloud IndexedDB initialization failed:', request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('✅ Cloud IndexedDB initialized');
+        logger.info('Cloud IndexedDB initialized');
         resolve();
       };
 
@@ -56,14 +57,14 @@ class CloudIndexedDB {
           syncStore.createIndex('operation', 'operation', { unique: false });
         }
 
-        console.log('📋 Cloud IndexedDB schema upgraded');
+        logger.info('Cloud IndexedDB schema upgraded');
       };
     });
   }
 
   // マインドマップを保存（読み取り専用 - indexedDB.tsで実装）
   async saveMindMap(_data: MindMapData, _userId: string): Promise<void> {
-    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
     throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
@@ -84,7 +85,7 @@ class CloudIndexedDB {
 
       request.onsuccess = () => {
         const result = request.result;
-        console.log('📋 Cloud IndexedDB: マインドマップ取得', { 
+        logger.debug('Cloud IndexedDB: マインドマップ取得', { 
           id, 
           found: !!result,
           isDirty: result?._metadata?.isDirty
@@ -93,7 +94,7 @@ class CloudIndexedDB {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: マインドマップ取得失敗', request.error);
+        logger.error('Cloud IndexedDB: マインドマップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -117,7 +118,7 @@ class CloudIndexedDB {
 
       request.onsuccess = () => {
         const results = request.result || [];
-        console.log('📋 Cloud IndexedDB: 全マインドマップ取得', { 
+        logger.debug('Cloud IndexedDB: 全マインドマップ取得', { 
           count: results.length,
           userId
         });
@@ -125,7 +126,7 @@ class CloudIndexedDB {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: 全マインドマップ取得失敗', request.error);
+        logger.error('Cloud IndexedDB: 全マインドマップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -133,7 +134,7 @@ class CloudIndexedDB {
 
   // 同期完了をマーク（読み取り専用 - indexedDB.tsで実装）
   async markSynced(_id: string): Promise<void> {
-    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
     throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
@@ -158,7 +159,7 @@ class CloudIndexedDB {
         const dirtyData = allData.filter((item: CachedCloudMindMap) => 
           item._metadata && item._metadata.isDirty === true
         );
-        console.log('🔄 Cloud IndexedDB: 未同期データ取得', { 
+        logger.debug('Cloud IndexedDB: 未同期データ取得', { 
           total: allData.length,
           dirty: dirtyData.length
         });
@@ -171,13 +172,13 @@ class CloudIndexedDB {
 
   // マインドマップを削除（読み取り専用 - indexedDB.tsで実装）
   async deleteMindMap(_id: string): Promise<void> {
-    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
     throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
   // データベースクリア（読み取り専用 - indexedDB.tsで実装）
   async clearAll(): Promise<void> {
-    console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+    logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
     throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
   }
 
@@ -186,7 +187,7 @@ class CloudIndexedDB {
     if (this.db) {
       this.db.close();
       this.db = null;
-      console.log('🔌 Cloud IndexedDB connection closed');
+      logger.info('Cloud IndexedDB connection closed');
     }
   }
 }
@@ -200,7 +201,7 @@ export async function initCloudIndexedDB(): Promise<void> {
 }
 
 export async function saveToCloudIndexedDB(_data: MindMapData, _userId: string): Promise<void> {
-  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
   throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
@@ -213,7 +214,7 @@ export async function getAllFromCloudIndexedDB(userId: string): Promise<CachedCl
 }
 
 export async function markAsCloudSynced(_id: string): Promise<void> {
-  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
   throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
@@ -222,12 +223,12 @@ export async function getCloudDirtyData(): Promise<CachedCloudMindMap[]> {
 }
 
 export async function deleteFromCloudIndexedDB(_id: string): Promise<void> {
-  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
   throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 
 export async function clearCloudIndexedDB(): Promise<void> {
-  console.warn('⚠️ CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
+  logger.warn('CloudIndexedDB書き込み無効: indexedDB.tsを使用してください');
   throw new Error('CloudIndexedDB write operations disabled. Use indexedDB.ts instead.');
 }
 

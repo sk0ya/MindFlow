@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useMindMapStore } from '../store/mindMapStore';
 import { createInitialData } from '../../shared/types/dataTypes';
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * 高レベルアクションに特化したHook
@@ -20,21 +21,21 @@ export const useMindMapActions = () => {
       newMap.createdAt = new Date().toISOString();
       newMap.updatedAt = new Date().toISOString();
       
-      console.log('Created new map:', newMap);
+      logger.debug('Created new map:', newMap);
       return newMap;
     }, []),
 
     // マップ選択
     selectMap: useCallback((mapData: MindMapData) => {
       store.setData(mapData);
-      console.log('Selected map:', mapData.title);
+      logger.debug('Selected map:', mapData.title);
     }, [store]),
 
     // マップ削除（データから）
     deleteMapData: useCallback(() => {
       const currentData = store.data;
       if (currentData) {
-        console.log('Deleting map:', currentData.title);
+        logger.debug('Deleting map:', currentData.title);
         // 新しい空のマップを作成
         const newMap = createInitialData();
         store.setData(newMap);
@@ -51,7 +52,7 @@ export const useMindMapActions = () => {
         updatedAt: new Date().toISOString()
       };
       
-      console.log('Duplicated map:', duplicatedMap.title);
+      logger.debug('Duplicated map:', duplicatedMap.title);
       return duplicatedMap;
     }, []),
 
@@ -65,7 +66,7 @@ export const useMindMapActions = () => {
           updatedAt: new Date().toISOString()
         };
         store.setData(updatedData);
-        console.log('Updated map metadata:', updates);
+        logger.debug('Updated map metadata:', updates);
       }
     }, [store])
   };
@@ -75,14 +76,14 @@ export const useMindMapActions = () => {
     undo: useCallback(async () => {
       if (store.canUndo()) {
         store.undo();
-        console.log('Undo performed');
+        logger.debug('Undo performed');
       }
     }, [store]),
 
     redo: useCallback(async () => {
       if (store.canRedo()) {
         store.redo();
-        console.log('Redo performed');
+        logger.debug('Redo performed');
       }
     }, [store]),
 
@@ -124,7 +125,7 @@ export const useMindMapActions = () => {
         store.setData(parsedData as MindMapData);
         return true;
       } catch (error) {
-        console.error('Failed to import data:', error);
+        logger.error('Failed to import data:', error);
         return false;
       }
     }, [store])

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { AuthAdapter } from '../../core/auth';
+import { logger } from '../../shared/utils/logger';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
 
   useEffect(() => {
     if (isOpen) {
-      console.log('🔓 LoginModal: Modal opened');
+      logger.debug('LoginModal: Modal opened');
       setEmail('');
       setMessage('');
       setIsSuccess(false);
@@ -57,7 +58,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
         setIsSuccess(false);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       setMessage('ネットワークエラーが発生しました。しばらく待ってから再度お試しください。');
       setIsSuccess(false);
     } finally {
@@ -90,7 +91,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, authAda
         setMessage(result.error || 'トークンが無効です');
       }
     } catch (error) {
-      console.error('Token verification error:', error);
+      logger.error('Token verification error:', error);
       setMessage('トークンの検証に失敗しました。トークンが正しいか確認してください。');
     } finally {
       setIsLoading(false);

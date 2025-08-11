@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import type { MindMapNode } from '@shared/types';
+import { logger } from '../../../../shared/utils/logger';
 
 interface DragState {
   isDragging: boolean;
@@ -29,8 +30,8 @@ export const useCanvasDragHandler = ({
   onChangeSiblingOrder,
   rootNode
 }: CanvasDragHandlerProps) => {
-  // 関数の存在をログ出力
-  console.log('🔧 CanvasDragHandler 初期化:', {
+  // 関数の存在をデバッグログ出力
+  logger.debug('CanvasDragHandler 初期化:', {
     hasOnChangeParent: !!onChangeParent,
     hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
     onChangeParentType: typeof onChangeParent,
@@ -55,7 +56,7 @@ export const useCanvasDragHandler = ({
     const svgX = (x - svgRect.left) / zoom - pan.x;
     const svgY = (y - svgRect.top) / zoom - pan.y;
 
-    console.log('🎯 座標変換:', {
+    logger.debug('座標変換:', {
       clientX: x, clientY: y,
       svgLeft: svgRect.left, svgTop: svgRect.top,
       zoom, panX: pan.x, panY: pan.y,
@@ -136,7 +137,7 @@ export const useCanvasDragHandler = ({
       action = 'move-parent';
     }
 
-    console.log('🎯 ドロップ判定結果:', {
+    logger.debug('ドロップ判定結果:', {
       closestNodeId: targetNode.id,
       relativeY,
       topThreshold,
@@ -155,7 +156,7 @@ export const useCanvasDragHandler = ({
 
   // ドラッグ開始時の処理
   const handleDragStart = useCallback((nodeId: string, _e: React.MouseEvent | React.TouchEvent) => {
-    console.log('🔥 ドラッグ開始:', { nodeId });
+    logger.debug('ドラッグ開始:', { nodeId });
     setDragState({
       isDragging: true,
       draggedNodeId: nodeId,
@@ -183,7 +184,7 @@ export const useCanvasDragHandler = ({
       if (prev.dropTargetId !== (targetNode?.id || null) ||
         prev.dropPosition !== position ||
         prev.dropAction !== action) {
-        console.log('🎯 ドラッグ移動 - 状態更新:', {
+        logger.debug('ドラッグ移動 - 状態更新:', {
           targetNodeId: targetNode?.id,
           position,
           action
@@ -203,7 +204,7 @@ export const useCanvasDragHandler = ({
   // ドラッグ終了時の処理
   const handleDragEnd = useCallback(() => {
     setDragState(prevState => {
-      console.log('🎯 handleDragEnd 実行:', {
+      logger.debug('handleDragEnd 実行:', {
         draggedNodeId: prevState.draggedNodeId,
         dropTargetId: prevState.dropTargetId,
         dropPosition: prevState.dropPosition,
@@ -220,7 +221,7 @@ export const useCanvasDragHandler = ({
         if (prevState.dropAction === 'reorder-sibling') {
           // 兄弟順序変更
           const insertBefore = prevState.dropPosition === 'before';
-          console.log('🔄 兄弟順序変更実行:', {
+          logger.debug('兄弟順序変更実行:', {
             draggedNodeId: prevState.draggedNodeId,
             targetNodeId: prevState.dropTargetId,
             insertBefore,
@@ -228,19 +229,19 @@ export const useCanvasDragHandler = ({
             hasOnChangeSiblingOrder: !!onChangeSiblingOrder
           });
           if (onChangeSiblingOrder) {
-            console.log('✅ onChangeSiblingOrder関数を呼び出し中...');
+            logger.debug('onChangeSiblingOrder関数を呼び出し中...');
             try {
               onChangeSiblingOrder(prevState.draggedNodeId, prevState.dropTargetId, insertBefore);
-              console.log('✅ onChangeSiblingOrder関数呼び出し完了');
+              logger.debug('onChangeSiblingOrder関数呼び出し完了');
             } catch (error) {
-              console.error('❌ onChangeSiblingOrder関数でエラー発生:', error);
+              logger.error('onChangeSiblingOrder関数でエラー発生:', error);
             }
           } else {
-            console.error('❌ onChangeSiblingOrder関数が存在しません');
+            logger.error('onChangeSiblingOrder関数が存在しません');
           }
         } else if (prevState.dropAction === 'move-parent') {
           // 親変更
-          console.log('🔄 親変更実行:', {
+          logger.debug('親変更実行:', {
             draggedNodeId: prevState.draggedNodeId,
             newParentId: prevState.dropTargetId
           });

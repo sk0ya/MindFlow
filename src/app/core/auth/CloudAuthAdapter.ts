@@ -1,5 +1,6 @@
 // Cloud authentication adapter for Local architecture
 import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse } from './types';
+import { logger } from '../../shared/utils/logger';
 
 const DEFAULT_CONFIG: AuthConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
@@ -51,9 +52,9 @@ export class CloudAuthAdapter implements AuthAdapter {
       if (token) {
         try {
           await this.validateToken(token);
-          console.log('✅ CloudAuthAdapter: Stored token validated');
+          logger.debug('✅ CloudAuthAdapter: Stored token validated');
         } catch (validationError) {
-          console.warn('⚠️ CloudAuthAdapter: Stored token invalid, clearing:', validationError);
+          logger.warn('⚠️ CloudAuthAdapter: Stored token invalid, clearing:', validationError);
           this.clearStoredTokens();
           this.clearAuthState();
         }
@@ -61,9 +62,9 @@ export class CloudAuthAdapter implements AuthAdapter {
       
       this._isInitialized = true;
       this.startTokenRefreshTimer();
-      console.log('✅ CloudAuthAdapter: Initialized');
+      logger.debug('✅ CloudAuthAdapter: Initialized');
     } catch (error) {
-      console.error('❌ CloudAuthAdapter: Initialization failed:', error);
+      logger.error('❌ CloudAuthAdapter: Initialization failed:', error);
       this.clearAuthState();
       this._isInitialized = true;
     }
@@ -86,7 +87,7 @@ export class CloudAuthAdapter implements AuthAdapter {
 
       const result: LoginResponse = await response.json();
 
-      console.log('📧 Server response:', {
+      logger.debug('📧 Server response:', {
         status: response.status,
         success: result.success,
         emailSent: result.emailSent,
@@ -99,9 +100,9 @@ export class CloudAuthAdapter implements AuthAdapter {
       }
 
       if (result.emailSent) {
-        console.log('✅ Magic link email sent to:', email);
+        logger.debug('✅ Magic link email sent to:', email);
       } else {
-        console.log('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
+        logger.debug('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
         
         // 開発モードの場合、Magic Linkを自動的に開く
         // eslint-disable-next-line no-alert
@@ -143,7 +144,7 @@ export class CloudAuthAdapter implements AuthAdapter {
 
       if (result.token && result.user) {
         this.setAuthenticatedUser(result.user, result.token);
-        console.log('✅ Magic link verified for:', result.user.email);
+        logger.debug('✅ Magic link verified for:', result.user.email);
         return { success: true };
       } else {
         throw new Error('Invalid response format');
@@ -164,7 +165,7 @@ export class CloudAuthAdapter implements AuthAdapter {
     this.clearAuthState();
     this.clearStoredTokens();
     this.notifyAuthChange(null);
-    console.log('👋 User logged out');
+    logger.debug('👋 User logged out');
   }
 
   /**
@@ -206,13 +207,13 @@ export class CloudAuthAdapter implements AuthAdapter {
 
       if (response.ok && result.success && result.token && result.user) {
         this.setAuthenticatedUser(result.user, result.token);
-        console.log('🔄 Token refreshed');
+        logger.debug('🔄 Token refreshed');
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('❌ Token refresh failed:', error);
+      logger.error('❌ Token refresh failed:', error);
       return false;
     }
   }
@@ -244,7 +245,7 @@ export class CloudAuthAdapter implements AuthAdapter {
       this.refreshTimer = null;
     }
     this.authChangeCallbacks = [];
-    console.log('🧹 CloudAuthAdapter: Cleanup completed');
+    logger.debug('🧹 CloudAuthAdapter: Cleanup completed');
   }
 
   /**
@@ -362,7 +363,7 @@ export class CloudAuthAdapter implements AuthAdapter {
       if (this.isAuthenticated) {
         const success = await this.refreshToken();
         if (!success) {
-          console.warn('⚠️ Token refresh failed, user may need to login again');
+          logger.warn('⚠️ Token refresh failed, user may need to login again');
         }
       }
     }, 45 * 60 * 1000); // 45 minutes

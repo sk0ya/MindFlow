@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import MindMapCanvas from './MindMapCanvas';
 import type { MindMapData, MindMapNode, Position, FileAttachment } from '@shared/types';
+import { logger } from '../../../../shared/utils/logger';
 
 interface MindMapWorkspaceProps {
   data: MindMapData;
@@ -56,7 +57,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   pan,
   setPan
 }) => {
-  console.log('🏗️ MindMapWorkspace props:', { 
+  logger.debug('MindMapWorkspace props:', { 
     hasOnMoveNode: !!onMoveNode,
     hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
     onMoveNodeType: typeof onMoveNode,

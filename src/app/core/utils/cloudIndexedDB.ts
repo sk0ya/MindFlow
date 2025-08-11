@@ -1,4 +1,5 @@
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * クラウドモード専用のIndexedDBユーティリティ
@@ -28,13 +29,13 @@ class CloudIndexedDBManager {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: 初期化エラー', request.error);
+        logger.error('Cloud IndexedDB: 初期化エラー', request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('✅ Cloud IndexedDB: 初期化完了');
+        logger.info('Cloud IndexedDB: 初期化完了');
         resolve();
       };
 
@@ -53,7 +54,7 @@ class CloudIndexedDBManager {
           store.createIndex('userId', '_metadata.userId', { unique: false });
         }
         
-        console.log('🔧 Cloud IndexedDB: データベース構造作成完了');
+        logger.info('Cloud IndexedDB: データベース構造作成完了');
       };
     });
   }
@@ -74,7 +75,7 @@ class CloudIndexedDBManager {
       const request = store.put(data, 'currentMap');
 
       request.onsuccess = () => {
-        console.log('💾 Cloud IndexedDB: 現在のマップ保存完了', { 
+        logger.debug('Cloud IndexedDB: 現在のマップ保存完了', { 
           id: data.id, 
           title: data.title,
           userId: data._metadata.userId
@@ -83,7 +84,7 @@ class CloudIndexedDBManager {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: 現在のマップ保存失敗', request.error);
+        logger.error('Cloud IndexedDB: 現在のマップ保存失敗', request.error);
         reject(request.error);
       };
     });
@@ -107,7 +108,7 @@ class CloudIndexedDBManager {
       request.onsuccess = () => {
         const result = request.result;
         const mapData = result || null;
-        console.log('📋 Cloud IndexedDB: 現在のマップ取得', { 
+        logger.debug('Cloud IndexedDB: 現在のマップ取得', { 
           found: !!mapData,
           title: mapData?.title,
           userId: mapData?._metadata?.userId
@@ -116,7 +117,7 @@ class CloudIndexedDBManager {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: 現在のマップ取得失敗', request.error);
+        logger.error('Cloud IndexedDB: 現在のマップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -138,7 +139,7 @@ class CloudIndexedDBManager {
       const request = store.put(data);
 
       request.onsuccess = () => {
-        console.log('💾 Cloud IndexedDB: マップリスト保存完了', { 
+        logger.debug('Cloud IndexedDB: マップリスト保存完了', { 
           id: data.id, 
           title: data.title,
           userId: data._metadata.userId
@@ -147,7 +148,7 @@ class CloudIndexedDBManager {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: マップリスト保存失敗', request.error);
+        logger.error('Cloud IndexedDB: マップリスト保存失敗', request.error);
         reject(request.error);
       };
     });
@@ -170,7 +171,7 @@ class CloudIndexedDBManager {
 
       request.onsuccess = () => {
         const maps = request.result || [];
-        console.log('📋 Cloud IndexedDB: 全マップ取得', { 
+        logger.debug('Cloud IndexedDB: 全マップ取得', { 
           count: maps.length,
           userIds: [...new Set(maps.map(m => m._metadata?.userId).filter(Boolean))]
         });
@@ -178,7 +179,7 @@ class CloudIndexedDBManager {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: 全マップ取得失敗', request.error);
+        logger.error('Cloud IndexedDB: 全マップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -200,12 +201,12 @@ class CloudIndexedDBManager {
       const request = store.delete(id);
 
       request.onsuccess = () => {
-        console.log('🗑️ Cloud IndexedDB: マップ削除完了', { id });
+        logger.debug('Cloud IndexedDB: マップ削除完了', { id });
         resolve();
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: マップ削除失敗', request.error);
+        logger.error('Cloud IndexedDB: マップ削除失敗', request.error);
         reject(request.error);
       };
     });
@@ -228,12 +229,12 @@ class CloudIndexedDBManager {
       transaction.objectStore(this.STORES.ALL_MAPS).clear();
 
       transaction.oncomplete = () => {
-        console.log('🧹 Cloud IndexedDB: 全データクリア完了');
+        logger.info('Cloud IndexedDB: 全データクリア完了');
         resolve();
       };
 
       transaction.onerror = () => {
-        console.error('❌ Cloud IndexedDB: データクリア失敗', transaction.error);
+        logger.error('Cloud IndexedDB: データクリア失敗', transaction.error);
         reject(transaction.error);
       };
     });
@@ -257,7 +258,7 @@ class CloudIndexedDBManager {
 
       request.onsuccess = () => {
         const maps = request.result || [];
-        console.log('📋 Cloud IndexedDB: ユーザーマップ取得', { 
+        logger.debug('Cloud IndexedDB: ユーザーマップ取得', { 
           userId,
           count: maps.length
         });
@@ -265,7 +266,7 @@ class CloudIndexedDBManager {
       };
 
       request.onerror = () => {
-        console.error('❌ Cloud IndexedDB: ユーザーマップ取得失敗', request.error);
+        logger.error('Cloud IndexedDB: ユーザーマップ取得失敗', request.error);
         reject(request.error);
       };
     });

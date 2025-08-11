@@ -1,6 +1,7 @@
 // Authentication provider for cloud mode
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { CloudAuthAdapter, type AuthAdapter, type AuthState } from '../../core/auth';
+import { logger } from '../../shared/utils/logger';
 
 interface AuthContextType {
   authAdapter: AuthAdapter;
@@ -27,9 +28,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         await authAdapter.initialize();
         setIsReady(true);
-        console.log('✅ AuthProvider: Authentication initialized');
+        logger.info('AuthProvider: Authentication initialized');
       } catch (error) {
-        console.error('❌ AuthProvider: Authentication initialization failed:', error);
+        logger.error('AuthProvider: Authentication initialization failed:', error);
         setIsReady(true); // エラーでも準備完了扱い
       }
     };
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = authAdapter.onAuthChange((user) => {
       setAuthState(authAdapter.authState);
-      console.log('🔄 AuthProvider: Auth state changed:', user ? `User: ${user.email}` : 'No user');
+      logger.info('AuthProvider: Auth state changed:', user ? `User: ${user.email}` : 'No user');
     });
 
     return unsubscribe;
@@ -53,30 +54,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const token = urlParams.get('token');
     
     if (token) {
-      console.log('🔗 Magic link token detected in AuthProvider:', token);
+      logger.info('Magic link token detected in AuthProvider:', token);
       
       if (isReady) {
         const verifyToken = async () => {
           try {
-            console.log('🔑 Attempting to verify magic link token');
+            logger.info('Attempting to verify magic link token');
             const result = await authAdapter.verifyMagicLink(token);
             
             if (result.success) {
-              console.log('✅ Magic link verified successfully');
+              logger.info('Magic link verified successfully');
               // URLからトークンを削除
               const newUrl = window.location.pathname + window.location.hash;
               window.history.replaceState({}, document.title, newUrl);
             } else {
-              console.error('❌ Magic link verification failed:', result.error);
+              logger.error('Magic link verification failed:', result.error);
             }
           } catch (error) {
-            console.error('❌ Magic link verification error:', error);
+            logger.error('Magic link verification error:', error);
           }
         };
 
         verifyToken();
       } else {
-        console.log('⏳ AuthProvider not ready yet, will verify token when ready');
+        logger.info('AuthProvider not ready yet, will verify token when ready');
       }
     }
   }, [authAdapter, isReady]);

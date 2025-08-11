@@ -4,6 +4,7 @@ import { useCanvasDragHandler } from '../core/CanvasDragHandler';
 import { useCanvasViewportHandler } from '../core/CanvasViewportHandler';
 import { useCanvasEventHandler } from '../core/CanvasEventHandler';
 import type { MindMapData, MindMapNode, FileAttachment } from '@shared/types';
+import { logger } from '../../../../shared/utils/logger';
 
 interface MindMapCanvasProps {
   data: MindMapData;
@@ -77,7 +78,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
   const allNodes = flattenVisibleNodes(data.rootNode);
   
   // ドラッグハンドラーを使用
-  console.log('🎯 MindMapCanvas useCanvasDragHandler 呼び出し:', { 
+  logger.debug('MindMapCanvas useCanvasDragHandler 呼び出し:', { 
     hasOnChangeParent: !!onChangeParent,
     hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
     onChangeParentType: typeof onChangeParent,

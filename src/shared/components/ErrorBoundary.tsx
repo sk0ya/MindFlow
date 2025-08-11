@@ -5,6 +5,7 @@
 
 import { Component, ReactNode, ErrorInfo } from 'react';
 import { isDevelopment } from '../utils/env';
+import { logger } from '../../app/shared/utils/logger';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -39,9 +40,11 @@ class ErrorReporter {
         JSON.parse(sessionStorage.getItem('auth_user') || '{}').id : 'anonymous'
     };
 
-    // Log to console in development
+    // Log error report
     if (isDevelopment()) {
-      console.error('🚨 ErrorBoundary Report:', errorReport);
+      logger.error('🚨 ErrorBoundary Report:', errorReport);
+    } else {
+      logger.error('ErrorBoundary caught error', { errorId, message: error.message, level });
     }
 
     // Store error locally for debugging
@@ -54,7 +57,7 @@ class ErrorReporter {
       }
       localStorage.setItem('mindflow_errors', JSON.stringify(storedErrors));
     } catch (e) {
-      console.warn('Failed to store error report:', e);
+      logger.warn('Failed to store error report:', e);
     }
 
     // TODO: Send to remote error reporting service in production
@@ -128,7 +131,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
 
     // TODO: Send user report
-    console.log('User error report:', reportData);
+    logger.info('User error report:', reportData);
     alert('Thank you for the report. We will investigate this issue.');
   };
 

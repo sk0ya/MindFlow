@@ -3,6 +3,7 @@ import type { StorageAdapter, StorageConfig, StorageMode, StorageAdapterFactory 
 import type { AuthAdapter } from '../auth/types';
 import { LocalStorageAdapter } from './adapters/LocalStorageAdapter';
 import { CloudStorageAdapter } from './adapters/CloudStorageAdapter';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * ストレージアダプターファクトリー
@@ -71,7 +72,7 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
   private async createLocalAdapter(): Promise<StorageAdapter> {
     const adapter = new LocalStorageAdapter();
     await adapter.initialize();
-    console.log('✅ StorageAdapterFactory: Local adapter created');
+    logger.info('StorageAdapterFactory: Local adapter created');
     return adapter;
   }
 
@@ -85,7 +86,7 @@ export class StorageAdapterFactory implements IStorageAdapterFactory {
 
     const adapter = new CloudStorageAdapter(config.authAdapter);
     await adapter.initialize();
-    console.log('✅ StorageAdapterFactory: Cloud adapter created');
+    logger.info('StorageAdapterFactory: Cloud adapter created');
     return adapter;
   }
 

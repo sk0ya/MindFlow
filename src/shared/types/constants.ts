@@ -211,33 +211,6 @@ export const KEYBOARD_SHORTCUTS = {
   }
 } as const;
 
-// Theme definitions
-export const THEME_CONSTANTS = {
-  DEFAULT: {
-    name: 'デフォルト',
-    background: '#ffffff',
-    connectionColor: '#333333',
-    textColor: '#000000',
-    nodeBackground: '#f8f9fa',
-    selectedNodeBorder: '#3498db'
-  },
-  DARK: {
-    name: 'ダーク',
-    background: '#2c3e50',
-    connectionColor: '#ecf0f1',
-    textColor: '#ffffff',
-    nodeBackground: '#34495e',
-    selectedNodeBorder: '#3498db'
-  },
-  MINIMAL: {
-    name: 'ミニマル',
-    background: '#fefefe',
-    connectionColor: '#bdc3c7',
-    textColor: '#2c3e50',
-    nodeBackground: 'transparent',
-    selectedNodeBorder: '#e74c3c'
-  }
-} as const;
 
 // Performance monitoring
 export const PERFORMANCE_CONSTANTS = {

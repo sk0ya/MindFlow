@@ -1,6 +1,7 @@
 // Local storage adapter - wraps IndexedDB functionality for unified interface
 import type { MindMapData } from '@shared/types';
 import type { StorageAdapter } from '../types';
+import { logger } from '../../../shared/utils/logger';
 import {
   initLocalIndexedDB,
   saveCurrentMapToIndexedDB,
@@ -29,9 +30,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       await initLocalIndexedDB();
       this._isInitialized = true;
-      console.log('✅ LocalStorageAdapter: IndexedDB initialized');
+      logger.debug('✅ LocalStorageAdapter: IndexedDB initialized');
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Initialization failed:', error);
+      logger.error('❌ LocalStorageAdapter: Initialization failed:', error);
       this._isInitialized = true; // 失敗でも初期化完了扱いにして処理を続行
       throw error;
     }
@@ -52,23 +53,23 @@ export class LocalStorageAdapter implements StorageAdapter {
       if (allMaps.length > 0) {
         // 最初のマップを取得
         const firstMap = allMaps[0];
-        console.log('📋 LocalStorageAdapter: Loading first available map:', firstMap.title);
+        logger.debug('📋 LocalStorageAdapter: Loading first available map:', firstMap.title);
         return firstMap;
       }
       
       // 利用可能なマップがない場合は現在のマップを試す
       const savedData = await getCurrentMapFromIndexedDB();
       if (savedData && this.isValidMindMapData(savedData)) {
-        console.log('📋 LocalStorageAdapter: Loaded current map:', savedData.title);
+        logger.debug('📋 LocalStorageAdapter: Loaded current map:', savedData.title);
         return savedData;
       }
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to load initial data:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to load initial data:', error);
     }
 
     // デフォルトデータを作成
     const initialData = createInitialData();
-    console.log('🆕 LocalStorageAdapter: Created initial data:', initialData.title);
+    logger.debug('🆕 LocalStorageAdapter: Created initial data:', initialData.title);
     return initialData;
   }
 
@@ -77,15 +78,15 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   async saveData(data: MindMapData): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('LocalStorageAdapter: Not initialized, skipping save');
+      logger.warn('LocalStorageAdapter: Not initialized, skipping save');
       return;
     }
 
     try {
       await saveCurrentMapToIndexedDB(data);
-      console.log('💾 LocalStorageAdapter: Data saved:', data.title);
+      logger.debug('💾 LocalStorageAdapter: Data saved:', data.title);
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to save data:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to save data:', error);
       throw error;
     }
   }
@@ -103,14 +104,14 @@ export class LocalStorageAdapter implements StorageAdapter {
       if (savedMaps && savedMaps.length > 0) {
         // _metadataを除去してMindMapData[]に変換
         const cleanMaps: MindMapData[] = savedMaps.map(({ _metadata, ...map }) => map);
-        console.log(`📋 LocalStorageAdapter: Loaded ${cleanMaps.length} maps`);
+        logger.debug(`📋 LocalStorageAdapter: Loaded ${cleanMaps.length} maps`);
         return cleanMaps;
       }
 
-      console.log('📋 LocalStorageAdapter: No saved maps found');
+      logger.debug('📋 LocalStorageAdapter: No saved maps found');
       return [];
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to load maps:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to load maps:', error);
       return [];
     }
   }
@@ -120,16 +121,16 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   async saveAllMaps(maps: MindMapData[]): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('LocalStorageAdapter: Not initialized, skipping save all maps');
+      logger.warn('LocalStorageAdapter: Not initialized, skipping save all maps');
       return;
     }
 
     try {
       // 各マップを個別にIndexedDBに保存
       await Promise.all(maps.map(map => saveMindMapToIndexedDB(map)));
-      console.log(`💾 LocalStorageAdapter: Saved ${maps.length} maps`);
+      logger.debug(`💾 LocalStorageAdapter: Saved ${maps.length} maps`);
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to save maps:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to save maps:', error);
       throw error;
     }
   }
@@ -139,15 +140,15 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   async addMapToList(map: MindMapData): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('LocalStorageAdapter: Not initialized, skipping add map');
+      logger.warn('LocalStorageAdapter: Not initialized, skipping add map');
       return;
     }
 
     try {
       await saveMindMapToIndexedDB(map);
-      console.log('📋 LocalStorageAdapter: Added map to list:', map.title);
+      logger.debug('📋 LocalStorageAdapter: Added map to list:', map.title);
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to add map:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to add map:', error);
       throw error;
     }
   }
@@ -157,15 +158,15 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   async removeMapFromList(mapId: string): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('LocalStorageAdapter: Not initialized, skipping remove map');
+      logger.warn('LocalStorageAdapter: Not initialized, skipping remove map');
       return;
     }
 
     try {
       await removeMindMapFromIndexedDB(mapId);
-      console.log('🗑️ LocalStorageAdapter: Removed map from list:', mapId);
+      logger.debug('🗑️ LocalStorageAdapter: Removed map from list:', mapId);
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to remove map:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to remove map:', error);
       throw error;
     }
   }
@@ -175,15 +176,15 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   async updateMapInList(map: MindMapData): Promise<void> {
     if (!this._isInitialized) {
-      console.warn('LocalStorageAdapter: Not initialized, skipping update map');
+      logger.warn('LocalStorageAdapter: Not initialized, skipping update map');
       return;
     }
 
     try {
       await saveMindMapToIndexedDB(map);
-      console.log('📋 LocalStorageAdapter: Updated map in list:', map.title);
+      logger.debug('📋 LocalStorageAdapter: Updated map in list:', map.title);
     } catch (error) {
-      console.error('❌ LocalStorageAdapter: Failed to update map:', error);
+      logger.error('❌ LocalStorageAdapter: Failed to update map:', error);
       throw error;
     }
   }
@@ -193,7 +194,7 @@ export class LocalStorageAdapter implements StorageAdapter {
    */
   cleanup(): void {
     // IndexedDBの接続はブラウザが管理するので、特別なクリーンアップは不要
-    console.log('🧹 LocalStorageAdapter: Cleanup completed');
+    logger.debug('🧹 LocalStorageAdapter: Cleanup completed');
   }
 
   /**

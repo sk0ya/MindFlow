@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { MindMapNode, Position } from '@shared/types';
+import { logger } from '../../../shared/utils/logger';
 import { 
   updateNormalizedNode,
   deleteNormalizedNode,
@@ -72,7 +73,7 @@ export const createNodeSlice: StateCreator<
           };
         }
       } catch (error) {
-        console.error('updateNode error:', error);
+        logger.error('updateNode error:', error);
       }
     });
   },
@@ -140,28 +141,28 @@ export const createNodeSlice: StateCreator<
           };
         }
       } catch (error) {
-        console.error('addChildNode error:', error);
+        logger.error('addChildNode error:', error);
       }
     });
     
     // Apply auto layout if enabled
     const { data } = get();
-    console.log('🔍 Auto layout check (addChildNode):', {
+    logger.debug('🔍 Auto layout check (addChildNode):', {
       hasData: !!data,
       hasSettings: !!data?.settings,
       autoLayoutEnabled: data?.settings?.autoLayout,
       settingsObject: data?.settings
     });
     if (data?.settings?.autoLayout) {
-      console.log('✅ Applying auto layout after addChildNode');
+      logger.debug('✅ Applying auto layout after addChildNode');
       const applyAutoLayout = get().applyAutoLayout;
       if (typeof applyAutoLayout === 'function') {
         applyAutoLayout();
       } else {
-        console.error('❌ applyAutoLayout function not found');
+        logger.error('❌ applyAutoLayout function not found');
       }
     } else {
-      console.log('❌ Auto layout disabled or settings missing');
+      logger.debug('❌ Auto layout disabled or settings missing');
     }
     
     return newNodeId;
@@ -203,22 +204,22 @@ export const createNodeSlice: StateCreator<
           };
         }
       } catch (error) {
-        console.error('deleteNode error:', error);
+        logger.error('deleteNode error:', error);
       }
     });
     
     // Apply auto layout if enabled
     const { data } = get();
-    console.log('🔍 Auto layout check (deleteNode):', {
+    logger.debug('🔍 Auto layout check (deleteNode):', {
       hasData: !!data,
       hasSettings: !!data?.settings,
       autoLayoutEnabled: data?.settings?.autoLayout
     });
     if (data?.settings?.autoLayout) {
-      console.log('✅ Applying auto layout after deleteNode');
+      logger.debug('✅ Applying auto layout after deleteNode');
       get().applyAutoLayout();
     } else {
-      console.log('❌ Auto layout disabled or settings missing');
+      logger.debug('❌ Auto layout disabled or settings missing');
     }
   },
 
@@ -239,7 +240,7 @@ export const createNodeSlice: StateCreator<
           };
         }
       } catch (error) {
-        console.error('moveNode error:', error);
+        logger.error('moveNode error:', error);
       }
     });
     
@@ -251,21 +252,21 @@ export const createNodeSlice: StateCreator<
   },
 
   changeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore: boolean = true) => {
-    console.log('🏪 Store changeSiblingOrder開始:', { draggedNodeId, targetNodeId, insertBefore });
+    logger.debug('🏪 Store changeSiblingOrder開始:', { draggedNodeId, targetNodeId, insertBefore });
     set((state) => {
       if (!state.normalizedData) {
-        console.error('❌ normalizedDataが存在しません');
+        logger.error('❌ normalizedDataが存在しません');
         return;
       }
       
       try {
-        console.log('🔄 changeSiblingOrder実行:', { draggedNodeId, targetNodeId, insertBefore });
+        logger.debug('🔄 changeSiblingOrder実行:', { draggedNodeId, targetNodeId, insertBefore });
         const originalData = state.normalizedData;
         state.normalizedData = changeSiblingOrderNormalized(state.normalizedData, draggedNodeId, targetNodeId, insertBefore);
         
         // Check if there were changes
         const hasChanged = JSON.stringify(originalData.childrenMap) !== JSON.stringify(state.normalizedData.childrenMap);
-        console.log('🔄 変更チェック:', { hasChanged });
+        logger.debug('🔄 変更チェック:', { hasChanged });
         
         // Sync back to tree structure
         const newRootNode = denormalizeTreeData(state.normalizedData);
@@ -275,18 +276,18 @@ export const createNodeSlice: StateCreator<
             rootNode: newRootNode,
             updatedAt: new Date().toISOString()
           };
-          console.log('🔄 データ更新完了');
+          logger.debug('🔄 データ更新完了');
         }
-        console.log('✅ changeSiblingOrder完了');
+        logger.debug('✅ changeSiblingOrder完了');
       } catch (error) {
-        console.error('❌ changeSiblingOrder error:', error);
+        logger.error('❌ changeSiblingOrder error:', error);
       }
     });
     
     // Apply auto layout if enabled
     const { data } = get();
     if (data?.settings?.autoLayout) {
-      console.log('🔄 自動レイアウト適用中...');
+      logger.debug('🔄 自動レイアウト適用中...');
       get().applyAutoLayout();
     }
   },
@@ -359,7 +360,7 @@ export const createNodeSlice: StateCreator<
           };
         }
       } catch (error) {
-        console.error('toggleNodeCollapse error:', error);
+        logger.error('toggleNodeCollapse error:', error);
       }
     });
     

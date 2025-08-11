@@ -1,5 +1,6 @@
 import { cloneDeep } from '../utils/lodash-utils';
 import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
+import { logger } from '../utils/logger';
 
 // Import shared types to ensure compatibility
 import type { 
@@ -288,7 +289,7 @@ export const createFileAttachment = (
 export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapData => {
   // rootNodeが存在しない場合の対応
   if (!mindMapData || !mindMapData.rootNode) {
-    console.warn('Invalid mindmap data or missing rootNode:', mindMapData);
+    logger.warn('Invalid mindmap data or missing rootNode:', mindMapData);
     return mindMapData || createInitialData();
   }
   

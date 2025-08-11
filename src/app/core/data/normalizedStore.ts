@@ -1,4 +1,5 @@
 import type { MindMapNode, MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 // 正規化されたデータ構造
 export interface NormalizedData {
@@ -250,22 +251,22 @@ export function changeSiblingOrderNormalized(
   targetNodeId: string,
   insertBefore: boolean = true
 ): NormalizedData {
-  console.log('🔧 changeSiblingOrderNormalized 開始:', { draggedNodeId, targetNodeId, insertBefore });
+  logger.debug('🔧 changeSiblingOrderNormalized 開始:', { draggedNodeId, targetNodeId, insertBefore });
   
   const draggedParentId = normalizedData.parentMap[draggedNodeId];
   const targetParentId = normalizedData.parentMap[targetNodeId];
   
-  console.log('🔧 親要素確認:', { draggedParentId, targetParentId });
+  logger.debug('🔧 親要素確認:', { draggedParentId, targetParentId });
   
   if (!draggedParentId || !targetParentId) {
     const error = 'Parent not found for one of the nodes';
-    console.error('❌', error);
+    logger.error('❌', error);
     throw new Error(error);
   }
   
   if (draggedParentId !== targetParentId) {
     const error = 'Nodes must have the same parent to change sibling order';
-    console.error('❌', error);
+    logger.error('❌', error);
     throw new Error(error);
   }
   
@@ -273,16 +274,16 @@ export function changeSiblingOrderNormalized(
   const draggedIndex = siblings.indexOf(draggedNodeId);
   const targetIndex = siblings.indexOf(targetNodeId);
   
-  console.log('🔧 兄弟リスト:', { siblings, draggedIndex, targetIndex });
+  logger.debug('🔧 兄弟リスト:', { siblings, draggedIndex, targetIndex });
   
   if (draggedIndex === -1 || targetIndex === -1) {
     const error = 'One of the nodes is not a child of the parent';
-    console.error('❌', error, { draggedIndex, targetIndex, siblings });
+    logger.error('❌', error, { draggedIndex, targetIndex, siblings });
     throw new Error(error);
   }
   
   if (draggedIndex === targetIndex) {
-    console.log('🔧 同じインデックスのため変更なし');
+    logger.debug('🔧 同じインデックスのため変更なし');
     return normalizedData; // No change needed
   }
   
@@ -293,7 +294,7 @@ export function changeSiblingOrderNormalized(
   const adjustedTargetIndex = newSiblings.indexOf(targetNodeId);
   const insertionIndex = insertBefore ? adjustedTargetIndex : adjustedTargetIndex + 1;
   
-  console.log('🔧 挿入処理:', { 
+  logger.debug('🔧 挿入処理:', { 
     originalSiblings: siblings, 
     newSiblings, 
     adjustedTargetIndex, 
@@ -304,7 +305,7 @@ export function changeSiblingOrderNormalized(
   // Insert dragged node at new position
   newSiblings.splice(insertionIndex, 0, draggedNodeId);
   
-  console.log('🔧 最終的な兄弟リスト:', newSiblings);
+  logger.debug('🔧 最終的な兄弟リスト:', newSiblings);
   
   const result = {
     ...normalizedData,
@@ -314,6 +315,6 @@ export function changeSiblingOrderNormalized(
     }
   };
   
-  console.log('✅ changeSiblingOrderNormalized 完了');
+  logger.debug('✅ changeSiblingOrderNormalized 完了');
   return result;
 }

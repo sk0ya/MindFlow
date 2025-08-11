@@ -2,6 +2,7 @@
 // LocalStorageの代替としてIndexedDBを使用してパフォーマンスと容量を改善
 
 import type { MindMapData } from '@shared/types';
+import { logger } from '../../shared/utils/logger';
 
 interface LocalCacheMetadata {
   lastModified: string;
@@ -28,13 +29,13 @@ class LocalIndexedDB {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        console.error('Local IndexedDB initialization failed:', request.error);
+        logger.error('Local IndexedDB initialization failed:', request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('✅ Local IndexedDB initialized');
+        logger.info('Local IndexedDB initialized');
         resolve();
       };
 
@@ -53,7 +54,7 @@ class LocalIndexedDB {
           db.createObjectStore(this.STORES.CURRENT_MAP, { keyPath: 'key' });
         }
 
-        console.log('📋 Local IndexedDB schema upgraded');
+        logger.info('Local IndexedDB schema upgraded');
       };
     });
   }
@@ -82,7 +83,7 @@ class LocalIndexedDB {
       const request = store.put({ key: 'currentMap', data: cachedData });
 
       request.onsuccess = () => {
-        console.log('💾 IndexedDB: 現在のマップ保存完了', { 
+        logger.debug('💾 IndexedDB: 現在のマップ保存完了', { 
           id: data.id, 
           title: data.title 
         });
@@ -90,7 +91,7 @@ class LocalIndexedDB {
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: 現在のマップ保存失敗', request.error);
+        logger.error('❌ IndexedDB: 現在のマップ保存失敗', request.error);
         reject(request.error);
       };
     });
@@ -114,7 +115,7 @@ class LocalIndexedDB {
       request.onsuccess = () => {
         const result = request.result;
         const mapData = result?.data || null;
-        console.log('📋 IndexedDB: 現在のマップ取得', { 
+        logger.debug('📋 IndexedDB: 現在のマップ取得', { 
           found: !!mapData,
           id: mapData?.id
         });
@@ -122,7 +123,7 @@ class LocalIndexedDB {
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: 現在のマップ取得失敗', request.error);
+        logger.error('❌ IndexedDB: 現在のマップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -152,7 +153,7 @@ class LocalIndexedDB {
       const request = store.put(cachedData);
 
       request.onsuccess = () => {
-        console.log('💾 IndexedDB: マップをリストに保存', { 
+        logger.debug('💾 IndexedDB: マップをリストに保存', { 
           id: data.id, 
           title: data.title
         });
@@ -160,7 +161,7 @@ class LocalIndexedDB {
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: マップリスト保存失敗', request.error);
+        logger.error('❌ IndexedDB: マップリスト保存失敗', request.error);
         reject(request.error);
       };
     });
@@ -183,12 +184,12 @@ class LocalIndexedDB {
 
       request.onsuccess = () => {
         const results = request.result || [];
-        console.log('📋 IndexedDB: 全マップ取得', { count: results.length });
+        logger.debug('📋 IndexedDB: 全マップ取得', { count: results.length });
         resolve(results);
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: 全マップ取得失敗', request.error);
+        logger.error('❌ IndexedDB: 全マップ取得失敗', request.error);
         reject(request.error);
       };
     });
@@ -210,12 +211,12 @@ class LocalIndexedDB {
       const request = store.delete(id);
 
       request.onsuccess = () => {
-        console.log('🗑️ IndexedDB: マップをリストから削除', { id });
+        logger.debug('🗑️ IndexedDB: マップをリストから削除', { id });
         resolve();
       };
 
       request.onerror = () => {
-        console.error('❌ IndexedDB: マップ削除失敗', request.error);
+        logger.error('❌ IndexedDB: マップ削除失敗', request.error);
         reject(request.error);
       };
     });
@@ -243,7 +244,7 @@ class LocalIndexedDB {
       const checkCompletion = () => {
         completedStores++;
         if (completedStores === totalStores) {
-          console.log('🗑️ Local IndexedDB: 全データクリア完了');
+          logger.debug('🗑️ Local IndexedDB: 全データクリア完了');
           resolve();
         }
       };
@@ -261,7 +262,7 @@ class LocalIndexedDB {
     if (this.db) {
       this.db.close();
       this.db = null;
-      console.log('🔌 Local IndexedDB connection closed');
+      logger.debug('🔌 Local IndexedDB connection closed');
     }
   }
 }
