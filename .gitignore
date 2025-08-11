@@ -375,3 +375,5 @@ workspace.xml
 cloudflare-worker/wrangler.toml
 cloudflare-worker/.wrangler/
 cloudflare-worker/package-lock.json
+
+coverage/
