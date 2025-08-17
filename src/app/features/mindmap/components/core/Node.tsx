@@ -134,7 +134,7 @@ const Node: React.FC<NodeProps> = ({
   // ノードのサイズ計算（画像を考慮）
   const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
   const imageHeight = hasImages ? 60 : 0; // 画像表示エリアの高さ
-  const nodeWidth = Math.max(120, node.text.length * 8, hasImages ? 150 : 0);
+  const nodeWidth = Math.max(node.text.length * 8 + 16, hasImages ? 150 : 0);
   const nodeHeight = 40 + imageHeight;
 
   return (

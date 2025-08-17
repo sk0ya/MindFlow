@@ -106,9 +106,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
   return (
     <foreignObject 
-      x={node.x - nodeWidth / 2 + 10} 
+      x={node.x - nodeWidth / 2} 
       y={node.y - 10 + imageHeight / 2} 
-      width={nodeWidth - 20} 
+      width={nodeWidth} 
       height="20"
     >
       <input
