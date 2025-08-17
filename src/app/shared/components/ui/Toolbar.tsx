@@ -16,8 +16,6 @@ interface ToolbarProps {
   onZoomReset: () => void;
   onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
-  onToggleSidebar?: () => void;
-  showSidebar?: boolean;
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onToggleNotesPanel?: () => void;
@@ -35,8 +33,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onZoomReset,
   onShowShortcutHelper,
   onAutoLayout,
-  onToggleSidebar,
-  showSidebar = true,
   storageMode = 'local',
   onStorageModeChange,
   onToggleNotesPanel,
@@ -44,10 +40,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   return (
     <div className="toolbar">
-      <ToolbarLogo 
-        onToggleSidebar={onToggleSidebar}
-        showSidebar={showSidebar}
-      />
+      <ToolbarLogo />
       
       <TitleEditor 
         title={title}

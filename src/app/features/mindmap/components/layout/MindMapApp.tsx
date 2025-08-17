@@ -505,8 +505,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             logger.error('applyAutoLayout function not available');
           }
         }}
-        onToggleSidebar={toggleSidebar}
-        showSidebar={!ui.sidebarCollapsed}
         storageMode={storageMode}
         onStorageModeChange={onModeChange}
         onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}

@@ -13,8 +13,6 @@ interface MindMapHeaderProps {
   onZoomReset: () => void;
   onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
-  onToggleSidebar?: () => void;
-  showSidebar?: boolean;
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onToggleNotesPanel?: () => void;
@@ -32,8 +30,6 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   onZoomReset,
   onShowShortcutHelper,
   onAutoLayout,
-  onToggleSidebar,
-  showSidebar = true,
   storageMode = 'local',
   onStorageModeChange,
   onToggleNotesPanel,
@@ -51,8 +47,6 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       onZoomReset={onZoomReset}
       onShowShortcutHelper={onShowShortcutHelper}
       onAutoLayout={onAutoLayout}
-      onToggleSidebar={onToggleSidebar}
-      showSidebar={showSidebar}
       storageMode={storageMode}
       onStorageModeChange={onStorageModeChange}
       onToggleNotesPanel={onToggleNotesPanel}

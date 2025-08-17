@@ -1,14 +1,8 @@
 import React from 'react';
 
-interface ToolbarLogoProps {
-  onToggleSidebar?: () => void;
-  showSidebar?: boolean;
-}
+interface ToolbarLogoProps {}
 
-const ToolbarLogo: React.FC<ToolbarLogoProps> = ({
-  onToggleSidebar: _onToggleSidebar,
-  showSidebar: _showSidebar = true
-}) => {
+const ToolbarLogo: React.FC<ToolbarLogoProps> = () => {
   return (
     <div className="logo-section">
       <div className="logo">
