@@ -11,7 +11,7 @@ const SidebarStyles: React.FC = () => (
       flex-direction: column;
       position: fixed;
       left: 0;
-      top: 0;
+      top: 60px;
       z-index: 100;
       overflow: hidden;
       box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.05);
@@ -19,7 +19,7 @@ const SidebarStyles: React.FC = () => (
 
     .mindmap-sidebar.collapsed {
       width: 50px;
-      height: 100vh;
+      height: calc(100vh - 60px);
       background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
       border-right: 2px solid #dee2e6;
       display: flex;
@@ -28,19 +28,24 @@ const SidebarStyles: React.FC = () => (
       padding: 16px 8px;
       position: fixed;
       left: 0;
-      top: 0;
+      top: 60px;
       z-index: 100;
       overflow: hidden;
     }
 
     .sidebar-header {
-      padding: 20px;
+      padding: 20px !important;
       border-bottom: 1px solid rgba(148, 163, 184, 0.12);
       background: rgba(248, 250, 252, 0.5);
       backdrop-filter: blur(10px);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+      position: relative !important;
+      z-index: 100 !important;
+      width: 100% !important;
+      overflow: visible !important;
+      min-height: 120px !important;
     }
 
     .sidebar-title {
@@ -54,9 +59,14 @@ const SidebarStyles: React.FC = () => (
     }
 
     .header-actions {
-      display: flex;
+      display: flex !important;
       gap: 6px;
       align-items: center;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      width: 100%;
+      min-height: 40px;
+      overflow: visible !important;
     }
 
     .sidebar-collapse-toggle {
@@ -125,20 +135,33 @@ const SidebarStyles: React.FC = () => (
     }
 
     .action-button {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      width: 36px;
-      height: 36px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      font-weight: bold;
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      color: white !important;
+      border: none !important;
+      border-radius: 10px !important;
+      width: 36px !important;
+      height: 36px !important;
+      min-width: 36px !important;
+      min-height: 36px !important;
+      max-width: 36px !important;
+      max-height: 36px !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
       transition: all 0.2s ease;
-      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
+      pointer-events: auto !important;
+      z-index: 1000 !important;
+      position: relative !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex-shrink: 0 !important;
+      overflow: visible !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     .action-button:hover {
@@ -148,12 +171,13 @@ const SidebarStyles: React.FC = () => (
     }
 
     .action-button.category {
-      background: #ff9800;
+      background: #ff9800 !important;
     }
 
     .action-button.category:hover {
-      background: #f57c00;
+      background: #f57c00 !important;
     }
+
 
     .toggle-button {
       background: #6c757d;

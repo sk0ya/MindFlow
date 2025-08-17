@@ -13,15 +13,22 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   onCreateMap,
   onToggleCollapse
 }) => {
-  const handleCreateCategory = () => {
-    // eslint-disable-next-line no-alert
-    const newCategory = prompt('新しいカテゴリー名を入力してください:', '');
-    if (newCategory && newCategory.trim()) {
+  const handleCreateCategory = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
       // eslint-disable-next-line no-alert
-      const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
-      if (mapName && mapName.trim()) {
-        onCreateMap(mapName.trim(), newCategory.trim());
+      const newCategory = window.prompt('新しいカテゴリー名を入力してください:', '');
+      if (newCategory && newCategory.trim()) {
+        // eslint-disable-next-line no-alert
+        const mapName = window.prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+        if (mapName && mapName.trim()) {
+          onCreateMap(mapName.trim(), newCategory.trim());
+        }
       }
+    } catch (error) {
+      console.error('フォルダ作成エラー:', error);
     }
   };
 
@@ -39,14 +46,22 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
         )}
         <button 
           className="action-button create"
-          onClick={() => {
-            // eslint-disable-next-line no-alert
-            const mapName = prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
-            if (mapName && mapName.trim()) {
-              onCreateMap(mapName.trim());
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            try {
+              // eslint-disable-next-line no-alert
+              const mapName = window.prompt('新しいマインドマップの名前を入力してください:', '新しいマインドマップ');
+              if (mapName && mapName.trim()) {
+                onCreateMap(mapName.trim());
+              }
+            } catch (error) {
+              console.error('マップ作成エラー:', error);
             }
           }}
           title="新しいマインドマップ"
+          type="button"
         >
           +
         </button>
@@ -55,6 +70,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           className="action-button category"
           onClick={handleCreateCategory}
           title="新しいカテゴリー"
+          type="button"
         >
           📁
         </button>
