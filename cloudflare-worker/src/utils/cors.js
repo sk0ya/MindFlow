@@ -1,6 +1,7 @@
 export function corsHeaders(origin = '*', requestOrigin = null) {
   // Allow multiple origins for development
   const allowedOrigins = [
+    'https://shigekazukoya.github.io',
     'https://sk0ya.github.io',
     'http://localhost:3001',
     'http://localhost:5173',

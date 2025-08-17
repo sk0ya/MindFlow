@@ -59,7 +59,10 @@ export default {
           },
           env: {
             ENABLE_AUTH: env.ENABLE_AUTH,
-            CORS_ORIGIN: env.CORS_ORIGIN
+            CORS_ORIGIN: env.CORS_ORIGIN,
+            HAS_RESEND_KEY: !!env.RESEND_KEY,
+            HAS_FROM_EMAIL: !!env.FROM_EMAIL,
+            RESEND_KEY_LENGTH: env.RESEND_KEY?.length || 0
           }
         };
         return new Response(JSON.stringify(status, null, 2), {

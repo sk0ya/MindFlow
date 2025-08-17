@@ -5,16 +5,10 @@ export async function sendMagicLinkEmail(email, magicLink, env, token = null) {
   console.log('📧 メール送信開始:', { 
     email, 
     hasResendKey: !!env.RESEND_KEY,
-    hasResendApiKey: !!env.RESEND_API_KEY,
     resendKeyLength: env.RESEND_KEY?.length,
-    resendApiKeyLength: env.RESEND_API_KEY?.length,
     fromEmail: env.FROM_EMAIL,
-    allEnvKeys: Object.keys(env), // 全ての環境変数名を表示
-    envValues: Object.entries(env).reduce((acc, [key, value]) => {
-      acc[key] = key.includes('KEY') || key.includes('SECRET') ? 
-        (value ? `SET(${value.length})` : 'NOT_SET') : value;
-      return acc;
-    }, {})
+    enableAuth: env.ENABLE_AUTH,
+    envKeys: Object.keys(env).filter(key => key.includes('RESEND') || key.includes('FROM') || key.includes('AUTH'))
   });
   
   // RESEND_KEY を使用（正しいAPIキー）
@@ -32,35 +26,19 @@ export async function sendMagicLinkEmail(email, magicLink, env, token = null) {
   });
   
   if (!resendKey || resendKey.trim() === '') {
-    const debugInfo = {
+    console.error('❌ RESEND_KEY が設定されていません:', {
       keyExists: !!resendKey,
       keyLength: resendKey?.length || 0,
-      keyIsPlaceholder: resendKey === 're_placeholder_key',
-      keyIsEmpty: resendKey === '',
-      keyIsWhitespace: resendKey?.trim() === '',
-      actualKey: resendKey ? `${resendKey.substring(0, 10)}...` : 'NONE'
-    };
-    console.log('⚠️ RESEND_KEY が無効なため開発モードで動作:', debugInfo);
-    console.log(`
-=== Magic Link Email (Development Mode) ===
-To: ${email}
-Subject: MindFlow - ログインリンク
-Magic Link: ${magicLink}
-${token ? `Token: ${token}` : 'Token: Not provided'}
-Debug: ${JSON.stringify(debugInfo)}
-==========================================
-    `);
-    return { 
-      success: true, 
-      messageId: 'dev-mode',
-      debugInfo: debugInfo // 一時的にデバッグ情報を含める
-    };
+      environment: env.ENABLE_AUTH
+    });
+    throw new Error('RESEND_KEY environment variable is not configured');
   }
 
   try {
     // メール送信データを準備
+    const fromAddress = env.FROM_EMAIL || 'noreply@resend.dev';
     const emailData = {
-      from: `MindFlow <${env.FROM_EMAIL}>`,
+      from: `MindFlow <${fromAddress}>`,
       to: [email],
       subject: 'MindFlow - ログインリンク',
       html: createMagicLinkEmailHTML(magicLink, token),
@@ -110,23 +88,8 @@ Debug: ${JSON.stringify(debugInfo)}
       name: error.name
     });
     
-    // フォールバック: 開発モードとして処理
-    console.log(`
-=== Magic Link Email (Fallback Mode) ===
-To: ${email}
-Subject: MindFlow - ログインリンク
-Magic Link: ${magicLink}
-${token ? `Token: ${token}` : 'Token: Not provided'}
-Error: ${error.message}
-==========================================
-    `);
-    return { 
-      success: true, 
-      messageId: 'fallback-mode',
-      error: error.message,
-      errorName: error.name,
-      errorStack: error.stack
-    };
+    // エラーを再投げしてメール送信失敗を明確にする
+    throw new Error(`Email sending failed: ${error.message}`);
   }
 }
 

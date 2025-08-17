@@ -105,3 +105,11 @@ The project has strict TypeScript checking. Always run `npm run type-check` befo
 
 #### Security
 The project includes automated unsafe pattern detection. Run security scans before deploying.
+
+# TODO
+- マークダウンエディタの組み込み
+- マップのNodeとエディタの結合
+- エディタ情報のDBへの保存
+- マップのエクスポート/インポート
+- マップ間のジャンプ
+- ログイン失敗の修正

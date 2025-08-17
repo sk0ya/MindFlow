@@ -85,7 +85,21 @@ export class CloudAuthAdapter implements AuthAdapter {
         body: JSON.stringify({ email }),
       });
 
-      const result: LoginResponse = await response.json();
+      let result: LoginResponse;
+      
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        logger.error('❌ Failed to parse JSON response:', jsonError);
+        logger.debug('📧 Server response:', {
+          status: response.status,
+          success: undefined,
+          emailSent: undefined,
+          message: undefined,
+          hasToken: false
+        });
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
 
       logger.debug('📧 Server response:', {
         status: response.status,
