@@ -20,6 +20,7 @@ export interface UIState {
   sidebarCollapsed: boolean;
   showLocalStoragePanel: boolean;
   showTutorial: boolean;
+  showNotesPanel: boolean;
   
   // File and image states
   selectedImage: ImageFile | null;
@@ -99,6 +100,8 @@ export interface MindMapStore extends DataState, HistoryState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowLocalStoragePanel: (show: boolean) => void;
   setShowTutorial: (show: boolean) => void;
+  setShowNotesPanel: (show: boolean) => void;
+  toggleNotesPanel: () => void;
   setSelectedImage: (image: ImageFile | null) => void;
   setSelectedFile: (file: FileAttachment | null) => void;
   setFileMenuPosition: (position: Position) => void;

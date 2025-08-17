@@ -16,6 +16,8 @@ export const useMindMapUI = () => {
     closeAllPanels,
     toggleSidebar,
     setSidebarCollapsed,
+    setShowNotesPanel,
+    toggleNotesPanel,
     setSelectedImage,
     setShowImageModal,
     showCustomization,
@@ -62,6 +64,15 @@ export const useMindMapUI = () => {
     setSidebarCollapsed: useCallback((collapsed: boolean) => {
       setSidebarCollapsed(collapsed);
     }, [setSidebarCollapsed]),
+
+    // ノートパネル
+    setShowNotesPanel: useCallback((show: boolean) => {
+      setShowNotesPanel(show);
+    }, [setShowNotesPanel]),
+
+    toggleNotesPanel: useCallback(() => {
+      toggleNotesPanel();
+    }, [toggleNotesPanel]),
 
     // モーダル制御
     showImageModal: useCallback((image: ImageFile) => {

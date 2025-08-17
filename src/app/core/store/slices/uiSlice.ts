@@ -23,6 +23,8 @@ export interface UISlice {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowLocalStoragePanel: (show: boolean) => void;
   setShowTutorial: (show: boolean) => void;
+  setShowNotesPanel: (show: boolean) => void;
+  toggleNotesPanel: () => void;
   
   // File and Image Management
   setSelectedImage: (image: ImageFile | null) => void;
@@ -64,6 +66,7 @@ export const createUISlice: StateCreator<
     sidebarCollapsed: false,
     showLocalStoragePanel: false,
     showTutorial: false,
+    showNotesPanel: false,
     selectedImage: null,
     selectedFile: null,
     fileMenuPosition: { x: 0, y: 0 },
@@ -160,6 +163,18 @@ export const createUISlice: StateCreator<
     });
   },
 
+  setShowNotesPanel: (show: boolean) => {
+    set((state) => {
+      state.ui.showNotesPanel = show;
+    });
+  },
+
+  toggleNotesPanel: () => {
+    set((state) => {
+      state.ui.showNotesPanel = !state.ui.showNotesPanel;
+    });
+  },
+
   // File and Image Management Actions
   setSelectedImage: (image: ImageFile | null) => {
     set((state) => {
@@ -216,6 +231,7 @@ export const createUISlice: StateCreator<
       state.ui.showImageModal = false;
       state.ui.showFileActionMenu = false;
       state.ui.showTutorial = false;
+      // Note: showNotesPanel は意図的に closeAllPanels から除外
     });
   },
 

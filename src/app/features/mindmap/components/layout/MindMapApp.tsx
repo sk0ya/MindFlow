@@ -35,7 +35,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   onModeChange,
   resetKey = 0
 }) => {
-  const [showNotesPanel, setShowNotesPanel] = useState(false);
   
   logger.debug('MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
   const { showNotification } = useNotification();
@@ -572,8 +571,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         }}
         storageMode={storageMode}
         onStorageModeChange={onModeChange}
-        onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}
-        showNotesPanel={showNotesPanel}
+        onToggleNotesPanel={() => store.toggleNotesPanel()}
+        showNotesPanel={ui.showNotesPanel}
       />
       
       <div className="mindmap-content">
@@ -599,9 +598,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             setEditText={setEditText}
             onSelectNode={(nodeId) => {
               selectNode(nodeId);
-              if (nodeId && !showNotesPanel) {
-                setShowNotesPanel(true);
-              }
+              // ノート表示フラグが有効な場合のみノートパネルを表示
+              // ノートフラグが無効な場合はノード選択してもノートパネルを表示しない
             }}
             onStartEdit={startEditing}
             onFinishEdit={finishEditing}
@@ -627,11 +625,11 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             setPan={setPan}
           />
           
-          {showNotesPanel && (
+          {ui.showNotesPanel && (
             <NodeNotesPanel
               selectedNode={selectedNodeId ? findNodeById(data?.rootNode, selectedNodeId) : null}
               onUpdateNode={updateNode}
-              onClose={() => setShowNotesPanel(false)}
+              onClose={() => store.setShowNotesPanel(false)}
             />
           )}
         </div>
