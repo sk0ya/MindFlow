@@ -208,7 +208,72 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     redo,
     canUndo,
     canRedo,
-    navigateToDirection: () => {},
+    navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => {
+      if (!selectedNodeId || !data?.rootNode) return;
+      
+      const findNextNode = (currentNodeId: string, direction: 'up' | 'down' | 'left' | 'right'): string | null => {
+        const currentNode = findNodeById(data.rootNode, currentNodeId);
+        if (!currentNode) return null;
+        
+        // Get all nodes in a flat list for easier distance calculation
+        const allNodes: MindMapNode[] = [];
+        const collectNodes = (node: MindMapNode) => {
+          allNodes.push(node);
+          if (node.children) {
+            node.children.forEach(collectNodes);
+          }
+        };
+        collectNodes(data.rootNode);
+        
+        // Filter out the current node
+        const otherNodes = allNodes.filter(node => node.id !== currentNodeId);
+        if (otherNodes.length === 0) return null;
+        
+        // Find the best node in the specified direction
+        let bestNode: MindMapNode | null = null;
+        let bestScore = Infinity;
+        
+        for (const node of otherNodes) {
+          const deltaX = node.x - currentNode.x;
+          const deltaY = node.y - currentNode.y;
+          
+          // Check if the node is in the correct direction
+          let isInDirection = false;
+          let directionalScore = 0;
+          
+          switch (direction) {
+            case 'right':
+              isInDirection = deltaX > 20; // Must be significantly to the right
+              directionalScore = deltaX + Math.abs(deltaY) * 0.5; // Prefer more to the right, penalize vertical distance
+              break;
+            case 'left':
+              isInDirection = deltaX < -20; // Must be significantly to the left
+              directionalScore = -deltaX + Math.abs(deltaY) * 0.5; // Prefer more to the left, penalize vertical distance
+              break;
+            case 'down':
+              isInDirection = deltaY > 20; // Must be significantly down
+              directionalScore = deltaY + Math.abs(deltaX) * 0.5; // Prefer more down, penalize horizontal distance
+              break;
+            case 'up':
+              isInDirection = deltaY < -20; // Must be significantly up
+              directionalScore = -deltaY + Math.abs(deltaX) * 0.5; // Prefer more up, penalize horizontal distance
+              break;
+          }
+          
+          if (isInDirection && directionalScore < bestScore) {
+            bestScore = directionalScore;
+            bestNode = node;
+          }
+        }
+        
+        return bestNode?.id || null;
+      };
+      
+      const nextNodeId = findNextNode(selectedNodeId, direction);
+      if (nextNodeId) {
+        selectNode(nextNodeId);
+      }
+    },
     showMapList: ui.showMapList,
     setShowMapList: (show: boolean) => store.setShowMapList(show),
     showLocalStorage: ui.showLocalStoragePanel,
