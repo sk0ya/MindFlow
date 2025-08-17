@@ -400,6 +400,50 @@ export class CloudStorageAdapter implements StorageAdapter {
   }
 
   /**
+   * ファイルをダウンロード
+   */
+  async downloadFile(mindmapId: string, nodeId: string, fileId: string): Promise<Blob> {
+    logger.info('🚀 CloudStorageAdapter: downloadFile called', { 
+      mindmapId, 
+      nodeId, 
+      fileId,
+      isInitialized: this.isInitialized
+    });
+
+    if (!this.isInitialized) {
+      logger.info('🔄 CloudStorageAdapter: Not initialized, initializing...');
+      await this.initialize();
+    }
+
+    logger.info('🔐 CloudStorageAdapter: Auth check', {
+      isAuthenticated: this.authAdapter.isAuthenticated,
+      hasUser: !!this.authAdapter.user,
+      userId: this.authAdapter.user?.id
+    });
+
+    if (!this.authAdapter.isAuthenticated) {
+      logger.error('❌ CloudStorageAdapter: User not authenticated');
+      throw new Error('User not authenticated for file download');
+    }
+
+    try {
+      logger.info('☁️ CloudStorageAdapter: Calling API client downloadFile...');
+      
+      const blob = await this.apiClient.downloadFile(mindmapId, nodeId, fileId);
+      
+      logger.info('✅ CloudStorageAdapter: File downloaded successfully:', {
+        size: blob.size,
+        type: blob.type
+      });
+      return blob;
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: File download failed:', error);
+      logger.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
+  }
+
+  /**
    * クリーンアップ
    */
   cleanup(): void {

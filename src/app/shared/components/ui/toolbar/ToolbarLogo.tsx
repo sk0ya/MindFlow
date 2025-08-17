@@ -6,8 +6,8 @@ interface ToolbarLogoProps {
 }
 
 const ToolbarLogo: React.FC<ToolbarLogoProps> = ({
-  onToggleSidebar,
-  showSidebar = true
+  onToggleSidebar: _onToggleSidebar,
+  showSidebar: _showSidebar = true
 }) => {
   return (
     <div className="logo-section">

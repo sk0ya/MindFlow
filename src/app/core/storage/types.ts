@@ -26,6 +26,7 @@ export interface StorageAdapter {
   uploadFile?(mindmapId: string, nodeId: string, file: File): Promise<FileInfo>;
   deleteFile?(mindmapId: string, nodeId: string, fileId: string): Promise<void>;
   getFileInfo?(mindmapId: string, nodeId: string, fileId: string): Promise<FileInfo>;
+  downloadFile?(mindmapId: string, nodeId: string, fileId: string): Promise<Blob>;
   
   // ライフサイクル
   initialize(): Promise<void>;

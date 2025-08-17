@@ -343,6 +343,58 @@ export class CloudflareAPI {
   }
 
   /**
+   * ファイルをダウンロード
+   */
+  async downloadFile(mindmapId: string, nodeId: string, fileId: string): Promise<Blob> {
+    logger.info('📥 API: Downloading file:', { mindmapId, nodeId, fileId });
+    
+    const downloadUrl = `${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}`;
+    const headers = this.getAuthHeaders();
+    
+    logger.info('🌐 API: Download URL and headers:', {
+      url: downloadUrl,
+      hasAuth: !!headers.Authorization,
+      authPrefix: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none',
+      headersCount: Object.keys(headers).length
+    });
+    
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers,
+    });
+
+    logger.info('📡 API: Download response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length')
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('❌ API: File download failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        body: errorText 
+      });
+      
+      if (response.status === 404) {
+        throw new Error('ファイルが見つかりません');
+      }
+      throw new Error(`ファイルのダウンロードに失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    logger.info('📥 API: File downloaded successfully:', {
+      size: blob.size,
+      type: blob.type
+    });
+    
+    return blob;
+  }
+
+  /**
    * ヘルスチェック
    */
   async healthCheck(): Promise<boolean> {

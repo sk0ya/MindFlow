@@ -5,7 +5,7 @@ interface MindMapFooterProps {
   data: MindMapData;
 }
 
-const MindMapFooter: React.FC<MindMapFooterProps> = ({ data }) => {
+const MindMapFooter: React.FC<MindMapFooterProps> = ({ data: _data }) => {
   return (
     <footer className="footer">
     </footer>

@@ -291,9 +291,17 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                   createdAt: uploadResult.uploadedAt,
                   downloadUrl: uploadResult.downloadUrl,
                   storagePath: uploadResult.storagePath,
-                  r2FileId: uploadResult.id
+                  r2FileId: uploadResult.id,
+                  nodeId: nodeId // nodeIdも保存
                 };
                 logger.info('File uploaded to cloud successfully:', fileAttachment);
+                logger.info('Upload result details:', {
+                  uploadResultId: uploadResult.id,
+                  fileName: uploadResult.fileName,
+                  mapId: data.id,
+                  nodeId: nodeId,
+                  fullUploadResult: uploadResult
+                });
                 return fileAttachment;
               } else {
                 logger.error('uploadFile method not available on storage adapter');
@@ -356,18 +364,55 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       let downloadUrl: string;
       const fileName = file.name;
 
-      if (storageMode === 'cloud' && file.downloadUrl) {
-        // クラウドモード: downloadUrlを直接使用
-        downloadUrl = file.downloadUrl;
+      if (storageMode === 'cloud' && (file.r2FileId || file.id)) {
+        // クラウドモード: APIを使用してファイルをダウンロード
+        const fileId = file.r2FileId || file.id; // 古いファイルとの互換性
+        logger.info('Downloading file from cloud storage...', { 
+          fileName: file.name, 
+          fileId: fileId,
+          r2FileId: file.r2FileId,
+          originalId: file.id,
+          nodeId: file.nodeId,
+          mapId: data?.id,
+          fullFile: file
+        });
+
+        if (!data) {
+          throw new Error('マインドマップデータが利用できません');
+        }
+
+        if (!auth || !auth.authAdapter) {
+          throw new Error('クラウドファイルダウンロードには認証が必要です');
+        }
+
+        // CloudStorageAdapterを直接使用してファイルをダウンロード
+        const { CloudStorageAdapter } = await import('../../../../core/storage/adapters/CloudStorageAdapter');
+        const storageAdapter = new CloudStorageAdapter(auth.authAdapter);
+        
+        await storageAdapter.initialize();
+        
+        if (typeof storageAdapter.downloadFile === 'function') {
+          logger.debug('Calling downloadFile method...');
+          const blob = await storageAdapter.downloadFile(data.id, file.nodeId || '', fileId);
+          logger.debug('Download blob received:', { size: blob.size, type: blob.type });
+          
+          // BlobからダウンロードURLを作成
+          downloadUrl = URL.createObjectURL(blob);
+          logger.info('File downloaded from cloud successfully');
+        } else {
+          logger.error('downloadFile method not available on storage adapter');
+          throw new Error('Cloud storage adapter downloadFile method not available');
+        }
       } else if (file.data) {
         // ローカルモード: Base64データから直接使用
-        downloadUrl = file.data;
+        downloadUrl = `data:${file.type};base64,${file.data}`;
       } else if (file.dataURL) {
         // 後方互換性: dataURLを使用
         downloadUrl = file.dataURL;
-      } else if (file.storagePath) {
-        // storagePath がある場合
-        downloadUrl = file.storagePath;
+      } else if (storageMode === 'cloud' && file.downloadUrl) {
+        // 古いクラウドファイル: downloadUrlを直接使用（認証なし、古い形式）
+        logger.info('Using legacy downloadUrl for old cloud file');
+        downloadUrl = file.downloadUrl;
       } else {
         logger.error('No download data found in file:', file);
         throw new Error('ダウンロード可能なファイルデータが見つかりません');
@@ -382,12 +427,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       link.click();
       document.body.removeChild(link);
 
-      // ローカルモードでBlobURLを使用した場合はメモリを解放
-      if (storageMode !== 'cloud' && downloadUrl.startsWith('blob:')) {
+      // BlobURLを使用した場合はメモリを解放
+      if (downloadUrl.startsWith('blob:')) {
         setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
       }
 
-      // ブラウザネイティブのダウンロード機能で十分なため、成功通知は不要
+      logger.info('File download completed successfully:', fileName);
     } catch (error) {
       logger.error('File download failed:', error);
       showNotification('error', `${file.name} のダウンロードに失敗しました`);

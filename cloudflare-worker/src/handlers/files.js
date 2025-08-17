@@ -57,7 +57,7 @@ export async function handleRequest(request, env) {
       case 'GET':
         if (fileId) {
           // 特定ファイルのダウンロード・情報取得
-          const fileResponse = await getFile(env, userId, mindmapId, nodeId, fileId, url.searchParams);
+          const fileResponse = await getFile(env, userId, mindmapId, nodeId, fileId, url.searchParams, requestOrigin);
           // Response オブジェクトの場合は直接返す
           if (fileResponse instanceof Response) {
             return fileResponse;
@@ -225,52 +225,96 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
 /**
  * ファイル取得処理
  */
-async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams) {
-  console.log('getFile called with:', { userId, mindmapId, nodeId, fileId });
+async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams, requestOrigin = null) {
+  console.log('📥 getFile called with:', { userId, mindmapId, nodeId, fileId, searchParams: Object.fromEntries(searchParams) });
   
   // 所有権確認
   try {
     await verifyOwnership(env.DB, userId, mindmapId, nodeId);
+    console.log('✅ Ownership verification passed');
   } catch (ownershipError) {
-    console.error('Ownership verification failed:', ownershipError);
+    console.error('❌ Ownership verification failed:', ownershipError);
     throw ownershipError;
   }
 
   // ファイル情報取得
   let attachment;
   try {
-    console.log('Querying attachment:', { fileId, nodeId });
+    console.log('🔍 Querying attachment:', { fileId, mindmapId, nodeId });
     attachment = await env.DB.prepare(
       'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
     ).bind(fileId, mindmapId, nodeId).first();
-    console.log('Attachment query result:', attachment);
+    console.log('💾 Attachment query result:', attachment);
+    
+    // さらにデバッグ：全てのattachmentsを確認
+    if (!attachment) {
+      console.log('🔍 Checking all attachments for this mindmap:');
+      const allAttachments = await env.DB.prepare(
+        'SELECT id, mindmap_id, node_id, file_name FROM attachments WHERE mindmap_id = ?'
+      ).bind(mindmapId).all();
+      console.log('📝 All attachments:', allAttachments.results);
+    }
   } catch (dbError) {
-    console.error('Database query failed:', dbError);
+    console.error('❌ Database query failed:', dbError);
     attachment = null;
   }
 
   if (!attachment) {
-    // データベースにファイル情報がない場合、R2から直接取得を試行（テスト用）
-    const storagePath = `${userId}/${mindmapId}/${nodeId}/${fileId}`;
-    const downloadType = searchParams.get('type') || 'info';
+    console.log('🔍 No attachment found in DB, trying alternative approaches...');
     
-    if (downloadType === 'download') {
+    // 1. データベースにファイル情報がない場合の代替検索
+    // fileIdがfile_で始まる場合は、idフィールドで検索
+    let alternativeAttachment = null;
+    if (fileId.startsWith('file_')) {
+      console.log('🔄 Trying alternative search with id field...');
       try {
-        const fileObject = await env.FILES.get(storagePath);
-        if (fileObject) {
-          return new Response(fileObject.body, {
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'Content-Disposition': `attachment; filename="${fileId}"`,
-              ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
-            }
-          });
+        alternativeAttachment = await env.DB.prepare(
+          'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ?'
+        ).bind(fileId, mindmapId).first();
+        console.log('🔍 Alternative attachment result:', alternativeAttachment);
+      } catch (error) {
+        console.error('❌ Alternative search failed:', error);
+      }
+    }
+
+    // 2. R2から直接取得を試行（複数のパスパターンを試す）
+    const downloadType = searchParams.get('type') || 'info';
+    if (downloadType === 'download') {
+      const possiblePaths = [
+        `${userId}/${mindmapId}/${nodeId}/${fileId}`, // 現在のパス
+        `${userId}/${mindmapId}/${fileId}`, // ノードIDなしのパス
+        `uploads/${userId}/${mindmapId}/${nodeId}/${fileId}`, // uploads プレフィックス付き
+        `uploads/${userId}/${mindmapId}/${fileId}`, // uploads プレフィックス、ノードIDなし
+        fileId // ファイルIDのみ（古い形式）
+      ];
+
+      for (const storagePath of possiblePaths) {
+        console.log(`🔍 Trying R2 path: ${storagePath}`);
+        try {
+          const fileObject = await env.FILES.get(storagePath);
+          if (fileObject) {
+            console.log(`✅ Found file at path: ${storagePath}`);
+            
+            // メタデータから元のファイル名を取得
+            const originalName = fileObject.customMetadata?.originalName || fileId;
+            const contentType = fileObject.httpMetadata?.contentType || 'application/octet-stream';
+            
+            return new Response(fileObject.body, {
+              headers: {
+                'Content-Type': contentType,
+                'Content-Disposition': `attachment; filename="${originalName}"`,
+                'Content-Length': fileObject.size?.toString() || '',
+                ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
+              }
+            });
+          }
+        } catch (r2Error) {
+          console.log(`❌ Path ${storagePath} failed:`, r2Error.message);
         }
-      } catch (r2Error) {
-        console.error('R2 direct access failed:', r2Error);
       }
     }
     
+    console.log('❌ File not found in any location');
     const error = new Error('File not found');
     error.status = 404;
     throw error;
