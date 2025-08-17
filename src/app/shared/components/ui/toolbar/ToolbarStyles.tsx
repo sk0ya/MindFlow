@@ -206,6 +206,24 @@ const ToolbarStyles: React.FC = () => (
       font-size: 16px;
     }
 
+    .toolbar-btn.notes {
+      font-size: 16px;
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: white;
+      border-color: transparent;
+    }
+
+    .toolbar-btn.notes:hover {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .toolbar-btn.notes.active {
+      background: linear-gradient(135deg, #6d28d9, #5b21b6);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+
     .toolbar-btn.storage {
       font-size: 16px;
       background: linear-gradient(135deg, #f59e0b, #d97706);

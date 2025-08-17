@@ -38,12 +38,18 @@
 }
 
 .mindmap-content {
+  display: flex;
   flex: 1;
-  position: relative;
+  overflow: hidden;
+  height: calc(100vh - 60px);
+}
+
+.workspace-container {
+  display: flex;
+  flex: 1;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
-  height: calc(100vh - 60px);
 }
 
 .mindmap-content.with-sidebar {

@@ -10,6 +10,8 @@ interface ActionButtonsProps {
   onZoomReset: () => void;
   onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
+  onToggleNotesPanel?: () => void;
+  showNotesPanel?: boolean;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -20,7 +22,9 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   zoom,
   onZoomReset,
   onShowShortcutHelper,
-  onAutoLayout
+  onAutoLayout,
+  onToggleNotesPanel,
+  showNotesPanel = false
 }) => {
 
   return (
@@ -72,8 +76,20 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         )}
       </div>
 
-      {/* ヘルプ・設定 */}
+      {/* ノート・ヘルプ・設定 */}
       <div className="action-group help-actions">
+        {onToggleNotesPanel && (
+          <ShortcutTooltip shortcut="Ctrl+Shift+N" description="ノートパネル">
+            <button 
+              className={`toolbar-btn notes ${showNotesPanel ? 'active' : ''}`}
+              onClick={onToggleNotesPanel}
+              title="ノートパネル (Ctrl+Shift+N)"
+            >
+              📝
+            </button>
+          </ShortcutTooltip>
+        )}
+        
         <ShortcutTooltip shortcut="?" description="キーボードショートカット">
           <button 
             className="toolbar-btn shortcuts"

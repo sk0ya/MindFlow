@@ -41,6 +41,9 @@ export interface MindMapNode {
   collapsed?: boolean;
   attachments?: FileAttachment[];
   mapLinks?: NodeMapLink[];
+  
+  // Markdown note for each node
+  note?: string;
 }
 
 // Main mindmap data structure

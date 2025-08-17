@@ -4,6 +4,7 @@ import MindMapSidebar from './MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
+import NodeNotesPanel from '../panels/NodeNotesPanel';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
 import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
@@ -34,6 +35,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   onModeChange,
   resetKey = 0
 }) => {
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
   
   logger.debug('MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
   const { showNotification } = useNotification();
@@ -507,6 +509,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         showSidebar={!ui.sidebarCollapsed}
         storageMode={storageMode}
         onStorageModeChange={onModeChange}
+        onToggleNotesPanel={() => setShowNotesPanel(!showNotesPanel)}
+        showNotesPanel={showNotesPanel}
       />
       
       <div className="mindmap-content">
@@ -523,36 +527,51 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onToggleCollapse={toggleSidebar}
         />
         
-        <MindMapWorkspace 
-          data={data}
-          selectedNodeId={selectedNodeId}
-          editingNodeId={editingNodeId}
-          editText={editText}
-          setEditText={setEditText}
-          onSelectNode={selectNode}
-          onStartEdit={startEditing}
-          onFinishEdit={finishEditing}
-          onMoveNode={moveNode}
-          onChangeSiblingOrder={changeSiblingOrder}
-          onAddChild={addNode}
-          onAddSibling={(nodeId) => addNode(nodeId)}
-          onDeleteNode={deleteNode}
-          onRightClick={() => {}}
-          onToggleCollapse={toggleNodeCollapse}
-          onFileUpload={(nodeId, files) => {
-            if (files.length > 0) {
-              handleFileUpload(nodeId, files[0]);
-            }
-          }}
-          onRemoveFile={() => {}}
-          onShowImageModal={showImageModal}
-          onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
-          onShowNodeMapLinks={showNodeMapLinks}
-          zoom={ui.zoom}
-          setZoom={setZoom}
-          pan={ui.pan}
-          setPan={setPan}
-        />
+        <div className="workspace-container">
+          <MindMapWorkspace 
+            data={data}
+            selectedNodeId={selectedNodeId}
+            editingNodeId={editingNodeId}
+            editText={editText}
+            setEditText={setEditText}
+            onSelectNode={(nodeId) => {
+              selectNode(nodeId);
+              if (nodeId && !showNotesPanel) {
+                setShowNotesPanel(true);
+              }
+            }}
+            onStartEdit={startEditing}
+            onFinishEdit={finishEditing}
+            onMoveNode={moveNode}
+            onChangeSiblingOrder={changeSiblingOrder}
+            onAddChild={addNode}
+            onAddSibling={(nodeId) => addNode(nodeId)}
+            onDeleteNode={deleteNode}
+            onRightClick={() => {}}
+            onToggleCollapse={toggleNodeCollapse}
+            onFileUpload={(nodeId, files) => {
+              if (files.length > 0) {
+                handleFileUpload(nodeId, files[0]);
+              }
+            }}
+            onRemoveFile={() => {}}
+            onShowImageModal={showImageModal}
+            onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
+            onShowNodeMapLinks={showNodeMapLinks}
+            zoom={ui.zoom}
+            setZoom={setZoom}
+            pan={ui.pan}
+            setPan={setPan}
+          />
+          
+          {showNotesPanel && (
+            <NodeNotesPanel
+              selectedNode={selectedNodeId ? findNodeById(data?.rootNode, selectedNodeId) : null}
+              onUpdateNode={updateNode}
+              onClose={() => setShowNotesPanel(false)}
+            />
+          )}
+        </div>
       </div>
       
       <MindMapModals 

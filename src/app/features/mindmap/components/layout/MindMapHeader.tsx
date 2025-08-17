@@ -17,6 +17,8 @@ interface MindMapHeaderProps {
   showSidebar?: boolean;
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
+  onToggleNotesPanel?: () => void;
+  showNotesPanel?: boolean;
 }
 
 const MindMapHeader: React.FC<MindMapHeaderProps> = ({
@@ -33,7 +35,9 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   onToggleSidebar,
   showSidebar = true,
   storageMode = 'local',
-  onStorageModeChange
+  onStorageModeChange,
+  onToggleNotesPanel,
+  showNotesPanel = false
 }) => {
   return (
     <Toolbar
@@ -51,6 +55,8 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       showSidebar={showSidebar}
       storageMode={storageMode}
       onStorageModeChange={onStorageModeChange}
+      onToggleNotesPanel={onToggleNotesPanel}
+      showNotesPanel={showNotesPanel}
     />
   );
 };
