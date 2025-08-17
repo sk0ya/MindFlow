@@ -44,7 +44,7 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           // 非ルートノードの場合はトグルボタン経由
           const rootNode = data.rootNode;
           const isOnRight = node.x > rootNode.x;
-          const toggleOffset = isOnRight ? 80 : -80;
+          const toggleOffset = isOnRight ? 40 : -40;
           const toggleX = node.x + toggleOffset;
           const toggleY = node.y;
           
@@ -80,7 +80,7 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         // 折りたたまれている場合
         const rootNode = data.rootNode;
         const isOnRight = node.x > rootNode.x;
-        const toggleOffset = isOnRight ? 80 : -80;
+        const toggleOffset = isOnRight ? 40 : -40;
         const toggleX = node.x + toggleOffset;
         const toggleY = node.y;
         
