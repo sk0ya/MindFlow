@@ -15,8 +15,11 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
 }) => {
   const [noteValue, setNoteValue] = useState('');
   const [isDirty, setIsDirty] = useState(false);
-  const [vimMode, setVimMode] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(600); // Default width
+  const [isResizing, setIsResizing] = useState(false);
   const saveDataRef = useRef({ selectedNode, noteValue, isDirty, onUpdateNode });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   // Update ref when values change
   useEffect(() => {
@@ -59,6 +62,44 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
     };
   }, []);
 
+  // Handle resize functionality
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const startX = e.clientX;
+    const startWidth = panelWidth;
+    let currentWidth = startWidth;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = startX - e.clientX; // Reverse direction for left panel
+      currentWidth = Math.max(300, Math.min(1200, startWidth + deltaX));
+      setPanelWidth(currentWidth);
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      // Save width to localStorage
+      localStorage.setItem('mindflow_notes_panel_width', currentWidth.toString());
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [panelWidth]);
+
+  // Load saved width on mount
+  useEffect(() => {
+    const savedWidth = localStorage.getItem('mindflow_notes_panel_width');
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (width >= 300 && width <= 1200) {
+        setPanelWidth(width);
+      }
+    }
+  }, []);
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,7 +116,16 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
 
   if (!selectedNode) {
     return (
-      <div className="node-notes-panel">
+      <div 
+        ref={panelRef}
+        className="node-notes-panel" 
+        style={{ width: `${panelWidth}px` }}
+      >
+        <div 
+          ref={resizeHandleRef}
+          className={`resize-handle ${isResizing ? 'resizing' : ''}`}
+          onMouseDown={handleResizeStart}
+        />
         <div className="panel-header">
           <h3 className="panel-title">📝 ノート</h3>
           {onClose && (
@@ -98,13 +148,22 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
             選択したノードにマークダウン形式のノートを追加できます
           </div>
         </div>
-        <style>{getStyles()}</style>
+        <style>{getStyles(panelWidth, isResizing)}</style>
       </div>
     );
   }
 
   return (
-    <div className="node-notes-panel">
+    <div 
+      ref={panelRef}
+      className="node-notes-panel" 
+      style={{ width: `${panelWidth}px` }}
+    >
+      <div 
+        ref={resizeHandleRef}
+        className={`resize-handle ${isResizing ? 'resizing' : ''}`}
+        onMouseDown={handleResizeStart}
+      />
       <div className="panel-header">
         <div className="panel-title-section">
           <h3 className="panel-title">📝 ノート</h3>
@@ -114,14 +173,6 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
           </div>
         </div>
         <div className="panel-controls">
-          <label className="vim-mode-toggle">
-            <input
-              type="checkbox"
-              checked={vimMode}
-              onChange={(e) => setVimMode(e.target.checked)}
-            />
-            <span>Vim</span>
-          </label>
           {onClose && (
             <button
               type="button"
@@ -143,9 +194,9 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
           value={noteValue}
           onChange={handleNoteChange}
           onSave={handleSave}
-          vimMode={vimMode}
           height="calc(100vh - 140px)"
           className="node-editor"
+          autoFocus={false}
         />
       </div>
 
@@ -162,12 +213,12 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
         </div>
       )}
 
-      <style>{getStyles()}</style>
+      <style>{getStyles(panelWidth, isResizing)}</style>
     </div>
   );
 };
 
-function getStyles() {
+function getStyles(_panelWidth: number, isResizing: boolean) {
   return `
     .node-notes-panel {
       display: flex;
@@ -175,9 +226,27 @@ function getStyles() {
       height: 100%;
       background: #ffffff;
       border-left: 1px solid #e5e7eb;
-      min-width: 400px;
-      max-width: 800px;
-      width: 50vw;
+      position: relative;
+      user-select: ${isResizing ? 'none' : 'auto'};
+    }
+
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: transparent;
+      cursor: col-resize;
+      z-index: 10;
+    }
+
+    .resize-handle:hover {
+      background: #3b82f6;
+    }
+
+    .resize-handle.resizing {
+      background: #3b82f6;
     }
 
     .panel-header {
@@ -230,19 +299,6 @@ function getStyles() {
       gap: 12px;
     }
 
-    .vim-mode-toggle {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-      color: #6b7280;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .vim-mode-toggle input[type="checkbox"] {
-      margin: 0;
-    }
 
     .close-button {
       background: none;
@@ -336,9 +392,11 @@ function getStyles() {
 
     @media (max-width: 768px) {
       .node-notes-panel {
-        width: 100vw;
-        min-width: unset;
-        max-width: unset;
+        width: 100vw !important;
+      }
+
+      .resize-handle {
+        display: none;
       }
 
       .panel-header {

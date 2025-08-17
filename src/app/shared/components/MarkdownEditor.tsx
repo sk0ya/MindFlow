@@ -9,6 +9,7 @@ interface MarkdownEditorProps {
   className?: string;
   height?: string;
   vimMode?: boolean;
+  autoFocus?: boolean;
 }
 
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
@@ -17,7 +18,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onSave,
   className = '',
   height = '400px',
-  vimMode = false
+  vimMode = false,
+  autoFocus = false
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [isVimEnabled, setIsVimEnabled] = useState(vimMode);
@@ -51,8 +53,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       enableVimMode(editor, monaco);
     }
 
-    // Auto-focus when mounted
-    editor.focus();
+    // Auto-focus when mounted (only if autoFocus is enabled)
+    if (autoFocus) {
+      editor.focus();
+    }
   };
 
   const enableVimMode = async (editor: editor.IStandaloneCodeEditor, _monaco: typeof import('monaco-editor')) => {
