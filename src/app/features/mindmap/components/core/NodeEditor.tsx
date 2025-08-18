@@ -90,9 +90,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   return (
     <foreignObject 
       x={node.x - nodeWidth / 2} 
-      y={node.y - 10 + imageHeight / 2} 
+      y={node.y - 12 + imageHeight / 2} 
       width={nodeWidth} 
-      height="20"
+      height="24"
     >
       <input
         ref={inputRef}
@@ -104,6 +104,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
         onBlur={handleInputBlur}
         style={{
           width: '100%',
+          height: '100%',
           border: '1px solid #ccc',
           background: 'white',
           textAlign: 'center',
@@ -113,7 +114,8 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           color: 'black',
           outline: 'none',
           borderRadius: '4px',
-          padding: '2px 4px'
+          padding: '0',
+          boxSizing: 'border-box'
         }}
       />
     </foreignObject>

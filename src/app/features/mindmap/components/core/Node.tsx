@@ -5,6 +5,7 @@ import NodeAttachments from './NodeAttachments';
 import NodeActions from './NodeActions';
 import NodeMapLinkIndicator from './NodeMapLinkIndicator';
 import { useNodeDragHandler } from './NodeDragHandler';
+import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeProps {
@@ -131,12 +132,11 @@ const Node: React.FC<NodeProps> = ({
     }
   }, [node.id, onRightClick]);
 
-  // ノードのサイズ計算（画像を考慮）
-  const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
-  const imageHeight = hasImages ? 60 : 0; // 画像表示エリアの高さ
-  const displayTextLength = node.text.length > 25 ? 28 : node.text.length; // 25 chars + "..." = 28
-  const nodeWidth = Math.max(displayTextLength * 8 + 16, hasImages ? 150 : 0);
-  const nodeHeight = 40 + imageHeight;
+  // ノードのサイズ計算（共有ユーティリティ関数を使用）
+  const nodeSize = calculateNodeSize(node, editText, isEditing);
+  const nodeWidth = nodeSize.width;
+  const nodeHeight = nodeSize.height;
+  const imageHeight = nodeSize.imageHeight;
 
   return (
     <g>

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import Connection from '../../../../shared/components/ui/Connection';
+import { calculateNodeSize, getToggleButtonPosition } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, MindMapData } from '@shared/types';
 
 interface ConnectionData {
@@ -42,11 +43,10 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           });
         } else {
           // 非ルートノードの場合はトグルボタン経由
-          const rootNode = data.rootNode;
-          const isOnRight = node.x > rootNode.x;
-          const toggleOffset = isOnRight ? 40 : -40;
-          const toggleX = node.x + toggleOffset;
-          const toggleY = node.y;
+          const nodeSize = calculateNodeSize(node);
+          const togglePosition = getToggleButtonPosition(node, data.rootNode, nodeSize);
+          const toggleX = togglePosition.x;
+          const toggleY = togglePosition.y;
           
           // 親からトグルボタンへの接続線
           connections.push({
@@ -78,11 +78,10 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         }
       } else {
         // 折りたたまれている場合
-        const rootNode = data.rootNode;
-        const isOnRight = node.x > rootNode.x;
-        const toggleOffset = isOnRight ? 40 : -40;
-        const toggleX = node.x + toggleOffset;
-        const toggleY = node.y;
+        const nodeSize = calculateNodeSize(node);
+        const togglePosition = getToggleButtonPosition(node, data.rootNode, nodeSize);
+        const toggleX = togglePosition.x;
+        const toggleY = togglePosition.y;
         
         // 親からトグルボタンへの接続線
         connections.push({
