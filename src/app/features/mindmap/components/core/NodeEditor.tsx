@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, memo, useState } from 'react';
+import React, { useRef, useEffect, useCallback, memo } from 'react';
 import type { MindMapNode } from '@shared/types';
 
 interface NodeEditorProps {
@@ -23,7 +23,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   blurTimeoutRef
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isComposing, setIsComposing] = useState(false);
 
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -39,11 +38,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   }, [isEditing, node.id]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // IME入力中は通常のキーイベント処理をスキップ
-    if (isComposing) {
-      return;
-    }
-    
     // 編集中の入力フィールドでは、Escapeのみ処理（他はuseKeyboardShortcutsに委任）
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -54,14 +48,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       onFinishEdit(node.id, node.text);
     }
     // Tab/EnterはuseKeyboardShortcutsで統一処理
-  }, [isComposing, node.id, node.text, onFinishEdit, blurTimeoutRef]);
+  }, [node.id, node.text, onFinishEdit, blurTimeoutRef]);
 
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    // IME入力中のblurは無視（composition終了後に適切に処理される）
-    if (isComposing) {
-      return;
-    }
-    
     // 既存のタイマーをクリア
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
@@ -72,17 +61,8 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     
     // 編集完了処理を実行
     onFinishEdit(node.id, currentValue);
-  }, [isComposing, node.id, editText, onFinishEdit, blurTimeoutRef]);
+  }, [node.id, editText, onFinishEdit, blurTimeoutRef]);
 
-  // IME composition開始時の処理
-  const handleCompositionStart = useCallback(() => {
-    setIsComposing(true);
-  }, []);
-
-  // IME composition終了時の処理
-  const handleCompositionEnd = useCallback(() => {
-    setIsComposing(false);
-  }, []);
 
   if (!isEditing) {
     const displayText = node.text.length > 25 ? node.text.substring(0, 25) + '...' : node.text;
@@ -100,8 +80,8 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           pointerEvents: 'none', 
           userSelect: 'none'
         }}
-        title={node.text.length > 25 ? node.text : undefined}
       >
+        <title>{node.text.length > 25 ? node.text : displayText}</title>
         {displayText}
       </text>
     );
@@ -122,8 +102,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
         onChange={(e) => setEditText(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleInputBlur}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
         style={{
           width: '100%',
           border: '1px solid #ccc',
