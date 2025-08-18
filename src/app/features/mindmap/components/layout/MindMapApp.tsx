@@ -506,6 +506,59 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   };
 
+  // ファイル削除ハンドラー
+  const handleFileDelete = async (nodeId: string, fileId: string): Promise<void> => {
+    try {
+      if (!data) {
+        throw new Error('マインドマップデータが利用できません');
+      }
+
+      const node = findNodeById(data.rootNode, nodeId);
+      if (!node || !node.attachments) {
+        throw new Error('ノードまたは添付ファイルが見つかりません');
+      }
+
+      const fileToDelete = node.attachments.find(file => file.id === fileId);
+      if (!fileToDelete) {
+        throw new Error('削除するファイルが見つかりません');
+      }
+
+      // クラウドモードの場合はサーバーからも削除
+      if (storageMode === 'cloud' && (fileToDelete.r2FileId || fileToDelete.id)) {
+        const fileIdForDeletion = fileToDelete.r2FileId || fileToDelete.id;
+        logger.info('Deleting file from cloud storage...', { 
+          fileName: fileToDelete.name, 
+          fileId: fileIdForDeletion,
+          nodeId: nodeId,
+          mapId: data.id
+        });
+
+        // ストレージアダプターを直接作成
+        const { createStorageAdapter } = await import('../../../../core/storage/StorageAdapterFactory');
+        const adapter = await createStorageAdapter(storageConfig);
+        if (adapter && 'deleteFile' in adapter && typeof adapter.deleteFile === 'function') {
+          await adapter.deleteFile(data.id, nodeId, fileIdForDeletion);
+          logger.info('File deleted from cloud storage successfully');
+        }
+      }
+
+      // ノードから添付ファイルを削除
+      const updatedAttachments = node.attachments.filter(file => file.id !== fileId);
+      const updatedNode = {
+        ...node,
+        attachments: updatedAttachments
+      };
+
+      updateNode(nodeId, updatedNode);
+      showNotification('success', `${fileToDelete.name} を削除しました`);
+      logger.debug('File deleted from node:', { nodeId, fileId, fileName: fileToDelete.name });
+    } catch (error) {
+      logger.error('File delete failed:', error);
+      showNotification('error', 'ファイルの削除に失敗しました');
+      handleError(error as Error, 'ファイル削除', fileId);
+    }
+  };
+
   // ユーティリティ関数
   const findNodeById = (rootNode: MindMapNode, nodeId: string): MindMapNode | null => {
     if (rootNode.id === nodeId) return rootNode;
@@ -615,7 +668,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                 handleFileUpload(nodeId, files[0]);
               }
             }}
-            onRemoveFile={() => {}}
+            onRemoveFile={handleFileDelete}
             onShowImageModal={showImageModal}
             onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
             onShowNodeMapLinks={showNodeMapLinks}
@@ -648,7 +701,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onShowCustomization={() => {}}
         onFileDownload={handleFileDownload}
         onFileRename={() => {}}
-        onFileDelete={() => {}}
+        onFileDelete={(fileId: string) => {
+          // selectedFileとselectedNodeIdから適切なnodeIdを取得する必要があります
+          if (ui.selectedFile && ui.selectedFile.nodeId) {
+            handleFileDelete(ui.selectedFile.nodeId, fileId);
+          } else if (ui.selectedFile && selectedNodeId) {
+            // fallbackとしてselectedNodeIdを使用
+            handleFileDelete(selectedNodeId, fileId);
+          }
+        }}
         onAddNodeMapLink={() => {}}
         onRemoveNodeMapLink={() => {}}
         onNavigateToMap={() => {}}

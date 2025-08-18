@@ -34,8 +34,11 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen || !image) {
+    console.log('ImageModal: Not rendering - isOpen:', isOpen, 'image:', image);
     return null;
   }
+
+  console.log('ImageModal: Rendering with image:', image);
 
   return (
     <div className="image-modal-overlay" onClick={handleBackdropClick}>

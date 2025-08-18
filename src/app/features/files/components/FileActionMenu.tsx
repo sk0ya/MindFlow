@@ -125,8 +125,13 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
 
   const handleView = () => {
     if (file) {
-      onView(file);
+      console.log('FileActionMenu: handleView called with file:', file);
+      // 先にメニューを閉じてからプレビューを開く
       handleClose();
+      // 少し遅延してからプレビューを開く
+      setTimeout(() => {
+        onView(file);
+      }, 50);
     }
   };
 

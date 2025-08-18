@@ -56,7 +56,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
         <g key={file.id}>
           <foreignObject 
             x={node.x - nodeWidth / 2 + 5} 
-            y={node.y - nodeWidth / 2 + 5} 
+            y={node.y - 40} 
             width={nodeWidth - 10} 
             height={imageHeight - 5}
           >
