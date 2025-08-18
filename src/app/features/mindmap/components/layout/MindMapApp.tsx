@@ -559,7 +559,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         canUndo={canUndo}
         canRedo={canRedo}
         zoom={ui.zoom}
-        onZoomReset={() => {}}
+        onZoomReset={() => setZoom(1.0)}
         onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
         onAutoLayout={() => {
           logger.info('Manual auto layout triggered');
