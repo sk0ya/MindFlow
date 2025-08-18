@@ -330,7 +330,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                 throw new Error('クラウドファイルアップロードには認証が必要です');
               }
               
-              logger.debug('Auth state:', {
+              logger.info('🚀 Cloud mode file upload starting...', {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                nodeId: nodeId,
+                mapId: data?.id,
                 hasAuth: !!auth,
                 hasAuthAdapter: !!auth.authAdapter,
                 isAuthenticated: auth.authAdapter?.isAuthenticated,
@@ -403,12 +408,25 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         // ノードにファイルを添付
         const node = data?.rootNode && findNodeById(data.rootNode, nodeId);
         if (node) {
+          logger.info('📎 Attaching file to node...', {
+            nodeId,
+            fileName: fileAttachment.name,
+            hasDownloadUrl: !!fileAttachment.downloadUrl,
+            hasDataURL: !!fileAttachment.dataURL,
+            downloadUrl: fileAttachment.downloadUrl ? fileAttachment.downloadUrl.substring(0, 100) + '...' : 'none',
+            existingAttachments: node.attachments?.length || 0
+          });
+          
           const updatedNode = {
             ...node,
             attachments: [...(node.attachments || []), fileAttachment]
           };
           updateNode(nodeId, updatedNode);
-          logger.debug('File attached to node:', nodeId);
+          logger.info('✅ File attached to node successfully:', {
+            nodeId,
+            fileName: fileAttachment.name,
+            totalAttachments: updatedNode.attachments.length
+          });
         } else {
           throw new Error(`ノードが見つかりません: ${nodeId}`);
         }

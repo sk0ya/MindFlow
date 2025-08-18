@@ -1,11 +1,109 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import type { FileAttachment } from '@shared/types';
+import { useAuth } from '../../../components/auth';
 
 interface ImageModalProps {
   isOpen: boolean;
   image: FileAttachment | null;
   onClose: () => void;
 }
+
+// クラウド画像用のモーダル表示コンポーネント  
+const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  
+  // 認証情報を取得
+  let auth;
+  try {
+    auth = useAuth();
+  } catch {
+    // AuthProviderの外で呼ばれた場合
+    auth = null;
+  }
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!file.downloadUrl) {
+        setError('No download URL available');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('CloudModalImage: Loading image from URL:', file.downloadUrl);
+        
+        // 認証が必要な場合はfetchでBlobを取得してオブジェクトURLを作成
+        if (file.downloadUrl.includes('/api/files/')) {
+          // 認証ヘッダーを取得
+          const headers: Record<string, string> = {
+            'Accept': 'image/*,*/*'
+          };
+          
+          if (auth?.authAdapter?.getAuthHeaders) {
+            const authHeaders = auth.authAdapter.getAuthHeaders();
+            Object.assign(headers, authHeaders);
+            console.log('CloudModalImage: Added auth headers:', Object.keys(authHeaders));
+          }
+          
+          const response = await fetch(file.downloadUrl, {
+            method: 'GET',
+            headers
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setImageUrl(url);
+          console.log('CloudModalImage: Created blob URL:', url);
+        } else {
+          setImageUrl(file.downloadUrl);
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('CloudModalImage: Failed to load image:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [file.downloadUrl]);
+
+  if (loading) {
+    return <div style={{ color: 'white', textAlign: 'center' }}>読み込み中...</div>;
+  }
+
+  if (error) {
+    return <div style={{ color: '#ff6b6b', textAlign: 'center' }}>画像読み込みエラー: {error}</div>;
+  }
+
+  return (
+    <img 
+      src={imageUrl}
+      alt={file.name}
+      className="image-modal-image"
+      onError={(e) => {
+        console.error('CloudModalImage: img onError:', e);
+        setError('Image load failed');
+      }}
+      onLoad={() => {
+        console.log('CloudModalImage: Image loaded successfully:', file.name);
+      }}
+    />
+  );
+};
 
 const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -50,11 +148,22 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
         >
           ×
         </button>
-        <img 
-          src={image.dataURL || image.data} 
-          alt={image.name}
-          className="image-modal-image"
-        />
+        {image.downloadUrl && image.downloadUrl.includes('/api/files/') ? (
+          <CloudModalImage file={image} />
+        ) : (
+          <img 
+            src={image.downloadUrl || image.dataURL || image.data} 
+            alt={image.name}
+            className="image-modal-image"
+            onError={(e) => {
+              console.error('ImageModal: Image load error for file:', image, 'Event:', e);
+              console.log('Attempted image src:', image.downloadUrl || image.dataURL || image.data);
+            }}
+            onLoad={() => {
+              console.log('ImageModal: Image loaded successfully for file:', image.name);
+            }}
+          />
+        )}
         <div className="image-modal-info">
           <p className="image-filename">{image.name}</p>
           <p className="image-filesize">{formatFileSize(image.size)}</p>

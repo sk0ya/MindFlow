@@ -294,6 +294,12 @@ export class CloudflareAPI {
     const result = await response.json();
     logger.info('📥 API: Upload response:', result);
     
+    // downloadUrlが相対パスの場合は絶対パスに変換
+    if (result.downloadUrl && result.downloadUrl.startsWith('/')) {
+      result.downloadUrl = `${API_BASE_URL}${result.downloadUrl}`;
+      logger.info('🔗 API: Converted relative downloadUrl to absolute:', result.downloadUrl);
+    }
+    
     return result;
   }
 
@@ -348,7 +354,7 @@ export class CloudflareAPI {
   async downloadFile(mindmapId: string, nodeId: string, fileId: string): Promise<Blob> {
     logger.info('📥 API: Downloading file:', { mindmapId, nodeId, fileId });
     
-    const downloadUrl = `${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}`;
+    const downloadUrl = `${API_BASE_URL}/api/files/${mindmapId}/${nodeId}/${fileId}?type=download`;
     const headers = this.getAuthHeaders();
     
     logger.info('🌐 API: Download URL and headers:', {
@@ -388,8 +394,19 @@ export class CloudflareAPI {
     const blob = await response.blob();
     logger.info('📥 API: File downloaded successfully:', {
       size: blob.size,
-      type: blob.type
+      type: blob.type,
+      responseContentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length')
     });
+    
+    // Content-TypeがblobのtypeがApplication/octet-streamの場合、レスポンスヘッダーから設定
+    if (blob.type === 'application/octet-stream' || !blob.type) {
+      const contentType = response.headers.get('content-type');
+      if (contentType) {
+        logger.info('🔄 API: Updating blob type from response headers:', contentType);
+        return new Blob([blob], { type: contentType });
+      }
+    }
     
     return blob;
   }
