@@ -145,6 +145,24 @@ export const setupGlobalErrorHandlers = (handleError: (error: Error, context?: s
 
   // JavaScriptエラーをキャッチ
   window.addEventListener('error', (event) => {
+    const errorMessage = event.error?.message || event.message || '';
+    const errorStack = event.error?.stack || '';
+    
+    // Monaco Editor関連のエラーを除外
+    if (
+      errorStack.includes('monaco-editor') ||
+      errorStack.includes('vs/editor') ||
+      errorMessage.includes('Monaco') ||
+      errorMessage.includes('editor') ||
+      errorMessage.includes('keydown') ||
+      errorMessage.includes('keyup') ||
+      errorMessage.includes('keypress') ||
+      errorMessage.includes('ResizeObserver') ||
+      errorMessage.includes('Non-Error promise rejection')
+    ) {
+      return;
+    }
+    
     logger.error('Global JavaScript error:', event.error);
     handleError(
       event.error || new Error(event.message),

@@ -31,7 +31,6 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
   onContextMenu
 }) => {
   // ファイルカードを考慮した選択範囲の計算
-  const hasAttachments = node.attachments && node.attachments.length > 0;
   const hasDisplayImage = node.attachments && node.attachments.some(f => f.isImage);
   const hasNonImageFiles = node.attachments && node.attachments.some(f => !f.isImage) || 
                           (node.attachments && node.attachments.filter(f => f.isImage).length > 1);

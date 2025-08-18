@@ -390,7 +390,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
 
   // 画像ファイルと非画像ファイルを分離 - 1枚目の画像のみ画像として表示
   const firstImageFile = node.attachments?.find((f: FileAttachment) => f.isImage) || null;
-  const remainingImageFiles = node.attachments?.filter((f: FileAttachment, index: number) => {
+  const remainingImageFiles = node.attachments?.filter((f: FileAttachment) => {
     const imageIndex = node.attachments?.findIndex(file => file.isImage && file.id === f.id);
     return f.isImage && imageIndex !== undefined && imageIndex > 0;
   }) || [];
@@ -405,7 +405,6 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   // ノードの高さを考慮してファイルカードを配置
   // 画像がある場合: 画像の下から10px下
   // 画像がない場合: ノードテキストから10px下
-  const nodeHeight = 40 + imageHeight;
   const nonImageFileYOffset = hasDisplayImage 
     ? node.y + imageHeight - 35 + 10  // 画像の下に10pxの間隔
     : node.y + 10;                    // ノードテキストから10px下

@@ -40,7 +40,11 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       renderWhitespace: 'boundary',
       folding: true,
       foldingStrategy: 'auto',
-      showFoldingControls: 'always'
+      showFoldingControls: 'always',
+      glyphMargin: false,
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      overviewRulerBorder: false
     });
 
     // Add keyboard shortcuts
@@ -141,15 +145,26 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           height="100%"
           defaultLanguage="markdown"
           value={value}
-          onChange={(newValue) => onChange(newValue || '')}
+          onChange={(newValue) => {
+            onChange(newValue ?? '');
+          }}
           onMount={handleEditorDidMount}
           theme="vs-dark"
+          loading="エディターを読み込み中..."
           options={{
             selectOnLineNumbers: true,
             roundedSelection: false,
             readOnly: false,
             cursorStyle: 'line',
             automaticLayout: true,
+            // キーボード関連の設定を明示的に指定
+            acceptSuggestionOnEnter: 'off',
+            acceptSuggestionOnCommitCharacter: false,
+            quickSuggestions: false,
+            parameterHints: { enabled: false },
+            suggestOnTriggerCharacters: false,
+            tabCompletion: 'off',
+            wordBasedSuggestions: 'off'
           }}
         />
       </div>
