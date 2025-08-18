@@ -1,4 +1,5 @@
 import React, { useCallback, memo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 import { useAuth } from '../../../../components/auth';
 
@@ -12,6 +13,121 @@ interface NodeAttachmentsProps {
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
 }
+
+// 隠れたファイル一覧表示コンポーネント
+interface HiddenFilesMenuProps {
+  files: FileAttachment[];
+  position: { x: number; y: number };
+  onFileClick: (file: FileAttachment) => void;
+  onClose: () => void;
+}
+
+const HiddenFilesMenu: React.FC<HiddenFilesMenuProps> = ({ files, position, onFileClick, onClose }) => {
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // メニュー外クリックで閉じる
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        left: position.x,
+        top: position.y,
+        backgroundColor: 'white',
+        border: '1px solid #e0e0e0',
+        borderRadius: '6px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        padding: '8px',
+        minWidth: '200px',
+        maxHeight: '300px',
+        overflowY: 'auto',
+        zIndex: 1000
+      }}
+    >
+      <div style={{ 
+        fontSize: '12px', 
+        fontWeight: '600', 
+        color: '#666', 
+        marginBottom: '8px',
+        borderBottom: '1px solid #f0f0f0',
+        paddingBottom: '4px'
+      }}>
+        その他のファイル ({files.length})
+      </div>
+      {files.map((file, index) => {
+        const icon = getFileIcon(file.name, file.type);
+        const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '...' : file.name;
+        const fileSize = file.size ? formatFileSize(file.size) : '';
+        
+        return (
+          <div
+            key={file.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
+              marginBottom: index < files.length - 1 ? '2px' : '0'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f5f5f5';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            onClick={() => {
+              onFileClick(file);
+              onClose();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onFileClick(file);
+              onClose();
+            }}
+          >
+            <span style={{ fontSize: '16px', marginRight: '8px' }}>{icon}</span>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div style={{ 
+                fontSize: '13px', 
+                fontWeight: '500', 
+                color: '#333',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {fileName}
+              </div>
+              {fileSize && (
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#888',
+                  marginTop: '2px'
+                }}>
+                  {fileSize}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // クラウド画像用のコンポーネント
 const CloudImage: React.FC<{ 
@@ -225,6 +341,26 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   onShowImageModal,
   onShowFileActionMenu
 }) => {
+  // 隠れたファイルメニューの状態管理
+  const [hiddenFilesMenu, setHiddenFilesMenu] = useState<{
+    files: FileAttachment[];
+    position: { x: number; y: number };
+  } | null>(null);
+
+  const showHiddenFilesMenu = useCallback((files: FileAttachment[], position: { x: number; y: number }) => {
+    console.log('showHiddenFilesMenu called with:', files, position);
+    setHiddenFilesMenu({ files, position });
+  }, []);
+
+  const closeHiddenFilesMenu = useCallback(() => {
+    setHiddenFilesMenu(null);
+  }, []);
+
+  const handleHiddenFileClick = useCallback((file: FileAttachment) => {
+    if (hiddenFilesMenu) {
+      onShowFileActionMenu(file, node.id, hiddenFilesMenu.position);
+    }
+  }, [hiddenFilesMenu, onShowFileActionMenu, node.id]);
   const handleImageDoubleClick = useCallback((e: React.MouseEvent, file: FileAttachment & { isImage?: boolean }) => {
     e.stopPropagation();
     e.preventDefault();
@@ -500,17 +636,39 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   ry="3"
                   style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
                   onClick={(e) => {
+                    console.log('+N button clicked');
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    // シンプルな座標計算（画面中央付近に表示）
+                    const clientX = window.innerWidth / 2;
+                    const clientY = window.innerHeight / 2;
+                    
+                    // 隠れているファイル一覧メニューを表示
+                    const hiddenFiles = nonImageFiles.slice(maxDisplayFiles);
+                    console.log('Hidden files:', hiddenFiles);
+                    console.log('Menu position:', { x: clientX, y: clientY });
+                    
+                    if (hiddenFiles.length > 0) {
+                      showHiddenFilesMenu(hiddenFiles, { x: clientX, y: clientY });
+                    } else {
+                      console.log('No hidden files to show');
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
                     const svgRect = svgRef.current?.getBoundingClientRect();
                     if (svgRect) {
-                      const clientX = svgRect.left + (node.x) * zoom + pan.x * zoom;
+                      const clientX = svgRect.left + (startX + filesToShow.length * (iconSize + iconSpacing) + iconSize / 2) * zoom + pan.x * zoom;
                       const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
-                      const fakeEvent = {
-                        stopPropagation: () => e.stopPropagation(),
-                        preventDefault: () => e.preventDefault(),
-                        clientX,
-                        clientY
-                      };
-                      handleFileActionMenu(fakeEvent, nonImageFiles[maxDisplayFiles]);
+                      
+                      // 隠れているファイル一覧メニューを表示
+                      const hiddenFiles = nonImageFiles.slice(maxDisplayFiles);
+                      if (hiddenFiles.length > 0) {
+                        showHiddenFilesMenu(hiddenFiles, { x: clientX, y: clientY });
+                      }
                     }
                   }}
                 />
@@ -530,6 +688,17 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
           </g>
         );
       })()}
+      
+      {/* 隠れたファイル一覧メニュー (Portal経由でbodyに表示) */}
+      {hiddenFilesMenu && createPortal(
+        <HiddenFilesMenu
+          files={hiddenFilesMenu.files}
+          position={hiddenFilesMenu.position}
+          onFileClick={handleHiddenFileClick}
+          onClose={closeHiddenFilesMenu}
+        />,
+        document.body
+      )}
     </>
   );
 };
