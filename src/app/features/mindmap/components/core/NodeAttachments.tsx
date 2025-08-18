@@ -156,6 +156,65 @@ const CloudImage: React.FC<{
   );
 };
 
+// ファイルタイプに応じたアイコンを取得
+const getFileIcon = (fileName: string, fileType?: string): string => {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const type = fileType?.toLowerCase();
+  
+  // 画像ファイル
+  if (type?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext || '')) {
+    return '🖼️';
+  }
+  
+  // PDFファイル
+  if (type === 'application/pdf' || ext === 'pdf') {
+    return '📄';
+  }
+  
+  // Officeドキュメント
+  if (type?.includes('word') || ['doc', 'docx'].includes(ext || '')) {
+    return '📝';
+  }
+  if (type?.includes('excel') || type?.includes('spreadsheet') || ['xls', 'xlsx', 'csv'].includes(ext || '')) {
+    return '📊';
+  }
+  if (type?.includes('presentation') || ['ppt', 'pptx'].includes(ext || '')) {
+    return '📈';
+  }
+  
+  // テキストファイル
+  if (type?.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'py', 'java', 'cpp'].includes(ext || '')) {
+    return '📄';
+  }
+  
+  // 動画ファイル
+  if (type?.startsWith('video/') || ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '')) {
+    return '🎬';
+  }
+  
+  // 音声ファイル
+  if (type?.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext || '')) {
+    return '🎵';
+  }
+  
+  // アーカイブファイル
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) {
+    return '🗜️';
+  }
+  
+  // デフォルト
+  return '📎';
+};
+
+// ファイルサイズを人間が読みやすい形式に変換
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
 const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   node,
   nodeWidth,
@@ -193,11 +252,33 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     return null;
   }
 
+  // 画像ファイルと非画像ファイルを分離 - 1枚目の画像のみ画像として表示
+  const firstImageFile = node.attachments?.find((f: FileAttachment) => f.isImage) || null;
+  const remainingImageFiles = node.attachments?.filter((f: FileAttachment, index: number) => {
+    const imageIndex = node.attachments?.findIndex(file => file.isImage && file.id === f.id);
+    return f.isImage && imageIndex !== undefined && imageIndex > 0;
+  }) || [];
+  const nonImageFiles = [
+    ...node.attachments?.filter((file: FileAttachment) => !file.isImage) || [],
+    ...remainingImageFiles // 2枚目以降の画像を非画像ファイルとして扱う
+  ];
+  
+  // レイアウト計算
+  const hasDisplayImage = firstImageFile !== null;
+  
+  // ノードの高さを考慮してファイルカードを配置
+  // 画像がある場合: 画像の下から10px下
+  // 画像がない場合: ノードテキストから10px下
+  const nodeHeight = 40 + imageHeight;
+  const nonImageFileYOffset = hasDisplayImage 
+    ? node.y + imageHeight - 35 + 10  // 画像の下に10pxの間隔
+    : node.y + 10;                    // ノードテキストから10px下
+
   return (
     <>
-      {/* 画像添付ファイルの表示 */}
-      {node.attachments.filter((file: FileAttachment) => file.isImage).map((file: FileAttachment) => (
-        <g key={file.id}>
+      {/* 最初の画像ファイルのみ表示（元の位置） */}
+      {firstImageFile && (
+        <g key={firstImageFile.id}>
           <foreignObject 
             x={node.x - nodeWidth / 2 + 5} 
             y={node.y - 40} 
@@ -208,111 +289,247 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               position: 'relative',
               width: '100%',
               height: '100%',
-              borderRadius: '4px',
+              borderRadius: '6px',
               overflow: 'hidden',
-              border: '1px solid #ddd'
+              border: '2px solid #fff',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              backgroundColor: '#fff'
             }}>
-              {file.downloadUrl && file.downloadUrl.includes('/api/files/') ? (
+              {firstImageFile.downloadUrl && firstImageFile.downloadUrl.includes('/api/files/') ? (
                 <CloudImage
-                  file={file}
+                  file={firstImageFile}
                   style={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease'
                   }}
-                  onClick={(e) => handleFileActionMenu(e, file)}
-                  onDoubleClick={(e) => handleImageDoubleClick(e, file)}
-                  onContextMenu={(e) => handleFileActionMenu(e, file)}
+                  onClick={(e) => handleFileActionMenu(e, firstImageFile)}
+                  onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
+                  onContextMenu={(e) => handleFileActionMenu(e, firstImageFile)}
                 />
               ) : (
                 <img 
-                  src={file.downloadUrl || file.dataURL || file.data} 
-                  alt={file.name}
+                  src={firstImageFile.downloadUrl || firstImageFile.dataURL || firstImageFile.data} 
+                  alt={firstImageFile.name}
                   style={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease'
                   }}
-                  onClick={(e) => handleFileActionMenu(e, file)}
-                  onDoubleClick={(e) => handleImageDoubleClick(e, file)}
-                  onContextMenu={(e) => handleFileActionMenu(e, file)}
+                  onClick={(e) => handleFileActionMenu(e, firstImageFile)}
+                  onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
+                  onContextMenu={(e) => handleFileActionMenu(e, firstImageFile)}
                   onError={(e) => {
-                    console.error('NodeAttachments: Image load error for file:', file, 'Event:', e);
-                    console.log('Attempted image src:', file.downloadUrl || file.dataURL || file.data);
+                    console.error('NodeAttachments: Image load error for file:', firstImageFile, 'Event:', e);
+                    console.log('Attempted image src:', firstImageFile.downloadUrl || firstImageFile.dataURL || firstImageFile.data);
                   }}
                   onLoad={() => {
-                    console.log('NodeAttachments: Image loaded successfully for file:', file.name);
+                    console.log('NodeAttachments: Image loaded successfully for file:', firstImageFile.name);
                   }}
                 />
               )}
             </div>
           </foreignObject>
         </g>
-      ))}
+      )}
       
       {/* 非画像ファイルの表示 */}
-      {node.attachments.filter((file: FileAttachment) => !file.isImage).map((file: FileAttachment, index: number) => {
-        const yOffset = node.y - 15 + (index * 20);
+      {(() => {
+        if (nonImageFiles.length === 0) return null;
+        
+        // 単一ファイルの場合 - アイコンのみ表示
+        if (nonImageFiles.length === 1) {
+          const file = nonImageFiles[0];
+          const icon = getFileIcon(file.name, file.type);
+          const yOffset = nonImageFileYOffset;
+          const iconSize = 24; // アイコンのサイズ
+          const cardX = node.x - iconSize / 2; // 中央揃え
+          
+          return (
+            <g key={file.id}>
+              {/* ファイルカード背景 */}
+              <rect
+                x={cardX}
+                y={yOffset}
+                width={iconSize}
+                height={iconSize}
+                fill="#ffffff"
+                stroke="#e0e0e0"
+                strokeWidth="1"
+                rx="4"
+                ry="4"
+                style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+                onClick={(e) => {
+                  const svgRect = svgRef.current?.getBoundingClientRect();
+                  if (svgRect) {
+                    const clientX = svgRect.left + (node.x) * zoom + pan.x * zoom;
+                    const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
+                    const fakeEvent = {
+                      stopPropagation: () => e.stopPropagation(),
+                      preventDefault: () => e.preventDefault(),
+                      clientX,
+                      clientY
+                    };
+                    handleFileActionMenu(fakeEvent, file);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  const svgRect = svgRef.current?.getBoundingClientRect();
+                  if (svgRect) {
+                    const clientX = svgRect.left + (node.x) * zoom + pan.x * zoom;
+                    const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
+                    const fakeEvent = {
+                      stopPropagation: () => e.stopPropagation(),
+                      preventDefault: () => e.preventDefault(),
+                      clientX,
+                      clientY
+                    };
+                    handleFileActionMenu(fakeEvent, file);
+                  }
+                }}
+              />
+              
+              {/* ファイルアイコン */}
+              <text
+                x={cardX + iconSize / 2}
+                y={yOffset + iconSize / 2 + 4}
+                textAnchor="middle"
+                fill="#333"
+                fontSize="14px"
+                style={{ pointerEvents: 'none' }}
+              >
+                {icon}
+              </text>
+            </g>
+          );
+        }
+        
+        // 複数ファイルの場合 - アイコンのみ横並び表示
+        const yOffset = nonImageFileYOffset;
+        const maxDisplayFiles = 3; // 表示するアイコン数を増やす
+        const filesToShow = nonImageFiles.slice(0, maxDisplayFiles);
+        const remainingCount = nonImageFiles.length - maxDisplayFiles;
+        const iconSize = 20; // アイコンサイズ
+        const iconSpacing = 4; // アイコン間のスペース
+        const totalWidth = filesToShow.length * iconSize + (filesToShow.length - 1) * iconSpacing + 
+                          (remainingCount > 0 ? iconSize + iconSpacing : 0); // +N表示も含む
+        const startX = node.x - totalWidth / 2; // 中央揃え
+        
         return (
-          <g key={file.id}>
-            <rect
-              x={node.x + nodeWidth / 2 - 40}
-              y={yOffset - 8}
-              width={35}
-              height={16}
-              fill="#f5f5f5"
-              stroke="#ddd"
-              strokeWidth="1"
-              rx="3"
-              ry="3"
-              style={{ cursor: 'pointer' }}
-              onClick={(e) => {
-                // SVGイベントの座標を取得
-                const svgRect = svgRef.current?.getBoundingClientRect();
-                if (svgRect) {
-                  const clientX = svgRect.left + (node.x + nodeWidth / 2 - 22) * zoom + pan.x * zoom;
-                  const clientY = svgRect.top + (yOffset + 8) * zoom + pan.y * zoom;
+          <g>
+            {/* ファイルアイコンを横並びで表示 */}
+            {filesToShow.map((file, index) => {
+              const icon = getFileIcon(file.name, file.type);
+              const iconX = startX + index * (iconSize + iconSpacing);
+              
+              return (
+                <g key={file.id}>
+                  {/* アイコン背景 */}
+                  <rect
+                    x={iconX}
+                    y={yOffset}
+                    width={iconSize}
+                    height={iconSize}
+                    fill="#ffffff"
+                    stroke="#e0e0e0"
+                    strokeWidth="1"
+                    rx="3"
+                    ry="3"
+                    style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+                    onClick={(e) => {
+                      const svgRect = svgRef.current?.getBoundingClientRect();
+                      if (svgRect) {
+                        const clientX = svgRect.left + (iconX + iconSize / 2) * zoom + pan.x * zoom;
+                        const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
+                        const fakeEvent = {
+                          stopPropagation: () => e.stopPropagation(),
+                          preventDefault: () => e.preventDefault(),
+                          clientX,
+                          clientY
+                        };
+                        handleFileActionMenu(fakeEvent, file);
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      const svgRect = svgRef.current?.getBoundingClientRect();
+                      if (svgRect) {
+                        const clientX = svgRect.left + (iconX + iconSize / 2) * zoom + pan.x * zoom;
+                        const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
+                        const fakeEvent = {
+                          stopPropagation: () => e.stopPropagation(),
+                          preventDefault: () => e.preventDefault(),
+                          clientX,
+                          clientY
+                        };
+                        handleFileActionMenu(fakeEvent, file);
+                      }
+                    }}
+                  />
                   
-                  const fakeEvent = {
-                    stopPropagation: () => e.stopPropagation(),
-                    preventDefault: () => e.preventDefault(),
-                    clientX,
-                    clientY
-                  };
-                  handleFileActionMenu(fakeEvent, file);
-                }
-              }}
-              onContextMenu={(e) => {
-                const svgRect = svgRef.current?.getBoundingClientRect();
-                if (svgRect) {
-                  const clientX = svgRect.left + (node.x + nodeWidth / 2 - 22) * zoom + pan.x * zoom;
-                  const clientY = svgRect.top + (yOffset + 8) * zoom + pan.y * zoom;
-                  
-                  const fakeEvent = {
-                    stopPropagation: () => e.stopPropagation(),
-                    preventDefault: () => e.preventDefault(),
-                    clientX,
-                    clientY
-                  };
-                  handleFileActionMenu(fakeEvent, file);
-                }
-              }}
-            />
-            <text
-              x={node.x + nodeWidth / 2 - 22}
-              y={yOffset + 2}
-              textAnchor="middle"
-              fill="#666"
-              fontSize="10px"
-              style={{ pointerEvents: 'none' }}
-            >
-              📎
-            </text>
+                  {/* ファイルアイコン */}
+                  <text
+                    x={iconX + iconSize / 2}
+                    y={yOffset + iconSize / 2 + 4}
+                    textAnchor="middle"
+                    fill="#333"
+                    fontSize="12px"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {icon}
+                  </text>
+                </g>
+              );
+            })}
+            
+            {/* 残りのファイル数表示 */}
+            {remainingCount > 0 && (
+              <g>
+                <rect
+                  x={startX + filesToShow.length * (iconSize + iconSpacing)}
+                  y={yOffset}
+                  width={iconSize}
+                  height={iconSize}
+                  fill="#f8f9fa"
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                  rx="3"
+                  ry="3"
+                  style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
+                  onClick={(e) => {
+                    const svgRect = svgRef.current?.getBoundingClientRect();
+                    if (svgRect) {
+                      const clientX = svgRect.left + (node.x) * zoom + pan.x * zoom;
+                      const clientY = svgRect.top + (yOffset + iconSize / 2) * zoom + pan.y * zoom;
+                      const fakeEvent = {
+                        stopPropagation: () => e.stopPropagation(),
+                        preventDefault: () => e.preventDefault(),
+                        clientX,
+                        clientY
+                      };
+                      handleFileActionMenu(fakeEvent, nonImageFiles[maxDisplayFiles]);
+                    }
+                  }}
+                />
+                <text
+                  x={startX + filesToShow.length * (iconSize + iconSpacing) + iconSize / 2}
+                  y={yOffset + iconSize / 2 + 3}
+                  textAnchor="middle"
+                  fill="#666"
+                  fontSize="8px"
+                  fontWeight="500"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  +{remainingCount}
+                </text>
+              </g>
+            )}
           </g>
         );
-      })}
+      })()}
     </>
   );
 };

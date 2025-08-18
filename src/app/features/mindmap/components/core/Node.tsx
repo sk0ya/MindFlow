@@ -148,6 +148,7 @@ const Node: React.FC<NodeProps> = ({
         isLayoutTransitioning={isLayoutTransitioning}
         nodeWidth={nodeWidth}
         nodeHeight={nodeHeight}
+        imageHeight={imageHeight}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
