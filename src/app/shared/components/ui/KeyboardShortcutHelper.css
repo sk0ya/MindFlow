@@ -232,9 +232,7 @@
 
 .shortcut-tooltip {
   position: absolute;
-  bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
   background: #2c3e50;
   color: white;
   padding: 8px 12px;
@@ -242,12 +240,18 @@
   font-size: 12px;
   white-space: nowrap;
   z-index: 1000;
-  margin-bottom: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   animation: tooltipFadeIn 0.2s ease-out;
+  min-width: 120px;
 }
 
-.shortcut-tooltip::after {
+/* 上側に表示する場合 */
+.shortcut-tooltip.tooltip-top {
+  bottom: 100%;
+  margin-bottom: 8px;
+}
+
+.shortcut-tooltip.tooltip-top::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -255,6 +259,22 @@
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: #2c3e50;
+}
+
+/* 下側に表示する場合 */
+.shortcut-tooltip.tooltip-bottom {
+  top: 100%;
+  margin-top: 8px;
+}
+
+.shortcut-tooltip.tooltip-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: #2c3e50;
 }
 
 @keyframes tooltipFadeIn {
@@ -269,15 +289,16 @@
 }
 
 .shortcut-tooltip-description {
-  display: block;
-  margin-bottom: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 
 .shortcut-tooltip-keys {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 2px;
+  vertical-align: middle;
 }
 
 .shortcut-tooltip-key {

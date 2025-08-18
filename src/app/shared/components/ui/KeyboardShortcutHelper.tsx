@@ -157,16 +157,74 @@ interface ShortcutTooltipProps {
 
 export const ShortcutTooltip: React.FC<ShortcutTooltipProps> = ({ shortcut, children, description }) => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('bottom');
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    
+    // ツールチップの表示位置を動的に決定
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const spaceAbove = rect.top;
+      const spaceBelow = viewportHeight - rect.bottom;
+      
+      // 上下の表示位置を決定
+      let position: 'top' | 'bottom' = 'bottom';
+      if (spaceAbove >= 80 && spaceBelow < 80) {
+        position = 'top';
+      } else if (spaceAbove >= 80 && spaceBelow >= 80) {
+        // 両方に十分なスペースがある場合は下を優先
+        position = 'bottom';
+      } else if (spaceAbove < 80 && spaceBelow >= 80) {
+        position = 'bottom';
+      } else {
+        // どちらも狭い場合は広い方を選択
+        position = spaceAbove >= spaceBelow ? 'top' : 'bottom';
+      }
+      
+      setTooltipPosition(position);
+
+      // 左右の位置調整（画面端からはみ出さないように）
+      const tooltipMaxWidth = 300; // 最大想定幅
+      const centerPosition = rect.left + rect.width / 2;
+      let leftPosition = centerPosition - tooltipMaxWidth / 2;
+      
+      // 左端チェック
+      if (leftPosition < 8) {
+        leftPosition = 8;
+      }
+      
+      // 右端チェック
+      if (leftPosition + tooltipMaxWidth > viewportWidth - 8) {
+        leftPosition = viewportWidth - tooltipMaxWidth - 8;
+      }
+      
+      // 左の位置を調整（中央基準からの相対位置として計算）
+      const offsetFromCenter = leftPosition + tooltipMaxWidth / 2 - centerPosition;
+      
+      setTooltipStyle({
+        transform: `translateX(calc(-50% + ${offsetFromCenter}px))`
+      });
+    }
+  };
 
   return (
     <div 
+      ref={containerRef}
       className="shortcut-tooltip-container"
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsHovered(false)}
     >
       {children}
       {isHovered && (
-        <div className="shortcut-tooltip">
+        <div 
+          className={`shortcut-tooltip ${tooltipPosition === 'bottom' ? 'tooltip-bottom' : 'tooltip-top'}`}
+          style={tooltipStyle}
+        >
           <div className="shortcut-tooltip-description">{description}</div>
           {shortcut && (
             <div className="shortcut-tooltip-keys">

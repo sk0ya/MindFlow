@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ShortcutTooltip } from '../KeyboardShortcutHelper';
 
 interface StorageModeSwitchProps {
   currentMode: 'local' | 'cloud';
@@ -25,15 +26,16 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
 
   return (
     <div className="storage-mode-switch">
-      <button
-        className="storage-mode-button"
-        onClick={() => setIsOpen(!isOpen)}
-        title={`現在のモード: ${currentModeInfo?.label} - ${currentModeInfo?.description}`}
-      >
-        <span className="storage-mode-icon">{currentModeInfo?.icon}</span>
-        <span className="storage-mode-label">{currentModeInfo?.label}</span>
-        <span className="storage-mode-arrow">{isOpen ? '▲' : '▼'}</span>
-      </button>
+      <ShortcutTooltip description={`現在のモード: ${currentModeInfo?.label} - ${currentModeInfo?.description}`}>
+        <button
+          className="storage-mode-button"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span className="storage-mode-icon">{currentModeInfo?.icon}</span>
+          <span className="storage-mode-label">{currentModeInfo?.label}</span>
+          <span className="storage-mode-arrow">{isOpen ? '▲' : '▼'}</span>
+        </button>
+      </ShortcutTooltip>
 
       {isOpen && (
         <div className="storage-mode-dropdown">

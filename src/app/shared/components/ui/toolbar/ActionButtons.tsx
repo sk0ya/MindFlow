@@ -37,7 +37,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             className={`toolbar-btn undo ${!canUndo ? 'disabled' : ''}`}
             onClick={onUndo}
             disabled={!canUndo}
-            title="元に戻す (Ctrl+Z)"
           >
             ↶
           </button>
@@ -48,7 +47,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             className={`toolbar-btn redo ${!canRedo ? 'disabled' : ''}`}
             onClick={onRedo}
             disabled={!canRedo}
-            title="やり直し (Ctrl+Y)"
           >
             ↷
           </button>
@@ -57,22 +55,24 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
       {/* ビュー操作 */}
       <div className="action-group view-actions">
-        <button 
-          className="toolbar-btn zoom-reset"
-          onClick={onZoomReset}
-          title={`ズームリセット (現在: ${Math.round(zoom * 100)}%)`}
-        >
-          🔍 {Math.round(zoom * 100)}%
-        </button>
+        <ShortcutTooltip description={`ズームリセット (現在: ${Math.round(zoom * 100)}%)`}>
+          <button 
+            className="toolbar-btn zoom-reset"
+            onClick={onZoomReset}
+          >
+            🔍 {Math.round(zoom * 100)}%
+          </button>
+        </ShortcutTooltip>
         
         {onAutoLayout && (
-          <button 
-            className="toolbar-btn auto-layout"
-            onClick={onAutoLayout}
-            title="自動整列"
-          >
-            📐
-          </button>
+          <ShortcutTooltip shortcut="Ctrl+L" description="自動整列">
+            <button 
+              className="toolbar-btn auto-layout"
+              onClick={onAutoLayout}
+            >
+              📐
+            </button>
+          </ShortcutTooltip>
         )}
       </div>
 
@@ -83,7 +83,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             <button 
               className={`toolbar-btn notes ${showNotesPanel ? 'active' : ''}`}
               onClick={onToggleNotesPanel}
-              title="ノートパネル (Ctrl+Shift+N)"
             >
               📝
             </button>
@@ -94,7 +93,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           <button 
             className="toolbar-btn shortcuts"
             onClick={onShowShortcutHelper}
-            title="キーボードショートカット (?)"
           >
             ⌨️
           </button>
