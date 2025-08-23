@@ -117,6 +117,10 @@ export class CloudStorageAdapter implements StorageAdapter {
 
       // Cloud IndexedDBを初期化
       await initCloudIndexedDB();
+      
+      // 起動時に期限切れキャッシュをクリーンアップ
+      await this.performStartupCleanup();
+      
       this._isInitialized = true;
       
       // バックグラウンド同期を開始
@@ -574,5 +578,89 @@ export class CloudStorageAdapter implements StorageAdapter {
         logger.warn('⚠️ CloudStorageAdapter: Background sync error:', error);
       }
     }, 30000);
+  }
+
+  /**
+   * アプリ起動時の期限切れキャッシュクリーンアップ
+   */
+  private async performStartupCleanup(): Promise<void> {
+    try {
+      const userId = this.authAdapter.user?.id;
+      if (!userId) {
+        logger.debug('🧹 CloudStorageAdapter: Skip cleanup - no authenticated user');
+        return;
+      }
+
+      // 前回のクリーンアップ時刻をチェック
+      const lastCleanupKey = `mindflow_last_cleanup_${userId}`;
+      const lastCleanup = localStorage.getItem(lastCleanupKey);
+      const now = new Date();
+
+      // 24時間以内にクリーンアップ済みの場合はスキップ
+      if (lastCleanup) {
+        const lastCleanupTime = new Date(lastCleanup);
+        const timeSinceLastCleanup = now.getTime() - lastCleanupTime.getTime();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+
+        if (timeSinceLastCleanup < twentyFourHours) {
+          logger.debug('🧹 CloudStorageAdapter: Skip cleanup - less than 24 hours since last cleanup');
+          return;
+        }
+      }
+
+      // 期限切れキャッシュの削除 (30日以上古い)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const allMaps = await getUserMapsFromCloudIndexedDB(userId);
+      const expiredMaps = allMaps.filter(map => 
+        new Date(map._metadata.lastSync) < thirtyDaysAgo
+      );
+
+      let removedCount = 0;
+      for (const map of expiredMaps) {
+        try {
+          await removeMindMapFromCloudIndexedDB(map.id);
+          removedCount++;
+        } catch (error) {
+          logger.warn('⚠️ CloudStorageAdapter: Failed to remove expired cache:', map.id, error);
+        }
+      }
+
+      // 容量制限の実施 (最大100件)
+      const remainingMaps = await getUserMapsFromCloudIndexedDB(userId);
+      const maxCacheEntries = 100;
+      
+      if (remainingMaps.length > maxCacheEntries) {
+        // lastSyncが古い順にソート
+        const sortedMaps = remainingMaps.sort((a, b) => 
+          new Date(a._metadata.lastSync).getTime() - 
+          new Date(b._metadata.lastSync).getTime()
+        );
+
+        const excessMaps = sortedMaps.slice(0, remainingMaps.length - maxCacheEntries);
+        for (const map of excessMaps) {
+          try {
+            await removeMindMapFromCloudIndexedDB(map.id);
+            removedCount++;
+          } catch (error) {
+            logger.warn('⚠️ CloudStorageAdapter: Failed to remove excess cache:', map.id, error);
+          }
+        }
+      }
+
+      // クリーンアップ時刻を記録
+      localStorage.setItem(lastCleanupKey, now.toISOString());
+
+      if (removedCount > 0) {
+        logger.info(`🧹 CloudStorageAdapter: Startup cleanup completed - removed ${removedCount} cache entries`);
+      } else {
+        logger.debug('🧹 CloudStorageAdapter: Startup cleanup completed - no entries to remove');
+      }
+
+    } catch (error) {
+      logger.warn('⚠️ CloudStorageAdapter: Startup cleanup failed:', error);
+      // クリーンアップ失敗は初期化を阻害しない
+    }
   }
 }
