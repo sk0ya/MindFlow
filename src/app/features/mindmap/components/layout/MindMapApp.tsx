@@ -4,6 +4,7 @@ import MindMapSidebar from './MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
+import ExportModal from '../modals/ExportModal';
 import NodeNotesPanel from '../panels/NodeNotesPanel';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
@@ -52,6 +53,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const [isAppReady] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [internalResetKey, setResetKey] = useState(resetKey);
+  const [showExportModal, setShowExportModal] = useState(false);
   const store = useMindMapStore();
   
   // Get auth adapter for cloud mode
@@ -610,6 +612,11 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   };
 
+  // エクスポートハンドラー
+  const handleExport = () => {
+    setShowExportModal(true);
+  };
+
 
   // Show loading while auth is initializing in cloud mode
   if (isCloudMode && auth && !auth.isReady) {
@@ -658,6 +665,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onStorageModeChange={onModeChange}
         onToggleNotesPanel={() => store.toggleNotesPanel()}
         showNotesPanel={ui.showNotesPanel}
+        onExport={handleExport}
       />
       
       <div className="mindmap-content">
@@ -769,6 +777,13 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           authAdapter={authAdapter}
         />
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        mindMapData={data}
+      />
     </div>
   );
 };
