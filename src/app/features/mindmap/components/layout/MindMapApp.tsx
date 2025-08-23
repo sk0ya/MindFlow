@@ -51,6 +51,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   }, [handleError]);
   const [isAppReady] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [internalResetKey, setResetKey] = useState(resetKey);
   const store = useMindMapStore();
   
   // Get auth adapter for cloud mode
@@ -88,6 +89,20 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       setShowLoginModal(false);
     }
   }, [needsAuth, auth?.isReady, auth?.authState.isAuthenticated, isCloudMode, showLoginModal]);
+
+  // Force data reload when authentication status changes in cloud mode
+  React.useEffect(() => {
+    if (isCloudMode && auth?.authState.isAuthenticated && auth?.isReady) {
+      logger.info('🔄 Authentication successful in cloud mode, forcing data reload');
+      // Increment reset key to force useMindMap to reinitialize with new auth context
+      setResetKey(prev => prev + 1);
+    }
+  }, [isCloudMode, auth?.authState.isAuthenticated, auth?.isReady]);
+
+  // Sync external resetKey with internal resetKey
+  React.useEffect(() => {
+    setResetKey(resetKey);
+  }, [resetKey]);
 
   // Handle mode changes - reset modal state when switching to cloud mode
   React.useEffect(() => {
@@ -131,7 +146,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   }, [storageMode, authAdapter]);
   
   // リセットキーでuseMindMapを強制リセット
-  const mindMap = useMindMap(isAppReady, storageConfig, resetKey);
+  const mindMap = useMindMap(isAppReady, storageConfig, Math.max(resetKey, internalResetKey));
   const { 
     data, 
     selectedNodeId, 
