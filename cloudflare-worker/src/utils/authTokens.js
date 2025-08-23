@@ -1,6 +1,7 @@
 // Magic Link認証トークン管理
 
 import { generateJWT } from './auth.js';
+import { createPersistentSession, extractDeviceInfo } from './deviceSecurity.js';
 
 // 認証トークンを生成してデータベースに保存
 export async function createAuthToken(email, request, env) {
@@ -46,9 +47,21 @@ export async function createAuthToken(email, request, env) {
   };
 }
 
-// トークンを検証して使用済みにマーク
-export async function verifyAuthToken(token, env) {
+// トークンを検証して使用済みにマーク（新しいセッション管理対応）
+export async function verifyAuthToken(token, request, env) {
   console.log('🔍 Token検証開始:', { token: token.substring(0, 10) + '...' });
+  
+  // デバイス情報を抽出
+  const deviceInfo = extractDeviceInfo(request);
+  
+  // リクエストボディからクライアントフィンガープリントを取得（存在する場合）
+  let clientFingerprint = null;
+  try {
+    const body = await request.clone().json();
+    clientFingerprint = body.deviceFingerprint;
+  } catch (e) {
+    // JSONでない場合はスキップ
+  }
   
   // まず、トークンがDBに存在するかチェック
   const { results: allTokens } = await env.DB.prepare(`
@@ -99,17 +112,24 @@ export async function verifyAuthToken(token, env) {
   // ユーザーを取得または作成
   const user = await getOrCreateUser(authToken.user_id, env);
   
-  // JWTトークンを生成
-  const jwtToken = await generateJWT({
-    userId: user.id,
-    email: user.email,
-    tokenId: authToken.id,
-    iat: Math.floor(Date.now() / 1000)
+  // 永続セッションを作成
+  const sessionResult = await createPersistentSession(
+    authToken.user_id, 
+    deviceInfo, 
+    clientFingerprint, 
+    env
+  );
+  
+  console.log('🔐 セッション作成結果:', {
+    sessionId: sessionResult.sessionId,
+    isNewSession: sessionResult.isNewSession
   });
 
   return {
     success: true,
-    token: jwtToken,
+    token: sessionResult.token,
+    sessionId: sessionResult.sessionId,
+    expiresAt: sessionResult.expiresAt,
     user: {
       id: user.id,
       email: user.id,

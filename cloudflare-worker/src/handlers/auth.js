@@ -4,6 +4,7 @@ import { corsHeaders } from '../utils/cors.js';
 import { authenticateUser, generateJWT, verifyJWT } from '../utils/auth.js';
 import { sendMagicLinkEmail } from '../utils/email.js';
 import { createAuthToken, verifyAuthToken, cleanupExpiredTokens } from '../utils/authTokens.js';
+import { validateSession, checkRateLimit, cleanupExpiredSessions } from '../utils/deviceSecurity.js';
 
 export async function handleAuthRequest(request, env) {
   const requestOrigin = request.headers.get('Origin');
@@ -25,6 +26,8 @@ export async function handleAuthRequest(request, env) {
           response = await handleVerifyMagicLink(request, env);
         } else if (action === 'refresh') {
           response = await handleRefreshToken(request, env);
+        } else if (action === 'logout') {
+          response = await handleLogout(request, env);
         } else {
           throw new Error(`Unknown auth action: ${action}`);
         }
@@ -43,6 +46,8 @@ export async function handleAuthRequest(request, env) {
           response = await handleGoogleCallback(request, env);
         } else if (action === 'health') {
           response = await handleHealthCheck(request, env);
+        } else if (action === 'logout') {
+          response = await handleLogout(request, env);
         } else {
           throw new Error(`Unknown auth action: ${action}`);
         }
@@ -99,6 +104,14 @@ async function handleSendMagicLink(request, env) {
   if (!emailRegex.test(email)) {
     throw new Error('Invalid email format');
   }
+
+  // レートリミットチェック
+  const rateLimit = await checkRateLimit(email, 'login', env);
+  if (!rateLimit.allowed) {
+    const error = new Error(`Too many login attempts. Try again in ${Math.ceil((rateLimit.resetTime - Math.floor(Date.now() / 1000)) / 60)} minutes.`);
+    error.status = 429;
+    throw error;
+  }
   
   try {
     console.log('🔍 認証トークン生成開始');
@@ -115,9 +128,10 @@ async function handleSendMagicLink(request, env) {
     const emailResult = await sendMagicLinkEmail(email, magicLink, env, authToken.token);
     console.log('✅ メール送信完了:', { messageId: emailResult.messageId });
     
-    console.log('🔍 期限切れトークンクリーンアップ開始');
-    // 期限切れトークンのクリーンアップ
+    console.log('🔍 期限切れトークン・セッションクリーンアップ開始');
+    // 期限切れトークンとセッションのクリーンアップ
     await cleanupExpiredTokens(env);
+    await cleanupExpiredSessions(env);
     console.log('✅ クリーンアップ完了');
     
     // メッセージを送信結果に応じて調整
@@ -198,14 +212,24 @@ async function handleVerifyMagicLink(request, env) {
     throw new Error('Authentication token is required');
   }
   
+  // レートリミットチェック
+  const userAgent = request.headers.get('User-Agent') || 'unknown';
+  const rateLimit = await checkRateLimit(userAgent, 'auth_verify', env);
+  if (!rateLimit.allowed) {
+    const error = new Error('Too many verification attempts. Please wait a moment.');
+    error.status = 429;
+    throw error;
+  }
+  
   try {
     console.log('🔍 Token検証開始 - バックエンド');
-    const result = await verifyAuthToken(token, env);
+    const result = await verifyAuthToken(token, request, env);
     console.log('✅ Token検証成功:', { 
       success: result.success,
       hasToken: !!result.token,
       hasUser: !!result.user,
-      userEmail: result.user?.email
+      userEmail: result.user?.email,
+      sessionId: result.sessionId
     });
     
     // JSONレスポンスとして返す（修正: Response オブジェクトを作成）
@@ -252,7 +276,7 @@ async function handleRefreshToken(request, env) {
   };
 }
 
-// トークン検証エンドポイント
+// トークン検証エンドポイント（セッション管理対応）
 async function handleValidateToken(request, env) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -261,25 +285,38 @@ async function handleValidateToken(request, env) {
     throw error;
   }
   
-  const token = authHeader.substring(7);
-  const verification = await verifyJWT(token);
+  const sessionToken = authHeader.substring(7);
   
-  if (!verification.valid) {
-    console.error('❌ Token validation failed:', verification.error);
-    const error = new Error('Invalid or expired token');
-    error.status = 400;
+  // セッション検証を実行
+  const validation = await validateSession(sessionToken, request, env);
+  
+  if (!validation.valid) {
+    console.error('❌ Session validation failed:', validation.reason, validation.riskLevel);
+    
+    // エラーメッセージをより詳細に
+    let errorMessage = 'Invalid or expired session';
+    if (validation.reason === 'session_expired_inactive') {
+      errorMessage = 'Session expired due to inactivity. Please login again.';
+    } else if (validation.reason === 'device_mismatch') {
+      errorMessage = 'Device verification failed. Please login again.';
+    }
+    
+    const error = new Error(errorMessage);
+    error.status = 401;
     throw error;
   }
   
-  const userId = verification.payload.userId;
-  console.log('✅ Token validated for user:', userId);
+  const userId = validation.user.id;
+  console.log('✅ Session validated for user:', userId);
   
   return {
     success: true,
     user: {
       id: userId,
       email: userId, // id = email in our schema
-      validated: true
+      validated: true,
+      sessionId: validation.session.id,
+      lastAccessed: validation.session.last_accessed_at
     }
   };
 }
@@ -426,16 +463,62 @@ async function handleGoogleCallback(request, env) {
   return Response.redirect(redirectUrl, 302);
 }
 
+// ログアウト処理
+async function handleLogout(request, env) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // トークンがない場合でもログアウト成功として扱う
+    return {
+      success: true,
+      message: 'Logged out successfully'
+    };
+  }
+  
+  const sessionToken = authHeader.substring(7);
+  
+  try {
+    // セッションを無効化
+    await env.DB.prepare(`
+      UPDATE user_sessions 
+      SET revoked_at = datetime('now') 
+      WHERE session_token = ?
+    `).bind(sessionToken).run();
+    
+    console.log('✅ Session revoked on logout');
+    
+    return {
+      success: true,
+      message: 'Logged out successfully'
+    };
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+    // ログアウトは失敗しても成功として扱う
+    return {
+      success: true,
+      message: 'Logged out successfully'
+    };
+  }
+}
+
 // 健全性チェック
 async function handleHealthCheck(request, env) {
   try {
     // データベース接続をテスト
     const testQuery = await env.DB.prepare('SELECT 1 as test').first();
     
+    // セッション統計を取得
+    const sessionStats = await env.DB.prepare(`
+      SELECT 
+        COUNT(*) as total_sessions,
+        COUNT(CASE WHEN expires_at > datetime('now') AND revoked_at IS NULL THEN 1 END) as active_sessions
+      FROM user_sessions
+    `).first();
+    
     return {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      database: testQuery ? 'connected' : 'disconnected'
+      database: testQuery ? 'connected' : 'disconnected',
+      sessions: sessionStats || { total_sessions: 0, active_sessions: 0 }
     };
   } catch (error) {
     console.error('Health check failed:', error);
