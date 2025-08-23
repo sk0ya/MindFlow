@@ -3,6 +3,7 @@ import NodeRenderer from './NodeRenderer';
 import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import NodeActions from './NodeActions';
+import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, FileAttachment } from '@shared/types';
@@ -129,6 +130,23 @@ const Node: React.FC<NodeProps> = ({
     }
   }, [node.id, onRightClick]);
 
+  // 添付ファイルリスト関連のハンドラー
+  const handleAttachmentFileClick = useCallback((file: FileAttachment) => {
+    // 通常のファイルアクションメニューを表示
+    onShowFileActionMenu(file, node.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  }, [onShowFileActionMenu, node.id]);
+
+  const handleAttachmentFileDoubleClick = useCallback((file: FileAttachment) => {
+    // 画像の場合はモーダルで表示
+    if (file.isImage) {
+      onShowImageModal(file);
+    }
+  }, [onShowImageModal]);
+
+  const handleAttachmentFileContextMenu = useCallback((file: FileAttachment, position: { x: number; y: number }) => {
+    onShowFileActionMenu(file, node.id, position);
+  }, [onShowFileActionMenu, node.id]);
+
   // ノードのサイズ計算（共有ユーティリティ関数を使用）
   const nodeSize = calculateNodeSize(node, editText, isEditing);
   const nodeWidth = nodeSize.width;
@@ -182,6 +200,17 @@ const Node: React.FC<NodeProps> = ({
         onAddChild={onAddChild}
         onDelete={onDelete}
         onFileUpload={onFileUpload}
+      />
+
+      {/* 選択されたノードの添付ファイル一覧表示 */}
+      <SelectedNodeAttachmentList
+        node={node}
+        isVisible={isSelected && !isEditing}
+        nodeWidth={nodeWidth}
+        nodeHeight={nodeHeight}
+        onFileClick={handleAttachmentFileClick}
+        onFileDoubleClick={handleAttachmentFileDoubleClick}
+        onFileContextMenu={handleAttachmentFileContextMenu}
       />
 
     </g>
