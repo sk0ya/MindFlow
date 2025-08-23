@@ -1,0 +1,276 @@
+.export-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.export-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.export-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.export-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.export-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.export-modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.export-modal-body {
+  padding: 20px;
+}
+
+.export-format-section,
+.export-options-section,
+.export-preview-section {
+  margin-bottom: 24px;
+}
+
+.export-format-section h3,
+.export-options-section h3,
+.export-preview-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.export-format-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-format-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-format-option:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.export-format-option input[type="radio"]:checked + .export-format-info {
+  color: #007bff;
+}
+
+.export-format-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.export-format-info {
+  flex: 1;
+}
+
+.export-format-label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.export-format-description {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #333;
+}
+
+.export-option input[type="checkbox"] {
+  margin: 0;
+}
+
+.export-option input[type="number"] {
+  width: 60px;
+  margin-left: 8px;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.indent-size-input {
+  margin: 0 8px !important;
+}
+
+.attachment-mode-option {
+  margin-left: 24px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.attachment-mode-option label {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.attachment-mode-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.export-filename-preview {
+  padding: 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #333;
+  word-break: break-all;
+}
+
+.export-modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.export-button-cancel,
+.export-button-confirm {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-button-cancel {
+  background-color: #f8f9fa;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.export-button-cancel:hover:not(:disabled) {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+.export-button-confirm {
+  background-color: #007bff;
+  color: white;
+}
+
+.export-button-confirm:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.export-button-confirm:disabled,
+.export-button-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .export-modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .export-modal-header,
+  .export-modal-body,
+  .export-modal-footer {
+    padding: 16px;
+  }
+  
+  .export-format-options {
+    gap: 8px;
+  }
+  
+  .export-format-option {
+    padding: 8px;
+  }
+  
+  .export-modal-footer {
+    flex-direction: column;
+  }
+  
+  .export-button-cancel,
+  .export-button-confirm {
+    width: 100%;
+  }
+}
