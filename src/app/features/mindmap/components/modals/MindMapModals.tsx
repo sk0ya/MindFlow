@@ -109,7 +109,6 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
         onRename={onFileRename}
         onDelete={onFileDelete}
         onView={(file: FileAttachment) => {
-          console.log('MindMapModals: onView called with file:', file);
           onShowImageModal(file);
         }}
       />

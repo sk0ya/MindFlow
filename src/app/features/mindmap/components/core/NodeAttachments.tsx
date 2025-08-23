@@ -159,16 +159,8 @@ const CloudImage: React.FC<{
       }
 
       try {
-        console.log('CloudImage: Loading image from URL:', file.downloadUrl);
-        
         // 認証が必要な場合はfetchでBlobを取得してオブジェクトURLを作成
         if (file.downloadUrl.includes('/api/files/')) {
-          console.log('CloudImage: Fetching with credentials:', {
-            url: file.downloadUrl,
-            method: 'GET',
-            credentials: 'include'
-          });
-          
           // 認証ヘッダーを取得
           const headers: Record<string, string> = {
             'Accept': 'image/*,*/*'
@@ -177,21 +169,12 @@ const CloudImage: React.FC<{
           if (auth?.authAdapter?.getAuthHeaders) {
             const authHeaders = auth.authAdapter.getAuthHeaders();
             Object.assign(headers, authHeaders);
-            console.log('CloudImage: Added auth headers:', Object.keys(authHeaders));
           }
           
           // API経由でダウンロードしてBlob URLを作成
           const response = await fetch(file.downloadUrl, {
             method: 'GET',
             headers
-          });
-          
-          console.log('CloudImage: Response received:', {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            contentType: response.headers.get('content-type'),
-            contentLength: response.headers.get('content-length')
           });
           
           if (!response.ok) {
@@ -201,17 +184,10 @@ const CloudImage: React.FC<{
           }
           
           const blob = await response.blob();
-          console.log('CloudImage: Blob created:', {
-            size: blob.size,
-            type: blob.type
-          });
-          
           const url = URL.createObjectURL(blob);
           setImageUrl(url);
-          console.log('CloudImage: Created blob URL:', url);
         } else {
           // 直接URLを使用
-          console.log('CloudImage: Using direct URL:', file.downloadUrl);
           setImageUrl(file.downloadUrl);
         }
         
@@ -265,9 +241,7 @@ const CloudImage: React.FC<{
         console.error('CloudImage: img onError:', e);
         setError('Image load failed');
       }}
-      onLoad={() => {
-        console.log('CloudImage: Image loaded successfully:', file.name);
-      }}
+      onLoad={() => {}}
     />
   );
 };
@@ -348,7 +322,6 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   } | null>(null);
 
   const showHiddenFilesMenu = useCallback((files: FileAttachment[], position: { x: number; y: number }) => {
-    console.log('showHiddenFilesMenu called with:', files, position);
     setHiddenFilesMenu({ files, position });
   }, []);
 
@@ -458,13 +431,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   onClick={(e) => handleFileActionMenu(e, firstImageFile)}
                   onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
                   onContextMenu={(e) => handleFileActionMenu(e, firstImageFile)}
-                  onError={(e) => {
-                    console.error('NodeAttachments: Image load error for file:', firstImageFile, 'Event:', e);
-                    console.log('Attempted image src:', firstImageFile.downloadUrl || firstImageFile.dataURL || firstImageFile.data);
-                  }}
-                  onLoad={() => {
-                    console.log('NodeAttachments: Image loaded successfully for file:', firstImageFile.name);
-                  }}
+                  onError={() => {}}
+                  onLoad={() => {}}
                 />
               )}
             </div>
@@ -635,7 +603,6 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   ry="3"
                   style={{ cursor: 'pointer', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
                   onClick={(e) => {
-                    console.log('+N button clicked');
                     e.stopPropagation();
                     e.preventDefault();
                     
@@ -645,13 +612,9 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                     
                     // 隠れているファイル一覧メニューを表示
                     const hiddenFiles = nonImageFiles.slice(maxDisplayFiles);
-                    console.log('Hidden files:', hiddenFiles);
-                    console.log('Menu position:', { x: clientX, y: clientY });
                     
                     if (hiddenFiles.length > 0) {
                       showHiddenFilesMenu(hiddenFiles, { x: clientX, y: clientY });
-                    } else {
-                      console.log('No hidden files to show');
                     }
                   }}
                   onContextMenu={(e) => {

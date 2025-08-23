@@ -76,7 +76,6 @@ export const useMindMapUI = () => {
 
     // モーダル制御
     showImageModal: useCallback((image: ImageFile) => {
-      console.log('useMindMapUI: showImageModal called with image:', image);
       setSelectedImage(image);
       setShowImageModal(true);
     }, [setSelectedImage, setShowImageModal]),

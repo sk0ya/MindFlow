@@ -32,7 +32,6 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
       }
 
       try {
-        console.log('CloudModalImage: Loading image from URL:', file.downloadUrl);
         
         // 認証が必要な場合はfetchでBlobを取得してオブジェクトURLを作成
         if (file.downloadUrl.includes('/api/files/')) {
@@ -44,7 +43,6 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
           if (auth?.authAdapter?.getAuthHeaders) {
             const authHeaders = auth.authAdapter.getAuthHeaders();
             Object.assign(headers, authHeaders);
-            console.log('CloudModalImage: Added auth headers:', Object.keys(authHeaders));
           }
           
           const response = await fetch(file.downloadUrl, {
@@ -59,7 +57,6 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
           setImageUrl(url);
-          console.log('CloudModalImage: Created blob URL:', url);
         } else {
           setImageUrl(file.downloadUrl);
         }
@@ -98,9 +95,6 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
         console.error('CloudModalImage: img onError:', e);
         setError('Image load failed');
       }}
-      onLoad={() => {
-        console.log('CloudModalImage: Image loaded successfully:', file.name);
-      }}
     />
   );
 };
@@ -132,11 +126,8 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
   }, [isOpen, handleKeyDown]);
 
   if (!isOpen || !image) {
-    console.log('ImageModal: Not rendering - isOpen:', isOpen, 'image:', image);
     return null;
   }
-
-  console.log('ImageModal: Rendering with image:', image);
 
   return (
     <div className="image-modal-overlay" onClick={handleBackdropClick}>
@@ -155,13 +146,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
             src={image.downloadUrl || image.dataURL || image.data} 
             alt={image.name}
             className="image-modal-image"
-            onError={(e) => {
-              console.error('ImageModal: Image load error for file:', image, 'Event:', e);
-              console.log('Attempted image src:', image.downloadUrl || image.dataURL || image.data);
-            }}
-            onLoad={() => {
-              console.log('ImageModal: Image loaded successfully for file:', image.name);
-            }}
           />
         )}
         <div className="image-modal-info">
