@@ -190,7 +190,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 onChange(newValue ?? '');
               }}
               onMount={handleEditorDidMount}
-              theme="vs-dark"
+              theme="vs"
               loading="エディターを読み込み中..."
               options={{
                 selectOnLineNumbers: true,
@@ -243,12 +243,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           border: 1px solid #d1d5db;
           border-radius: 6px;
           overflow: hidden;
-          background-color: #1e1e1e;
+          background-color: #ffffff;
         }
 
         .editor-toolbar {
-          background-color: #2d2d30;
-          border-bottom: 1px solid #3e3e42;
+          background-color: #f8f9fa;
+          border-bottom: 1px solid #e5e7eb;
           padding: 8px 12px;
           display: flex;
           justify-content: space-between;
@@ -267,9 +267,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .mode-toggle {
-          background: #3c3c3c;
-          border: 1px solid #5a5a5a;
-          color: #cccccc;
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          color: #374151;
           padding: 6px 10px;
           border-radius: 4px;
           cursor: pointer;
@@ -279,19 +279,20 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .mode-toggle:hover {
-          background: #4a4a4a;
+          background: #f3f4f6;
+          border-color: #9ca3af;
         }
 
         .mode-toggle.active {
-          background: #007acc;
-          border-color: #007acc;
+          background: #3b82f6;
+          border-color: #3b82f6;
           color: white;
         }
 
         .vim-toggle {
-          background: #3c3c3c;
-          border: 1px solid #5a5a5a;
-          color: #cccccc;
+          background: #ffffff;
+          border: 1px solid #d1d5db;
+          color: #374151;
           padding: 4px 8px;
           border-radius: 4px;
           cursor: pointer;
@@ -300,18 +301,19 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .vim-toggle:hover {
-          background: #4a4a4a;
+          background: #f3f4f6;
+          border-color: #9ca3af;
         }
 
         .vim-toggle.active {
-          background: #007acc;
-          border-color: #007acc;
+          background: #10b981;
+          border-color: #10b981;
           color: white;
         }
 
         .save-button {
-          background: #0e639c;
-          border: 1px solid #0e639c;
+          background: #3b82f6;
+          border: 1px solid #3b82f6;
           color: white;
           padding: 4px 12px;
           border-radius: 4px;
@@ -321,7 +323,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .save-button:hover {
-          background: #1177bb;
+          background: #2563eb;
         }
 
         .editor-container {
@@ -341,12 +343,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         .mode-split .editor-pane,
         .mode-split .preview-pane {
           width: 50%;
-          border-right: 1px solid #3e3e42;
+          border-right: 1px solid #e5e7eb;
         }
 
         .mode-split .preview-pane {
           border-right: none;
-          border-left: 1px solid #3e3e42;
+          border-left: 1px solid #e5e7eb;
         }
 
         .editor-pane {
@@ -500,12 +502,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .vim-statusbar {
-          background-color: #2d2d30;
-          border-top: 1px solid #3e3e42;
+          background-color: #f8f9fa;
+          border-top: 1px solid #e5e7eb;
           padding: 4px 12px;
           font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
           font-size: 12px;
-          color: #cccccc;
+          color: #374151;
           min-height: 20px;
           display: flex;
           align-items: center;
