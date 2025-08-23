@@ -377,3 +377,6 @@ cloudflare-worker/.wrangler/
 cloudflare-worker/package-lock.json
 
 coverage/
+
+# VSCode settings
+.vscode/
