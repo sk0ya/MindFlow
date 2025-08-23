@@ -102,7 +102,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
           transition: 'all 0.2s ease'
         }}
       >
-        <g transform={`scale(${zoom}) translate(${pan?.x || 0}, ${pan?.y || 0})`}>
+        <g transform={`scale(${zoom * 1.5}) translate(${pan?.x || 0}, ${pan?.y || 0})`}>
           {/* ドラッグ中のドロップガイドライン */}
           <CanvasDragGuide
             dragState={dragState}

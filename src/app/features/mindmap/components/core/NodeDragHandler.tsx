@@ -34,8 +34,8 @@ export const useNodeDragHandler = ({
     
     if (svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
-      const svgX = (e.clientX - svgRect.left) / zoom;
-      const svgY = (e.clientY - svgRect.top) / zoom;
+      const svgX = (e.clientX - svgRect.left) / (zoom * 1.5);
+      const svgY = (e.clientY - svgRect.top) / (zoom * 1.5);
       
       // マウスダウン位置を記録（ドラッグ判定用）
       setMouseDownPos({ x: e.clientX, y: e.clientY });
@@ -78,8 +78,8 @@ export const useNodeDragHandler = ({
     logger.debug('Node マウスアップ:', { nodeId: node.id, isDragging });
     if (isDragging && svgRef.current) {
       const svgRect = svgRef.current.getBoundingClientRect();
-      const svgX = (e.clientX - svgRect.left) / zoom;
-      const svgY = (e.clientY - svgRect.top) / zoom;
+      const svgX = (e.clientX - svgRect.left) / (zoom * 1.5);
+      const svgY = (e.clientY - svgRect.top) / (zoom * 1.5);
       
       const newX = svgX - dragStart.x;
       const newY = svgY - dragStart.y;

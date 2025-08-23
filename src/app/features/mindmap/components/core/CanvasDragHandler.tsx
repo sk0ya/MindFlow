@@ -53,8 +53,8 @@ export const useCanvasDragHandler = ({
     if (!svgRect) return { node: null, position: null, action: null };
 
     // マウス座標をSVG内座標に変換（zoom, panを考慮）
-    const svgX = (x - svgRect.left) / zoom - pan.x;
-    const svgY = (y - svgRect.top) / zoom - pan.y;
+    const svgX = (x - svgRect.left) / (zoom * 1.5) - pan.x;
+    const svgY = (y - svgRect.top) / (zoom * 1.5) - pan.y;
 
     logger.debug('座標変換:', {
       clientX: x, clientY: y,

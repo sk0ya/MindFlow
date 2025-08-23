@@ -65,8 +65,8 @@ export const useCanvasViewportHandler = ({
       }
       
       setPan(prev => ({
-        x: prev.x + deltaX / zoom,
-        y: prev.y + deltaY / zoom
+        x: prev.x + deltaX / (zoom * 1.5),
+        y: prev.y + deltaY / (zoom * 1.5)
       }));
       
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
