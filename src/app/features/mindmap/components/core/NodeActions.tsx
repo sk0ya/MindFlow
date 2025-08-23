@@ -9,7 +9,6 @@ interface NodeActionsProps {
   onAddChild: (parentId: string) => void;
   onDelete: (nodeId: string) => void;
   onFileUpload: (nodeId: string, files: FileList) => void;
-  onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
 }
 
 const NodeActions: React.FC<NodeActionsProps> = ({
@@ -20,18 +19,7 @@ const NodeActions: React.FC<NodeActionsProps> = ({
   onAddChild,
   onDelete,
   onFileUpload,
-  onShowNodeMapLinks
 }) => {
-  const handleShowMapLinks = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (onShowNodeMapLinks) {
-      onShowNodeMapLinks(node, {
-        x: e.clientX,
-        y: e.clientY
-      });
-    }
-  }, [onShowNodeMapLinks, node]);
 
   const handleFileUpload = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -115,34 +103,6 @@ const NodeActions: React.FC<NodeActionsProps> = ({
         📎
       </text>
 
-      {/* マップリンクボタン */}
-      <circle
-        cx={node.x + 15}
-        cy={node.y + nodeHeight / 2 + 15}
-        r="12"
-        fill="#9c27b0"
-        stroke="white"
-        strokeWidth="2"
-        role="button"
-        tabIndex={0}
-        aria-label="Map links"
-        style={{ 
-          cursor: 'pointer',
-          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
-        }}
-        onClick={handleShowMapLinks}
-      />
-      <text
-        x={node.x + 15}
-        y={node.y + nodeHeight / 2 + 15 + 4}
-        textAnchor="middle"
-        fill="white"
-        fontSize="14"
-        fontWeight="bold"
-        style={{ pointerEvents: 'none' }}
-      >
-        🔗
-      </text>
 
       {node.id !== 'root' && (
         <>

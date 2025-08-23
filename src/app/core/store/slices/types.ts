@@ -15,8 +15,6 @@ export interface UIState {
   contextMenuPosition: Position;
   showShortcutHelper: boolean;
   showMapList: boolean;
-  showNodeMapLinksPanel: boolean;
-  nodeMapLinksPanelPosition: Position;
   sidebarCollapsed: boolean;
   showLocalStoragePanel: boolean;
   showTutorial: boolean;
@@ -31,7 +29,6 @@ export interface UIState {
   
   // Other UI states
   clipboard: MindMapNode | null;
-  selectedNodeForLinks: MindMapNode | null;
 }
 
 // Data State types
@@ -95,8 +92,6 @@ export interface MindMapStore extends DataState, HistoryState {
   setContextMenuPosition: (position: Position) => void;
   setShowShortcutHelper: (show: boolean) => void;
   setShowMapList: (show: boolean) => void;
-  setShowNodeMapLinksPanel: (show: boolean) => void;
-  setNodeMapLinksPanelPosition: (position: Position) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowLocalStoragePanel: (show: boolean) => void;
   setShowTutorial: (show: boolean) => void;
@@ -108,10 +103,7 @@ export interface MindMapStore extends DataState, HistoryState {
   setShowImageModal: (show: boolean) => void;
   setShowFileActionMenu: (show: boolean) => void;
   setClipboard: (node: MindMapNode | null) => void;
-  setSelectedNodeForLinks: (node: MindMapNode | null) => void;
   closeAllPanels: () => void;
   toggleSidebar: () => void;
   showCustomization: (position?: Position) => void;
-  showNodeMapLinks: (node: MindMapNode, position: Position) => void;
-  closeNodeMapLinksPanel: () => void;
 }

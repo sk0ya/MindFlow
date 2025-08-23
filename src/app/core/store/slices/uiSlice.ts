@@ -18,8 +18,6 @@ export interface UISlice {
   setContextMenuPosition: (position: Position) => void;
   setShowShortcutHelper: (show: boolean) => void;
   setShowMapList: (show: boolean) => void;
-  setShowNodeMapLinksPanel: (show: boolean) => void;
-  setNodeMapLinksPanelPosition: (position: Position) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowLocalStoragePanel: (show: boolean) => void;
   setShowTutorial: (show: boolean) => void;
@@ -35,14 +33,11 @@ export interface UISlice {
   
   // Other UI States
   setClipboard: (node: MindMapNode | null) => void;
-  setSelectedNodeForLinks: (node: MindMapNode | null) => void;
   
   // Composite Actions
   closeAllPanels: () => void;
   toggleSidebar: () => void;
   showCustomization: (position?: Position) => void;
-  showNodeMapLinks: (node: MindMapNode, position: Position) => void;
-  closeNodeMapLinksPanel: () => void;
 }
 
 export const createUISlice: StateCreator<
@@ -61,8 +56,6 @@ export const createUISlice: StateCreator<
     contextMenuPosition: { x: 0, y: 0 },
     showShortcutHelper: false,
     showMapList: false,
-    showNodeMapLinksPanel: false,
-    nodeMapLinksPanelPosition: { x: 0, y: 0 },
     sidebarCollapsed: false,
     showLocalStoragePanel: false,
     showTutorial: false,
@@ -73,7 +66,6 @@ export const createUISlice: StateCreator<
     showImageModal: false,
     showFileActionMenu: false,
     clipboard: null,
-    selectedNodeForLinks: null,
   },
 
   // Zoom and Pan Actions
@@ -133,17 +125,6 @@ export const createUISlice: StateCreator<
     });
   },
 
-  setShowNodeMapLinksPanel: (show: boolean) => {
-    set((state) => {
-      state.ui.showNodeMapLinksPanel = show;
-    });
-  },
-
-  setNodeMapLinksPanelPosition: (position: Position) => {
-    set((state) => {
-      state.ui.nodeMapLinksPanelPosition = position;
-    });
-  },
 
   setSidebarCollapsed: (collapsed: boolean) => {
     set((state) => {
@@ -213,11 +194,6 @@ export const createUISlice: StateCreator<
     });
   },
 
-  setSelectedNodeForLinks: (node: MindMapNode | null) => {
-    set((state) => {
-      state.ui.selectedNodeForLinks = node;
-    });
-  },
 
   // Composite Actions
   closeAllPanels: () => {
@@ -226,7 +202,6 @@ export const createUISlice: StateCreator<
       state.ui.showContextMenu = false;
       state.ui.showShortcutHelper = false;
       state.ui.showMapList = false;
-      state.ui.showNodeMapLinksPanel = false;
       state.ui.showLocalStoragePanel = false;
       state.ui.showImageModal = false;
       state.ui.showFileActionMenu = false;
@@ -249,25 +224,7 @@ export const createUISlice: StateCreator<
       }
       // Close other panels
       state.ui.showContextMenu = false;
-      state.ui.showNodeMapLinksPanel = false;
     });
   },
 
-  showNodeMapLinks: (node: MindMapNode, position: Position) => {
-    set((state) => {
-      state.ui.selectedNodeForLinks = node;
-      state.ui.showNodeMapLinksPanel = true;
-      state.ui.nodeMapLinksPanelPosition = position;
-      // Close other panels
-      state.ui.showCustomizationPanel = false;
-      state.ui.showContextMenu = false;
-    });
-  },
-
-  closeNodeMapLinksPanel: () => {
-    set((state) => {
-      state.ui.showNodeMapLinksPanel = false;
-      state.ui.selectedNodeForLinks = null;
-    });
-  },
 });

@@ -170,7 +170,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     // UI操作
     showImageModal,
     showFileActionMenu,
-    showNodeMapLinks,
     closeAllPanels,
     setZoom,
     setPan,
@@ -704,7 +703,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onRemoveFile={handleFileDelete}
             onShowImageModal={showImageModal}
             onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
-            onShowNodeMapLinks={showNodeMapLinks}
             zoom={ui.zoom}
             setZoom={setZoom}
             pan={ui.pan}
@@ -743,14 +741,10 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             handleFileDelete(selectedNodeId, fileId);
           }
         }}
-        onAddNodeMapLink={() => {}}
-        onRemoveNodeMapLink={() => {}}
-        onNavigateToMap={() => {}}
         onCloseContextMenu={closeAllPanels}
         onCloseCustomizationPanel={closeAllPanels}
         onCloseImageModal={closeAllPanels}
         onCloseFileActionMenu={closeAllPanels}
-        onCloseNodeMapLinksPanel={closeAllPanels}
         onShowImageModal={showImageModal}
       />
       

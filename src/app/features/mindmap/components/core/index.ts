@@ -6,7 +6,6 @@ export { default as NodeEditor } from './NodeEditor';
 export { default as NodeActions } from './NodeActions';
 export { default as NodeAttachments } from './NodeAttachments';
 export { useNodeDragHandler } from './NodeDragHandler';
-export { default as NodeMapLinkIndicator } from './NodeMapLinkIndicator';
 
 // Canvas関連
 export { default as CanvasRenderer } from './CanvasRenderer';

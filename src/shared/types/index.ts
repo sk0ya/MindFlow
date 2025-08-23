@@ -21,7 +21,6 @@ export type {
   MindMapData,
   MindMapSettings,
   FileAttachment,
-  NodeMapLink,
   AuthUser,
   AuthState,
   UIState,

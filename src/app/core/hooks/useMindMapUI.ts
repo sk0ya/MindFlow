@@ -21,8 +21,6 @@ export const useMindMapUI = () => {
     setSelectedImage,
     setShowImageModal,
     showCustomization,
-    showNodeMapLinks,
-    closeNodeMapLinksPanel,
     setSelectedFile,
     setFileMenuPosition,
     setShowFileActionMenu,
@@ -89,14 +87,6 @@ export const useMindMapUI = () => {
       showCustomization(position);
     }, [showCustomization]),
 
-    // ノードマップリンクパネル
-    showNodeMapLinks: useCallback((node: MindMapNode, position: Position) => {
-      showNodeMapLinks(node, position);
-    }, [showNodeMapLinks]),
-
-    closeNodeMapLinksPanel: useCallback(() => {
-      closeNodeMapLinksPanel();
-    }, [closeNodeMapLinksPanel]),
 
     // ファイルアクションメニュー
     showFileActionMenu: useCallback((fileAttachment: FileAttachment, position: Position) => {

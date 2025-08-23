@@ -8,13 +8,11 @@ import type {
   MindMapData as SharedMindMapData,
   MindMapSettings as SharedMindMapSettings,
   FileAttachment as SharedFileAttachment,
-  NodeMapLink as SharedNodeMapLink
 } from '@shared/types';
 
 // Re-export shared types for compatibility
 export type MindMapNode = SharedMindMapNode;
 export type FileAttachment = SharedFileAttachment;
-export type NodeMapLink = SharedNodeMapLink;
 export type MindMapSettings = SharedMindMapSettings;
 export type MindMapData = SharedMindMapData;
 // Position type definition
@@ -141,7 +139,6 @@ export const createInitialData = (): MindMapData => ({
     fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
     children: [],
     attachments: [],
-    mapLinks: []
   },
   settings: {
     autoSave: DEFAULTS.AUTO_SAVE,
@@ -162,7 +159,6 @@ export const createNewNode = (text: string = '', parentNode: MindMapNode | null 
     fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
     children: [],
     attachments: [], // ファイル添付用
-    mapLinks: [] // 他のマインドマップへのリンク
   };
 };
 
@@ -353,11 +349,3 @@ export const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// ノード用マインドマップリンクを作成
-export const createNodeMapLink = (targetMapId: string, targetMapTitle: string, description: string = ''): NodeMapLink => ({
-  id: generateId(),
-  targetMapId,
-  targetMapTitle,
-  description,
-  createdAt: new Date().toISOString()
-});

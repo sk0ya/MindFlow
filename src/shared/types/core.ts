@@ -40,7 +40,6 @@ export interface MindMapNode {
   // Functional properties  
   collapsed?: boolean;
   attachments?: FileAttachment[];
-  mapLinks?: NodeMapLink[];
   
   // Markdown note for each node
   note?: string;
@@ -97,15 +96,6 @@ export interface FileAttachment {
   nodeId?: string;
 }
 
-// Node map links for navigation between maps
-export interface NodeMapLink {
-  id: string;
-  targetMapId: string;
-  targetMapTitle: string;
-  description: string;
-  createdAt: string;
-  targetNodeId?: string; // For deep linking
-}
 
 // Authentication types
 export interface AuthUser {

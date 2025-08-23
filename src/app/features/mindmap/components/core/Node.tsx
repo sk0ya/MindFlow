@@ -3,7 +3,6 @@ import NodeRenderer from './NodeRenderer';
 import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import NodeActions from './NodeActions';
-import NodeMapLinkIndicator from './NodeMapLinkIndicator';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, FileAttachment } from '@shared/types';
@@ -27,7 +26,6 @@ interface NodeProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
-  onShowNodeMapLinks: (node: MindMapNode, position: { x: number; y: number }) => void;
   editText: string;
   setEditText: (text: string) => void;
   zoom: number;
@@ -52,7 +50,6 @@ const Node: React.FC<NodeProps> = ({
   onFileUpload,
   onShowImageModal,
   onShowFileActionMenu,
-  onShowNodeMapLinks,
   editText,
   setEditText,
   zoom,
@@ -185,15 +182,8 @@ const Node: React.FC<NodeProps> = ({
         onAddChild={onAddChild}
         onDelete={onDelete}
         onFileUpload={onFileUpload}
-        onShowNodeMapLinks={onShowNodeMapLinks}
       />
 
-      <NodeMapLinkIndicator
-        node={node}
-        nodeWidth={nodeWidth}
-        nodeHeight={nodeHeight}
-        onShowNodeMapLinks={onShowNodeMapLinks}
-      />
     </g>
   );
 };

@@ -9,7 +9,6 @@ export type {
   MindMapData,
   MindMapSettings,
   FileAttachment,
-  NodeMapLink as MapLink, // Backward compatibility alias
   UIState,
   ValidationResult,
   StorageStats,

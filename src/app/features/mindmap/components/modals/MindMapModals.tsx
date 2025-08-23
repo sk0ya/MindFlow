@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { ContextMenu, MapLinksPanel } from '../../../../shared';
+import { ContextMenu } from '../../../../shared';
 import NodeCustomizationPanel from '../panels/NodeCustomizationPanel';
 import { ImageModal, FileActionMenu } from '../../../files';
 import type { MindMapNode, FileAttachment } from '../../../../shared';
@@ -10,14 +10,11 @@ interface MindMapModalsProps {
     showContextMenu: boolean;
     showImageModal: boolean;
     showFileActionMenu: boolean;
-    showNodeMapLinksPanel: boolean;
     contextMenuPosition: { x: number; y: number };
     customizationPosition: { x: number; y: number };
     fileMenuPosition: { x: number; y: number };
-    nodeMapLinksPanelPosition: { x: number; y: number };
     selectedImage: FileAttachment | null;
     selectedFile: FileAttachment | null;
-    selectedNodeForLinks: MindMapNode | null;
     clipboard: MindMapNode | null;
   };
   selectedNodeId: string | null;
@@ -32,14 +29,10 @@ interface MindMapModalsProps {
   onFileDownload: (file: FileAttachment) => void;
   onFileRename: (fileId: string, newName: string) => void;
   onFileDelete: (fileId: string) => void;
-  onAddNodeMapLink: (nodeId: string, targetMapId: string) => void;
-  onRemoveNodeMapLink: (nodeId: string, linkId: string) => void;
-  onNavigateToMap: (mapId: string) => void;
   onCloseCustomizationPanel: () => void;
   onCloseContextMenu: () => void;
   onCloseImageModal: () => void;
   onCloseFileActionMenu: () => void;
-  onCloseNodeMapLinksPanel: () => void;
   onShowImageModal: (file: FileAttachment) => void;
 }
 
@@ -57,14 +50,10 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
   onFileDownload,
   onFileRename,
   onFileDelete,
-  onAddNodeMapLink,
-  onRemoveNodeMapLink,
-  onNavigateToMap,
   onCloseCustomizationPanel,
   onCloseContextMenu,
   onCloseImageModal,
   onCloseFileActionMenu,
-  onCloseNodeMapLinksPanel,
   onShowImageModal
 }) => {
   return (
@@ -113,19 +102,6 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
         }}
       />
 
-      {ui.selectedNodeForLinks && (
-        <MapLinksPanel
-          isOpen={ui.showNodeMapLinksPanel}
-          position={ui.nodeMapLinksPanelPosition}
-          selectedNode={ui.selectedNodeForLinks}
-          currentMapId={''}
-          allMaps={[]}
-          onClose={onCloseNodeMapLinksPanel}
-          onAddLink={onAddNodeMapLink}
-          onRemoveLink={onRemoveNodeMapLink}
-          onNavigateToMap={onNavigateToMap}
-        />
-      )}
     </>
   );
 };

@@ -166,8 +166,6 @@ export const useMindMap = (
     showImageModal: uiHook.showImageModal,
     hideImageModal: uiHook.hideImageModal,
     showCustomization: uiHook.showCustomization,
-    showNodeMapLinks: uiHook.showNodeMapLinks,
-    closeNodeMapLinksPanel: uiHook.closeNodeMapLinksPanel,
     showFileActionMenu: uiHook.showFileActionMenu,
     hideFileActionMenu: uiHook.hideFileActionMenu,
 
