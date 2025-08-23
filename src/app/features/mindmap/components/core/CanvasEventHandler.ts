@@ -6,6 +6,7 @@ interface CanvasEventHandlerProps {
   editText: string;
   onSelectNode: (nodeId: string | null) => void;
   onFinishEdit: (nodeId: string, text: string) => void;
+  isPanning?: boolean;
 }
 
 export const useCanvasEventHandler = ({
@@ -25,19 +26,17 @@ export const useCanvasEventHandler = ({
                          target.closest('foreignObject');
     
     if (!isNodeElement) {
-      // 編集中の場合は編集を確定してから選択をクリア
+      // 編集中の場合は編集を確定するのみ（選択状態は維持）
       if (editingNodeId) {
         onFinishEdit(editingNodeId, editText);
       }
-      onSelectNode(null);
     }
-  }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
+  }, [editingNodeId, editText, onFinishEdit]);
 
   // 右クリック処理
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    onSelectNode(null);
-  }, [onSelectNode]);
+  }, []);
 
   // ノード選択時に編集を確定する処理
   const handleNodeSelect = useCallback((nodeId: string | null) => {
