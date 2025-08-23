@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Editor, OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import { marked } from 'marked';
 
 interface MarkdownEditorProps {
   value: string;
@@ -23,6 +24,18 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [isVimEnabled, setIsVimEnabled] = useState(vimMode);
+  const [mode, setMode] = useState<'edit' | 'preview' | 'split'>('edit');
+
+  // Convert markdown to HTML
+  const getPreviewHtml = (): string => {
+    try {
+      const result = marked.parse(value || '');
+      return typeof result === 'string' ? result : '';
+    } catch (error) {
+      console.warn('Markdown parsing error:', error);
+      return '<p>マークダウンの解析でエラーが発生しました</p>';
+    }
+  };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -119,6 +132,32 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     <div className={`markdown-editor ${className}`}>
       <div className="editor-toolbar">
         <div className="editor-controls">
+          <div className="mode-toggles">
+            <button
+              type="button"
+              onClick={() => setMode('edit')}
+              className={`mode-toggle ${mode === 'edit' ? 'active' : ''}`}
+              title="編集モード"
+            >
+              📝 編集
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('preview')}
+              className={`mode-toggle ${mode === 'preview' ? 'active' : ''}`}
+              title="プレビューモード"
+            >
+              👁️ プレビュー
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('split')}
+              className={`mode-toggle ${mode === 'split' ? 'active' : ''}`}
+              title="分割表示モード"
+            >
+              🔄 分割
+            </button>
+          </div>
           <button
             type="button"
             onClick={toggleVimMode}
@@ -140,33 +179,55 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         </div>
       </div>
       
-      <div className="editor-container" style={{ height }}>
-        <Editor
-          height="100%"
-          defaultLanguage="markdown"
-          value={value}
-          onChange={(newValue) => {
-            onChange(newValue ?? '');
-          }}
-          onMount={handleEditorDidMount}
-          theme="vs-dark"
-          loading="エディターを読み込み中..."
-          options={{
-            selectOnLineNumbers: true,
-            roundedSelection: false,
-            readOnly: false,
-            cursorStyle: 'line',
-            automaticLayout: true,
-            // キーボード関連の設定を明示的に指定
-            acceptSuggestionOnEnter: 'off',
-            acceptSuggestionOnCommitCharacter: false,
-            quickSuggestions: false,
-            parameterHints: { enabled: false },
-            suggestOnTriggerCharacters: false,
-            tabCompletion: 'off',
-            wordBasedSuggestions: 'off'
-          }}
-        />
+      <div className={`editor-container mode-${mode}`} style={{ height }}>
+        {(mode === 'edit' || mode === 'split') && (
+          <div className="editor-pane">
+            <Editor
+              height="100%"
+              defaultLanguage="markdown"
+              value={value}
+              onChange={(newValue) => {
+                onChange(newValue ?? '');
+              }}
+              onMount={handleEditorDidMount}
+              theme="vs-dark"
+              loading="エディターを読み込み中..."
+              options={{
+                selectOnLineNumbers: true,
+                roundedSelection: false,
+                readOnly: false,
+                cursorStyle: 'line',
+                automaticLayout: true,
+                // キーボード関連の設定を明示的に指定
+                acceptSuggestionOnEnter: 'off',
+                acceptSuggestionOnCommitCharacter: false,
+                quickSuggestions: false,
+                parameterHints: { enabled: false },
+                suggestOnTriggerCharacters: false,
+                tabCompletion: 'off',
+                wordBasedSuggestions: 'off'
+              }}
+            />
+          </div>
+        )}
+        
+        {(mode === 'preview' || mode === 'split') && (
+          <div className="preview-pane">
+            <div className="preview-content">
+              {value.trim() ? (
+                <div
+                  className="markdown-preview"
+                  dangerouslySetInnerHTML={{ __html: getPreviewHtml() }}
+                />
+              ) : (
+                <div className="preview-empty">
+                  <div className="preview-empty-icon">📄</div>
+                  <div className="preview-empty-message">プレビューするマークダウンテキストを入力してください</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       {isVimEnabled && (
@@ -196,7 +257,35 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
         .editor-controls {
           display: flex;
-          gap: 8px;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .mode-toggles {
+          display: flex;
+          gap: 4px;
+        }
+
+        .mode-toggle {
+          background: #3c3c3c;
+          border: 1px solid #5a5a5a;
+          color: #cccccc;
+          padding: 6px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .mode-toggle:hover {
+          background: #4a4a4a;
+        }
+
+        .mode-toggle.active {
+          background: #007acc;
+          border-color: #007acc;
+          color: white;
         }
 
         .vim-toggle {
@@ -238,6 +327,176 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         .editor-container {
           flex: 1;
           overflow: hidden;
+          display: flex;
+        }
+
+        .mode-edit .editor-pane {
+          width: 100%;
+        }
+
+        .mode-preview .preview-pane {
+          width: 100%;
+        }
+
+        .mode-split .editor-pane,
+        .mode-split .preview-pane {
+          width: 50%;
+          border-right: 1px solid #3e3e42;
+        }
+
+        .mode-split .preview-pane {
+          border-right: none;
+          border-left: 1px solid #3e3e42;
+        }
+
+        .editor-pane {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+        }
+
+        .preview-pane {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          background: #ffffff;
+        }
+
+        .preview-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 20px;
+          height: 100%;
+        }
+
+        .markdown-preview {
+          line-height: 1.6;
+          color: #333333;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        .markdown-preview h1,
+        .markdown-preview h2,
+        .markdown-preview h3,
+        .markdown-preview h4,
+        .markdown-preview h5,
+        .markdown-preview h6 {
+          margin: 20px 0 10px 0;
+          font-weight: 600;
+          line-height: 1.25;
+        }
+
+        .markdown-preview h1 {
+          font-size: 2em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 10px;
+        }
+
+        .markdown-preview h2 {
+          font-size: 1.5em;
+          border-bottom: 1px solid #eaecef;
+          padding-bottom: 8px;
+        }
+
+        .markdown-preview h3 {
+          font-size: 1.25em;
+        }
+
+        .markdown-preview p {
+          margin: 12px 0;
+        }
+
+        .markdown-preview ul,
+        .markdown-preview ol {
+          margin: 12px 0;
+          padding-left: 20px;
+        }
+
+        .markdown-preview li {
+          margin: 4px 0;
+        }
+
+        .markdown-preview pre {
+          background: #f6f8fa;
+          border-radius: 6px;
+          padding: 16px;
+          overflow-x: auto;
+          border: 1px solid #e1e4e8;
+          margin: 12px 0;
+        }
+
+        .markdown-preview code {
+          background: #f6f8fa;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-size: 85%;
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .markdown-preview pre code {
+          background: none;
+          padding: 0;
+        }
+
+        .markdown-preview blockquote {
+          border-left: 4px solid #dfe2e5;
+          padding: 0 16px;
+          margin: 12px 0;
+          color: #6a737d;
+        }
+
+        .markdown-preview table {
+          border-collapse: collapse;
+          margin: 12px 0;
+          width: 100%;
+        }
+
+        .markdown-preview th,
+        .markdown-preview td {
+          border: 1px solid #dfe2e5;
+          padding: 8px 12px;
+          text-align: left;
+        }
+
+        .markdown-preview th {
+          background: #f6f8fa;
+          font-weight: 600;
+        }
+
+        .markdown-preview img {
+          max-width: 100%;
+          height: auto;
+          margin: 12px 0;
+        }
+
+        .markdown-preview a {
+          color: #0366d6;
+          text-decoration: none;
+        }
+
+        .markdown-preview a:hover {
+          text-decoration: underline;
+        }
+
+        .preview-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #6b7280;
+          text-align: center;
+        }
+
+        .preview-empty-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+          opacity: 0.6;
+        }
+
+        .preview-empty-message {
+          font-size: 14px;
+          line-height: 1.5;
         }
 
         .vim-statusbar {
