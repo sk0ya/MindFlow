@@ -1,10 +1,11 @@
 // Cloud authentication adapter for Local architecture
 import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse } from './types';
 import { logger } from '../../shared/utils/logger';
+import { generateDeviceFingerprint, saveDeviceFingerprint } from '../../shared/utils/deviceFingerprint';
 
 const DEFAULT_CONFIG: AuthConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
-  tokenKey: 'mindflow_auth_token',
+  tokenKey: 'mindflow_session_token', // セッショントークンに変更
   refreshTokenKey: 'mindflow_refresh_token'
 };
 
@@ -136,18 +137,28 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * Magic linkトークンを検証
+   * Magic linkトークンを検証（デバイスフィンガープリンティング対応）
    */
   async verifyMagicLink(token: string): Promise<{ success: boolean; error?: string }> {
     this.setLoading(true);
     
     try {
+      // デバイスフィンガープリントを生成
+      const deviceFingerprint = await generateDeviceFingerprint();
+      logger.debug('🔍 Device fingerprint generated for auth:', {
+        deviceId: deviceFingerprint.deviceId,
+        confidence: deviceFingerprint.confidence
+      });
+
       const response = await fetch(`${this.config.apiBaseUrl}/api/auth/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ 
+          token,
+          deviceFingerprint: deviceFingerprint.fingerprint
+        }),
       });
 
       const result: LoginResponse = await response.json();
@@ -157,6 +168,9 @@ export class CloudAuthAdapter implements AuthAdapter {
       }
 
       if (result.token && result.user) {
+        // デバイスフィンガープリントを保存
+        saveDeviceFingerprint(deviceFingerprint);
+        
         this.setAuthenticatedUser(result.user, result.token);
         logger.debug('✅ Magic link verified for:', result.user.email);
         return { success: true };
@@ -173,11 +187,33 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * ログアウト
+   * ログアウト（サーバーサイドセッション無効化対応）
    */
-  logout(): void {
+  async logout(): Promise<void> {
+    const token = this.getStoredToken();
+    
+    // サーバーにログアウトを通知してセッションを無効化
+    if (token) {
+      try {
+        await fetch(`${this.config.apiBaseUrl}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        logger.debug('📤 Server logout request sent');
+      } catch (error) {
+        logger.warn('⚠️ Server logout request failed:', error);
+        // サーバーエラーがあってもローカルログアウトは続行
+      }
+    }
+    
     this.clearAuthState();
     this.clearStoredTokens();
+    
+    // デバイスフィンガープリントは保持（次回ログイン時の利便性のため）
+    
     this.notifyAuthChange(null);
     logger.debug('👋 User logged out');
   }
@@ -369,17 +405,38 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * トークンリフレッシュタイマーを開始
+   * セッション検証タイマーを開始（永続セッション対応）
    */
   private startTokenRefreshTimer(): void {
-    // 45分間隔でトークンリフレッシュを試行
+    // 1時間間隔でセッション検証を実行
     this.refreshTimer = setInterval(async () => {
       if (this.isAuthenticated) {
-        const success = await this.refreshToken();
-        if (!success) {
-          logger.warn('⚠️ Token refresh failed, user may need to login again');
+        const token = this.getStoredToken();
+        if (token) {
+          try {
+            const response = await fetch(`${this.config.apiBaseUrl}/api/auth/validate`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+            
+            if (!response.ok) {
+              logger.warn('⚠️ Session validation failed, user may need to login again');
+              if (response.status === 401) {
+                // セッションが無効化されている場合はログアウト
+                this.clearAuthState();
+                this.clearStoredTokens();
+                this.notifyAuthChange(null);
+              }
+            } else {
+              logger.debug('✅ Session validated successfully');
+            }
+          } catch (error) {
+            logger.warn('⚠️ Session validation error:', error);
+          }
         }
       }
-    }, 45 * 60 * 1000); // 45 minutes
+    }, 60 * 60 * 1000); // 1 hour
   }
 }

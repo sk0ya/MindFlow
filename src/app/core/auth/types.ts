@@ -29,6 +29,14 @@ export interface AuthConfig {
   refreshTokenKey: string;
 }
 
+export interface DeviceInfo {
+  userAgent: string;
+  language: string;
+  timezone: string;
+  screenResolution: string;
+  fingerprint?: string;
+}
+
 export interface AuthAdapter {
   readonly isAuthenticated: boolean;
   readonly user: AuthUser | null;
@@ -38,7 +46,7 @@ export interface AuthAdapter {
   // Authentication operations
   login(email: string): Promise<LoginResponse>;
   verifyMagicLink(token: string): Promise<{ success: boolean; error?: string }>;
-  logout(): void;
+  logout(): Promise<void>;
   
   // Token management
   getAuthHeaders(): Record<string, string>;
