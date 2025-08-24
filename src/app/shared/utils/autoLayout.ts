@@ -281,7 +281,7 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         const bounds1 = calculateNodeBounds(prevNode.text);
         const bounds2 = calculateNodeBounds(currentNode.text);
         
-        const minDistance = (bounds1.height + bounds2.height) / 2 + 20;
+        const minDistance = (bounds1.height + bounds2.height) / 2 + 10;
         const currentDistance = currentNode.y - prevNode.y;
         
         if (currentDistance < minDistance) {
@@ -475,7 +475,7 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
     levelSpacing = LAYOUT.LEVEL_SPACING,
-    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN + 20
+    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN + 10
   } = options;
 
   const newRootNode = cloneDeep(rootNode);
