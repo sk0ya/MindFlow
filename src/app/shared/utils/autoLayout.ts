@@ -1,7 +1,6 @@
 // 自動レイアウト機能のユーティリティ
 import { cloneDeep } from './lodash-utils';
 import { COORDINATES, LAYOUT } from '../constants/index';
-import { calculateNodeSize } from './nodeUtils';
 import type { MindMapNode } from '../types';
 
 // Layout options interfaces
@@ -163,7 +162,6 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
     const height = 40;
     return { width, height };
   };
-
 
   const updateNodePositions = (node: MindMapNode, depth = 0, side: 'center' | 'left' | 'right' = 'center', yOffset = 0): void => {
     if (depth === 0) {
@@ -486,11 +484,6 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
   newRootNode.x = centerX;
   newRootNode.y = centerY;
 
-  // ノード幅を取得するヘルパー関数
-  const getNodeWidth = (node: MindMapNode): number => {
-    return calculateNodeSize(node).width;
-  };
-
   // サブツリーの高さを計算（ノード数ベース）
   const calculateSubtreeHeight = (node: MindMapNode): number => {
     if (node.collapsed || !node.children || node.children.length === 0) {
@@ -499,18 +492,12 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     return node.children.reduce((sum, child) => sum + calculateSubtreeHeight(child), 0);
   };
 
-  // 再帰的にノードを配置（左端座標ベースで計算）
-  const positionNode = (node: MindMapNode, depth: number, yOffset: number, parentX?: number, parentWidth?: number): void => {
+  // 再帰的にノードを配置
+  const positionNode = (node: MindMapNode, depth: number, yOffset: number): void => {
     if (depth === 0) return; // ルートは既に配置済み
     
-    // 左端X座標: 親ノードの右端 + 間隔
-    const baseX = parentX || centerX;
-    const baseWidth = parentWidth || getNodeWidth(newRootNode);
-    const leftX = baseX + baseWidth / 2 + levelSpacing;
-    
-    // 中央座標に変換して設定
-    const nodeWidth = getNodeWidth(node);
-    node.x = leftX + nodeWidth / 2;
+    // X座標: 深度に応じて右側に配置
+    node.x = centerX + (depth * levelSpacing);
     node.y = centerY + yOffset;
     
     if (!node.collapsed && node.children && node.children.length > 0) {
@@ -526,7 +513,7 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         const childHeight = calculateSubtreeHeight(child);
         const childCenterOffset = currentOffset + (childHeight - 1) * nodeSpacing / 2;
         
-        positionNode(child, depth + 1, yOffset + childCenterOffset, node.x, getNodeWidth(node));
+        positionNode(child, depth + 1, yOffset + childCenterOffset);
         currentOffset += childHeight * nodeSpacing;
       });
     }
@@ -545,7 +532,7 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       const childHeight = calculateSubtreeHeight(child);
       const childCenterOffset = currentOffset + (childHeight - 1) * nodeSpacing / 2;
       
-      positionNode(child, 1, childCenterOffset, newRootNode.x, getNodeWidth(newRootNode));
+      positionNode(child, 1, childCenterOffset);
       currentOffset += childHeight * nodeSpacing;
     });
   }
@@ -558,36 +545,6 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
  */
 export const autoSelectLayout = (rootNode: MindMapNode, options: LayoutOptions = {}): MindMapNode => {
   return simpleHierarchicalLayout(rootNode, options);
-};
-
-/**
- * DB保存用に座標を除外したノード作成
- */
-export const removeCoordinatesForStorage = (node: MindMapNode): any => {
-  const { x, y, ...nodeWithoutCoords } = node;
-  
-  const processedChildren = node.children?.map(child => removeCoordinatesForStorage(child)) || [];
-  
-  return {
-    ...nodeWithoutCoords,
-    children: processedChildren
-  };
-};
-
-/**
- * DB読み込み後にレイアウトを適用したノード作成
- */
-export const applyLayoutAfterLoad = (nodeData: any, options: LayoutOptions = {}): MindMapNode => {
-  // 座標をデフォルト値で初期化
-  const nodeWithCoords: MindMapNode = {
-    ...nodeData,
-    x: options.centerX || 400,
-    y: options.centerY || 300,
-    children: nodeData.children?.map((child: any) => applyLayoutAfterLoad(child, options)) || []
-  };
-  
-  // レイアウトを適用
-  return autoSelectLayout(nodeWithCoords, options);
 };
 
 /**

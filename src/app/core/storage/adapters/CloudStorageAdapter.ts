@@ -3,8 +3,6 @@ import type { MindMapData } from '@shared/types';
 import type { StorageAdapter } from '../types';
 import type { AuthAdapter } from '../../auth/types';
 import { createInitialData } from '../../../shared/types/dataTypes';
-import { removeCoordinatesForStorage, applyLayoutAfterLoad } from '../../../shared/utils/autoLayout';
-import type { MindMapNodeForStorage } from '@shared/types/core';
 import {
   initCloudIndexedDB,
   saveMindMapToCloudIndexedDB,
@@ -171,17 +169,9 @@ export class CloudStorageAdapter implements StorageAdapter {
       // 3. サーバーデータがある場合はそれを使用、なければローカルデータ
       if (serverData) {
         logger.info('📋 CloudStorageAdapter: Loaded server data:', serverData.title);
-        // 座標がない場合はレイアウトを適用
-        if (!serverData.rootNode.x && !serverData.rootNode.y) {
-          serverData.rootNode = applyLayoutAfterLoad(serverData.rootNode as any);
-        }
         return serverData;
       } else if (localData) {
         logger.info('📋 CloudStorageAdapter: Using local cached data:', localData.title);
-        // 座標がない場合はレイアウトを適用
-        if (!localData.rootNode.x && !localData.rootNode.y) {
-          localData.rootNode = applyLayoutAfterLoad(localData.rootNode as any);
-        }
         return localData;
       }
 
@@ -253,14 +243,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       // APIから全マップを取得
       const serverMaps = await this.apiClient.getMindMaps();
       if (serverMaps.length > 0) {
-        const cleanedMaps = serverMaps.map(map => {
-          const cleaned = cleanEmptyNodesFromData(map);
-          // 座標がない場合はレイアウトを適用
-          if (!cleaned.rootNode.x && !cleaned.rootNode.y) {
-            cleaned.rootNode = applyLayoutAfterLoad(cleaned.rootNode as any);
-          }
-          return cleaned;
-        });
+        const cleanedMaps = serverMaps.map(map => cleanEmptyNodesFromData(map));
         logger.info(`📋 CloudStorageAdapter: Loaded ${cleanedMaps.length} maps from API`);
         
         // Note: ローカルキャッシュの更新は明示的な保存時のみ行う（読み込み時は不要）
@@ -566,14 +549,7 @@ export class CloudStorageAdapter implements StorageAdapter {
     if (!userId) {
       throw new Error('User ID required for local storage');
     }
-    
-    // 座標を除外してDB保存
-    const dataForStorage = {
-      ...data,
-      rootNode: removeCoordinatesForStorage(data.rootNode) as MindMapNodeForStorage
-    };
-    
-    await saveToCloudIndexedDB(dataForStorage as any, userId);
+    await saveToCloudIndexedDB(data, userId);
   }
 
   /**
@@ -583,23 +559,17 @@ export class CloudStorageAdapter implements StorageAdapter {
     if (!this.authAdapter.isAuthenticated) return;
 
     try {
-      // 座標を除外してクラウドAPI保存
-      const dataForStorage = {
-        ...data,
-        rootNode: removeCoordinatesForStorage(data.rootNode) as MindMapNodeForStorage
-      };
-      
       // まずサーバーに存在するかチェックして、適切なAPIを使用
       let updatedData: MindMapData;
       
       try {
         // 既存のマップを更新を試行
-        updatedData = await this.apiClient.updateMindMap(dataForStorage as any);
+        updatedData = await this.apiClient.updateMindMap(data);
         logger.debug('☁️ CloudStorageAdapter: Data updated in cloud:', updatedData.title);
       } catch (updateError) {
         // 更新が失敗した場合は新規作成を試行
         logger.debug('🆕 CloudStorageAdapter: Creating new mindmap in cloud');
-        updatedData = await this.apiClient.createMindMap(dataForStorage as any);
+        updatedData = await this.apiClient.createMindMap(data);
         logger.debug('☁️ CloudStorageAdapter: Data created in cloud:', updatedData.title);
       }
       

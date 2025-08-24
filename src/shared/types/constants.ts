@@ -116,7 +116,7 @@ export const DEFAULT_VALUES = {
     ROOT_POSITION: { x: 400, y: 300 },
     SETTINGS: {
       autoSave: true,
-      autoLayout: true,
+      autoLayout: false,
       snapToGrid: false,
       showGrid: false,
       animationEnabled: true
