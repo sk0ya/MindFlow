@@ -8,6 +8,7 @@ import { useDataReset } from './useDataReset';
 import { useStorageConfigChange } from './useStorageConfigChange';
 import { useAutoSave } from './useAutoSave';
 import type { StorageConfig } from '../storage/types';
+import type { MindMapData } from '@shared/types';
 
 /**
  * 統合MindMapHook - 新しいアーキテクチャ
@@ -93,7 +94,11 @@ export const useMindMap = (
       if (dataHook.data?.id === mapId) {
         await persistenceHook.updateMapInList(dataHook.data);
       }
-    }, [actionsHook, dataHook, persistenceHook])
+    }, [actionsHook, dataHook, persistenceHook]),
+
+    addImportedMapToList: useCallback(async (mapData: MindMapData): Promise<void> => {
+      await persistenceHook.addMapToList(mapData);
+    }, [persistenceHook])
   };
 
   // ファイル操作の統合

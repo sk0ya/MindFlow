@@ -1,0 +1,400 @@
+/* Import Modal のスタイル（ExportModal のスタイルをベースに作成） */
+
+.import-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.import-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.import-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.import-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.import-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.import-modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.import-modal-body {
+  padding: 20px;
+}
+
+.import-file-section,
+.supported-formats-section,
+.import-options-section {
+  margin-bottom: 24px;
+}
+
+.import-file-section h3,
+.supported-formats-section h3,
+.import-options-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* ファイルドロップゾーン */
+.file-drop-zone {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #fafafa;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-drop-zone:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.file-drop-zone.drag-over {
+  border-color: #007bff;
+  background-color: #e3f2fd;
+  transform: scale(1.02);
+}
+
+.file-drop-zone.has-file {
+  border-color: #28a745;
+  background-color: #f8fff9;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.drop-icon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.drop-text {
+  color: #666;
+}
+
+.drop-text div:first-child {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.drop-text div:last-child {
+  font-size: 14px;
+}
+
+/* 選択されたファイル情報 */
+.selected-file-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px;
+  width: 100%;
+}
+
+.file-icon {
+  font-size: 32px;
+}
+
+.file-details {
+  flex: 1;
+  text-align: left;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.file-size {
+  font-size: 14px;
+  color: #666;
+}
+
+.remove-file {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-file:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* サポート形式 */
+.format-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.format-item {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.format-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.format-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.format-extensions {
+  font-size: 12px;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.format-description {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* インポートオプション */
+.import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.import-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1565c0;
+}
+
+.info-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.import-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.import-option input[type="radio"] {
+  margin: 0;
+}
+
+.import-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.title-input,
+.category-input {
+  flex: 1;
+  margin-left: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.title-input:focus,
+.category-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+/* フッター */
+.import-modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.import-button-cancel,
+.import-button-confirm {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.import-button-cancel {
+  background-color: #f8f9fa;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.import-button-cancel:hover:not(:disabled) {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+.import-button-confirm {
+  background-color: #28a745;
+  color: white;
+}
+
+.import-button-confirm:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.import-button-confirm:disabled,
+.import-button-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .import-modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .import-modal-header,
+  .import-modal-body,
+  .import-modal-footer {
+    padding: 16px;
+  }
+  
+  .file-drop-zone {
+    padding: 24px 16px;
+    min-height: 100px;
+  }
+  
+  .drop-icon {
+    font-size: 36px;
+  }
+  
+  .format-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .import-modal-footer {
+    flex-direction: column;
+  }
+  
+  .import-button-cancel,
+  .import-button-confirm {
+    width: 100%;
+  }
+  
+  .title-input,
+  .category-input {
+    min-width: auto;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  
+  .import-option label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

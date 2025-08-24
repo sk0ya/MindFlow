@@ -21,6 +21,7 @@ interface ToolbarProps {
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
   onExport?: () => void;
+  onImport?: () => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -38,7 +39,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onStorageModeChange,
   onToggleNotesPanel,
   showNotesPanel = false,
-  onExport
+  onExport,
+  onImport
 }) => {
   return (
     <div className="toolbar">
@@ -61,6 +63,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         onToggleNotesPanel={onToggleNotesPanel}
         showNotesPanel={showNotesPanel}
         onExport={onExport}
+        onImport={onImport}
       />
 
       {onStorageModeChange && (
