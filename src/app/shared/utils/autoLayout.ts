@@ -184,12 +184,13 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
           const rightTotalHeight = rightChildren.reduce((sum, child) => 
             sum + calculateSubtreeHeight(child), 0);
           
-          let currentOffset = 0;
+          let currentOffset = -(rightTotalHeight - 1) * minVerticalSpacing / 2;
+          
           rightChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
-            const childYOffset = (currentOffset + childHeight / 2 - rightTotalHeight / 2) * minVerticalSpacing;
-            updateNodePositions(child, 1, 'right', childYOffset);
-            currentOffset += childHeight;
+            const childCenterOffset = currentOffset + (childHeight - 1) * minVerticalSpacing / 2;
+            updateNodePositions(child, 1, 'right', childCenterOffset);
+            currentOffset += childHeight * minVerticalSpacing;
           });
         }
 
@@ -198,12 +199,13 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
           const leftTotalHeight = leftChildren.reduce((sum, child) => 
             sum + calculateSubtreeHeight(child), 0);
           
-          let currentOffset = 0;
+          let currentOffset = -(leftTotalHeight - 1) * minVerticalSpacing / 2;
+          
           leftChildren.forEach((child: MindMapNode) => {
             const childHeight = calculateSubtreeHeight(child);
-            const childYOffset = (currentOffset + childHeight / 2 - leftTotalHeight / 2) * minVerticalSpacing;
-            updateNodePositions(child, 1, 'left', childYOffset);
-            currentOffset += childHeight;
+            const childCenterOffset = currentOffset + (childHeight - 1) * minVerticalSpacing / 2;
+            updateNodePositions(child, 1, 'left', childCenterOffset);
+            currentOffset += childHeight * minVerticalSpacing;
           });
         }
       }
@@ -222,12 +224,16 @@ export const improvedMindMapLayout = (rootNode: MindMapNode, options: LayoutOpti
         
         const spacing = minVerticalSpacing;
         
-        let currentOffset = 0;
+        // 子ノードの配置を親ノードを中心として計算
+        let currentOffset = -(totalChildHeight - 1) * spacing / 2;
+        
         node.children.forEach((child: MindMapNode) => {
           const childHeight = calculateSubtreeHeight(child);
-          const childYOffset = yOffset + (currentOffset + childHeight / 2 - totalChildHeight / 2) * spacing;
+          const childCenterOffset = currentOffset + (childHeight - 1) * spacing / 2;
+          const childYOffset = yOffset + childCenterOffset;
+          
           updateNodePositions(child, depth + 1, side, childYOffset);
-          currentOffset += childHeight;
+          currentOffset += childHeight * spacing;
         });
       }
     }
@@ -469,56 +475,67 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
     levelSpacing = LAYOUT.LEVEL_SPACING,
-    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN * 2
+    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN + 20
   } = options;
 
-  // 全ノードを平坦化して深度順でソート
-  const allNodes: Array<{ node: MindMapNode; depth: number; parentY: number }> = [];
+  const newRootNode = cloneDeep(rootNode);
   
-  const collectNodes = (node: MindMapNode, depth = 0, parentY = centerY): void => {
-    allNodes.push({ node, depth, parentY });
+  // ルートノードを配置
+  newRootNode.x = centerX;
+  newRootNode.y = centerY;
+
+  // サブツリーの高さを計算（ノード数ベース）
+  const calculateSubtreeHeight = (node: MindMapNode): number => {
+    if (node.collapsed || !node.children || node.children.length === 0) {
+      return 1;
+    }
+    return node.children.reduce((sum, child) => sum + calculateSubtreeHeight(child), 0);
+  };
+
+  // 再帰的にノードを配置
+  const positionNode = (node: MindMapNode, depth: number, yOffset: number): void => {
+    if (depth === 0) return; // ルートは既に配置済み
+    
+    // X座標: 深度に応じて右側に配置
+    node.x = centerX + (depth * levelSpacing);
+    node.y = centerY + yOffset;
     
     if (!node.collapsed && node.children && node.children.length > 0) {
+      // 子ノード全体の高さを計算
+      const totalHeight = node.children.reduce((sum, child) => 
+        sum + calculateSubtreeHeight(child), 0
+      );
+      
+      // 子ノードの開始位置を計算（親ノードを中心とする）
+      let currentOffset = -(totalHeight - 1) * nodeSpacing / 2;
+      
       node.children.forEach((child: MindMapNode) => {
-        collectNodes(child, depth + 1, node.y || parentY);
+        const childHeight = calculateSubtreeHeight(child);
+        const childCenterOffset = currentOffset + (childHeight - 1) * nodeSpacing / 2;
+        
+        positionNode(child, depth + 1, yOffset + childCenterOffset);
+        currentOffset += childHeight * nodeSpacing;
       });
     }
   };
 
-  const newRootNode = cloneDeep(rootNode);
-  
-  // まずルートノードを配置
-  newRootNode.x = centerX;
-  newRootNode.y = centerY;
-  
-  // 全ノードを収集
-  collectNodes(newRootNode);
-  
-  // 各階層でのY座標カウンター
-  const levelYCounters: { [depth: number]: number } = {};
-  
-  // 深度順に処理
-  allNodes.forEach(({ node, depth }) => {
-    if (depth === 0) {
-      // ルートは既に配置済み
-      levelYCounters[0] = centerY;
-      return;
-    }
+  if (!newRootNode.collapsed && newRootNode.children && newRootNode.children.length > 0) {
+    // ルートの子ノード全体の高さを計算
+    const totalHeight = newRootNode.children.reduce((sum, child) => 
+      sum + calculateSubtreeHeight(child), 0
+    );
     
-    // X座標: 右側に階層的に配置
-    node.x = centerX + (depth * levelSpacing);
+    // 子ノードの開始位置を計算（ルートノードを中心とする）
+    let currentOffset = -(totalHeight - 1) * nodeSpacing / 2;
     
-    // Y座標: 各階層で順次配置
-    if (levelYCounters[depth] === undefined) {
-      // この階層の最初のノード
-      // 上の階層から少し上にオフセット
-      const baseY = centerY - (depth * 50);
-      levelYCounters[depth] = baseY;
-    }
-    
-    node.y = levelYCounters[depth];
-    levelYCounters[depth] += nodeSpacing;
-  });
+    newRootNode.children.forEach((child: MindMapNode) => {
+      const childHeight = calculateSubtreeHeight(child);
+      const childCenterOffset = currentOffset + (childHeight - 1) * nodeSpacing / 2;
+      
+      positionNode(child, 1, childCenterOffset);
+      currentOffset += childHeight * nodeSpacing;
+    });
+  }
 
   return newRootNode;
 };
