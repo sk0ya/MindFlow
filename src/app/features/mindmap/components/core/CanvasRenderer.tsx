@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import { CanvasConnections, CanvasDragGuide } from '.';
 import { Node } from '../..';
+import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
+import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { FileAttachment, MindMapData, MindMapNode } from '../../../../shared';
 
 interface DragState {
@@ -143,6 +145,37 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
               />
             ))}
           </g>
+
+          {/* 選択されたノードの添付ファイル一覧を最前面に表示 */}
+          {selectedNodeId && (
+            (() => {
+              const selectedNode = allNodes.find(node => node.id === selectedNodeId);
+              if (selectedNode) {
+                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id);
+                return (
+                  <SelectedNodeAttachmentList
+                    key={`attachment-list-${selectedNodeId}`}
+                    node={selectedNode}
+                    isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
+                    nodeWidth={nodeSize.width}
+                    nodeHeight={nodeSize.height}
+                    onFileClick={(file) => {
+                      onShowFileActionMenu(file, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                    }}
+                    onFileDoubleClick={(file) => {
+                      if (file.isImage) {
+                        onShowImageModal(file);
+                      }
+                    }}
+                    onFileContextMenu={(file, position) => {
+                      onShowFileActionMenu(file, selectedNode.id, position);
+                    }}
+                  />
+                );
+              }
+              return null;
+            })()
+          )}
         </g>
       </svg>
 
