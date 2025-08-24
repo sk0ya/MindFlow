@@ -13,6 +13,8 @@ import {
 } from '../../utils/cloudIndexedDB';
 import { logger } from '../../../shared/utils/logger';
 import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI, type FileInfo } from '../../cloud/api';
+import { SyncStatusService } from '../../services/SyncStatusService';
+import { EditingStateService } from '../../services/EditingStateService';
 
 // Cloud-specific helper functions using separate cloud IndexedDB
 const saveToCloudIndexedDB = async (data: MindMapData, userId: string): Promise<void> => {
@@ -79,6 +81,9 @@ export class CloudStorageAdapter implements StorageAdapter {
   private syncInterval: NodeJS.Timeout | null = null;
   private apiClient: CloudflareAPI;
   private abortController: AbortController | null = null;
+  private syncStatusService = SyncStatusService.getInstance();
+  private editingStateService = EditingStateService.getInstance();
+  private lastKnownServerVersion: Map<string, string> = new Map();
 
   constructor(private authAdapter: AuthAdapter) {
     this.apiClient = createCloudflareAPIClient(() => this.authAdapter.getAuthHeaders());
@@ -488,6 +493,13 @@ export class CloudStorageAdapter implements StorageAdapter {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
+    
+    // SyncStatusServiceのクリーンアップ
+    this.syncStatusService.cleanup();
+    
+    // EditingStateServiceのクリーンアップ
+    this.editingStateService.cleanup();
+    
     logger.info('🧹 CloudStorageAdapter: Cleanup completed');
   }
 
@@ -589,38 +601,164 @@ export class CloudStorageAdapter implements StorageAdapter {
   private startBackgroundSync(): void {
     // 30秒間隔でバックグラウンド同期
     this.syncInterval = setInterval(async () => {
-      if (!this.authAdapter.isAuthenticated) return;
+      if (!this.authAdapter.isAuthenticated) {
+        this.syncStatusService.updateStatus({ isOnline: false });
+        return;
+      }
 
       // Create a new AbortController for this sync cycle
       const syncAbortController = new AbortController();
       
       try {
-        const userId = this.authAdapter.user?.id || '';
-        const dirtyMaps = await getCloudDirtyData(userId);
-        
-        for (const dirtyMap of dirtyMaps) {
-          // Check if we should abort
-          if (syncAbortController.signal.aborted) {
-            logger.debug('🚫 CloudStorageAdapter: Background sync aborted');
-            break;
-          }
-          
-          try {
-            const { _metadata, ...cleanData } = dirtyMap;
-            const validData = validateAndCleanData(cleanData);
-            if (validData) {
-              await this.apiClient.updateMindMap(validData);
-            }
-            await markAsCloudSynced(dirtyMap.id);
-            logger.debug('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
-          } catch (syncError) {
-            logger.warn('⚠️ CloudStorageAdapter: Background sync failed:', syncError);
-          }
+        // 編集中は同期チェックをスキップ
+        if (this.editingStateService.isEditing()) {
+          return;
         }
+
+        // 1. ローカルの dirty データをサーバーに送信
+        await this.syncDirtyDataToServer(syncAbortController);
+        
+        // 2. サーバーから更新をチェック（編集中でない場合のみ）
+        if (!this.editingStateService.isEditing()) {
+          await this.checkServerUpdates();
+        }
+        
+        this.syncStatusService.onSyncSuccess();
       } catch (error) {
         logger.warn('⚠️ CloudStorageAdapter: Background sync error:', error);
+        this.syncStatusService.onSyncFailure(error instanceof Error ? error.message : '同期エラー');
       }
     }, 30000);
+  }
+
+  /**
+   * Dirty データをサーバーに同期
+   */
+  private async syncDirtyDataToServer(syncAbortController: AbortController): Promise<void> {
+    const userId = this.authAdapter.user?.id || '';
+    const dirtyMaps = await getCloudDirtyData(userId);
+    
+    if (dirtyMaps.length === 0) return;
+    
+    this.syncStatusService.updatePendingUploads(dirtyMaps.length);
+    
+    for (const dirtyMap of dirtyMaps) {
+      // Check if we should abort
+      if (syncAbortController.signal.aborted) {
+        logger.debug('🚫 CloudStorageAdapter: Background sync aborted');
+        break;
+      }
+      
+      try {
+        const { _metadata, ...cleanData } = dirtyMap;
+        const validData = validateAndCleanData(cleanData);
+        if (validData) {
+          await this.apiClient.updateMindMap(validData);
+          await markAsCloudSynced(dirtyMap.id);
+          logger.debug('🔄 CloudStorageAdapter: Background sync completed:', dirtyMap.id);
+        }
+      } catch (syncError) {
+        logger.warn('⚠️ CloudStorageAdapter: Background sync failed for map:', dirtyMap.id, syncError);
+        this.syncStatusService.onSyncFailure(syncError instanceof Error ? syncError.message : '同期エラー', dirtyMap.id);
+      }
+    }
+    
+    this.syncStatusService.updatePendingUploads(0);
+  }
+
+  /**
+   * サーバーからの更新をチェック
+   */
+  private async checkServerUpdates(): Promise<void> {
+    try {
+      const serverMaps = await this.apiClient.getMindMaps();
+      const userId = this.authAdapter.user?.id || '';
+      const localMaps = await getAllFromCloudIndexedDB(userId);
+      
+      let updateCount = 0;
+      const updatedMaps: MindMapData[] = [];
+      
+      for (const serverMap of serverMaps) {
+        const localMap = localMaps.find(map => map.id === serverMap.id);
+        const lastKnownVersion = this.lastKnownServerVersion.get(serverMap.id);
+        
+        // サーバーとローカルのタイムスタンプを比較
+        const serverTimestamp = new Date(serverMap.updatedAt).getTime();
+        const localTimestamp = localMap ? new Date(localMap.updatedAt).getTime() : 0;
+        
+        // 詳細ログは開発時のみ
+        // logger.debug('Checking map for updates:', { ... });
+        
+        // 初回チェック時：バージョンを記録するだけで通知しない
+        if (!lastKnownVersion) {
+          this.lastKnownServerVersion.set(serverMap.id, serverMap.updatedAt);
+          // logger.debug('📋 First time checking map, recording version:', serverMap.title);
+          continue;
+        }
+        
+        // 既にこのバージョンを知っている場合はスキップ
+        if (lastKnownVersion === serverMap.updatedAt) {
+          // logger.debug('✅ Already know this version:', serverMap.title);
+          continue;
+        }
+        
+        // ローカルにマップがない場合（新規マップ）
+        if (!localMap) {
+          updateCount++;
+          updatedMaps.push(serverMap);
+          this.lastKnownServerVersion.set(serverMap.id, serverMap.updatedAt);
+          logger.info('🆕 New map found on server:', serverMap.title);
+          continue;
+        }
+        
+        // サーバー側が新しい場合のみ更新通知
+        if (serverTimestamp > localTimestamp) {
+          updateCount++;
+          updatedMaps.push(serverMap);
+          this.lastKnownServerVersion.set(serverMap.id, serverMap.updatedAt);
+          logger.info('🔄 Server map is newer:', serverMap.title, {
+            serverTime: new Date(serverTimestamp).toISOString(),
+            localTime: new Date(localTimestamp).toISOString(),
+            timeDiff: serverTimestamp - localTimestamp
+          });
+        } else {
+          // ローカル側が新しいか同じ場合：バージョンだけ更新して通知しない
+          this.lastKnownServerVersion.set(serverMap.id, serverMap.updatedAt);
+          // logger.debug('📱 Local map is newer or equal, no update needed:', serverMap.title);
+        }
+      }
+      
+      if (updateCount > 0) {
+        logger.info(`📥 Found ${updateCount} updates on server`);
+        
+        // 更新されたマップをローカルキャッシュに保存（バックグラウンドで）
+        this.cacheUpdatedMapsAsync(updatedMaps, userId);
+        
+        // ユーザーに通知
+        this.syncStatusService.onUpdatesAvailable(updateCount);
+      }
+      
+    } catch (error) {
+      logger.warn('⚠️ CloudStorageAdapter: Failed to check server updates:', error);
+    }
+  }
+
+  /**
+   * 更新されたマップをバックグラウンドでローカルキャッシュに保存
+   */
+  private async cacheUpdatedMapsAsync(updatedMaps: MindMapData[], userId: string): Promise<void> {
+    try {
+      for (const map of updatedMaps) {
+        const validatedMap = validateAndCleanData(map);
+        if (validatedMap) {
+          await saveToCloudIndexedDB(validatedMap, userId);
+          logger.debug('🔄 Cached updated map:', map.title);
+        }
+      }
+      logger.info(`💾 Cached ${updatedMaps.length} updated maps`);
+    } catch (error) {
+      logger.warn('⚠️ Failed to cache updated maps:', error);
+    }
   }
 
   /**

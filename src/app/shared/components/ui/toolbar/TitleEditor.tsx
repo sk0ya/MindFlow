@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useActivityLifecycle } from '../../../../core/hooks/useEditingState';
 
 interface TitleEditorProps {
   title: string;
@@ -11,6 +12,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
   const [tempTitle, setTempTitle] = useState<string>(title);
+  
+  // 編集状態を追跡（タイトル編集時のみ）
+  useActivityLifecycle('typing', isEditingTitle);
 
   const handleTitleClick = useCallback((): void => {
     setIsEditingTitle(true);
