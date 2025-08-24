@@ -174,8 +174,8 @@ export class CloudStorageAdapter implements StorageAdapter {
       const initialData = createInitialData();
       logger.info('🆕 CloudStorageAdapter: Created initial data:', initialData.title);
       
-      // すぐにサーバーに保存（非同期）
-      this.saveToAPIAsync(initialData);
+      // 初期データは新規作成なので直接作成APIを呼び出し
+      this.createInitialDataAsync(initialData);
       await this.saveToLocal(initialData);
       
       return initialData;
@@ -281,7 +281,34 @@ export class CloudStorageAdapter implements StorageAdapter {
    * マップをリストに追加
    */
   async addMapToList(map: MindMapData): Promise<void> {
-    return this.saveData(map);
+    if (!this._isInitialized) {
+      logger.warn('CloudStorageAdapter: Not initialized, skipping add map to list');
+      return;
+    }
+
+    try {
+      // 認証されている場合のみ保存
+      if (!this.authAdapter.isAuthenticated) {
+        logger.warn('CloudStorageAdapter: User not authenticated, skipping add map to list');
+        return;
+      }
+
+      // 1. まずローカルに保存（即座の応答性）
+      await this.saveToLocal(map);
+      logger.debug('💾 CloudStorageAdapter: New map saved locally:', map.title);
+
+      // 2. 新規マップなので直接作成APIを呼び出し
+      try {
+        const createdMap = await this.apiClient.createMindMap(map);
+        logger.info('☁️ CloudStorageAdapter: New map created in cloud:', createdMap.title);
+        await markAsCloudSynced(createdMap.id);
+      } catch (createError) {
+        logger.warn('⚠️ CloudStorageAdapter: Failed to create map in cloud, saved locally only:', createError);
+      }
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: Failed to add map to list:', error);
+      throw error;
+    }
   }
 
   /**
@@ -537,6 +564,22 @@ export class CloudStorageAdapter implements StorageAdapter {
       await markAsCloudSynced(updatedData.id);
     } catch (error) {
       logger.warn('⚠️ CloudStorageAdapter: Cloud sync failed, data saved locally:', error);
+    }
+  }
+
+  /**
+   * 初期データを非同期でAPIに作成
+   */
+  private async createInitialDataAsync(data: MindMapData): Promise<void> {
+    if (!this.authAdapter.isAuthenticated) return;
+
+    try {
+      // 新規作成なので直接作成APIを使用
+      const createdData = await this.apiClient.createMindMap(data);
+      logger.info('☁️ CloudStorageAdapter: Initial data created in cloud:', createdData.title);
+      await markAsCloudSynced(createdData.id);
+    } catch (error) {
+      logger.warn('⚠️ CloudStorageAdapter: Failed to create initial data in cloud, saved locally only:', error);
     }
   }
 
