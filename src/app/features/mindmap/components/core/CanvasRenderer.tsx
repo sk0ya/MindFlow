@@ -28,7 +28,7 @@ interface CanvasRendererProps {
   // Event handlers
   onWheel: (e: React.WheelEvent) => void;
   onMouseDown: (e: React.MouseEvent) => void;
-  onBackgroundClick: (e: React.MouseEvent) => void;
+  onMouseUp: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onNodeSelect: (nodeId: string | null) => void;
   onStartEdit: (nodeId: string) => void;
@@ -63,7 +63,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   dragState,
   onWheel,
   onMouseDown,
-  onBackgroundClick,
+  onMouseUp,
   onContextMenu,
   onNodeSelect,
   onStartEdit,
@@ -89,7 +89,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
         height="calc(100vh)"
         onWheel={onWheel}
         onMouseDown={onMouseDown}
-        onClick={onBackgroundClick}
+        onMouseUp={onMouseUp}
         onContextMenu={onContextMenu}
         style={{
           background: 'white',

@@ -23,6 +23,7 @@ export const useCanvasViewportHandler = ({
   isDragging = false
 }: CanvasViewportHandlerProps) => {
   const isPanningRef = useRef(false);
+  const isPanReadyRef = useRef(false); // パン準備状態（マウスダウン済み）
   const lastPanPointRef = useRef({ x: 0, y: 0 });
 
   // ズーム処理
@@ -46,7 +47,7 @@ export const useCanvasViewportHandler = ({
                          target.closest('foreignObject');
     
     if (!isNodeElement) {
-      isPanningRef.current = true;
+      isPanReadyRef.current = true;
       lastPanPointRef.current = { x: e.clientX, y: e.clientY };
       e.preventDefault();
     }
@@ -54,14 +55,19 @@ export const useCanvasViewportHandler = ({
 
   // パン移動処理
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    // ドラッグ中はパン操作を無効化してドラッグ操作を優先
-    if (isPanningRef.current && !isDragging) {
+    // パン準備状態で、ドラッグ中でない場合にパン開始
+    if (isPanReadyRef.current && !isDragging) {
       const deltaX = e.clientX - lastPanPointRef.current.x;
       const deltaY = e.clientY - lastPanPointRef.current.y;
       
       // 小さな移動は無視してパフォーマンスを改善
       if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
         return;
+      }
+      
+      // 実際に動いた時点でパン状態をtrueに
+      if (!isPanningRef.current) {
+        isPanningRef.current = true;
       }
       
       setPan(prev => ({
@@ -78,6 +84,7 @@ export const useCanvasViewportHandler = ({
     // ドラッグ中でない場合のみパン終了
     if (!isDragging) {
       isPanningRef.current = false;
+      isPanReadyRef.current = false;
     }
   }, [isDragging]);
 
@@ -99,11 +106,16 @@ export const useCanvasViewportHandler = ({
     return 'grab';
   }, [isDragging]);
 
+  // isPanningの現在値を取得する関数
+  const getIsPanning = useCallback(() => {
+    return isPanningRef.current;
+  }, []);
+
   return {
     handleWheel,
     handleMouseDown,
     getCursor,
-    isPanning: isPanningRef.current
+    getIsPanning
   };
 };
 

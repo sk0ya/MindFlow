@@ -1,4 +1,4 @@
-import React, { useRef, memo } from 'react';
+import React, { useRef, memo, useCallback } from 'react';
 import CanvasRenderer from '../core/CanvasRenderer';
 import { useCanvasDragHandler } from '../core/CanvasDragHandler';
 import { useCanvasViewportHandler } from '../core/CanvasViewportHandler';
@@ -93,7 +93,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
   });
 
   // ビューポートハンドラーを使用
-  const { handleWheel, handleMouseDown, getCursor } = useCanvasViewportHandler({
+  const { handleWheel, handleMouseDown, getCursor, getIsPanning } = useCanvasViewportHandler({
     zoom,
     setZoom,
     pan,
@@ -103,11 +103,13 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
   });
 
   // イベントハンドラーを使用
-  const { handleBackgroundClick, handleContextMenu, handleNodeSelect } = useCanvasEventHandler({
+  const { handleMouseUp: handleCanvasMouseUp, handleContextMenu, handleNodeSelect, handleMouseDown: handleCanvasMouseDown } = useCanvasEventHandler({
     editingNodeId,
     editText,
     onSelectNode,
-    onFinishEdit
+    onFinishEdit,
+    getIsPanning,
+    isDragging: dragState.isDragging
   });
 
   // ドラッグハンドラーのアダプター（Node.tsxとの互換性維持）
@@ -124,6 +126,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     handleDragEnd();
   };
 
+  // マウスダウンイベントを組み合わせる
+  const combinedHandleMouseDown = useCallback((e: React.MouseEvent) => {
+    handleCanvasMouseDown(e);
+    handleMouseDown(e);
+  }, [handleCanvasMouseDown, handleMouseDown]);
+
   return (
     <CanvasRenderer
       svgRef={svgRef}
@@ -138,8 +146,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       cursor={getCursor()}
       dragState={dragState}
       onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onBackgroundClick={handleBackgroundClick}
+      onMouseDown={combinedHandleMouseDown}
+      onMouseUp={handleCanvasMouseUp}
       onContextMenu={handleContextMenu}
       onNodeSelect={handleNodeSelect}
       onStartEdit={onStartEdit}
