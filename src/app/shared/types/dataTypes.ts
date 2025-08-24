@@ -132,7 +132,7 @@ export const createInitialData = (): MindMapData => ({
   updatedAt: new Date().toISOString(),
   rootNode: {
     id: 'root',
-    text: DEFAULTS.ROOT_NODE_TEXT,
+    text: DEFAULTS.NEW_MAP_TITLE,
     x: COORDINATES.ROOT_NODE_X,
     y: COORDINATES.ROOT_NODE_Y,
     fontSize: TYPOGRAPHY.DEFAULT_FONT_SIZE,

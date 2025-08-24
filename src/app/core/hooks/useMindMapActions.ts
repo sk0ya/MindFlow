@@ -21,6 +21,9 @@ export const useMindMapActions = () => {
       newMap.createdAt = new Date().toISOString();
       newMap.updatedAt = new Date().toISOString();
       
+      // rootNodeのテキストもマップタイトルに合わせる
+      newMap.rootNode.text = title;
+      
       logger.debug('Created new map:', newMap);
       return newMap;
     }, []),
