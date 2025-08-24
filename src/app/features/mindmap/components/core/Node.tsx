@@ -2,7 +2,6 @@ import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
 import NodeRenderer from './NodeRenderer';
 import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
-import NodeActions from './NodeActions';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, FileAttachment } from '@shared/types';
@@ -18,9 +17,6 @@ interface NodeProps {
   onDragStart?: (nodeId: string) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd?: (nodeId: string, x: number, y: number) => void;
-  onAddChild: (parentId: string) => void;
-  onAddSibling: (nodeId: string) => void;
-  onDelete: (nodeId: string) => void;
   onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
   onFileUpload: (nodeId: string, files: FileList) => void;
   onRemoveFile: (nodeId: string, fileId: string) => void;
@@ -44,8 +40,6 @@ const Node: React.FC<NodeProps> = ({
   onDragStart,
   onDragMove,
   onDragEnd,
-  onAddChild,
-  onDelete,
   onRightClick,
   onFileUpload,
   onShowImageModal,
@@ -175,15 +169,6 @@ const Node: React.FC<NodeProps> = ({
         blurTimeoutRef={blurTimeoutRef}
       />
 
-      <NodeActions
-        node={node}
-        isSelected={isSelected}
-        isEditing={isEditing}
-        nodeHeight={nodeHeight}
-        onAddChild={onAddChild}
-        onDelete={onDelete}
-        onFileUpload={onFileUpload}
-      />
 
 
     </g>

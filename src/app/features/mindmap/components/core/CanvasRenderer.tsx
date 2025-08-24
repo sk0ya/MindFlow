@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { CanvasConnections, CanvasDragGuide } from '.';
 import { Node } from '../..';
 import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
+import NodeActions from './NodeActions';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import type { FileAttachment, MindMapData, MindMapNode } from '../../../../shared';
 
@@ -170,6 +171,29 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                     onFileContextMenu={(file, position) => {
                       onShowFileActionMenu(file, selectedNode.id, position);
                     }}
+                  />
+                );
+              }
+              return null;
+            })()
+          )}
+
+          {/* 選択されたノードのアクションボタンを最前面に表示 */}
+          {selectedNodeId && (
+            (() => {
+              const selectedNode = allNodes.find(node => node.id === selectedNodeId);
+              if (selectedNode) {
+                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id);
+                return (
+                  <NodeActions
+                    key={`actions-${selectedNodeId}`}
+                    node={selectedNode}
+                    isSelected={selectedNodeId === selectedNode.id}
+                    isEditing={editingNodeId === selectedNode.id}
+                    nodeHeight={nodeSize.height}
+                    onAddChild={onAddChild}
+                    onDelete={onDeleteNode}
+                    onFileUpload={onFileUpload}
                   />
                 );
               }
