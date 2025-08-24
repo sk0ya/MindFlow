@@ -179,15 +179,42 @@ export const createNodeSlice: StateCreator<
   },
 
   deleteNode: (nodeId: string) => {
+    let nextNodeToSelect: string | null = null;
+    
     set((state) => {
       if (!state.normalizedData) return;
       
       try {
+        // Before deleting, find the next node to select
+        if (state.selectedNodeId === nodeId) {
+          const parentId = state.normalizedData.parentMap[nodeId];
+          if (parentId) {
+            const siblings = state.normalizedData.childrenMap[parentId] || [];
+            const currentIndex = siblings.indexOf(nodeId);
+            
+            if (currentIndex !== -1) {
+              // Try next sibling first
+              if (currentIndex < siblings.length - 1) {
+                nextNodeToSelect = siblings[currentIndex + 1];
+              }
+              // If no next sibling, try previous sibling
+              else if (currentIndex > 0) {
+                nextNodeToSelect = siblings[currentIndex - 1];
+              }
+              // If no siblings, select parent (unless it's root)
+              else if (parentId !== 'root') {
+                nextNodeToSelect = parentId;
+              }
+              // If parent is root and no siblings, keep null
+            }
+          }
+        }
+        
         state.normalizedData = deleteNormalizedNode(state.normalizedData, nodeId);
         
-        // Clear selection if deleted node was selected
+        // Set new selection
         if (state.selectedNodeId === nodeId) {
-          state.selectedNodeId = null;
+          state.selectedNodeId = nextNodeToSelect;
         }
         if (state.editingNodeId === nodeId) {
           state.editingNodeId = null;
