@@ -20,6 +20,31 @@ export const isMapId = (id: string): id is MapId => typeof id === 'string' && id
 export const isFileId = (id: string): id is FileId => typeof id === 'string' && id.length > 0;
 export const isUserId = (id: string): id is UserId => typeof id === 'string' && id.length > 0;
 
+// DB保存用のノード型（座標なし）
+export interface MindMapNodeForStorage {
+  id: string;
+  text: string;
+  children: MindMapNodeForStorage[];
+  
+  // Optional visual properties
+  fontSize?: number;
+  fontWeight?: string;
+  fontStyle?: string;
+  color?: string;
+  borderStyle?: string;
+  borderWidth?: number;
+  borderColor?: string;
+  backgroundColor?: string;
+  collapsed?: boolean;
+  
+  // File attachments
+  attachments?: FileAttachment[];
+  
+  // Metadata
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Base node interface that both modes can extend
 export interface MindMapNode {
   id: string;

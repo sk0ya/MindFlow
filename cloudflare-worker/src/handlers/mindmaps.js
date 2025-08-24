@@ -2,6 +2,19 @@
 import { corsHeaders } from '../utils/cors.js';
 import { verifyJWT } from '../utils/auth.js';
 
+// 座標をDB保存から除外するヘルパー関数
+function removeCoordinatesForStorage(node) {
+  if (!node) return node;
+  
+  const { x, y, ...nodeWithoutCoords } = node;
+  
+  return {
+    ...nodeWithoutCoords,
+    children: node.children ? node.children.map(child => removeCoordinatesForStorage(child)) : []
+  };
+}
+
+
 export async function handleRequest(request, env) {
   const requestOrigin = request.headers.get('Origin');
   const url = new URL(request.url);
@@ -190,7 +203,7 @@ async function getMindMap(db, userId, mindmapId) {
   
   const data = JSON.parse(mindmap.data);
   
-  // フロントエンド期待形式に合わせる
+  // フロントエンド期待形式に合わせる（座標はフロントエンドで自動レイアウト）
   const mindmapData = {
     id: mindmap.id,
     title: mindmap.title,
@@ -227,6 +240,12 @@ async function createMindMap(db, userId, mindmapData) {
   
   console.log('💾 マインドマップ作成/更新:', { id, userId, title: mindmapData.title });
   
+  // 座標を除外してDB保存用データを準備
+  const dataForStorage = {
+    ...mindmapData,
+    rootNode: removeCoordinatesForStorage(mindmapData.rootNode)
+  };
+  
   // 既存マップをチェック
   const { results: existing } = await db.prepare(
     'SELECT id, created_at FROM mindmaps WHERE id = ? AND user_id = ?'
@@ -239,7 +258,7 @@ async function createMindMap(db, userId, mindmapData) {
       'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE id = ? AND user_id = ?'
     ).bind(
       mindmapData.title || 'Untitled Mind Map',
-      JSON.stringify(mindmapData),
+      JSON.stringify(dataForStorage),
       now,
       id,
       userId
@@ -281,7 +300,7 @@ async function createMindMap(db, userId, mindmapData) {
       id,
       userId,
       mindmapData.title || 'Untitled Mind Map',
-      JSON.stringify(mindmapData),
+      JSON.stringify(dataForStorage),
       now,
       now
     ).run();
@@ -317,13 +336,19 @@ async function createMindMap(db, userId, mindmapData) {
 }
 
 async function updateMindMap(db, userId, mindmapId, mindmapData) {
+  // 座標を除外してDB保存用データを準備
+  const dataForStorage = {
+    ...mindmapData,
+    rootNode: removeCoordinatesForStorage(mindmapData.rootNode)
+  };
+  
   const now = new Date().toISOString();
   
   const result = await db.prepare(
     'UPDATE mindmaps SET title = ?, data = ?, updated_at = ? WHERE user_id = ? AND id = ?'
   ).bind(
     mindmapData.title || 'Untitled Mind Map',
-    JSON.stringify(mindmapData),
+    JSON.stringify(dataForStorage),
     now,
     userId,
     mindmapId
