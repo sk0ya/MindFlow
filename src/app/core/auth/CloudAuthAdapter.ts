@@ -5,13 +5,13 @@ import { generateDeviceFingerprint, saveDeviceFingerprint } from '../../shared/u
 
 const DEFAULT_CONFIG: AuthConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
-  tokenKey: 'mindflow_session_token', // セッショントークンに変更
+  tokenKey: 'mindflow_session_token',
   refreshTokenKey: 'mindflow_refresh_token'
 };
 
 /**
  * クラウド認証アダプター
- * Magic link認証とJWT管理を提供
+ * ID・パスワード認証とJWT管理を提供
  */
 export class CloudAuthAdapter implements AuthAdapter {
   private _authState: AuthState = {
@@ -72,18 +72,29 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * Magic linkでログイン
+   * ID・パスワードでログイン
    */
-  async login(email: string): Promise<LoginResponse> {
+  async loginWithPassword(email: string, password: string): Promise<LoginResponse> {
     this.setLoading(true);
     
     try {
+      // デバイスフィンガープリントを生成
+      const deviceFingerprint = await generateDeviceFingerprint();
+      logger.debug('🔍 Device fingerprint generated for login:', {
+        deviceId: deviceFingerprint.deviceId,
+        confidence: deviceFingerprint.confidence
+      });
+
       const response = await fetch(`${this.config.apiBaseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email, 
+          password,
+          deviceFingerprint: deviceFingerprint.fingerprint
+        }),
       });
 
       let result: LoginResponse;
@@ -92,38 +103,27 @@ export class CloudAuthAdapter implements AuthAdapter {
         result = await response.json();
       } catch (jsonError) {
         logger.error('❌ Failed to parse JSON response:', jsonError);
-        logger.debug('📧 Server response:', {
-          status: response.status,
-          success: undefined,
-          emailSent: undefined,
-          message: undefined,
-          hasToken: false
-        });
         throw new Error(`Server error: ${response.status} ${response.statusText}`);
       }
 
-      logger.debug('📧 Server response:', {
+      logger.debug('🔐 Login response:', {
         status: response.status,
         success: result.success,
-        emailSent: result.emailSent,
         message: result.message,
-        hasToken: !!result.magicLink
+        hasToken: !!result.token,
+        hasUser: !!result.user
       });
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Login failed');
       }
 
-      if (result.emailSent) {
-        logger.debug('✅ Magic link email sent to:', email);
-      } else {
-        logger.debug('⚠️ Email not sent (dev mode), magic link:', result.magicLink);
+      if (result.token && result.user) {
+        // デバイスフィンガープリントを保存
+        saveDeviceFingerprint(deviceFingerprint);
         
-        // 開発モードの場合、Magic Linkを自動的に開く
-        // eslint-disable-next-line no-alert
-        if (result.magicLink && confirm('メールが送信されませんでした。Magic Linkを直接開きますか？')) {
-          window.location.href = result.magicLink;
-        }
+        this.setAuthenticatedUser(result.user, result.token);
+        logger.debug('✅ Login successful for:', result.user.email);
       }
       
       return result;
@@ -137,53 +137,27 @@ export class CloudAuthAdapter implements AuthAdapter {
   }
 
   /**
-   * Magic linkトークンを検証（デバイスフィンガープリンティング対応）
+   * 既存のloginメソッド（後方互換性のため残す）
+   * @deprecated Use loginWithPassword instead
    */
-  async verifyMagicLink(token: string): Promise<{ success: boolean; error?: string }> {
-    this.setLoading(true);
-    
-    try {
-      // デバイスフィンガープリントを生成
-      const deviceFingerprint = await generateDeviceFingerprint();
-      logger.debug('🔍 Device fingerprint generated for auth:', {
-        deviceId: deviceFingerprint.deviceId,
-        confidence: deviceFingerprint.confidence
-      });
+  async login(_email: string): Promise<LoginResponse> {
+    // パスワードなしのログインは無効にする
+    return { 
+      success: false, 
+      message: 'パスワードが必要です。loginWithPasswordメソッドを使用してください。' 
+    };
+  }
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/auth/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          token,
-          deviceFingerprint: deviceFingerprint.fingerprint
-        }),
-      });
-
-      const result: LoginResponse = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Token verification failed');
-      }
-
-      if (result.token && result.user) {
-        // デバイスフィンガープリントを保存
-        saveDeviceFingerprint(deviceFingerprint);
-        
-        this.setAuthenticatedUser(result.user, result.token);
-        logger.debug('✅ Magic link verified for:', result.user.email);
-        return { success: true };
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Verification failed';
-      this.setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      this.setLoading(false);
-    }
+  /**
+   * Magic linkトークンを検証（デバイスフィンガープリンティング対応）
+   * @deprecated Magic link authentication is deprecated
+   */
+  async verifyMagicLink(_token: string): Promise<{ success: boolean; error?: string }> {
+    logger.warn('verifyMagicLink is deprecated. Use loginWithPassword instead.');
+    return { 
+      success: false, 
+      error: 'Magic link認証は無効になりました。ID・パスワードでログインしてください。' 
+    };
   }
 
   /**

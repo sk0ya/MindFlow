@@ -19,8 +19,8 @@ export interface LoginResponse {
   message: string;
   token?: string;
   user?: AuthUser;
-  emailSent?: boolean;
-  magicLink?: string;
+  emailSent?: boolean; // Deprecated - kept for compatibility
+  magicLink?: string; // Deprecated - kept for compatibility
 }
 
 export interface AuthConfig {
@@ -44,8 +44,9 @@ export interface AuthAdapter {
   readonly authState: AuthState;
   
   // Authentication operations
-  login(email: string): Promise<LoginResponse>;
-  verifyMagicLink(token: string): Promise<{ success: boolean; error?: string }>;
+  login(_email: string): Promise<LoginResponse>; // Deprecated - kept for compatibility
+  loginWithPassword(_email: string, _password: string): Promise<LoginResponse>;
+  verifyMagicLink(_token: string): Promise<{ success: boolean; error?: string }>; // Deprecated
   logout(): Promise<void>;
   
   // Token management
@@ -53,7 +54,7 @@ export interface AuthAdapter {
   refreshToken(): Promise<boolean>;
   
   // Event handlers
-  onAuthChange(callback: (user: AuthUser | null) => void): () => void;
+  onAuthChange(_callback: (_user: AuthUser | null) => void): () => void;
   
   // Lifecycle
   initialize(): Promise<void>;

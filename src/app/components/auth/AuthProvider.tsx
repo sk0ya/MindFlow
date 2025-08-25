@@ -6,7 +6,8 @@ import { logger } from '../../shared/utils/logger';
 interface AuthContextType {
   authAdapter: AuthAdapter;
   authState: AuthState;
-  login: (email: string) => Promise<{ success: boolean; error?: string }>;
+  login: (_email: string) => Promise<{ success: boolean; error?: string }>; // Deprecated
+  loginWithPassword: (_email: string, _password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isReady: boolean;
 }
@@ -48,39 +49,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return unsubscribe;
   }, [authAdapter]);
 
-  // Magic linkトークンの処理
+  // URLパラメータからトークンを削除（マジックリンク機能は無効化）
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     
     if (token) {
-      logger.info('Magic link token detected in AuthProvider:', token);
-      
-      if (isReady) {
-        const verifyToken = async () => {
-          try {
-            logger.info('Attempting to verify magic link token');
-            const result = await authAdapter.verifyMagicLink(token);
-            
-            if (result.success) {
-              logger.info('Magic link verified successfully');
-              // URLからトークンを削除
-              const newUrl = window.location.pathname + window.location.hash;
-              window.history.replaceState({}, document.title, newUrl);
-            } else {
-              logger.error('Magic link verification failed:', result.error);
-            }
-          } catch (error) {
-            logger.error('Magic link verification error:', error);
-          }
-        };
-
-        verifyToken();
-      } else {
-        logger.info('AuthProvider not ready yet, will verify token when ready');
-      }
+      logger.info('Legacy magic link token detected, removing from URL');
+      // URLからトークンを削除
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
     }
-  }, [authAdapter, isReady]);
+  }, []);
 
   // クリーンアップ
   useEffect(() => {
@@ -92,7 +72,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const contextValue: AuthContextType = {
     authAdapter,
     authState,
-    login: authAdapter.login.bind(authAdapter),
+    login: authAdapter.login.bind(authAdapter), // Deprecated
+    loginWithPassword: async (email: string, password: string) => {
+      try {
+        const result = await authAdapter.loginWithPassword(email, password);
+        return { success: result.success, error: result.success ? undefined : result.message };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Login failed';
+        return { success: false, error: errorMessage };
+      }
+    },
     logout: authAdapter.logout.bind(authAdapter),
     isReady
   };

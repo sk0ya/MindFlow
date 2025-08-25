@@ -853,7 +853,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
               onModeChange('local');
             }
           }}
-          authAdapter={authAdapter}
         />
       )}
 

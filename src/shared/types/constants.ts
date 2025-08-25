@@ -7,7 +7,7 @@ export const FILE_CONSTANTS = {
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_TYPES: [
     'image/jpeg',
-    'image/jpg', 
+    'image/jpg',
     'image/png',
     'image/gif',
     'image/webp',
@@ -19,7 +19,7 @@ export const FILE_CONSTANTS = {
   IMAGE_TYPES: [
     'image/jpeg',
     'image/jpg',
-    'image/png', 
+    'image/png',
     'image/gif',
     'image/webp'
   ]
@@ -29,29 +29,28 @@ export const FILE_CONSTANTS = {
 export const LAYOUT_CONSTANTS = {
   // Node positioning
   RADIAL_BASE_RADIUS: 150,
-  LEVEL_SPACING: 200,
   VERTICAL_SPACING: 80,
   MIN_NODE_DISTANCE: 50,
   SIBLING_SPACING: 60,
   CHILD_OFFSET_X: 200,
   CHILD_OFFSET_Y: 100,
-  
+
   // Grid settings
   GRID_SIZE: 20,
   SNAP_THRESHOLD: 10,
-  
+
   // Canvas bounds
   MIN_ZOOM: 0.1,
   MAX_ZOOM: 5.0,
   DEFAULT_ZOOM: 1.0,
   ZOOM_STEP: 0.1,
   PAN_SENSITIVITY: 1.0,
-  
+
   // Animation
   ANIMATION_DURATION: 300,
   EASING: 'ease-out',
   TRANSITION_DELAY: 50,
-  
+
   // Performance thresholds
   MAX_VISIBLE_NODES: 1000,
   COLLISION_CHECK_LIMIT: 100,
@@ -188,7 +187,7 @@ export const API_CONSTANTS = {
 export const KEYBOARD_SHORTCUTS = {
   NAVIGATION: {
     SELECT_UP: 'ArrowUp',
-    SELECT_DOWN: 'ArrowDown', 
+    SELECT_DOWN: 'ArrowDown',
     SELECT_LEFT: 'ArrowLeft',
     SELECT_RIGHT: 'ArrowRight'
   },
@@ -237,7 +236,7 @@ export const ERROR_CONSTANTS = {
   },
   SEVERITY_COLORS: {
     low: '#3498db',
-    medium: '#f39c12', 
+    medium: '#f39c12',
     high: '#e74c3c',
     critical: '#8e44ad'
   }
