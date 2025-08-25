@@ -2,9 +2,12 @@
 
 import { corsHeaders } from '../utils/cors.js';
 import { authenticateUser, generateJWT, verifyJWT } from '../utils/auth.js';
-import { sendMagicLinkEmail } from '../utils/email.js';
-import { createAuthToken, verifyAuthToken, cleanupExpiredTokens } from '../utils/authTokens.js';
-import { validateSession, checkRateLimit, cleanupExpiredSessions } from '../utils/deviceSecurity.js';
+import { 
+  hashPassword, 
+  verifyPassword, 
+  validatePasswordStrength, 
+  calculateLockoutDuration 
+} from '../utils/password.js';
 
 export async function handleAuthRequest(request, env) {
   const requestOrigin = request.headers.get('Origin');
@@ -19,15 +22,17 @@ export async function handleAuthRequest(request, env) {
     switch (method) {
       case 'POST':
         if (action === 'login') {
-          response = await handleSendMagicLink(request, env);
+          response = await handlePasswordLogin(request, env);
         } else if (action === 'register') {
-          response = await handleSendMagicLink(request, env);
-        } else if (action === 'verify') {
-          response = await handleVerifyMagicLink(request, env);
+          response = await handleUserRegistration(request, env);
         } else if (action === 'refresh') {
           response = await handleRefreshToken(request, env);
         } else if (action === 'logout') {
           response = await handleLogout(request, env);
+        } else if (action === 'reset-password') {
+          response = await handlePasswordReset(request, env);
+        } else if (action === 'change-password') {
+          response = await handlePasswordChange(request, env);
         } else {
           throw new Error(`Unknown auth action: ${action}`);
         }
@@ -36,14 +41,8 @@ export async function handleAuthRequest(request, env) {
       case 'GET':
         if (action === 'me') {
           response = await handleGetCurrentUser(request, env);
-        } else if (action === 'verify') {
-          response = await handleVerifyMagicLink(request, env);
         } else if (action === 'validate') {
           response = await handleValidateToken(request, env);
-        } else if (action === 'google') {
-          response = await handleGoogleAuth(request, env);
-        } else if (action === 'google-callback') {
-          response = await handleGoogleCallback(request, env);
         } else if (action === 'health') {
           response = await handleHealthCheck(request, env);
         } else if (action === 'logout') {
@@ -89,163 +88,220 @@ export async function handleAuthRequest(request, env) {
   }
 }
 
-// Magic Link送信処理（JSONオブジェクトを返す）
-async function handleSendMagicLink(request, env) {
-  const { email } = await request.json();
+// ID・パスワードログイン処理
+async function handlePasswordLogin(request, env) {
+  const { email, password, deviceFingerprint } = await request.json();
   
-  console.log('🔍 Magic Link送信開始:', { email });
+  console.log('🔍 Password login attempt:', { email, hasPassword: !!password, hasDeviceFingerprint: !!deviceFingerprint });
   
-  if (!email) {
-    throw new Error('Email is required');
+  if (!email || !password) {
+    throw new Error('メールアドレスとパスワードが必要です');
   }
 
   // メールアドレスの形式チェック
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new Error('Invalid email format');
+    throw new Error('メールアドレスの形式が正しくありません');
   }
 
-  // レートリミットチェック
-  const rateLimit = await checkRateLimit(email, 'login', env);
-  if (!rateLimit.allowed) {
-    const error = new Error(`Too many login attempts. Try again in ${Math.ceil((rateLimit.resetTime - Math.floor(Date.now() / 1000)) / 60)} minutes.`);
-    error.status = 429;
-    throw error;
-  }
-  
+
   try {
-    console.log('🔍 認証トークン生成開始');
-    // 認証トークンを生成（許可チェック含む）
-    const authToken = await createAuthToken(email, request, env);
-    console.log('✅ 認証トークン生成完了:', { tokenLength: authToken.token.length });
-    
-    // Magic Linkを生成（パスの重複を避ける）
-    const baseUrl = env.FRONTEND_URL.endsWith('/') ? env.FRONTEND_URL.slice(0, -1) : env.FRONTEND_URL;
-    const magicLink = `${baseUrl}/?token=${authToken.token}&type=magic-link`;
-    
-    console.log('🔍 メール送信開始');
-    // メール送信（トークンも渡す）
-    const emailResult = await sendMagicLinkEmail(email, magicLink, env, authToken.token);
-    console.log('✅ メール送信完了:', { messageId: emailResult.messageId });
-    
-    console.log('🔍 期限切れトークン・セッションクリーンアップ開始');
-    // 期限切れトークンとセッションのクリーンアップ
-    await cleanupExpiredTokens(env);
-    await cleanupExpiredSessions(env);
-    console.log('✅ クリーンアップ完了');
-    
-    // メッセージを送信結果に応じて調整
-    let message;
-    if (emailResult.messageId === 'dev-mode') {
-      // 開発環境（APIキーが設定されていない）
-      message = 'Magic Linkを生成しました\n開発環境のためメールは送信されず、\nリンクを直接表示しています。';
-    } else if (emailResult.messageId === 'fallback-mode') {
-      // 本番環境でメール送信に失敗した場合
-      message = 'メール送信に失敗しました。\nしばらく時間をおいて再度お試しいただくか、\n管理者にお問い合わせください。';
-    } else {
-      // メール送信成功
-      message = `${email}にログインリンクを送信しました。\nメールを確認してログインしてください。`;
-    }
-    
-    // メール送信に失敗した場合はエラーを投げる
-    if (emailResult.messageId === 'fallback-mode') {
-      // 一時的にデバッグ情報を含める
-      const error = new Error(message);
-      error.status = 503; // Service Unavailable
-      error.debugInfo = emailResult;
+    // ユーザーの存在確認とアカウントロック状態チェック
+    const { results } = await env.DB.prepare(`
+      SELECT id, password_hash, salt, failed_login_attempts, account_locked_until, last_login_at
+      FROM users 
+      WHERE id = ?
+    `).bind(email).all();
+
+    if (results.length === 0) {
+      // ユーザーが存在しない場合は登録を促す
+      const error = new Error('アカウントが存在しません。新規登録を行ってください。');
+      error.status = 404;
       throw error;
     }
+
+    const user = results[0];
+
+    // パスワードが設定されていない場合
+    if (!user.password_hash || !user.salt) {
+      const error = new Error('パスワードが設定されていません。管理者にお問い合わせください。');
+      error.status = 400;
+      throw error;
+    }
+
+    // アカウントロック状態チェック
+    if (user.account_locked_until) {
+      const lockUntil = new Date(user.account_locked_until);
+      if (lockUntil > new Date()) {
+        const remainingMinutes = Math.ceil((lockUntil - new Date()) / (1000 * 60));
+        const error = new Error(`アカウントがロックされています。${remainingMinutes}分後に再度お試しください。`);
+        error.status = 423; // Locked
+        throw error;
+      } else {
+        // ロック期限切れの場合、ロックを解除
+        await env.DB.prepare(`
+          UPDATE users 
+          SET account_locked_until = NULL, failed_login_attempts = 0 
+          WHERE id = ?
+        `).bind(email).run();
+      }
+    }
+
+    // パスワード検証
+    const isPasswordValid = await verifyPassword(password, user.password_hash, user.salt);
     
-    const response = {
+    if (!isPasswordValid) {
+      // ログイン失敗回数を増加
+      const failedAttempts = (user.failed_login_attempts || 0) + 1;
+      const lockoutDuration = calculateLockoutDuration(failedAttempts);
+      
+      let lockUntil = null;
+      if (lockoutDuration > 0) {
+        lockUntil = new Date(Date.now() + lockoutDuration * 60 * 1000).toISOString();
+      }
+
+      await env.DB.prepare(`
+        UPDATE users 
+        SET failed_login_attempts = ?, account_locked_until = ?
+        WHERE id = ?
+      `).bind(failedAttempts, lockUntil, email).run();
+
+      let errorMessage = 'メールアドレスまたはパスワードが間違っています。';
+      if (lockUntil) {
+        errorMessage += ` アカウントが${lockoutDuration}分間ロックされました。`;
+      }
+      
+      const error = new Error(errorMessage);
+      error.status = 401;
+      throw error;
+    }
+
+    // ログイン成功 - 失敗カウンターをリセット
+    await env.DB.prepare(`
+      UPDATE users 
+      SET failed_login_attempts = 0, account_locked_until = NULL, last_login_at = datetime('now')
+      WHERE id = ?
+    `).bind(email).run();
+
+    console.log('✅ Password authentication successful for:', email);
+
+    // JWT生成
+    const authResult = await authenticateUser(email);
+    
+
+
+    return {
       success: true,
-      message: message,
-      expiresIn: 600, // 10分
-      emailSent: emailResult.messageId !== 'dev-mode'
+      message: 'ログインに成功しました',
+      token: authResult.token,
+      user: {
+        id: email,
+        email: email,
+        lastLoginAt: new Date().toISOString()
+      }
     };
-    
-    // セキュリティ上、Magic Linkは直接表示しない
-    // 開発環境でのみデバッグ情報を含める
-    if (env.NODE_ENV === 'development' && emailResult.messageId === 'dev-mode') {
-      response.magicLink = magicLink;
-      response.debugEmailResult = emailResult;
-    }
-    
-    // セキュリティのため、トークンはレスポンスに含めない
-    // トークンはメールでのみ提供する
-    
-    return response;
+
   } catch (error) {
-    // 許可されていないメールアドレスの場合
-    if (error.message.includes('Access denied')) {
-      const registrationError = new Error('このメールアドレスは登録されていません。\nアクセスには事前の承認が必要です。');
-      registrationError.status = 403;
-      throw registrationError;
+    if (error.status) {
+      throw error;
     }
-    throw error;
+    console.error('❌ Password login error:', error);
+    throw new Error('ログイン処理でエラーが発生しました');
   }
 }
 
-// Magic Link検証処理
-async function handleVerifyMagicLink(request, env) {
-  const url = new URL(request.url);
-  let token;
+// ユーザー登録処理
+async function handleUserRegistration(request, env) {
+  const { email, password } = await request.json();
   
-  console.log('🔍 Magic Link検証開始:', { 
-    method: request.method, 
-    url: request.url.replace(/token=[^&]+/, 'token=***') 
-  });
+  console.log('🔍 User registration attempt:', { email, hasPassword: !!password });
   
-  if (request.method === 'GET') {
-    token = url.searchParams.get('token');
-  } else {
-    const body = await request.json();
-    token = body.token;
+  if (!email || !password) {
+    throw new Error('メールアドレスとパスワードが必要です');
   }
-  
-  console.log('🔍 Token抽出:', { 
-    hasToken: !!token, 
-    tokenStart: token?.substring(0, 10) + '...' 
-  });
-  
-  if (!token) {
-    console.error('❌ Token不足');
-    throw new Error('Authentication token is required');
+
+  // メールアドレスの形式チェック
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error('メールアドレスの形式が正しくありません');
   }
-  
-  // レートリミットチェック
-  const userAgent = request.headers.get('User-Agent') || 'unknown';
-  const rateLimit = await checkRateLimit(userAgent, 'auth_verify', env);
-  if (!rateLimit.allowed) {
-    const error = new Error('Too many verification attempts. Please wait a moment.');
-    error.status = 429;
+
+  // パスワード強度チェック
+  const passwordValidation = validatePasswordStrength(password);
+  if (!passwordValidation.valid) {
+    const error = new Error(passwordValidation.errors.join('\n'));
+    error.status = 400;
     throw error;
   }
-  
+
+  // 許可されたメールアドレスかチェック（環境変数で制御）
+  const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
+  if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
+    const error = new Error('このメールアドレスでの登録は許可されていません。');
+    error.status = 403;
+    throw error;
+  }
+
   try {
-    console.log('🔍 Token検証開始 - バックエンド');
-    const result = await verifyAuthToken(token, request, env);
-    console.log('✅ Token検証成功:', { 
-      success: result.success,
-      hasToken: !!result.token,
-      hasUser: !!result.user,
-      userEmail: result.user?.email,
-      sessionId: result.sessionId
-    });
+    // 既存ユーザーの確認
+    const { results } = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(email).all();
     
-    // JSONレスポンスとして返す（修正: Response オブジェクトを作成）
-    const requestOrigin = request.headers.get('Origin');
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
+    if (results.length > 0) {
+      const error = new Error('このメールアドレスは既に登録されています。');
+      error.status = 409; // Conflict
+      throw error;
+    }
+
+    // パスワードハッシュ化
+    const { hash, salt } = await hashPassword(password);
+    
+    // ユーザー作成
+    const now = new Date().toISOString();
+    await env.DB.prepare(`
+      INSERT INTO users (
+        id, password_hash, salt, created_at, updated_at, password_updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(email, hash, salt, now, now, now).run();
+
+    console.log('✅ User registration successful:', email);
+
+    // 自動ログイン
+    const authResult = await authenticateUser(email);
+    
+    return {
+      success: true,
+      message: 'アカウントの作成に成功しました',
+      token: authResult.token,
+      user: {
+        id: email,
+        email: email,
+        createdAt: now
       }
-    });
+    };
+
   } catch (error) {
-    console.error('❌ Magic Link検証エラー:', error);
-    throw error;
+    if (error.status) {
+      throw error;
+    }
+    console.error('❌ User registration error:', error);
+    throw new Error('アカウント作成でエラーが発生しました');
   }
 }
+
+// パスワードリセット処理
+async function handlePasswordReset(request, env) {
+  // 将来実装: パスワードリセット機能
+  throw new Error('パスワードリセット機能は現在実装中です');
+}
+
+// パスワード変更処理
+async function handlePasswordChange(request, env) {
+  // 将来実装: パスワード変更機能
+  throw new Error('パスワード変更機能は現在実装中です');
+}
+
+
+
 
 
 // トークン更新処理
@@ -276,7 +332,7 @@ async function handleRefreshToken(request, env) {
   };
 }
 
-// トークン検証エンドポイント（セッション管理対応）
+// トークン検証エンドポイント（シンプル版）
 async function handleValidateToken(request, env) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -285,38 +341,24 @@ async function handleValidateToken(request, env) {
     throw error;
   }
   
-  const sessionToken = authHeader.substring(7);
+  const token = authHeader.substring(7);
+  const verification = await verifyJWT(token);
   
-  // セッション検証を実行
-  const validation = await validateSession(sessionToken, request, env);
-  
-  if (!validation.valid) {
-    console.error('❌ Session validation failed:', validation.reason, validation.riskLevel);
-    
-    // エラーメッセージをより詳細に
-    let errorMessage = 'Invalid or expired session';
-    if (validation.reason === 'session_expired_inactive') {
-      errorMessage = 'Session expired due to inactivity. Please login again.';
-    } else if (validation.reason === 'device_mismatch') {
-      errorMessage = 'Device verification failed. Please login again.';
-    }
-    
-    const error = new Error(errorMessage);
+  if (!verification.valid) {
+    const error = new Error('Invalid token');
     error.status = 401;
     throw error;
   }
   
-  const userId = validation.user.id;
-  console.log('✅ Session validated for user:', userId);
+  const userId = verification.payload.userId;
+  console.log('✅ Token validated for user:', userId);
   
   return {
     success: true,
     user: {
       id: userId,
-      email: userId, // id = email in our schema
-      validated: true,
-      sessionId: validation.session.id,
-      lastAccessed: validation.session.last_accessed_at
+      email: userId,
+      validated: true
     }
   };
 }
@@ -359,145 +401,15 @@ async function handleGetCurrentUser(request, env) {
   };
 }
 
-// Google OAuth認証（OAuth2フロー開始）
-async function handleGoogleAuth(request, env) {
-  const clientId = env.GOOGLE_CLIENT_ID;
-  const redirectUri = `${env.API_BASE_URL}/api/auth/google-callback`;
-  
-  if (!clientId) {
-    throw new Error('Google OAuth not configured');
-  }
-  
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'offline',
-    prompt: 'consent'
-  });
-  
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  
-  return {
-    authUrl
-  };
-}
 
-// Google OAuth コールバック処理
-async function handleGoogleCallback(request, env) {
-  const url = new URL(request.url);
-  const code = url.searchParams.get('code');
-  const error = url.searchParams.get('error');
-  
-  if (error) {
-    throw new Error(`OAuth error: ${error}`);
-  }
-  
-  if (!code) {
-    throw new Error('Authorization code not provided');
-  }
-  
-  // アクセストークンを取得
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
-      code,
-      grant_type: 'authorization_code',
-      redirect_uri: `${env.API_BASE_URL}/api/auth/google-callback`
-    })
-  });
-  
-  const tokenData = await tokenResponse.json();
-  
-  if (!tokenResponse.ok) {
-    throw new Error(`Token exchange failed: ${tokenData.error_description}`);
-  }
-  
-  // ユーザー情報を取得
-  const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: {
-      'Authorization': `Bearer ${tokenData.access_token}`
-    }
-  });
-  
-  const userData = await userResponse.json();
-  
-  if (!userResponse.ok) {
-    throw new Error('Failed to fetch user data');
-  }
-  
-  // 許可されたメールアドレスかチェック
-  const allowedEmails = env.ALLOWED_EMAILS ? env.ALLOWED_EMAILS.split(',').map(e => e.trim()) : [];
-  if (allowedEmails.length > 0 && !allowedEmails.includes(userData.email)) {
-    const error = new Error('Access denied: Email not authorized');
-    error.status = 403;
-    throw error;
-  }
-  
-  // ユーザーをデータベースに保存/更新（メールアドレスをそのまま使用）
-  const userId = userData.email;
-  const now = new Date().toISOString();
-  
-  const { results } = await env.DB.prepare(
-    'SELECT * FROM users WHERE id = ?'
-  ).bind(userData.email).all();
-  
-  if (results.length === 0) {
-    await env.DB.prepare(
-      'INSERT INTO users (id, created_at, updated_at) VALUES (?, ?, ?)'
-    ).bind(userId, now, now).run();
-  }
-  
-  // JWTトークンを生成
-  const authResult = await authenticateUser(userData.email);
-  
-  // フロントエンドにリダイレクト（トークンを含む）
-  const redirectUrl = `${env.FRONTEND_URL}/auth-callback?token=${authResult.token}`;
-  
-  return Response.redirect(redirectUrl, 302);
-}
 
 // ログアウト処理
 async function handleLogout(request, env) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // トークンがない場合でもログアウト成功として扱う
-    return {
-      success: true,
-      message: 'Logged out successfully'
-    };
-  }
-  
-  const sessionToken = authHeader.substring(7);
-  
-  try {
-    // セッションを無効化
-    await env.DB.prepare(`
-      UPDATE user_sessions 
-      SET revoked_at = datetime('now') 
-      WHERE session_token = ?
-    `).bind(sessionToken).run();
-    
-    console.log('✅ Session revoked on logout');
-    
-    return {
-      success: true,
-      message: 'Logged out successfully'
-    };
-  } catch (error) {
-    console.error('❌ Logout error:', error);
-    // ログアウトは失敗しても成功として扱う
-    return {
-      success: true,
-      message: 'Logged out successfully'
-    };
-  }
+  // シンプルなログアウト処理
+  return {
+    success: true,
+    message: 'Logged out successfully'
+  };
 }
 
 // 健全性チェック
@@ -506,19 +418,10 @@ async function handleHealthCheck(request, env) {
     // データベース接続をテスト
     const testQuery = await env.DB.prepare('SELECT 1 as test').first();
     
-    // セッション統計を取得
-    const sessionStats = await env.DB.prepare(`
-      SELECT 
-        COUNT(*) as total_sessions,
-        COUNT(CASE WHEN expires_at > datetime('now') AND revoked_at IS NULL THEN 1 END) as active_sessions
-      FROM user_sessions
-    `).first();
-    
     return {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      database: testQuery ? 'connected' : 'disconnected',
-      sessions: sessionStats || { total_sessions: 0, active_sessions: 0 }
+      database: testQuery ? 'connected' : 'disconnected'
     };
   } catch (error) {
     console.error('Health check failed:', error);
