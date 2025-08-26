@@ -29,14 +29,6 @@ export const useMindMapPersistence = (config: StorageConfig = { mode: 'local' })
     const modeChanged = prevConfig?.mode !== config.mode;
     const authAdapterChanged = prevConfig?.authAdapter !== config.authAdapter;
     
-    logger.info('useMindMapPersistence: useEffect triggered', {
-      mode: config.mode,
-      hasAuthAdapter: !!config.authAdapter,
-      currentAdapterExists: !!storageAdapter,
-      isInitialized,
-      modeChanged,
-      authAdapterChanged
-    });
 
     // 設定が実際に変更された場合のみ再初期化
     if (!prevConfig || modeChanged || authAdapterChanged) {

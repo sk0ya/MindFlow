@@ -30,13 +30,6 @@ export const useCanvasDragHandler = ({
   onChangeSiblingOrder,
   rootNode
 }: CanvasDragHandlerProps) => {
-  // 関数の存在をデバッグログ出力
-  logger.debug('CanvasDragHandler 初期化:', {
-    hasOnChangeParent: !!onChangeParent,
-    hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
-    onChangeParentType: typeof onChangeParent,
-    onChangeSiblingOrderType: typeof onChangeSiblingOrder
-  });
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedNodeId: null,
@@ -56,12 +49,6 @@ export const useCanvasDragHandler = ({
     const svgX = (x - svgRect.left) / (zoom * 1.5) - pan.x;
     const svgY = (y - svgRect.top) / (zoom * 1.5) - pan.y;
 
-    logger.debug('座標変換:', {
-      clientX: x, clientY: y,
-      svgLeft: svgRect.left, svgTop: svgRect.top,
-      zoom, panX: pan.x, panY: pan.y,
-      svgX, svgY
-    });
 
     // 各ノードとの距離を計算して最も近いものを見つける
     let closestNode: MindMapNode | null = null;
@@ -137,26 +124,12 @@ export const useCanvasDragHandler = ({
       action = 'move-parent';
     }
 
-    logger.debug('ドロップ判定結果:', {
-      closestNodeId: targetNode.id,
-      relativeY,
-      topThreshold,
-      bottomThreshold,
-      position,
-      action,
-      draggedParentId: draggedParent?.id,
-      targetParentId: targetParent?.id,
-      areSameParent: draggedParent?.id === targetParent?.id,
-      draggedNodeId: dragState.draggedNodeId,
-      shiftKey
-    });
 
     return { node: targetNode, position, action };
   }, [allNodes, zoom, pan, dragState.draggedNodeId, svgRef, rootNode]);
 
   // ドラッグ開始時の処理
   const handleDragStart = useCallback((nodeId: string, _e: React.MouseEvent | React.TouchEvent) => {
-    logger.debug('ドラッグ開始:', { nodeId });
     setDragState({
       isDragging: true,
       draggedNodeId: nodeId,
@@ -184,11 +157,6 @@ export const useCanvasDragHandler = ({
       if (prev.dropTargetId !== (targetNode?.id || null) ||
         prev.dropPosition !== position ||
         prev.dropAction !== action) {
-        logger.debug('ドラッグ移動 - 状態更新:', {
-          targetNodeId: targetNode?.id,
-          position,
-          action
-        });
         return {
           ...prev,
           dropTargetId: targetNode?.id || null,
@@ -204,14 +172,6 @@ export const useCanvasDragHandler = ({
   // ドラッグ終了時の処理
   const handleDragEnd = useCallback(() => {
     setDragState(prevState => {
-      logger.debug('handleDragEnd 実行:', {
-        draggedNodeId: prevState.draggedNodeId,
-        dropTargetId: prevState.dropTargetId,
-        dropPosition: prevState.dropPosition,
-        dropAction: prevState.dropAction,
-        hasOnChangeParent: !!onChangeParent,
-        hasOnChangeSiblingOrder: !!onChangeSiblingOrder
-      });
 
       if (prevState.dropTargetId &&
         prevState.dropTargetId !== prevState.draggedNodeId &&

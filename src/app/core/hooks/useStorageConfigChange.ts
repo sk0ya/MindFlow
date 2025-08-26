@@ -27,13 +27,6 @@ export const useStorageConfigChange = (
     const modeChanged = currentConfig?.mode !== prevConfig?.mode;
     const authChanged = currentConfig?.authAdapter !== prevConfig?.authAdapter;
 
-    logger.info('Storage config change check', {
-      prevMode: prevConfig?.mode,
-      currentMode: currentConfig?.mode,
-      modeChanged,
-      authChanged,
-      persistenceInitialized: dependencies.isInitialized
-    });
 
     if (modeChanged || authChanged) {
       logger.info('Storage config changed, reloading data', {

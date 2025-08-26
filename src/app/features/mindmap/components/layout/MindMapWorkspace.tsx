@@ -55,12 +55,6 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   pan,
   setPan
 }) => {
-  logger.debug('MindMapWorkspace props:', { 
-    hasOnMoveNode: !!onMoveNode,
-    hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
-    onMoveNodeType: typeof onMoveNode,
-    onChangeSiblingOrderType: typeof onChangeSiblingOrder
-  });
   
   return (
     <ErrorBoundary>

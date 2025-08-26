@@ -24,12 +24,6 @@ export const useDataReset = (
     const currentResetKey = resetKey;
     const prevResetKey = prevResetKeyRef.current;
 
-    logger.info('Reset key effect triggered', {
-      currentResetKey,
-      prevResetKey,
-      shouldReset: currentResetKey !== prevResetKey,
-      persistenceInitialized: dependencies.isInitialized
-    });
 
     if (currentResetKey !== prevResetKey) {
       logger.info('Reset key changed, forcing data reload:', currentResetKey);

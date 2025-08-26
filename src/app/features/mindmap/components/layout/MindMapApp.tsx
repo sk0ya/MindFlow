@@ -38,7 +38,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   resetKey = 0
 }) => {
   
-  logger.debug('MindMapApp: Rendering with resetKey:', resetKey, 'storageMode:', storageMode);
   const { showNotification } = useNotification();
   const { handleError, handleAsyncError } = useErrorHandler();
   const { retryableUpload, clearUploadState } = useRetryableUpload({
@@ -121,11 +120,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   
   // Create storage configuration based on selected mode
   const storageConfig: StorageConfig = React.useMemo(() => {
-    logger.debug('MindMapApp: Creating storageConfig', {
-      storageMode,
-      hasAuthAdapter: !!authAdapter,
-      authAdapterRef: authAdapter ? authAdapter.constructor.name : 'none'
-    });
     
     let config: StorageConfig;
     switch (storageMode) {
@@ -140,11 +134,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         break;
     }
     
-    logger.debug('MindMapApp: StorageConfig created', {
-      mode: config.mode,
-      hasAuthAdapter: !!config.authAdapter,
-      configHash: JSON.stringify(config).slice(0, 50) + '...'
-    });
     
     return config;
   }, [storageMode, authAdapter]);

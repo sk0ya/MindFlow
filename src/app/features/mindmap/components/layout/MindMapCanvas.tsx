@@ -76,12 +76,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
   const allNodes = flattenVisibleNodes(data.rootNode);
   
   // ドラッグハンドラーを使用
-  logger.debug('MindMapCanvas useCanvasDragHandler 呼び出し:', { 
-    hasOnChangeParent: !!onChangeParent,
-    hasOnChangeSiblingOrder: !!onChangeSiblingOrder,
-    onChangeParentType: typeof onChangeParent,
-    onChangeSiblingOrderType: typeof onChangeSiblingOrder
-  });
   const { dragState, handleDragStart, handleDragMove, handleDragEnd } = useCanvasDragHandler({
     allNodes,
     zoom,
