@@ -65,10 +65,10 @@ export async function handleRequest(request, env) {
           response = fileResponse;
         } else if (nodeId) {
           // 特定ノードの全ファイル取得
-          response = await getNodeFiles(env.DB, userId, mindmapId, nodeId);
+          response = await getNodeFiles(env.DB, userId, mindmapId, nodeId, env);
         } else {
           // マインドマップの全ファイル取得
-          response = await getMindmapFiles(env.DB, userId, mindmapId);
+          response = await getMindmapFiles(env.DB, userId, mindmapId, env);
         }
         break;
       
@@ -176,29 +176,9 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
       thumbnailPath = await generateThumbnail(env.FILES, fileBuffer, storagePath, file.type);
     }
 
-    // データベースに記録
-    if (!env.DB) {
-      console.error('❌ D1 database binding "DB" is not configured');
-      throw new Error('Database is not properly configured. Please check the D1 binding.');
-    }
+    console.log('✅ File uploaded to R2 - no database record needed');
 
     const now = new Date().toISOString();
-    console.log('💾 Saving file metadata to database...');
-    await env.DB.prepare(`
-      INSERT INTO attachments 
-      (id, mindmap_id, node_id, file_name, original_name, file_size, mime_type, 
-       storage_path, thumbnail_path, attachment_type, uploaded_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      fileId, mindmapId, nodeId, file.name, file.name, file.size, file.type,
-      storagePath, thumbnailPath, attachmentType, now
-    ).run();
-
-    // マインドマップの更新日時を更新
-    await env.DB.prepare(
-      'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
-    ).bind(now, mindmapId).run();
-
     return {
       id: fileId,
       fileName: file.name,
@@ -223,7 +203,7 @@ async function uploadFile(env, userId, mindmapId, nodeId, request) {
 }
 
 /**
- * ファイル取得処理
+ * ファイル取得処理（R2のみ使用）
  */
 async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams, requestOrigin = null) {
   console.log('📥 getFile called with:', { userId, mindmapId, nodeId, fileId, searchParams: Object.fromEntries(searchParams) });
@@ -237,176 +217,121 @@ async function getFile(env, userId, mindmapId, nodeId, fileId, searchParams, req
     throw ownershipError;
   }
 
-  // ファイル情報取得
-  let attachment;
-  try {
-    console.log('🔍 Querying attachment:', { fileId, mindmapId, nodeId });
-    attachment = await env.DB.prepare(
-      'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
-    ).bind(fileId, mindmapId, nodeId).first();
-    console.log('💾 Attachment query result:', attachment);
-    
-    // さらにデバッグ：全てのattachmentsを確認
-    if (!attachment) {
-      console.log('🔍 Checking all attachments for this mindmap:');
-      const allAttachments = await env.DB.prepare(
-        'SELECT id, mindmap_id, node_id, file_name FROM attachments WHERE mindmap_id = ?'
-      ).bind(mindmapId).all();
-      console.log('📝 All attachments:', allAttachments.results);
-    }
-  } catch (dbError) {
-    console.error('❌ Database query failed:', dbError);
-    attachment = null;
-  }
+  // R2から直接取得を試行（複数のパスパターンを試す）
+  const downloadType = searchParams.get('type') || 'download';
+  const possiblePaths = [
+    `${userId}/${mindmapId}/${nodeId}/${fileId}`, // 現在のパス
+    `${userId}/${mindmapId}/${fileId}`, // ノードIDなしのパス
+    `uploads/${userId}/${mindmapId}/${nodeId}/${fileId}`, // uploads プレフィックス付き
+    `uploads/${userId}/${mindmapId}/${fileId}`, // uploads プレフィックス、ノードIDなし
+    fileId // ファイルIDのみ（古い形式）
+  ];
 
-  if (!attachment) {
-    console.log('🔍 No attachment found in DB, trying alternative approaches...');
-    
-    // 1. データベースにファイル情報がない場合の代替検索
-    // fileIdがfile_で始まる場合は、idフィールドで検索
-    let alternativeAttachment = null;
-    if (fileId.startsWith('file_')) {
-      console.log('🔄 Trying alternative search with id field...');
-      try {
-        alternativeAttachment = await env.DB.prepare(
-          'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ?'
-        ).bind(fileId, mindmapId).first();
-        console.log('🔍 Alternative attachment result:', alternativeAttachment);
-      } catch (error) {
-        console.error('❌ Alternative search failed:', error);
-      }
-    }
-
-    // 2. R2から直接取得を試行（複数のパスパターンを試す）
-    const downloadType = searchParams.get('type') || 'info';
-    if (downloadType === 'download') {
-      const possiblePaths = [
-        `${userId}/${mindmapId}/${nodeId}/${fileId}`, // 現在のパス
-        `${userId}/${mindmapId}/${fileId}`, // ノードIDなしのパス
-        `uploads/${userId}/${mindmapId}/${nodeId}/${fileId}`, // uploads プレフィックス付き
-        `uploads/${userId}/${mindmapId}/${fileId}`, // uploads プレフィックス、ノードIDなし
-        fileId // ファイルIDのみ（古い形式）
-      ];
-
-      for (const storagePath of possiblePaths) {
-        console.log(`🔍 Trying R2 path: ${storagePath}`);
-        try {
-          const fileObject = await env.FILES.get(storagePath);
-          if (fileObject) {
-            console.log(`✅ Found file at path: ${storagePath}`);
-            
-            // メタデータから元のファイル名を取得
-            const originalName = fileObject.customMetadata?.originalName || fileId;
-            const contentType = fileObject.httpMetadata?.contentType || 'application/octet-stream';
-            
-            return new Response(fileObject.body, {
-              headers: {
-                'Content-Type': contentType,
-                'Content-Disposition': `attachment; filename="${originalName}"`,
-                'Content-Length': fileObject.size?.toString() || '',
-                ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
-              }
-            });
-          }
-        } catch (r2Error) {
-          console.log(`❌ Path ${storagePath} failed:`, r2Error.message);
-        }
-      }
-    }
-    
-    console.log('❌ File not found in any location');
-    const error = new Error('File not found');
-    error.status = 404;
-    throw error;
-  }
-
-  // ダウンロードタイプの判定
-  const downloadType = searchParams.get('type') || 'info';
-  
-  switch (downloadType) {
-    case 'download':
-      // R2から直接ファイルを読み取ってレスポンスとして返す
-      const fileObject = await env.FILES.get(attachment.storage_path);
-      if (!fileObject) {
-        const error = new Error('File not found in storage');
-        error.status = 404;
-        throw error;
-      }
-      
-      return new Response(fileObject.body, {
-        headers: {
-          'Content-Type': attachment.mime_type,
-          'Content-Disposition': `attachment; filename="${attachment.original_name}"`,
-          'Content-Length': attachment.file_size.toString(),
-          ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
-        }
-      });
-    
-    case 'thumbnail':
-      if (attachment.thumbnail_path) {
-        const thumbnailObject = await env.FILES.get(attachment.thumbnail_path);
-        if (!thumbnailObject) {
-          const error = new Error('Thumbnail not found in storage');
-          error.status = 404;
-          throw error;
-        }
+  for (const storagePath of possiblePaths) {
+    console.log(`🔍 Trying R2 path: ${storagePath}`);
+    try {
+      const fileObject = await env.FILES.get(storagePath);
+      if (fileObject) {
+        console.log(`✅ Found file at path: ${storagePath}`);
         
-        return new Response(thumbnailObject.body, {
-          headers: {
-            'Content-Type': attachment.mime_type,
-            'Cache-Control': 'public, max-age=3600',
+        // メタデータから情報を取得
+        const originalName = fileObject.customMetadata?.originalName || fileId;
+        const contentType = fileObject.httpMetadata?.contentType || 'application/octet-stream';
+        const attachmentType = fileObject.customMetadata?.attachmentType || getAttachmentType(contentType);
+        
+        if (downloadType === 'info') {
+          // ファイル情報のみ返却
+          return {
+            id: fileId,
+            fileName: originalName,
+            originalName: originalName,
+            fileSize: fileObject.size,
+            mimeType: contentType,
+            attachmentType: attachmentType,
+            hasThumbnail: false, // TODO: サムネイル確認を実装
+            uploadedAt: new Date().toISOString(), // R2にアップロード日時は保存されていないので現在時刻
+            downloadUrl: `/api/files/${mindmapId}/${encodeURIComponent(nodeId)}/${encodeURIComponent(fileId)}?type=download`
+          };
+        } else {
+          // ダウンロード用レスポンス
+          const isImage = contentType && contentType.startsWith('image/');
+          const headers = {
+            'Content-Type': contentType,
+            'Content-Length': fileObject.size?.toString() || '',
+            'Cache-Control': isImage ? 'public, max-age=3600' : 'private, max-age=0',
             ...corsHeaders(env.CORS_ORIGIN, requestOrigin)
+          };
+          
+          // 画像以外の場合のみContent-Dispositionを設定
+          if (!isImage) {
+            headers['Content-Disposition'] = `attachment; filename="${originalName}"`;
           }
-        });
-      } else {
-        const error = new Error('Thumbnail not available');
-        error.status = 404;
-        throw error;
+          
+          console.log('📤 Sending file with headers:', headers);
+          
+          return new Response(fileObject.body, { headers });
+        }
       }
-    
-    case 'info':
-    default:
-      // ファイル情報のみ返却
-      return {
-        id: attachment.id,
-        fileName: attachment.file_name,
-        originalName: attachment.original_name,
-        fileSize: attachment.file_size,
-        mimeType: attachment.mime_type,
-        attachmentType: attachment.attachment_type,
-        hasThumbnail: !!attachment.thumbnail_path,
-        uploadedAt: attachment.uploaded_at,
-        downloadUrl: `/api/files/${mindmapId}/${encodeURIComponent(attachment.node_id)}/${encodeURIComponent(attachment.id)}?type=download`
-      };
+    } catch (r2Error) {
+      console.log(`❌ Path ${storagePath} failed:`, r2Error.message);
+    }
   }
+  
+  console.log('❌ File not found in any R2 location');
+  const error = new Error('File not found');
+  error.status = 404;
+  throw error;
 }
 
 /**
- * ノードの全ファイル取得
+ * ノードの全ファイル取得（R2から直接）
  */
-async function getNodeFiles(db, userId, mindmapId, nodeId) {
+async function getNodeFiles(db, userId, mindmapId, nodeId, env) {
   await verifyOwnership(db, userId, mindmapId, nodeId);
 
-  const { results: attachments } = await db.prepare(
-    'SELECT * FROM attachments WHERE mindmap_id = ? AND node_id = ? ORDER BY uploaded_at DESC'
-  ).bind(mindmapId, nodeId).all();
+  // R2からファイル一覧を取得
+  const prefix = `${userId}/${mindmapId}/${nodeId}/`;
+  console.log('📁 Listing files with prefix:', prefix);
+  
+  try {
+    const listResult = await env.FILES.list({ prefix });
+    console.log('📋 R2 list result:', { 
+      objectCount: listResult.objects.length,
+      truncated: listResult.truncated 
+    });
 
-  return attachments.map(att => ({
-    id: att.id,
-    fileName: att.file_name,
-    originalName: att.original_name,
-    fileSize: att.file_size,
-    mimeType: att.mime_type,
-    attachmentType: att.attachment_type,
-    hasThumbnail: !!att.thumbnail_path,
-    uploadedAt: att.uploaded_at
-  }));
+    const files = [];
+    for (const obj of listResult.objects) {
+      // オブジェクトの詳細を取得してメタデータを読む
+      const fileObject = await env.FILES.get(obj.key);
+      if (fileObject) {
+        const fileName = fileObject.customMetadata?.originalName || obj.key.split('/').pop();
+        const attachmentType = fileObject.customMetadata?.attachmentType || getAttachmentType(fileObject.httpMetadata?.contentType);
+        
+        files.push({
+          id: obj.key.split('/').pop(), // ファイル名部分をIDとして使用
+          fileName: fileName,
+          originalName: fileName,
+          fileSize: obj.size,
+          mimeType: fileObject.httpMetadata?.contentType || 'application/octet-stream',
+          attachmentType: attachmentType,
+          hasThumbnail: false, // TODO: サムネイル確認を実装
+          uploadedAt: obj.uploaded?.toISOString() || new Date().toISOString()
+        });
+      }
+    }
+
+    return files;
+  } catch (error) {
+    console.error('❌ Failed to list files from R2:', error);
+    return [];
+  }
 }
 
 /**
- * マインドマップの全ファイル取得
+ * マインドマップの全ファイル取得（R2から直接）
  */
-async function getMindmapFiles(db, userId, mindmapId) {
+async function getMindmapFiles(db, userId, mindmapId, env) {
   // マインドマップの所有権確認
   const mindmap = await db.prepare(
     'SELECT id FROM mindmaps WHERE id = ? AND user_id = ?'
@@ -418,24 +343,46 @@ async function getMindmapFiles(db, userId, mindmapId) {
     throw error;
   }
 
-  const { results: attachments } = await db.prepare(`
-    SELECT * 
-    FROM attachments 
-    WHERE mindmap_id = ? 
-    ORDER BY uploaded_at DESC
-  `).bind(mindmapId).all();
+  // R2からファイル一覧を取得
+  const prefix = `${userId}/${mindmapId}/`;
+  console.log('📁 Listing all mindmap files with prefix:', prefix);
+  
+  try {
+    const listResult = await env.FILES.list({ prefix });
+    console.log('📋 R2 mindmap files result:', { 
+      objectCount: listResult.objects.length,
+      truncated: listResult.truncated 
+    });
 
-  return attachments.map(att => ({
-    id: att.id,
-    nodeId: att.node_id,
-    fileName: att.file_name,
-    originalName: att.original_name,
-    fileSize: att.file_size,
-    mimeType: att.mime_type,
-    attachmentType: att.attachment_type,
-    hasThumbnail: !!att.thumbnail_path,
-    uploadedAt: att.uploaded_at
-  }));
+    const files = [];
+    for (const obj of listResult.objects) {
+      // オブジェクトの詳細を取得してメタデータを読む
+      const fileObject = await env.FILES.get(obj.key);
+      if (fileObject) {
+        const pathParts = obj.key.split('/');
+        const nodeId = pathParts[2]; // userId/mindmapId/nodeId/fileId
+        const fileName = fileObject.customMetadata?.originalName || pathParts.pop();
+        const attachmentType = fileObject.customMetadata?.attachmentType || getAttachmentType(fileObject.httpMetadata?.contentType);
+        
+        files.push({
+          id: pathParts.pop(), // ファイル名部分をIDとして使用
+          nodeId: nodeId,
+          fileName: fileName,
+          originalName: fileName,
+          fileSize: obj.size,
+          mimeType: fileObject.httpMetadata?.contentType || 'application/octet-stream',
+          attachmentType: attachmentType,
+          hasThumbnail: false,
+          uploadedAt: obj.uploaded?.toISOString() || new Date().toISOString()
+        });
+      }
+    }
+
+    return files;
+  } catch (error) {
+    console.error('❌ Failed to list mindmap files from R2:', error);
+    return [];
+  }
 }
 
 /**
@@ -468,48 +415,50 @@ async function updateFileInfo(db, userId, mindmapId, nodeId, fileId, updateData)
 }
 
 /**
- * ファイル削除
+ * ファイル削除（R2のみ）
  */
 async function deleteFile(env, userId, mindmapId, nodeId, fileId) {
   await verifyOwnership(env.DB, userId, mindmapId, nodeId);
 
-  // ファイル情報取得
-  const attachment = await env.DB.prepare(
-    'SELECT * FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
-  ).bind(fileId, mindmapId, nodeId).first();
+  // 複数のパスパターンで削除を試行
+  const possiblePaths = [
+    `${userId}/${mindmapId}/${nodeId}/${fileId}`,
+    `${userId}/${mindmapId}/${fileId}`,
+    `uploads/${userId}/${mindmapId}/${nodeId}/${fileId}`,
+    `uploads/${userId}/${mindmapId}/${fileId}`,
+    fileId
+  ];
 
-  if (!attachment) {
-    const error = new Error('File not found');
+  let deleted = false;
+  for (const storagePath of possiblePaths) {
+    try {
+      console.log('🗑️ Trying to delete from path:', storagePath);
+      await env.FILES.delete(storagePath);
+      console.log('✅ Successfully deleted from path:', storagePath);
+      deleted = true;
+      
+      // サムネイルも削除を試行
+      const thumbnailPath = storagePath.replace(/(\.[^.]+)$/, '_thumb$1');
+      try {
+        await env.FILES.delete(thumbnailPath);
+        console.log('✅ Thumbnail also deleted:', thumbnailPath);
+      } catch (thumbError) {
+        console.log('ℹ️ No thumbnail found or failed to delete:', thumbnailPath);
+      }
+      
+      break; // 削除が成功したらループを抜ける
+    } catch (error) {
+      console.log(`❌ Failed to delete from path ${storagePath}:`, error.message);
+    }
+  }
+
+  if (!deleted) {
+    const error = new Error('File not found or failed to delete');
     error.status = 404;
     throw error;
   }
 
-  try {
-    // R2からファイル削除
-    await env.FILES.delete(attachment.storage_path);
-    
-    // サムネイルも削除
-    if (attachment.thumbnail_path) {
-      await env.FILES.delete(attachment.thumbnail_path);
-    }
-
-    // データベースから削除
-    await env.DB.prepare(
-      'DELETE FROM attachments WHERE id = ? AND mindmap_id = ? AND node_id = ?'
-    ).bind(fileId, mindmapId, nodeId).run();
-
-    const now = new Date().toISOString();
-    await env.DB.prepare(
-      'UPDATE mindmaps SET updated_at = ? WHERE id = ?'
-    ).bind(now, mindmapId).run();
-
-    return { deleted_at: now };
-
-  } catch (error) {
-    console.error('Failed to delete file from R2:', error);
-    // R2削除失敗でもDB削除は実行する（孤立ファイル対策は別途実装）
-    throw error;
-  }
+  return { deleted_at: new Date().toISOString() };
 }
 
 /**
