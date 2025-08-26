@@ -49,16 +49,11 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
     // 編集中は実際のテキスト幅を計算し、最小10文字分の幅を確保
     displayTextWidth = Math.max(calculateTextWidth(effectiveText), 10);
   } else {
-    // 非編集時は25文字を超える場合は省略表示を考慮
-    if (node.text.length > 25) {
-      const truncatedText = node.text.substring(0, 25) + '...';
-      displayTextWidth = calculateTextWidth(truncatedText);
-    } else {
-      displayTextWidth = Math.max(calculateTextWidth(node.text), 5); // 最小5文字分の幅
-    }
+    // 非編集時は実際のテキスト幅を計算
+    displayTextWidth = Math.max(calculateTextWidth(node.text), 5); // 最小5文字分の幅
   }
   
-  const nodeWidth = Math.max(displayTextWidth * 8, hasImages ? 150 : 20); // 最小20pxを確保
+  const nodeWidth = Math.max(displayTextWidth * 8, 20); // 最小20pxを確保
   const nodeHeight = 40 + imageHeight;
 
   return {

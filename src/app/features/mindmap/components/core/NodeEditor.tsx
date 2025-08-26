@@ -65,8 +65,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
 
   if (!isEditing) {
-    const displayText = node.text.length > 25 ? node.text.substring(0, 25) + '...' : node.text;
-    
     return (
       <text
         x={node.x}
@@ -81,8 +79,8 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           userSelect: 'none'
         }}
       >
-        <title>{node.text.length > 25 ? node.text : displayText}</title>
-        {displayText}
+        <title>{node.text}</title>
+        {node.text}
       </text>
     );
   }
