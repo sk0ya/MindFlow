@@ -150,52 +150,77 @@ const CloudImage: React.FC<{
     auth = null;
   }
 
+
   useEffect(() => {
+    let cancelled = false;
+    let blobUrl: string | null = null;
+
     const loadImage = async () => {
       if (!file.downloadUrl) {
-        setError('No download URL available');
-        setLoading(false);
+        if (!cancelled) {
+          setError('No download URL available');
+          setLoading(false);
+        }
         return;
       }
 
+      setLoading(true);
+      setError('');
+
       try {
-        // 認証が必要な場合はfetchでBlobを取得してオブジェクトURLを作成
+        // R2ストレージからの画像取得処理
         if (file.downloadUrl.includes('/api/files/')) {
           // 認証ヘッダーを取得
-          const headers: Record<string, string> = {
-            'Accept': 'image/*,*/*'
-          };
+          const headers: Record<string, string> = {};
           
           if (auth?.authAdapter?.getAuthHeaders) {
             const authHeaders = auth.authAdapter.getAuthHeaders();
             Object.assign(headers, authHeaders);
           }
           
-          // API経由でダウンロードしてBlob URLを作成
-          const response = await fetch(file.downloadUrl, {
+          // ダウンロード用URLを構築（R2ストレージから直接取得）
+          const downloadUrl = file.downloadUrl.includes('?type=download') 
+            ? file.downloadUrl 
+            : `${file.downloadUrl}?type=download`;
+          
+          // R2経由でダウンロードしてBlob URLを作成
+          const response = await fetch(downloadUrl, {
             method: 'GET',
-            headers
+            headers,
+            mode: 'cors'
           });
           
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error('CloudImage: Response error body:', errorText);
-            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText} - ${errorText}`);
+            throw new Error(`Failed to fetch image from R2: ${response.status} ${response.statusText}`);
           }
           
           const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          setImageUrl(url);
+          
+          // 画像ファイルかチェック
+          if (blob.size === 0) {
+            throw new Error('Empty file received from R2 storage');
+          }
+          
+          blobUrl = URL.createObjectURL(blob);
+          
+          if (!cancelled) {
+            setImageUrl(blobUrl);
+          }
         } else {
-          // 直接URLを使用
-          setImageUrl(file.downloadUrl);
+          // 直接URLを使用（非R2ルート）
+          if (!cancelled) {
+            setImageUrl(file.downloadUrl);
+          }
         }
         
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       } catch (err) {
-        console.error('CloudImage: Failed to load image:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setLoading(false);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+          setLoading(false);
+        }
       }
     };
 
@@ -203,11 +228,12 @@ const CloudImage: React.FC<{
 
     // クリーンアップ
     return () => {
-      if (imageUrl && imageUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(imageUrl);
+      cancelled = true;
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
       }
     };
-  }, [file.downloadUrl]);
+  }, [file.downloadUrl, file.id, auth?.authAdapter?.isAuthenticated]);
 
   if (loading) {
     return (
@@ -237,11 +263,13 @@ const CloudImage: React.FC<{
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      onError={(e) => {
-        console.error('CloudImage: img onError:', e);
+      onError={() => {
         setError('Image load failed');
+        setLoading(false);
       }}
-      onLoad={() => {}}
+      onLoad={() => {
+        setError('');
+      }}
     />
   );
 };

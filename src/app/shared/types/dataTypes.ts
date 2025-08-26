@@ -153,7 +153,7 @@ export const createNewNode = (text: string = '', parentNode: MindMapNode | null 
   return {
     id: generateId(),
     text,
-    x: parentNode ? parentNode.x + LAYOUT.RADIAL_BASE_RADIUS : COORDINATES.DEFAULT_CENTER_X,
+    x: parentNode ? parentNode.x + LAYOUT.LEVEL_SPACING : COORDINATES.DEFAULT_CENTER_X,
     y: parentNode ? parentNode.y : COORDINATES.DEFAULT_CENTER_Y,
     fontSize: TYPOGRAPHY.DEFAULT_FONT_SIZE - 2, // 子ノードは少し小さく
     fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
@@ -168,7 +168,7 @@ export const calculateNodePosition = (parentNode: MindMapNode | null, childIndex
     y: COORDINATES.DEFAULT_CENTER_Y 
   };
   
-  const distance = LAYOUT.RADIAL_BASE_RADIUS;
+  const distance = LAYOUT.LEVEL_SPACING;
   
   // 初回の子ノードの場合（子ノードが1つの場合）
   if (totalChildren === 1) {

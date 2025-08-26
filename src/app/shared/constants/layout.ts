@@ -2,18 +2,15 @@
  * レイアウト関連の定数
  */
 export const LAYOUT = {
-  // 放射状レイアウト
-  RADIAL_BASE_RADIUS: 120,
-  RADIAL_RADIUS_INCREMENT: 100,
-  RADIAL_MIN_RADIUS: 100,
-
   // 階層レイアウト
   LEVEL_SPACING: 140,
   VERTICAL_SPACING_MIN: 25,
   VERTICAL_SPACING_MAX: 45,
 
   // ノード間隔
-  NODE_PADDING: 50,
+  NODE_PADDING: 30, // 親ノードの右端から子ノードまでの間隔
+  TOGGLE_TO_CHILD_DISTANCE: 60, // トグルボタンから子ノードまでの距離
+  ROOT_TO_CHILD_DISTANCE: 120, // ルートノードの右端から子ノードまでの距離
   NODE_MIN_DISTANCE: 100,
 
   // グリッド

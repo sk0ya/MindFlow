@@ -96,7 +96,7 @@ export const createNodeSlice: StateCreator<
         if (childNodes.length === 0) {
           // First child node case
           newPosition = {
-            x: parentNode.x + LAYOUT.RADIAL_BASE_RADIUS,
+            x: parentNode.x + LAYOUT.LEVEL_SPACING,
             y: parentNode.y
           };
         } else {
@@ -105,12 +105,12 @@ export const createNodeSlice: StateCreator<
           if (lastChild) {
             newPosition = {
               x: lastChild.x,
-              y: lastChild.y + LAYOUT.RADIAL_BASE_RADIUS * 0.8
+              y: lastChild.y + LAYOUT.LEVEL_SPACING * 0.6
             };
           } else {
             // Fallback position
             newPosition = {
-              x: parentNode.x + LAYOUT.RADIAL_BASE_RADIUS,
+              x: parentNode.x + LAYOUT.LEVEL_SPACING,
               y: parentNode.y
             };
           }

@@ -28,7 +28,6 @@ export const FILE_CONSTANTS = {
 // Layout and coordinate constants
 export const LAYOUT_CONSTANTS = {
   // Node positioning
-  RADIAL_BASE_RADIUS: 150,
   VERTICAL_SPACING: 80,
   MIN_NODE_DISTANCE: 50,
   SIBLING_SPACING: 60,
