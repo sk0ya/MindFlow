@@ -4,7 +4,7 @@
 export const LAYOUT = {
   // 階層レイアウト
   LEVEL_SPACING: 140,
-  VERTICAL_SPACING_MIN: 25,
+  VERTICAL_SPACING_MIN: 0, // 完全に密着配置
   VERTICAL_SPACING_MAX: 45,
 
   // ノード間隔
