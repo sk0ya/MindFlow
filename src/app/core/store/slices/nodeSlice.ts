@@ -10,8 +10,7 @@ import {
   denormalizeTreeData
 } from '../../data';
 import { createNewNode } from '../../../shared/types/dataTypes';
-import { COLORS } from '../../../shared';
-import { LAYOUT } from '../../../shared';
+import { COLORS, LAYOUT } from '../../../shared';
 import type { MindMapStore } from './types';
 
 export interface NodeSlice {

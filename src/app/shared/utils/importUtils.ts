@@ -1,5 +1,4 @@
-import type { MindMapData } from '../types/dataTypes';
-import { createInitialData, assignColorsToExistingNodes } from '../types/dataTypes';
+import { type MindMapData, createInitialData, assignColorsToExistingNodes } from '../types/dataTypes';
 import { MarkdownImporter } from './markdownImporter';
 
 /**

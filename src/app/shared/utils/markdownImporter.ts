@@ -1,5 +1,4 @@
-import type { MindMapNode } from '../types/dataTypes';
-import { createNewNode } from '../types/dataTypes';
+import { type MindMapNode, createNewNode } from '../types/dataTypes';
 
 /**
  * マークダウンの見出し行を解析

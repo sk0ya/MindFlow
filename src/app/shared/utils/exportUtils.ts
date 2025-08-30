@@ -27,13 +27,13 @@ export const exportToJSON = (
   const { attachmentExportMode = 'links-only' } = options;
   
   // 必要最小限のプロパティのみを含むクリーンなデータを作成
-  const exportData: any = {};
+  const exportData: Record<string, unknown> = {};
   
   // title, settings, theme, id, category, createdAt, updatedAtなどの不要なプロパティは一切含めない
   
   // 不要なプロパティを削除する関数
-  const cleanNode = (node: MindMapNode): any => {
-    const cleanedNode: any = {
+  const cleanNode = (node: MindMapNode): Record<string, unknown> => {
+    const cleanedNode: Record<string, unknown> = {
       text: node.text,
       children: node.children?.map(cleanNode) || []
     };
@@ -48,7 +48,7 @@ export const exportToJSON = (
   
   if (attachmentExportMode === 'embedded') {
     // ZIP形式用：不要なプロパティを削除し、添付ファイル情報をパスのみに簡素化、ノートもattachmentsに含める
-    const updateAttachmentPaths = (node: MindMapNode): any => {
+    const updateAttachmentPaths = (node: MindMapNode): Record<string, unknown> => {
       const attachmentPaths = node.attachments?.map(attachment => `./attachments/${node.id}/${attachment.name}`) || [];
       
       // ノートがある場合は添付ファイルとして追加
@@ -57,7 +57,7 @@ export const exportToJSON = (
         attachmentPaths.push(`./attachments/${node.id}/${safeName}.md`);
       }
       
-      const cleanedNode: any = {
+      const cleanedNode: Record<string, unknown> = {
         text: node.text,
         children: node.children?.map(updateAttachmentPaths) || []
       };
@@ -289,7 +289,7 @@ export const saveBlobWithDialog = async (blob: Blob, defaultFilename: string): P
   // File System Access APIが利用可能かチェック
   if ('showSaveFilePicker' in window) {
     try {
-      const fileHandle = await (window as any).showSaveFilePicker({
+      const fileHandle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<unknown> }).showSaveFilePicker({
         suggestedName: defaultFilename,
         types: [
           {
@@ -532,7 +532,7 @@ export const exportToZip = async (
         if (!nodeMap.has(nodeId)) {
           nodeMap.set(nodeId, { nodePath, files: [] });
         }
-        nodeMap.get(nodeId)!.files.push({ name: attachment.name, type: 'attachment' });
+        nodeMap.get(nodeId)?.files.push({ name: attachment.name, type: 'attachment' });
       });
       
       // ノートファイルを追加
@@ -543,7 +543,7 @@ export const exportToZip = async (
         if (!nodeMap.has(nodeId)) {
           nodeMap.set(nodeId, { nodePath, files: [] });
         }
-        nodeMap.get(nodeId)!.files.push({ name: fileName, type: 'note' });
+        nodeMap.get(nodeId)?.files.push({ name: fileName, type: 'note' });
       });
       
       if (nodeMap.size === 0) {

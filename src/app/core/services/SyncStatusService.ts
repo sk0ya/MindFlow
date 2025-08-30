@@ -158,6 +158,7 @@ export class SyncStatusService {
 
     // メッセージボックスで同期を促す
     setTimeout(() => {
+      // eslint-disable-next-line no-alert
       const shouldSync = window.confirm(
         `${mapCount}件の更新がサーバーで見つかりました。\n\n最新のデータを取得しますか？\n\n※「キャンセル」を選択した場合、30秒後に再度確認します。`
       );

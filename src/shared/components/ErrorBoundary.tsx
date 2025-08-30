@@ -96,12 +96,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true };
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const errorId = ErrorReporter.reportError(error, errorInfo, this.props.level);
+  override componentDidCatch(_error: Error, _errorInfo: ErrorInfo): void {
+    const errorId = ErrorReporter.reportError(_error, _errorInfo, this.props.level);
     
     this.setState({
-      error,
-      errorInfo,
+      error: _error,
+      errorInfo: _errorInfo,
       errorId
     });
 
@@ -126,12 +126,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     const reportData = {
       errorId,
+      // eslint-disable-next-line no-alert
       userDescription: prompt('Please describe what you were doing when this error occurred:') || '',
       timestamp: new Date().toISOString()
     };
 
     // TODO: Send user report
     logger.info('User error report:', reportData);
+    // eslint-disable-next-line no-alert
     alert('Thank you for the report. We will investigate this issue.');
   };
 

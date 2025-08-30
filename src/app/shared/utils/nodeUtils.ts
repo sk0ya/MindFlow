@@ -26,7 +26,7 @@ function calculateTextWidth(text: string): number {
       // 全角記号・全角英数字
       (code >= 0xFF00 && code <= 0xFFEF) ||
       // その他の全角文字
-      char.match(/[^\x00-\x7F]/)
+      code > 0x007F
     ) {
       width += 2; // 全角文字は2倍の幅
     } else {
