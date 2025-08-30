@@ -364,8 +364,13 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)' // スムーズなサイズ変更アニメーション
-            }}>
+              transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)', // スムーズなサイズ変更アニメーション
+              cursor: 'pointer'
+            }}
+            onClick={(e) => handleImageClick(e as any, firstImageFile)}
+            onDoubleClick={(e) => handleImageDoubleClick(e as any, firstImageFile)}
+            onContextMenu={(e) => handleFileActionMenu(e as any, firstImageFile)}
+            >
               {firstImageFile.downloadUrl && firstImageFile.downloadUrl.includes('/api/files/') ? (
                 <CloudImage
                   file={firstImageFile}
