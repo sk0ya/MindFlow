@@ -636,8 +636,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 width={imageDimensions.width + 4}
                 height={imageDimensions.height + 4}
                 fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2"
+                stroke="#bfdbfe"
+                strokeWidth="1"
                 strokeDasharray="5,3"
                 rx="6"
                 ry="6"
@@ -656,8 +656,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   width="8"
                   height="8"
                   fill="white"
-                  stroke="#3b82f6"
-                  strokeWidth="2"
+                  stroke="#bfdbfe"
+                  strokeWidth="1"
                   rx="1"
                   ry="1"
                   style={{
@@ -666,19 +666,25 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   }}
                   onMouseDown={handleResizeStart}
                 />
-                {/* ハンドルの十字マーク */}
-                <g stroke="#3b82f6" strokeWidth="1" style={{ pointerEvents: 'none' }}>
+                {/* リサイズハンドルのアイコン（斜め線） */}
+                <g stroke="#6b7280" strokeWidth="1" style={{ pointerEvents: 'none' }}>
                   <line
                     x1={node.x + imageDimensions.width / 2 - 2}
-                    y1={node.y + imageDimensions.height / 2 - 20 - 2}
+                    y1={node.y + imageDimensions.height / 2 - 20 + 2}
                     x2={node.x + imageDimensions.width / 2 + 2}
-                    y2={node.y + imageDimensions.height / 2 - 20 + 2}
+                    y2={node.y + imageDimensions.height / 2 - 20 - 2}
                   />
                   <line
-                    x1={node.x + imageDimensions.width / 2 + 2}
-                    y1={node.y + imageDimensions.height / 2 - 20 - 2}
-                    x2={node.x + imageDimensions.width / 2 - 2}
-                    y2={node.y + imageDimensions.height / 2 - 20 + 2}
+                    x1={node.x + imageDimensions.width / 2 - 1}
+                    y1={node.y + imageDimensions.height / 2 - 20 + 1}
+                    x2={node.x + imageDimensions.width / 2 + 1}
+                    y2={node.y + imageDimensions.height / 2 - 20 - 1}
+                  />
+                  <line
+                    x1={node.x + imageDimensions.width / 2}
+                    y1={node.y + imageDimensions.height / 2 - 20}
+                    x2={node.x + imageDimensions.width / 2}
+                    y2={node.y + imageDimensions.height / 2 - 20}
                   />
                 </g>
               </g>

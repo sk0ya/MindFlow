@@ -187,7 +187,7 @@ export const NodeSelectionBorder: React.FC<{
       width={selectionWidth}
       height={selectionHeight}
       fill="transparent"
-      stroke={isDragTarget ? "#f59e0b" : "#3b82f6"}
+      stroke={isDragTarget ? "#f59e0b" : "#60a5fa"}
       strokeWidth={isDragTarget ? "3" : "2.5"}
       strokeDasharray={isDragTarget ? "5,5" : "none"}
       rx="12"
