@@ -84,7 +84,7 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
   
   // 画像がある場合は画像幅とテキスト幅の大きい方を使用（NodeRendererと同じロジック）
   const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 20) : textBasedWidth;
-  const nodeHeight = 40 + imageHeight;
+  const nodeHeight = (hasImages ? 25 : 20) + imageHeight;
 
   return {
     width: nodeWidth,

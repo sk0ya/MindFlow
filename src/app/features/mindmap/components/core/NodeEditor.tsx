@@ -88,7 +88,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     };
     
     const actualImageHeight = getActualImageHeight();
-    const textY = hasImage ? node.y + actualImageHeight / 2 - 5 : node.y + 5;
+    const textY = hasImage ? node.y + actualImageHeight / 2 + 10 : node.y + 3;
     
     return (
       <>
@@ -188,7 +188,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   };
   
   const actualImageHeight = getActualImageHeight();
-  const editY = hasImage ? node.y + actualImageHeight / 2 - 17 : node.y - 12;
+  const editY = hasImage ? node.y + actualImageHeight / 2 + 5 : node.y - 12;
 
   return (
     <foreignObject 

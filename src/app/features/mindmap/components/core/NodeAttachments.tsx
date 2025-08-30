@@ -354,9 +354,9 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
         <g key={firstImageFile.id}>
           <foreignObject 
             x={node.x - imageDimensions.width / 2} 
-            y={node.y - imageDimensions.height / 2 - 20} 
+            y={node.y - imageDimensions.height / 2} 
             width={imageDimensions.width} 
-            height={imageDimensions.height - 5}
+            height={imageDimensions.height}
           >
             <div style={{
               position: 'relative',
@@ -421,7 +421,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               {/* 枠線 */}
               <rect
                 x={node.x - imageDimensions.width / 2 - 2}
-                y={node.y - imageDimensions.height / 2 - 20 - 2}
+                y={node.y - imageDimensions.height / 2 - 2}
                 width={imageDimensions.width + 4}
                 height={imageDimensions.height + 4}
                 fill="none"
@@ -441,7 +441,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 {/* ハンドル背景 */}
                 <rect
                   x={node.x + imageDimensions.width / 2 - 4}
-                  y={node.y + imageDimensions.height / 2 - 20 - 4}
+                  y={node.y + imageDimensions.height / 2 - 4}
                   width="8"
                   height="8"
                   fill="white"
@@ -459,21 +459,21 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 <g stroke="#6b7280" strokeWidth="1" style={{ pointerEvents: 'none' }}>
                   <line
                     x1={node.x + imageDimensions.width / 2 - 2}
-                    y1={node.y + imageDimensions.height / 2 - 20 + 2}
+                    y1={node.y + imageDimensions.height / 2 + 2}
                     x2={node.x + imageDimensions.width / 2 + 2}
-                    y2={node.y + imageDimensions.height / 2 - 20 - 2}
+                    y2={node.y + imageDimensions.height / 2 - 2}
                   />
                   <line
                     x1={node.x + imageDimensions.width / 2 - 1}
-                    y1={node.y + imageDimensions.height / 2 - 20 + 1}
+                    y1={node.y + imageDimensions.height / 2 + 1}
                     x2={node.x + imageDimensions.width / 2 + 1}
-                    y2={node.y + imageDimensions.height / 2 - 20 - 1}
+                    y2={node.y + imageDimensions.height / 2 - 1}
                   />
                   <line
                     x1={node.x + imageDimensions.width / 2}
-                    y1={node.y + imageDimensions.height / 2 - 20}
+                    y1={node.y + imageDimensions.height / 2}
                     x2={node.x + imageDimensions.width / 2}
-                    y2={node.y + imageDimensions.height / 2 - 20}
+                    y2={node.y + imageDimensions.height / 2}
                   />
                 </g>
               </g>

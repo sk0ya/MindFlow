@@ -125,7 +125,7 @@ export const NodeSelectionBorder: React.FC<{
     const imageDimensions = getImageDimensions(node);
     
     actualNodeWidth = Math.max(nodeWidth, imageDimensions.width + 20);
-    actualNodeHeight = 40 + imageDimensions.height;
+    actualNodeHeight = 25 + imageDimensions.height;
   }
   
   // 選択範囲の計算
@@ -151,25 +151,44 @@ export const NodeSelectionBorder: React.FC<{
 
     const imageDimensions = getImageDimensions(node);
     
-    const imageTop = node.y - imageDimensions.height / 2 - 20;
-    const textBottom = node.y + imageDimensions.height / 2 + 5;
+    const imageTop = node.y - imageDimensions.height / 2;
+    const textBottom = node.y + imageDimensions.height / 2 + 20;
     
     selectionY = imageTop - 5;
-    selectionHeight = textBottom - imageTop + 10;
-    selectionWidth = Math.max(actualNodeWidth, imageDimensions.width) + 10;
+    selectionHeight = textBottom - imageTop + 5;
+    selectionWidth = Math.max(actualNodeWidth, imageDimensions.width);
     selectionX = node.x - selectionWidth / 2;
   } else {
-    selectionHeight = actualNodeHeight + 10;
-    selectionY = node.y - actualNodeHeight / 2 - 5;
-    selectionWidth = actualNodeWidth + 10;
+    selectionHeight = actualNodeHeight;
+    selectionY = node.y - actualNodeHeight / 2;
+    selectionWidth = actualNodeWidth;
     selectionX = node.x - selectionWidth / 2;
   }
   
   // ファイルアイコンがある場合の範囲拡張
   if (hasNonImageFiles) {
     const fileCardHeight = 22;
+    
+    // 画像サイズを再取得
+    const getImageDimensions = (node: MindMapNode) => {
+      if (node.customImageWidth && node.customImageHeight) {
+        return { width: node.customImageWidth, height: node.customImageHeight };
+      }
+      
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': { width: 100, height: 70 },
+        'medium': { width: 150, height: 105 },
+        'large': { width: 200, height: 140 },
+        'extra-large': { width: 250, height: 175 }
+      };
+      
+      return sizeMap[imageSize];
+    };
+    
+    const imageDimensions = getImageDimensions(node);
     const fileCardYOffset = hasDisplayImage 
-      ? node.y + (hasDisplayImage ? (node.imageSize ? { 'small': 70, 'medium': 105, 'large': 140, 'extra-large': 175 }[node.imageSize] || 105 : 105) : 0) / 2 + 15
+      ? node.y + imageDimensions.height / 2 + 25
       : node.y + 10;
     
     const fileCardBottom = fileCardYOffset + fileCardHeight;
