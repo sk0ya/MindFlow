@@ -88,12 +88,12 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     };
     
     const actualImageHeight = getActualImageHeight();
-    const textY = hasImage ? node.y + actualImageHeight / 2 + 10 : node.y + 3;
+    const textY = hasImage ? node.y + actualImageHeight / 2 + 9 : node.y + 3;
     
     return (
       <>
         <text
-          x={node.x - (nodeWidth / 2) + 10}
+          x={node.x - (nodeWidth / 2) + 15}
           y={textY}
           textAnchor="start"
           fill="black"
@@ -114,7 +114,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           <g>
             {/* 背景バッジ */}
             <rect
-              x={node.x + (nodeWidth / 2) - 32}
+              x={node.x + (nodeWidth / 2) - 35}
               y={textY - 8}
               width="26"
               height="12"
@@ -131,7 +131,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
             
             {/* SVGアイコン: ペーパークリップ */}
             <g 
-              transform={`translate(${node.x + (nodeWidth / 2) - 29}, ${textY - 8})`}
+              transform={`translate(${node.x + (nodeWidth / 2) - 32}, ${textY - 8})`}
               style={{ pointerEvents: 'none' }}
             >
               <path
@@ -147,7 +147,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
             
             {/* ファイル数 */}
             <text
-              x={node.x + (nodeWidth / 2) - 15}
+              x={node.x + (nodeWidth / 2) - 18}
               y={textY + 1}
               textAnchor="middle"
               fill="#333"
@@ -192,9 +192,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
   return (
     <foreignObject 
-      x={node.x - nodeWidth / 2 + 5} 
+      x={node.x - nodeWidth / 2 + 20} 
       y={editY} 
-      width={nodeWidth - 45} 
+      width={nodeWidth - 48} 
       height="24"
     >
       <input

@@ -348,7 +348,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
         <g key={firstImageFile.id}>
           <foreignObject 
             x={node.x - imageDimensions.width / 2} 
-            y={node.y - imageDimensions.height / 2} 
+            y={node.y - (imageDimensions.height + 35) / 2 + 5} 
             width={imageDimensions.width} 
             height={imageDimensions.height}
           >
@@ -358,7 +358,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               height: '100%',
               borderRadius: '6px',
               overflow: 'hidden',
-              border: '2px solid #fff',
+              border: 'none',
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               backgroundColor: '#fff',
               display: 'flex',
@@ -415,7 +415,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               {/* 枠線 */}
               <rect
                 x={node.x - imageDimensions.width / 2 - 2}
-                y={node.y - imageDimensions.height / 2 - 2}
+                y={node.y - (imageDimensions.height + 35) / 2 + 3}
                 width={imageDimensions.width + 4}
                 height={imageDimensions.height + 4}
                 fill="none"
@@ -435,7 +435,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 {/* ハンドル背景 */}
                 <rect
                   x={node.x + imageDimensions.width / 2 - 4}
-                  y={node.y + imageDimensions.height / 2 - 4}
+                  y={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
                   width="8"
                   height="8"
                   fill="white"
@@ -453,21 +453,21 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 <g stroke="#6b7280" strokeWidth="1" style={{ pointerEvents: 'none' }}>
                   <line
                     x1={node.x + imageDimensions.width / 2 - 2}
-                    y1={node.y + imageDimensions.height / 2 + 2}
+                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 2}
                     x2={node.x + imageDimensions.width / 2 + 2}
-                    y2={node.y + imageDimensions.height / 2 - 2}
+                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 6}
                   />
                   <line
                     x1={node.x + imageDimensions.width / 2 - 1}
-                    y1={node.y + imageDimensions.height / 2 + 1}
+                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 3}
                     x2={node.x + imageDimensions.width / 2 + 1}
-                    y2={node.y + imageDimensions.height / 2 - 1}
+                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 5}
                   />
                   <line
                     x1={node.x + imageDimensions.width / 2}
-                    y1={node.y + imageDimensions.height / 2}
+                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
                     x2={node.x + imageDimensions.width / 2}
-                    y2={node.y + imageDimensions.height / 2}
+                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
                   />
                 </g>
               </g>
