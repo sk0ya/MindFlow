@@ -41,20 +41,25 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
   const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
   
   let imageHeight = 0;
+  let imageWidth = 0;
+  
   if (hasImages) {
     // カスタムサイズを優先
     if (node.customImageWidth && node.customImageHeight) {
-      imageHeight = node.customImageHeight + 5; // マージン追加
+      imageWidth = node.customImageWidth;
+      imageHeight = node.customImageHeight;
     } else {
       // ノードの画像サイズ設定を取得
       const imageSize = node.imageSize || 'medium';
       const sizeMap = {
-        'small': 75,      // 70px + マージン
-        'medium': 110,    // 105px + マージン  
-        'large': 145,     // 140px + マージン
-        'extra-large': 180 // 175px + マージン
+        'small': { width: 100, height: 70 },
+        'medium': { width: 150, height: 105 },
+        'large': { width: 200, height: 140 },
+        'extra-large': { width: 250, height: 175 }
       };
-      imageHeight = sizeMap[imageSize];
+      const dimensions = sizeMap[imageSize];
+      imageWidth = dimensions.width;
+      imageHeight = dimensions.height;
     }
   }
   
@@ -70,7 +75,11 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
     displayTextWidth = Math.max(calculateTextWidth(node.text), 5); // 最小5文字分の幅
   }
   
-  const nodeWidth = Math.max(displayTextWidth * 8, 20); // 最小20pxを確保
+  // テキストベースの幅計算
+  const textBasedWidth = Math.max(displayTextWidth * 8, 20);
+  
+  // 画像がある場合は画像幅とテキスト幅の大きい方を使用（NodeRendererと同じロジック）
+  const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 20) : textBasedWidth;
   const nodeHeight = 40 + imageHeight;
 
   return {
@@ -82,10 +91,60 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
 
 export function getToggleButtonPosition(node: MindMapNode, rootNode: MindMapNode, nodeSize: NodeSize) {
   const isOnRight = node.x > rootNode.x;
-  // ノードの半分の幅に少しマージンを加えてトグルボタンを配置
-  const toggleOffset = isOnRight ? (nodeSize.width / 2 + 20) : -(nodeSize.width / 2 + 20);
-  const toggleX = node.x + toggleOffset;
+  
+  // ノードサイズに応じた動的なマージン調整
+  // 画像が大きい場合は、より大きなマージンを適用
+  let baseMargin = 20;
+  
+  // 画像の高さに応じてマージンを調整
+  if (nodeSize.imageHeight > 100) {
+    baseMargin = 25 + (nodeSize.imageHeight - 100) * 0.1;
+  }
+  
+  // 幅に応じた追加調整
+  const widthAdjustment = Math.max(0, (nodeSize.width - 100) * 0.05);
+  const totalMargin = baseMargin + widthAdjustment;
+  
+  // ノードの右端から一定距離でトグルボタンを配置
+  const nodeRightEdge = node.x + nodeSize.width / 2;
+  const nodeLeftEdge = node.x - nodeSize.width / 2;
+  
+  const toggleX = isOnRight ? (nodeRightEdge + totalMargin) : (nodeLeftEdge - totalMargin);
   const toggleY = node.y;
   
   return { x: toggleX, y: toggleY };
+}
+
+/**
+ * 親ノードの右端から子ノードの左端までの水平距離を計算
+ */
+export function getDynamicNodeSpacing(parentNodeSize: NodeSize, childNodeSize: NodeSize, isRootChild: boolean = false): number {
+  if (isRootChild) {
+    // ルートノードの子の場合：ルートノードのサイズに応じて調整
+    const baseDistance = 120; // LAYOUT.ROOT_TO_CHILD_DISTANCE
+    const widthAdjustment = Math.max(0, (parentNodeSize.width - 100) * 0.2);
+    const imageAdjustment = parentNodeSize.imageHeight > 0 ? parentNodeSize.imageHeight * 0.15 : 0;
+    
+    return baseDistance + widthAdjustment + imageAdjustment;
+  } else {
+    // 通常の親子間：両方のノードサイズを考慮
+    const baseDistance = 60; // LAYOUT.TOGGLE_TO_CHILD_DISTANCE
+    const parentWidthAdjustment = Math.max(0, (parentNodeSize.width - 100) * 0.1);
+    const parentImageAdjustment = parentNodeSize.imageHeight > 0 ? parentNodeSize.imageHeight * 0.1 : 0;
+    const childSizeAdjustment = Math.max(0, (childNodeSize.width - 100) * 0.05);
+    
+    return baseDistance + parentWidthAdjustment + parentImageAdjustment + childSizeAdjustment;
+  }
+}
+
+/**
+ * 親ノードの右端から子ノードの左端までの距離に基づいて子ノードのX座標を計算
+ */
+export function calculateChildNodeX(parentNode: MindMapNode, childNodeSize: NodeSize, edgeToEdgeDistance: number): number {
+  const parentNodeSize = calculateNodeSize(parentNode);
+  const parentRightEdge = parentNode.x + parentNodeSize.width / 2;
+  const childLeftEdge = parentRightEdge + edgeToEdgeDistance;
+  const childCenterX = childLeftEdge + childNodeSize.width / 2;
+  
+  return childCenterX;
 }

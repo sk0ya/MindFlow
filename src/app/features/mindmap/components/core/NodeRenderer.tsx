@@ -30,42 +30,9 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
   onDoubleClick,
   onContextMenu
 }) => {
-  // ファイルカードを考慮した選択範囲の計算
-  const hasDisplayImage = node.attachments && node.attachments.some(f => f.isImage);
-  const hasNonImageFiles = node.attachments && node.attachments.some(f => !f.isImage) || 
-                          (node.attachments && node.attachments.filter(f => f.isImage).length > 1);
-  
-  // 画像がある場合のノード背景サイズを調整
-  let actualNodeWidth = nodeWidth;
-  let actualNodeHeight = nodeHeight;
-  
-  if (hasDisplayImage) {
-    // 画像サイズを取得（カスタムサイズを優先）
-    const getImageDimensions = (node: MindMapNode) => {
-      // カスタムサイズが設定されている場合
-      if (node.customImageWidth && node.customImageHeight) {
-        return { width: node.customImageWidth, height: node.customImageHeight };
-      }
-      
-      // プリセットサイズの場合
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': { width: 100, height: 70 },
-        'medium': { width: 150, height: 105 },
-        'large': { width: 200, height: 140 },
-        'extra-large': { width: 250, height: 175 }
-      };
-      
-      return sizeMap[imageSize];
-    };
-
-    const imageDimensions = getImageDimensions(node);
-    
-    // ノード幅は画像幅とテキスト幅のうち大きい方に調整
-    actualNodeWidth = Math.max(nodeWidth, imageDimensions.width + 20); // 20pxのマージン
-    // ノード高さも調整（テキスト部分 + 画像部分）
-    actualNodeHeight = 40 + imageDimensions.height; // テキスト部分40px + 画像の高さ
-  }
+  // propsで渡されたnodeWidth/nodeHeightを使用（nodeUtils.tsで計算済み）
+  const actualNodeWidth = nodeWidth;
+  const actualNodeHeight = nodeHeight;
   
   // この部分は使用されない（NodeSelectionBorderで選択枠線を描画する）
 

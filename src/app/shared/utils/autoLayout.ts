@@ -1,7 +1,7 @@
 // 自動レイアウト機能のユーティリティ
 import { cloneDeep } from './lodash-utils';
 import { COORDINATES, LAYOUT } from '../constants/index';
-import { calculateNodeSize, getToggleButtonPosition } from './nodeUtils';
+import { calculateNodeSize, getDynamicNodeSpacing, calculateChildNodeX } from './nodeUtils';
 import type { MindMapNode } from '../types';
 
 // Layout options interfaces
@@ -13,25 +13,27 @@ interface LayoutOptions {
 }
 
 /**
- * トグルボタンの位置を基準にした子ノードのX座標を計算
+ * 親ノードの右端から子ノードの左端までの距離に基づいて子ノードのX座標を計算（非ルート）
  */
-const getChildNodeXFromToggle = (parentNode: MindMapNode, rootNode: MindMapNode): number => {
+const getChildNodeXFromParentEdge = (parentNode: MindMapNode, childNode: MindMapNode): number => {
   const parentNodeSize = calculateNodeSize(parentNode);
-  const togglePosition = getToggleButtonPosition(parentNode, rootNode, parentNodeSize);
+  const childNodeSize = calculateNodeSize(childNode);
   
-  // トグルボタンから子ノードまでの距離
-  return togglePosition.x + LAYOUT.TOGGLE_TO_CHILD_DISTANCE;
+  // 親ノードの右端から子ノードの左端までの距離を計算
+  const edgeToEdgeDistance = getDynamicNodeSpacing(parentNodeSize, childNodeSize, false);
+  return calculateChildNodeX(parentNode, childNodeSize, edgeToEdgeDistance);
 };
 
 /**
- * ルートノードの右端から子ノードのX座標を計算
+ * ルートノードの右端から子ノードの左端までの距離に基づいて子ノードのX座標を計算
  */
-const getChildNodeXFromRootEdge = (rootNode: MindMapNode): number => {
+const getChildNodeXFromRootEdge = (rootNode: MindMapNode, childNode: MindMapNode): number => {
   const rootNodeSize = calculateNodeSize(rootNode);
-  const rootRightEdge = rootNode.x + rootNodeSize.width / 2;
+  const childNodeSize = calculateNodeSize(childNode);
   
-  // ルートノードの右端から子ノードまでの距離
-  return rootRightEdge + LAYOUT.ROOT_TO_CHILD_DISTANCE;
+  // ルートノードの右端から子ノードの左端までの距離を計算
+  const edgeToEdgeDistance = getDynamicNodeSpacing(rootNodeSize, childNodeSize, true);
+  return calculateChildNodeX(rootNode, childNodeSize, edgeToEdgeDistance);
 };
 
 
@@ -53,17 +55,31 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
   newRootNode.x = centerX;
   newRootNode.y = centerY;
 
-  // サブツリーの実際の高さを計算（最小間隔で密に配置）
+  // サブツリーの実際の高さを計算（画像サイズを考慮した適応的間隔）
   const calculateSubtreeActualHeight = (node: MindMapNode): number => {
     if (node.collapsed || !node.children || node.children.length === 0) {
       const nodeSize = calculateNodeSize(node);
       return nodeSize.height;
     }
     
-    // 子ノードの合計高さ + 最小間隔のみ
+    // 子ノードの合計高さ + 画像サイズに応じた間隔
     const childrenTotalHeight = node.children.reduce((sum, child, index) => {
       const childHeight = calculateSubtreeActualHeight(child);
-      const spacing = index > 0 ? nodeSpacing : 0; // 最小間隔のみ
+      
+      // 前の子ノードとのスペース計算（画像サイズを考慮）
+      let spacing = 0;
+      if (index > 0) {
+        const prevChild = node.children[index - 1];
+        const prevChildSize = calculateNodeSize(prevChild);
+        const currentChildSize = calculateNodeSize(child);
+        
+        // 基本間隔に画像の高さに応じた追加間隔を加える
+        spacing = nodeSpacing;
+        if (prevChildSize.imageHeight > 80 || currentChildSize.imageHeight > 80) {
+          spacing += Math.max(prevChildSize.imageHeight, currentChildSize.imageHeight) * 0.1;
+        }
+      }
+      
       return sum + childHeight + spacing;
     }, 0);
     
@@ -86,16 +102,12 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     
     // X座標の計算
     if (parent) {
-      const nodeSize = calculateNodeSize(node);
-      
       if (depth === 1) {
-        // ルートノードの直接の子要素: ルートノードの右端から120px
-        const childXFromRootEdge = getChildNodeXFromRootEdge(newRootNode);
-        node.x = childXFromRootEdge + nodeSize.width / 2;
+        // ルートノードの直接の子要素: ルートノードの右端から子ノードの左端まで
+        node.x = getChildNodeXFromRootEdge(newRootNode, node);
       } else {
-        // それ以外: トグルボタンを基準とした配置
-        const childXFromToggle = getChildNodeXFromToggle(parent, newRootNode);
-        node.x = childXFromToggle + nodeSize.width / 2;
+        // それ以外: 親ノードの右端から子ノードの左端まで
+        node.x = getChildNodeXFromParentEdge(parent, node);
       }
     } else {
       // フォールバック: 従来の深度ベースの配置
@@ -111,9 +123,20 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         nodeCount: calculateSubtreeNodeCount(child)
       }));
       
-      // 全子ノードの合計高さ + 最小間隔を計算
+      // 全子ノードの合計高さ + 画像サイズに応じた間隔を計算
       const totalActualHeight = childrenWithHeights.reduce((sum, child, index) => {
-        const spacing = index > 0 ? nodeSpacing : 0;
+        let spacing = 0;
+        if (index > 0) {
+          const prevChild = childrenWithHeights[index - 1];
+          const prevChildSize = calculateNodeSize(prevChild.node);
+          const currentChildSize = calculateNodeSize(child.node);
+          
+          // 基本間隔に画像の高さに応じた追加間隔を加える
+          spacing = nodeSpacing;
+          if (prevChildSize.imageHeight > 80 || currentChildSize.imageHeight > 80) {
+            spacing += Math.max(prevChildSize.imageHeight, currentChildSize.imageHeight) * 0.1;
+          }
+        }
         return sum + child.actualHeight + spacing;
       }, 0);
       
@@ -126,10 +149,18 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         
         positionNode(childInfo.node, node, depth + 1, yOffset + childCenterOffset);
         
-        // 次の子ノードのためのオフセット更新（最小間隔のみ）
+        // 次の子ノードのためのオフセット更新（画像サイズに応じた間隔）
         currentOffset += childInfo.actualHeight;
         if (index < childrenWithHeights.length - 1) {
-          currentOffset += nodeSpacing; // 最小間隔のみ追加
+          const currentChildSize = calculateNodeSize(childInfo.node);
+          const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node);
+          
+          // 基本間隔に画像の高さに応じた追加間隔を加える
+          let spacing = nodeSpacing;
+          if (currentChildSize.imageHeight > 80 || nextChildSize.imageHeight > 80) {
+            spacing += Math.max(currentChildSize.imageHeight, nextChildSize.imageHeight) * 0.1;
+          }
+          currentOffset += spacing;
         }
       });
     }
@@ -143,9 +174,20 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       nodeCount: calculateSubtreeNodeCount(child)
     }));
     
-    // 全子ノードの合計高さ + 最小間隔を計算
+    // 全子ノードの合計高さ + 画像サイズに応じた間隔を計算
     const totalActualHeight = childrenWithHeights.reduce((sum, child, index) => {
-      const spacing = index > 0 ? nodeSpacing : 0;
+      let spacing = 0;
+      if (index > 0) {
+        const prevChild = childrenWithHeights[index - 1];
+        const prevChildSize = calculateNodeSize(prevChild.node);
+        const currentChildSize = calculateNodeSize(child.node);
+        
+        // 基本間隔に画像の高さに応じた追加間隔を加える
+        spacing = nodeSpacing;
+        if (prevChildSize.imageHeight > 80 || currentChildSize.imageHeight > 80) {
+          spacing += Math.max(prevChildSize.imageHeight, currentChildSize.imageHeight) * 0.1;
+        }
+      }
       return sum + child.actualHeight + spacing;
     }, 0);
     
@@ -158,10 +200,18 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       
       positionNode(childInfo.node, newRootNode, 1, childCenterOffset);
       
-      // 次の子ノードのためのオフセット更新（最小間隔のみ）
+      // 次の子ノードのためのオフセット更新（画像サイズに応じた間隔）
       currentOffset += childInfo.actualHeight;
       if (index < childrenWithHeights.length - 1) {
-        currentOffset += nodeSpacing; // 最小間隔のみ追加
+        const currentChildSize = calculateNodeSize(childInfo.node);
+        const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node);
+        
+        // 基本間隔に画像の高さに応じた追加間隔を加える
+        let spacing = nodeSpacing;
+        if (currentChildSize.imageHeight > 80 || nextChildSize.imageHeight > 80) {
+          spacing += Math.max(currentChildSize.imageHeight, nextChildSize.imageHeight) * 0.1;
+        }
+        currentOffset += spacing;
       }
     });
   }
