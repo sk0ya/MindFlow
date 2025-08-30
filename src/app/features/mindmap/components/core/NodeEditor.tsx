@@ -93,7 +93,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     return (
       <>
         <text
-          x={node.x - (nodeWidth / 2) + 15}
+          x={node.x - (nodeWidth / 2) + 8}
           y={textY}
           textAnchor="start"
           fill="black"
@@ -192,9 +192,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
   return (
     <foreignObject 
-      x={node.x - nodeWidth / 2 + 20} 
+      x={node.x - nodeWidth / 2 + 8} 
       y={editY} 
-      width={nodeWidth - 48} 
+      width={nodeWidth - 16} 
       height="24"
     >
       <input
