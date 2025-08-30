@@ -436,6 +436,14 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             fileName: fileAttachment.name,
             totalAttachments: updatedNode.attachments.length
           });
+          
+          // ファイル添付後に自動整列を実行
+          if (typeof applyAutoLayout === 'function') {
+            logger.debug('🎯 Applying auto layout after file attachment');
+            requestAnimationFrame(() => {
+              applyAutoLayout();
+            });
+          }
         } else {
           throw new Error(`ノードが見つかりません: ${nodeId}`);
         }
