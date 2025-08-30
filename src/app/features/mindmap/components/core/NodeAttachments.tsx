@@ -197,7 +197,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     }
     
     const svgRect = svgRef.current.getBoundingClientRect();
-    const currentDimensions = getImageDimensions(node);
+    const currentDimensions = imageDimensions;
     
     console.log('📏 現在の画像サイズ:', currentDimensions);
     
@@ -326,26 +326,20 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   // 画像ファイルのみを表示（1枚目のみ）
   const firstImageFile = node.attachments?.find((f: FileAttachment) => f.isImage) || null;
   
-  // 画像サイズ設定
-  const getImageDimensions = (node: MindMapNode) => {
-    // カスタムサイズが設定されている場合
-    if (node.customImageWidth && node.customImageHeight) {
-      return { width: node.customImageWidth, height: node.customImageHeight };
-    }
-    
-    // プリセットサイズの場合
-    const imageSize = node.imageSize || 'medium';
-    const sizeMap = {
-      'small': { width: 100, height: 70 },
-      'medium': { width: 150, height: 105 },
-      'large': { width: 200, height: 140 },
-      'extra-large': { width: 250, height: 175 }
-    };
-    
-    return sizeMap[imageSize];
-  };
-
-  const imageDimensions = getImageDimensions(node);
+  // calculateNodeSizeで既に計算済みの画像サイズを使用
+  // カスタムサイズを優先
+  const imageDimensions = node.customImageWidth && node.customImageHeight
+    ? { width: node.customImageWidth, height: node.customImageHeight }
+    : (() => {
+        const imageSize = node.imageSize || 'medium';
+        const sizeMap = {
+          'small': { width: 100, height: 70 },
+          'medium': { width: 150, height: 105 },
+          'large': { width: 200, height: 140 },
+          'extra-large': { width: 250, height: 175 }
+        };
+        return sizeMap[imageSize];
+      })();
 
   return (
     <>

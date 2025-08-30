@@ -93,111 +93,11 @@ export const NodeSelectionBorder: React.FC<{
 }) => {
   if (!isSelected && !isDragTarget) return null;
   
-  // 画像の有無を確認
-  const hasDisplayImage = node.attachments && node.attachments.some(f => f.isImage);
-  const hasNonImageFiles = node.attachments && node.attachments.some(f => !f.isImage) || 
-                          (node.attachments && node.attachments.filter(f => f.isImage).length > 1);
-  
-  // 画像がある場合のノード背景サイズを調整
-  let actualNodeWidth = nodeWidth;
-  let actualNodeHeight = nodeHeight;
-  
-  if (hasDisplayImage) {
-    // 画像サイズを取得（カスタムサイズを優先）
-    const getImageDimensions = (node: MindMapNode) => {
-      // カスタムサイズが設定されている場合
-      if (node.customImageWidth && node.customImageHeight) {
-        return { width: node.customImageWidth, height: node.customImageHeight };
-      }
-      
-      // プリセットサイズの場合
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': { width: 100, height: 70 },
-        'medium': { width: 150, height: 105 },
-        'large': { width: 200, height: 140 },
-        'extra-large': { width: 250, height: 175 }
-      };
-      
-      return sizeMap[imageSize];
-    };
-
-    const imageDimensions = getImageDimensions(node);
-    
-    actualNodeWidth = Math.max(nodeWidth, imageDimensions.width + 20);
-    actualNodeHeight = 25 + imageDimensions.height;
-  }
-  
-  // 選択範囲の計算
-  let selectionHeight, selectionY, selectionWidth, selectionX;
-  
-  if (hasDisplayImage) {
-    // 同じgetImageDimensions関数を使用
-    const getImageDimensions = (node: MindMapNode) => {
-      if (node.customImageWidth && node.customImageHeight) {
-        return { width: node.customImageWidth, height: node.customImageHeight };
-      }
-      
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': { width: 100, height: 70 },
-        'medium': { width: 150, height: 105 },
-        'large': { width: 200, height: 140 },
-        'extra-large': { width: 250, height: 175 }
-      };
-      
-      return sizeMap[imageSize];
-    };
-
-    const imageDimensions = getImageDimensions(node);
-    
-    const imageTop = node.y - imageDimensions.height / 2;
-    const textBottom = node.y + imageDimensions.height / 2 + 20;
-    
-    selectionY = imageTop - 5;
-    selectionHeight = textBottom - imageTop + 5;
-    selectionWidth = Math.max(actualNodeWidth, imageDimensions.width);
-    selectionX = node.x - selectionWidth / 2;
-  } else {
-    selectionHeight = actualNodeHeight;
-    selectionY = node.y - actualNodeHeight / 2;
-    selectionWidth = actualNodeWidth;
-    selectionX = node.x - selectionWidth / 2;
-  }
-  
-  // ファイルアイコンがある場合の範囲拡張
-  if (hasNonImageFiles) {
-    const fileCardHeight = 22;
-    
-    // 画像サイズを再取得
-    const getImageDimensions = (node: MindMapNode) => {
-      if (node.customImageWidth && node.customImageHeight) {
-        return { width: node.customImageWidth, height: node.customImageHeight };
-      }
-      
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': { width: 100, height: 70 },
-        'medium': { width: 150, height: 105 },
-        'large': { width: 200, height: 140 },
-        'extra-large': { width: 250, height: 175 }
-      };
-      
-      return sizeMap[imageSize];
-    };
-    
-    const imageDimensions = getImageDimensions(node);
-    const fileCardYOffset = hasDisplayImage 
-      ? node.y + imageDimensions.height / 2 + 25
-      : node.y + 10;
-    
-    const fileCardBottom = fileCardYOffset + fileCardHeight;
-    const currentBottom = selectionY + selectionHeight;
-    
-    if (fileCardBottom > currentBottom) {
-      selectionHeight = fileCardBottom - selectionY + 5;
-    }
-  }
+  // calculateNodeSizeで計算済みのサイズをそのまま使用
+  const selectionWidth = nodeWidth;
+  const selectionHeight = nodeHeight;
+  const selectionX = node.x - selectionWidth / 2;
+  const selectionY = node.y - selectionHeight / 2;
 
   return (
     <rect
