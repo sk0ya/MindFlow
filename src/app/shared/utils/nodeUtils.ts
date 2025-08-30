@@ -42,15 +42,20 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
   
   let imageHeight = 0;
   if (hasImages) {
-    // ノードの画像サイズ設定を取得
-    const imageSize = node.imageSize || 'medium';
-    const sizeMap = {
-      'small': 75,      // 70px + マージン
-      'medium': 110,    // 105px + マージン  
-      'large': 145,     // 140px + マージン
-      'extra-large': 180 // 175px + マージン
-    };
-    imageHeight = sizeMap[imageSize];
+    // カスタムサイズを優先
+    if (node.customImageWidth && node.customImageHeight) {
+      imageHeight = node.customImageHeight + 5; // マージン追加
+    } else {
+      // ノードの画像サイズ設定を取得
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': 75,      // 70px + マージン
+        'medium': 110,    // 105px + マージン  
+        'large': 145,     // 140px + マージン
+        'extra-large': 180 // 175px + マージン
+      };
+      imageHeight = sizeMap[imageSize];
+    }
   }
   
   // 編集中は editText の長さ、非編集時は表示用の長さを使用

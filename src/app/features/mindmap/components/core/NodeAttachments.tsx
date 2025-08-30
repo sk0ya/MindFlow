@@ -5,13 +5,14 @@ import { useAuth } from '../../../../components/auth';
 
 interface NodeAttachmentsProps {
   node: MindMapNode;
-  nodeWidth: number;
-  imageHeight: number;
   svgRef: React.RefObject<SVGSVGElement>;
   zoom: number;
   pan: { x: number; y: number };
+  isSelected?: boolean;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onAutoLayout?: () => void;
 }
 
 // 隠れたファイル一覧表示コンポーネント
@@ -335,19 +336,26 @@ const formatFileSize = (bytes: number): string => {
 
 const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   node,
-  nodeWidth,
-  imageHeight,
   svgRef,
   zoom,
   pan,
+  isSelected = false,
   onShowImageModal,
-  onShowFileActionMenu
+  onShowFileActionMenu,
+  onUpdateNode,
+  onAutoLayout
 }) => {
   // 隠れたファイルメニューの状態管理
   const [hiddenFilesMenu, setHiddenFilesMenu] = useState<{
     files: FileAttachment[];
     position: { x: number; y: number };
   } | null>(null);
+  
+  // 画像リサイズ状態管理
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
+  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
+  const [originalAspectRatio, setOriginalAspectRatio] = useState(1);
 
   const showHiddenFilesMenu = useCallback((files: FileAttachment[], position: { x: number; y: number }) => {
     setHiddenFilesMenu({ files, position });
@@ -356,6 +364,100 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   const closeHiddenFilesMenu = useCallback(() => {
     setHiddenFilesMenu(null);
   }, []);
+
+  // 画像リサイズハンドラー
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    console.log('🎯 リサイズ開始:', { nodeId: node.id, isResizing });
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!onUpdateNode) {
+      console.log('❌ onUpdateNode が未定義');
+      return;
+    }
+    
+    if (!svgRef.current) {
+      console.log('❌ svgRef が未定義');
+      return;
+    }
+    
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const currentDimensions = getImageDimensions(node);
+    
+    console.log('📏 現在の画像サイズ:', currentDimensions);
+    
+    setIsResizing(true);
+    setResizeStartPos({
+      x: (e.clientX - svgRect.left) / zoom - pan.x,
+      y: (e.clientY - svgRect.top) / zoom - pan.y
+    });
+    setResizeStartSize({
+      width: currentDimensions.width,
+      height: currentDimensions.height
+    });
+    setOriginalAspectRatio(currentDimensions.width / currentDimensions.height);
+    
+    console.log('✅ リサイズ開始完了');
+  }, [node, onUpdateNode, svgRef, zoom, pan, isResizing]);
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !onUpdateNode || !svgRef.current) return;
+    
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const currentPos = {
+      x: (e.clientX - svgRect.left) / zoom - pan.x,
+      y: (e.clientY - svgRect.top) / zoom - pan.y
+    };
+    
+    const deltaX = currentPos.x - resizeStartPos.x;
+    const deltaY = currentPos.y - resizeStartPos.y;
+    
+    // 対角線方向の距離を計算
+    const diagonal = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const direction = deltaX + deltaY > 0 ? 1 : -1;
+    
+    // 最小・最大サイズの制限
+    const minWidth = 50;
+    const maxWidth = 400;
+    const newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStartSize.width + diagonal * direction));
+    const newHeight = newWidth / originalAspectRatio;
+    
+    onUpdateNode(node.id, {
+      customImageWidth: Math.round(newWidth),
+      customImageHeight: Math.round(newHeight),
+      imageSize: undefined // カスタムサイズ使用時はプリセットをクリア
+    });
+  }, [isResizing, onUpdateNode, svgRef, zoom, pan, resizeStartPos, resizeStartSize, originalAspectRatio, node.id]);
+
+  const handleResizeEnd = useCallback(() => {
+    if (isResizing) {
+      setIsResizing(false);
+      
+      // リサイズ後に自動整列
+      if (onAutoLayout) {
+        requestAnimationFrame(() => {
+          onAutoLayout();
+        });
+      }
+    }
+  }, [isResizing, onAutoLayout]);
+
+  // マウスイベントリスナーの管理
+  useEffect(() => {
+    if (isResizing) {
+      const handleMouseMove = (e: MouseEvent) => handleResizeMove(e);
+      const handleMouseUp = () => handleResizeEnd();
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+    return undefined;
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   const handleHiddenFileClick = useCallback((file: FileAttachment) => {
     if (hiddenFilesMenu) {
@@ -498,6 +600,65 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               )}
             </div>
           </foreignObject>
+          
+          {/* 画像選択時の枠線とリサイズハンドル */}
+          {isSelected && (
+            <g>
+              {/* 枠線 */}
+              <rect
+                x={node.x - imageDimensions.width / 2 - 2}
+                y={node.y - imageDimensions.height / 2 - 20 - 2}
+                width={imageDimensions.width + 4}
+                height={imageDimensions.height + 4}
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth="2"
+                strokeDasharray="5,3"
+                rx="6"
+                ry="6"
+                style={{
+                  pointerEvents: 'none',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)'
+                }}
+              />
+              
+              {/* リサイズハンドル（右下） */}
+              <g>
+                {/* ハンドル背景 */}
+                <rect
+                  x={node.x + imageDimensions.width / 2 - 4}
+                  y={node.y + imageDimensions.height / 2 - 20 - 4}
+                  width="8"
+                  height="8"
+                  fill="white"
+                  stroke="#3b82f6"
+                  strokeWidth="2"
+                  rx="1"
+                  ry="1"
+                  style={{
+                    cursor: isResizing ? 'nw-resize' : 'se-resize',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseDown={handleResizeStart}
+                />
+                {/* ハンドルの十字マーク */}
+                <g stroke="#3b82f6" strokeWidth="1" style={{ pointerEvents: 'none' }}>
+                  <line
+                    x1={node.x + imageDimensions.width / 2 - 2}
+                    y1={node.y + imageDimensions.height / 2 - 20 - 2}
+                    x2={node.x + imageDimensions.width / 2 + 2}
+                    y2={node.y + imageDimensions.height / 2 - 20 + 2}
+                  />
+                  <line
+                    x1={node.x + imageDimensions.width / 2 + 2}
+                    y1={node.y + imageDimensions.height / 2 - 20 - 2}
+                    x2={node.x + imageDimensions.width / 2 - 2}
+                    y2={node.y + imageDimensions.height / 2 - 20 + 2}
+                  />
+                </g>
+              </g>
+            </g>
+          )}
         </g>
       )}
       

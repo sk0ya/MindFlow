@@ -40,15 +40,26 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
   let actualNodeHeight = nodeHeight;
   
   if (hasDisplayImage) {
-    // 画像サイズを取得
-    const imageSize = node.imageSize || 'medium';
-    const imageSizeMap = {
-      'small': { width: 100, height: 70 },
-      'medium': { width: 150, height: 105 },
-      'large': { width: 200, height: 140 },
-      'extra-large': { width: 250, height: 175 }
+    // 画像サイズを取得（カスタムサイズを優先）
+    const getImageDimensions = (node: MindMapNode) => {
+      // カスタムサイズが設定されている場合
+      if (node.customImageWidth && node.customImageHeight) {
+        return { width: node.customImageWidth, height: node.customImageHeight };
+      }
+      
+      // プリセットサイズの場合
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': { width: 100, height: 70 },
+        'medium': { width: 150, height: 105 },
+        'large': { width: 200, height: 140 },
+        'extra-large': { width: 250, height: 175 }
+      };
+      
+      return sizeMap[imageSize];
     };
-    const imageDimensions = imageSizeMap[imageSize];
+
+    const imageDimensions = getImageDimensions(node);
     
     // ノード幅は画像幅とテキスト幅のうち大きい方に調整
     actualNodeWidth = Math.max(nodeWidth, imageDimensions.width + 20); // 20pxのマージン
@@ -56,90 +67,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
     actualNodeHeight = 40 + imageDimensions.height; // テキスト部分40px + 画像の高さ
   }
   
-  // 選択範囲の高さ・幅計算（新しいレイアウトに合わせて）
-  let selectionHeight, selectionY, selectionWidth, selectionX;
-  
-  if (hasDisplayImage) {
-    // 画像がある場合: 画像（上）+ テキスト（下）をカバーする範囲
-    const imageSize = node.imageSize || 'medium';
-    const imageSizeMap = {
-      'small': { width: 100, height: 70 },
-      'medium': { width: 150, height: 105 },
-      'large': { width: 200, height: 140 },
-      'extra-large': { width: 250, height: 175 }
-    };
-    const imageDimensions = imageSizeMap[imageSize];
-    
-    // 画像の上端から テキストの下端までをカバー
-    const imageTop = node.y - imageDimensions.height / 2 - 20;
-    const textBottom = node.y + imageDimensions.height / 2 + 5;
-    
-    selectionY = imageTop - 5; // 5pxのマージン
-    selectionHeight = textBottom - imageTop + 10; // 上下5pxずつのマージン
-    selectionWidth = Math.max(actualNodeWidth, imageDimensions.width) + 10; // 左右5pxずつのマージン
-    selectionX = node.x - selectionWidth / 2;
-  } else {
-    // 画像がない場合: 従来通り
-    selectionHeight = actualNodeHeight + 10; // 上下5pxずつのマージン
-    selectionY = node.y - actualNodeHeight / 2 - 5;
-    selectionWidth = actualNodeWidth + 10; // 左右5pxずつのマージン
-    selectionX = node.x - selectionWidth / 2;
-  }
-  
-  if (isSelected && hasNonImageFiles) {
-    // ファイルカードがある場合は選択範囲を拡張
-    const fileCardHeight = 22; // ファイルカードの高さ
-    const fileCardYOffset = hasDisplayImage 
-      ? imageHeight - 35 + 10  // 画像がある場合
-      : 10;                    // 画像がない場合
-    
-    // 高さの拡張
-    const fileCardBottom = node.y + fileCardYOffset + fileCardHeight;
-    const nodeBottom = node.y + nodeHeight / 2;
-    
-    if (fileCardBottom > nodeBottom) {
-      selectionHeight = fileCardBottom - selectionY + 5; // 5pxのマージン
-    }
-    
-    // 幅の拡張 - ファイルカードの実際の配置範囲を計算
-    const nonImageFiles = [
-      ...(node.attachments?.filter(f => !f.isImage) || []),
-      ...(node.attachments?.filter(f => f.isImage).slice(1) || [])
-    ];
-    
-    if (nonImageFiles.length > 0) {
-      let fileContentLeft, fileContentRight;
-      
-      if (nonImageFiles.length === 1) {
-        // 単一ファイルの場合 - アイコンのみ
-        const iconSize = 24;
-        fileContentLeft = node.x - iconSize / 2;
-        fileContentRight = node.x + iconSize / 2;
-      } else {
-        // 複数ファイルの場合 - アイコンの横並び
-        const maxDisplayFiles = 3;
-        const filesToShow = nonImageFiles.slice(0, maxDisplayFiles);
-        const remainingCount = nonImageFiles.length - maxDisplayFiles;
-        const iconSize = 20;
-        const iconSpacing = 4;
-        const totalWidth = filesToShow.length * iconSize + (filesToShow.length - 1) * iconSpacing + 
-                          (remainingCount > 0 ? iconSize + iconSpacing : 0);
-        fileContentLeft = node.x - totalWidth / 2;
-        fileContentRight = node.x + totalWidth / 2;
-      }
-      
-      // ノードテキスト部分の範囲
-      const nodeLeft = node.x - nodeWidth / 2;
-      const nodeRight = node.x + nodeWidth / 2;
-      
-      // 選択範囲は両方を含む最小の範囲
-      const selectionLeft = Math.min(nodeLeft, fileContentLeft);
-      const selectionRight = Math.max(nodeRight, fileContentRight);
-      
-      selectionWidth = selectionRight - selectionLeft;
-      selectionX = selectionLeft;
-    }
-  }
+  // この部分は使用されない（NodeSelectionBorderで選択枠線を描画する）
 
   return (
     <>
@@ -187,7 +115,6 @@ export const NodeSelectionBorder: React.FC<{
   isLayoutTransitioning: boolean;
   nodeWidth: number;
   nodeHeight: number;
-  imageHeight: number;
 }> = ({
   node,
   isSelected,
@@ -195,8 +122,7 @@ export const NodeSelectionBorder: React.FC<{
   isDragging,
   isLayoutTransitioning,
   nodeWidth,
-  nodeHeight,
-  imageHeight
+  nodeHeight
 }) => {
   if (!isSelected && !isDragTarget) return null;
   
@@ -210,14 +136,26 @@ export const NodeSelectionBorder: React.FC<{
   let actualNodeHeight = nodeHeight;
   
   if (hasDisplayImage) {
-    const imageSize = node.imageSize || 'medium';
-    const imageSizeMap = {
-      'small': { width: 100, height: 70 },
-      'medium': { width: 150, height: 105 },
-      'large': { width: 200, height: 140 },
-      'extra-large': { width: 250, height: 175 }
+    // 画像サイズを取得（カスタムサイズを優先）
+    const getImageDimensions = (node: MindMapNode) => {
+      // カスタムサイズが設定されている場合
+      if (node.customImageWidth && node.customImageHeight) {
+        return { width: node.customImageWidth, height: node.customImageHeight };
+      }
+      
+      // プリセットサイズの場合
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': { width: 100, height: 70 },
+        'medium': { width: 150, height: 105 },
+        'large': { width: 200, height: 140 },
+        'extra-large': { width: 250, height: 175 }
+      };
+      
+      return sizeMap[imageSize];
     };
-    const imageDimensions = imageSizeMap[imageSize];
+
+    const imageDimensions = getImageDimensions(node);
     
     actualNodeWidth = Math.max(nodeWidth, imageDimensions.width + 20);
     actualNodeHeight = 40 + imageDimensions.height;
@@ -227,14 +165,24 @@ export const NodeSelectionBorder: React.FC<{
   let selectionHeight, selectionY, selectionWidth, selectionX;
   
   if (hasDisplayImage) {
-    const imageSize = node.imageSize || 'medium';
-    const imageSizeMap = {
-      'small': { width: 100, height: 70 },
-      'medium': { width: 150, height: 105 },
-      'large': { width: 200, height: 140 },
-      'extra-large': { width: 250, height: 175 }
+    // 同じgetImageDimensions関数を使用
+    const getImageDimensions = (node: MindMapNode) => {
+      if (node.customImageWidth && node.customImageHeight) {
+        return { width: node.customImageWidth, height: node.customImageHeight };
+      }
+      
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': { width: 100, height: 70 },
+        'medium': { width: 150, height: 105 },
+        'large': { width: 200, height: 140 },
+        'extra-large': { width: 250, height: 175 }
+      };
+      
+      return sizeMap[imageSize];
     };
-    const imageDimensions = imageSizeMap[imageSize];
+
+    const imageDimensions = getImageDimensions(node);
     
     const imageTop = node.y - imageDimensions.height / 2 - 20;
     const textBottom = node.y + imageDimensions.height / 2 + 5;

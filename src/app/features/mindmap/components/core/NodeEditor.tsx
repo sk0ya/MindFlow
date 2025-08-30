@@ -67,7 +67,28 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   if (!isEditing) {
     // 画像がある場合はテキストをノードの下部に表示
     const hasImage = node.attachments && node.attachments.some(f => f.isImage);
-    const textY = hasImage ? node.y + imageHeight / 2 - 5 : node.y + 5;
+    
+    // カスタム画像サイズを考慮
+    const getActualImageHeight = () => {
+      if (!hasImage) return 0;
+      
+      if (node.customImageWidth && node.customImageHeight) {
+        return node.customImageHeight;
+      }
+      
+      const imageSize = node.imageSize || 'medium';
+      const sizeMap = {
+        'small': 70,
+        'medium': 105,
+        'large': 140,
+        'extra-large': 175
+      };
+      
+      return sizeMap[imageSize];
+    };
+    
+    const actualImageHeight = getActualImageHeight();
+    const textY = hasImage ? node.y + actualImageHeight / 2 - 5 : node.y + 5;
     
     return (
       <text
@@ -91,7 +112,27 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
   // 編集時も画像がある場合はテキストを下部に配置
   const hasImage = node.attachments && node.attachments.some(f => f.isImage);
-  const editY = hasImage ? node.y + imageHeight / 2 - 17 : node.y - 12;
+  
+  const getActualImageHeight = () => {
+    if (!hasImage) return 0;
+    
+    if (node.customImageWidth && node.customImageHeight) {
+      return node.customImageHeight;
+    }
+    
+    const imageSize = node.imageSize || 'medium';
+    const sizeMap = {
+      'small': 70,
+      'medium': 105,
+      'large': 140,
+      'extra-large': 175
+    };
+    
+    return sizeMap[imageSize];
+  };
+  
+  const actualImageHeight = getActualImageHeight();
+  const editY = hasImage ? node.y + actualImageHeight / 2 - 17 : node.y - 12;
 
   return (
     <foreignObject 

@@ -4,7 +4,6 @@ import { useCanvasDragHandler } from '../core/CanvasDragHandler';
 import { useCanvasViewportHandler } from '../core/CanvasViewportHandler';
 import { useCanvasEventHandler } from '../core/CanvasEventHandler';
 import type { MindMapData, MindMapNode, FileAttachment } from '@shared/types';
-import { logger } from '../../../../shared/utils/logger';
 
 interface MindMapCanvasProps {
   data: MindMapData;

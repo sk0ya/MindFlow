@@ -2,7 +2,6 @@ import React, { memo } from 'react';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import MindMapCanvas from './MindMapCanvas';
 import type { MindMapData, Position, FileAttachment } from '@shared/types';
-import { logger } from '../../../../shared/utils/logger';
 
 interface MindMapWorkspaceProps {
   data: MindMapData;

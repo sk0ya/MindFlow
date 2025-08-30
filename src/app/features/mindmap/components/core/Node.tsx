@@ -25,6 +25,8 @@ interface NodeProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onAutoLayout?: () => void;
   editText: string;
   setEditText: (text: string) => void;
   zoom: number;
@@ -50,6 +52,8 @@ const Node: React.FC<NodeProps> = ({
   onFileUpload: _onFileUpload,
   onShowImageModal,
   onShowFileActionMenu,
+  onUpdateNode,
+  onAutoLayout,
   editText,
   setEditText,
   zoom,
@@ -157,13 +161,14 @@ const Node: React.FC<NodeProps> = ({
       {/* 2. 添付ファイル（画像とアイコン） */}
       <NodeAttachments
         node={node}
-        nodeWidth={nodeWidth}
-        imageHeight={imageHeight}
         svgRef={svgRef}
         zoom={zoom}
         pan={pan}
+        isSelected={isSelected}
         onShowImageModal={onShowImageModal}
         onShowFileActionMenu={onShowFileActionMenu}
+        onUpdateNode={onUpdateNode}
+        onAutoLayout={onAutoLayout}
       />
 
       {/* 3. テキスト */}
@@ -187,7 +192,6 @@ const Node: React.FC<NodeProps> = ({
         isLayoutTransitioning={isLayoutTransitioning}
         nodeWidth={nodeWidth}
         nodeHeight={nodeHeight}
-        imageHeight={imageHeight}
       />
     </g>
   );
@@ -204,7 +208,9 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
       prevProps.node.fontWeight !== nextProps.node.fontWeight ||
       prevProps.node.color !== nextProps.node.color ||
       prevProps.node.collapsed !== nextProps.node.collapsed ||
-      prevProps.node.imageSize !== nextProps.node.imageSize) {
+      prevProps.node.imageSize !== nextProps.node.imageSize ||
+      prevProps.node.customImageWidth !== nextProps.node.customImageWidth ||
+      prevProps.node.customImageHeight !== nextProps.node.customImageHeight) {
     return false;
   }
 

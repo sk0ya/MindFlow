@@ -144,6 +144,8 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                 onRemoveFile={onRemoveFile}
                 onShowImageModal={onShowImageModal}
                 onShowFileActionMenu={onShowFileActionMenu}
+                onUpdateNode={onUpdateNode}
+                onAutoLayout={onAutoLayout}
                 zoom={zoom}
                 pan={pan}
                 svgRef={svgRef}
@@ -198,8 +200,6 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                     onAddChild={onAddChild}
                     onDelete={onDeleteNode}
                     onFileUpload={onFileUpload}
-                    onUpdateNode={onUpdateNode}
-                    onAutoLayout={onAutoLayout}
                   />
                 );
               }
