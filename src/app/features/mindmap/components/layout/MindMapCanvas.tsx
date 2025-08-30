@@ -27,6 +27,8 @@ interface MindMapCanvasProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onAutoLayout?: () => void;
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: { x: number; y: number };
@@ -54,6 +56,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     onRemoveFile,
     onShowImageModal,
     onShowFileActionMenu,
+    onUpdateNode,
+    onAutoLayout,
     zoom,
     setZoom,
     pan,
@@ -155,6 +159,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       onRemoveFile={onRemoveFile}
       onShowImageModal={onShowImageModal}
       onShowFileActionMenu={onShowFileActionMenu}
+      onUpdateNode={onUpdateNode}
+      onAutoLayout={onAutoLayout}
       onDragStart={handleDragStartAdapter}
       onDragMove={handleDragMoveAdapter}
       onDragEnd={handleDragEndAdapter}

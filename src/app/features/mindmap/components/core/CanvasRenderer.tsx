@@ -45,6 +45,8 @@ interface CanvasRendererProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onAutoLayout?: () => void;
 
   // Drag handlers
   onDragStart: (nodeId: string) => void;
@@ -80,6 +82,8 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onUpdateNode,
+  onAutoLayout,
   onDragStart,
   onDragMove,
   onDragEnd
@@ -194,6 +198,8 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                     onAddChild={onAddChild}
                     onDelete={onDeleteNode}
                     onFileUpload={onFileUpload}
+                    onUpdateNode={onUpdateNode}
+                    onAutoLayout={onAutoLayout}
                   />
                 );
               }

@@ -9,6 +9,8 @@ interface NodeActionsProps {
   onAddChild: (parentId: string) => void;
   onDelete: (nodeId: string) => void;
   onFileUpload: (nodeId: string, files: FileList) => void;
+  onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
+  onAutoLayout?: () => void;
 }
 
 const NodeActions: React.FC<NodeActionsProps> = ({
@@ -19,6 +21,8 @@ const NodeActions: React.FC<NodeActionsProps> = ({
   onAddChild,
   onDelete,
   onFileUpload,
+  onUpdateNode,
+  onAutoLayout,
 }) => {
 
   const handleFileUpload = useCallback((e: React.MouseEvent) => {
@@ -37,6 +41,34 @@ const NodeActions: React.FC<NodeActionsProps> = ({
     fileInput.click();
   }, [node.id, onFileUpload]);
 
+  const handleImageSizeChange = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onUpdateNode) return;
+    
+    // 現在のサイズを取得
+    const currentSize = node.imageSize || 'medium';
+    const sizeOptions = ['small', 'medium', 'large', 'extra-large'];
+    const currentIndex = sizeOptions.indexOf(currentSize);
+    const nextIndex = (currentIndex + 1) % sizeOptions.length;
+    const nextSize = sizeOptions[nextIndex] as 'small' | 'medium' | 'large' | 'extra-large';
+    
+    console.log(`画像サイズ変更: ${currentSize} → ${nextSize} (ノード: ${node.id})`);
+    
+    onUpdateNode(node.id, { imageSize: nextSize });
+    
+    // 画像サイズ変更後に自動整列を実行
+    if (onAutoLayout) {
+      // requestAnimationFrameを使用してより滑らかな更新
+      requestAnimationFrame(() => {
+        console.log('自動整列実行');
+        onAutoLayout();
+      });
+    }
+  }, [node.id, node.imageSize, onUpdateNode, onAutoLayout]);
+
+  // 画像があるかチェック
+  const hasImage = node.attachments && node.attachments.some(f => f.isImage);
+
   if (!isSelected || isEditing) {
     return null;
   }
@@ -44,6 +76,17 @@ const NodeActions: React.FC<NodeActionsProps> = ({
   const buttonY = node.y + nodeHeight / 2 + 20;
   const buttonSize = 14; // ボタンサイズを少し大きく
   const spacing = 36; // ボタン間隔
+  
+  // 画像サイズ表示用のテキスト
+  const getSizeDisplayText = (size: string | undefined) => {
+    const sizeMap = {
+      'small': 'S',
+      'medium': 'M', 
+      'large': 'L',
+      'extra-large': 'XL'
+    };
+    return sizeMap[size as keyof typeof sizeMap] || 'M';
+  };
 
   return (
     <g className="node-actions">
@@ -312,6 +355,87 @@ const NodeActions: React.FC<NodeActionsProps> = ({
               className="icon-stroke"
             />
           </g>
+        </g>
+      )}
+
+      {/* 画像サイズ調整ボタン（画像がある場合のみ） */}
+      {hasImage && onUpdateNode && (
+        <g className="action-button" style={{ cursor: 'pointer' }}>
+          {/* ツールチップ背景 */}
+          <rect
+            x={node.x + spacing * 2 - 30}
+            y={buttonY - 38}
+            width="60"
+            height="18"
+            rx="4"
+            ry="4"
+            fill="rgba(0, 0, 0, 0.8)"
+            style={{ opacity: 0, transition: 'opacity 0.2s ease', pointerEvents: 'none' }}
+            className="tooltip-bg"
+          />
+          {/* ツールチップテキスト */}
+          <text
+            x={node.x + spacing * 2}
+            y={buttonY - 26}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="white"
+            fontSize="10"
+            fontFamily="system-ui, sans-serif"
+            style={{ opacity: 0, transition: 'opacity 0.2s ease', pointerEvents: 'none' }}
+            className="tooltip-text"
+          >
+            画像サイズ変更
+          </text>
+          
+          {/* ボタン背景 */}
+          <rect
+            x={node.x + spacing * 2 - buttonSize / 2}
+            y={buttonY - buttonSize / 2}
+            width={buttonSize}
+            height={buttonSize}
+            rx="4"
+            ry="4"
+            fill="#8b5cf6"
+            stroke="#8b5cf6"
+            strokeWidth="1.5"
+            style={{
+              filter: 'drop-shadow(0 2px 8px rgba(139, 92, 246, 0.15))',
+              transition: 'all 0.2s ease'
+            }}
+            className="button-bg"
+            onClick={handleImageSizeChange}
+          />
+          {/* ホバーエフェクト用の背景 */}
+          <rect
+            x={node.x + spacing * 2 - buttonSize / 2}
+            y={buttonY - buttonSize / 2}
+            width={buttonSize}
+            height={buttonSize}
+            rx="4"
+            ry="4"
+            fill="#8b5cf6"
+            opacity="0"
+            style={{
+              transition: 'opacity 0.2s ease',
+              pointerEvents: 'none'
+            }}
+            className="button-hover"
+          />
+          {/* 画像サイズアイコン */}
+          <text
+            x={node.x + spacing * 2}
+            y={buttonY + 1}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="white"
+            fontSize="8"
+            fontWeight="bold"
+            fontFamily="system-ui, sans-serif"
+            style={{ pointerEvents: 'none' }}
+          >
+            {getSizeDisplayText(node.imageSize)}
+          </text>
         </g>
       )}
 

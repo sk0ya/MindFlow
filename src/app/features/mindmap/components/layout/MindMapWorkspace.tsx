@@ -24,6 +24,8 @@ interface MindMapWorkspaceProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onUpdateNode: (nodeId: string, updates: Partial<import('@shared/types').MindMapNode>) => void;
+  onAutoLayout?: () => void;
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: Position;
@@ -50,6 +52,8 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onUpdateNode,
+  onAutoLayout,
   zoom,
   setZoom,
   pan,
@@ -79,6 +83,8 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         onRemoveFile={onRemoveFile}
         onShowImageModal={onShowImageModal}
         onShowFileActionMenu={onShowFileActionMenu}
+        onUpdateNode={onUpdateNode}
+        onAutoLayout={onAutoLayout}
         zoom={zoom}
         setZoom={setZoom}
         pan={pan}

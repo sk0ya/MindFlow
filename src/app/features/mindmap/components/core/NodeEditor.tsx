@@ -65,10 +65,14 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
 
   if (!isEditing) {
+    // 画像がある場合はテキストをノードの下部に表示
+    const hasImage = node.attachments && node.attachments.some(f => f.isImage);
+    const textY = hasImage ? node.y + imageHeight / 2 - 5 : node.y + 5;
+    
     return (
       <text
         x={node.x}
-        y={node.y + 5 + imageHeight / 2}
+        y={textY}
         textAnchor="middle"
         fill="black"
         fontSize={node.fontSize || '14px'}
@@ -85,10 +89,14 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     );
   }
 
+  // 編集時も画像がある場合はテキストを下部に配置
+  const hasImage = node.attachments && node.attachments.some(f => f.isImage);
+  const editY = hasImage ? node.y + imageHeight / 2 - 17 : node.y - 12;
+
   return (
     <foreignObject 
       x={node.x - nodeWidth / 2} 
-      y={node.y - 12 + imageHeight / 2} 
+      y={editY} 
       width={nodeWidth} 
       height="24"
     >

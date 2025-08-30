@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect, memo } from 'react';
-import NodeRenderer from './NodeRenderer';
+import NodeRenderer, { NodeSelectionBorder } from './NodeRenderer';
 import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import { useNodeDragHandler } from './NodeDragHandler';
@@ -138,6 +138,7 @@ const Node: React.FC<NodeProps> = ({
 
   return (
     <g>
+      {/* 1. ノード背景（最初に描画） */}
       <NodeRenderer
         node={node}
         isSelected={isSelected}
@@ -153,6 +154,7 @@ const Node: React.FC<NodeProps> = ({
         onContextMenu={handleRightClick}
       />
       
+      {/* 2. 添付ファイル（画像とアイコン） */}
       <NodeAttachments
         node={node}
         nodeWidth={nodeWidth}
@@ -164,6 +166,7 @@ const Node: React.FC<NodeProps> = ({
         onShowFileActionMenu={onShowFileActionMenu}
       />
 
+      {/* 3. テキスト */}
       <NodeEditor
         node={node}
         isEditing={isEditing}
@@ -175,8 +178,17 @@ const Node: React.FC<NodeProps> = ({
         blurTimeoutRef={blurTimeoutRef}
       />
 
-
-
+      {/* 4. 選択枠線（最後に描画して最前面に） */}
+      <NodeSelectionBorder
+        node={node}
+        isSelected={isSelected}
+        isDragTarget={isDragTarget}
+        isDragging={isDragging}
+        isLayoutTransitioning={isLayoutTransitioning}
+        nodeWidth={nodeWidth}
+        nodeHeight={nodeHeight}
+        imageHeight={imageHeight}
+      />
     </g>
   );
 };
@@ -191,7 +203,8 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
       prevProps.node.fontSize !== nextProps.node.fontSize ||
       prevProps.node.fontWeight !== nextProps.node.fontWeight ||
       prevProps.node.color !== nextProps.node.color ||
-      prevProps.node.collapsed !== nextProps.node.collapsed) {
+      prevProps.node.collapsed !== nextProps.node.collapsed ||
+      prevProps.node.imageSize !== nextProps.node.imageSize) {
     return false;
   }
 

@@ -779,6 +779,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onRemoveFile={handleFileDelete}
             onShowImageModal={showImageModal}
             onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
+            onUpdateNode={updateNode}
+            onAutoLayout={applyAutoLayout}
             zoom={ui.zoom}
             setZoom={setZoom}
             pan={ui.pan}

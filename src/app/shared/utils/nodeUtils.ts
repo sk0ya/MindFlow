@@ -37,9 +37,21 @@ function calculateTextWidth(text: string): number {
 }
 
 export function calculateNodeSize(node: MindMapNode, editText?: string, isEditing: boolean = false): NodeSize {
-  // 画像の有無を確認
+  // 画像の有無とサイズを確認
   const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
-  const imageHeight = hasImages ? 60 : 0; // 画像表示エリアの高さ
+  
+  let imageHeight = 0;
+  if (hasImages) {
+    // ノードの画像サイズ設定を取得
+    const imageSize = node.imageSize || 'medium';
+    const sizeMap = {
+      'small': 75,      // 70px + マージン
+      'medium': 110,    // 105px + マージン  
+      'large': 145,     // 140px + マージン
+      'extra-large': 180 // 175px + マージン
+    };
+    imageHeight = sizeMap[imageSize];
+  }
   
   // 編集中は editText の長さ、非編集時は表示用の長さを使用
   const effectiveText = isEditing && editText !== undefined ? editText : node.text;

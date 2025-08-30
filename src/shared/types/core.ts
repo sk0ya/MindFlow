@@ -41,6 +41,11 @@ export interface MindMapNode {
   collapsed?: boolean;
   attachments?: FileAttachment[];
   
+  // Image display properties
+  imageSize?: 'small' | 'medium' | 'large' | 'extra-large';
+  customImageWidth?: number;
+  customImageHeight?: number;
+  
   // Markdown note for each node
   note?: string;
 }

@@ -400,15 +400,36 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     ...remainingImageFiles // 2枚目以降の画像を非画像ファイルとして扱う
   ];
   
+  // 画像サイズ設定
+  const getImageDimensions = (node: MindMapNode) => {
+    // カスタムサイズが設定されている場合
+    if (node.customImageWidth && node.customImageHeight) {
+      return { width: node.customImageWidth, height: node.customImageHeight };
+    }
+    
+    // プリセットサイズの場合
+    const imageSize = node.imageSize || 'medium';
+    const sizeMap = {
+      'small': { width: 100, height: 70 },
+      'medium': { width: 150, height: 105 },
+      'large': { width: 200, height: 140 },
+      'extra-large': { width: 250, height: 175 }
+    };
+    
+    return sizeMap[imageSize];
+  };
+
+  const imageDimensions = getImageDimensions(node);
+  
   // レイアウト計算
   const hasDisplayImage = firstImageFile !== null;
   
   // ノードの高さを考慮してファイルカードを配置
-  // 画像がある場合: 画像の下から10px下
+  // 画像がある場合: 画像の下から10px下（テキストの更に下）
   // 画像がない場合: ノードテキストから10px下
   const nonImageFileYOffset = hasDisplayImage 
-    ? node.y + imageHeight - 35 + 10  // 画像の下に10pxの間隔
-    : node.y + 10;                    // ノードテキストから10px下
+    ? node.y + imageDimensions.height / 2 + 15  // 画像の下、テキストの更に下
+    : node.y + 10;                             // ノードテキストから10px下
 
   return (
     <>
@@ -416,10 +437,10 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
       {firstImageFile && (
         <g key={firstImageFile.id}>
           <foreignObject 
-            x={node.x - 75} 
-            y={node.y - 40} 
-            width={150} 
-            height={imageHeight - 5}
+            x={node.x - imageDimensions.width / 2} 
+            y={node.y - imageDimensions.height / 2 - 20} 
+            width={imageDimensions.width} 
+            height={imageDimensions.height - 5}
           >
             <div style={{
               position: 'relative',
@@ -432,7 +453,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               backgroundColor: '#fff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)' // スムーズなサイズ変更アニメーション
             }}>
               {firstImageFile.downloadUrl && firstImageFile.downloadUrl.includes('/api/files/') ? (
                 <CloudImage
@@ -444,7 +466,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                     height: 'auto',
                     objectFit: 'contain',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)',
                     display: 'block',
                     margin: '0 auto'
                   }}
@@ -463,7 +485,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                     height: 'auto',
                     objectFit: 'contain',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)',
                     display: 'block',
                     margin: '0 auto'
                   }}
