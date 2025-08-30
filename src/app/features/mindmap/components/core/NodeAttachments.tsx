@@ -429,17 +429,24 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               overflow: 'hidden',
               border: '2px solid #fff',
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              backgroundColor: '#fff'
+              backgroundColor: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}>
               {firstImageFile.downloadUrl && firstImageFile.downloadUrl.includes('/api/files/') ? (
                 <CloudImage
                   file={firstImageFile}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s ease'
+                    transition: 'transform 0.2s ease',
+                    display: 'block',
+                    margin: '0 auto'
                   }}
                   onClick={(e) => handleFileActionMenu(e, firstImageFile)}
                   onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
@@ -450,11 +457,15 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                   src={firstImageFile.downloadUrl || firstImageFile.dataURL || firstImageFile.data} 
                   alt={firstImageFile.name}
                   style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s ease'
+                    transition: 'transform 0.2s ease',
+                    display: 'block',
+                    margin: '0 auto'
                   }}
                   onClick={(e) => handleFileActionMenu(e, firstImageFile)}
                   onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
