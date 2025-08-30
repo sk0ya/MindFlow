@@ -24,7 +24,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
   isLayoutTransitioning,
   nodeWidth,
   nodeHeight,
-  imageHeight,
+  imageHeight: _imageHeight,
   onMouseDown,
   onClick,
   onDoubleClick,

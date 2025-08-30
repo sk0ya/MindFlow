@@ -19,7 +19,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   setEditText,
   onFinishEdit,
   nodeWidth,
-  imageHeight,
+  imageHeight: _imageHeight,
   blurTimeoutRef
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);

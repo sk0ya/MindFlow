@@ -9,6 +9,7 @@ interface NodeAttachmentsProps {
   zoom: number;
   pan: { x: number; y: number };
   isSelected?: boolean;
+  onSelectNode?: (nodeId: string | null) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
   onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
@@ -340,6 +341,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   zoom,
   pan,
   isSelected = false,
+  onSelectNode,
   onShowImageModal,
   onShowFileActionMenu,
   onUpdateNode,
@@ -472,6 +474,29 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     }
   }, [onShowImageModal]);
 
+  // 画像クリック時の処理（ノード選択 or メニュー表示）
+  const handleImageClick = useCallback((e: React.MouseEvent, file: FileAttachment) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // ノードが選択されていない場合は選択する
+    if (!isSelected && onSelectNode) {
+      onSelectNode(node.id);
+      return;
+    }
+    
+    // 既に選択されている場合はファイルアクションメニューを表示
+    if (onShowFileActionMenu) {
+      const clientX = e.clientX || 0;
+      const clientY = e.clientY || 0;
+      
+      onShowFileActionMenu(file, node.id, {
+        x: clientX,
+        y: clientY
+      });
+    }
+  }, [isSelected, onSelectNode, onShowFileActionMenu, node.id]);
+
   const handleFileActionMenu = useCallback((e: React.MouseEvent | { stopPropagation: () => void; preventDefault: () => void; clientX: number; clientY: number }, file: FileAttachment) => {
     e.stopPropagation();
     e.preventDefault();
@@ -572,7 +597,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                     display: 'block',
                     margin: '0 auto'
                   }}
-                  onClick={(e) => handleFileActionMenu(e, firstImageFile)}
+                  onClick={(e) => handleImageClick(e, firstImageFile)}
                   onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
                   onContextMenu={(e) => handleFileActionMenu(e, firstImageFile)}
                 />
@@ -591,7 +616,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                     display: 'block',
                     margin: '0 auto'
                   }}
-                  onClick={(e) => handleFileActionMenu(e, firstImageFile)}
+                  onClick={(e) => handleImageClick(e, firstImageFile)}
                   onDoubleClick={(e) => handleImageDoubleClick(e, firstImageFile)}
                   onContextMenu={(e) => handleFileActionMenu(e, firstImageFile)}
                   onError={() => {}}

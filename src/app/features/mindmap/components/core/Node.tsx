@@ -165,6 +165,7 @@ const Node: React.FC<NodeProps> = ({
         zoom={zoom}
         pan={pan}
         isSelected={isSelected}
+        onSelectNode={onSelect}
         onShowImageModal={onShowImageModal}
         onShowFileActionMenu={onShowFileActionMenu}
         onUpdateNode={onUpdateNode}

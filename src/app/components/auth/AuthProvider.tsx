@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 認証状態の変更を監視
   useEffect(() => {
-    const unsubscribe = authAdapter.onAuthChange((user) => {
+    const unsubscribe = authAdapter.onAuthChange((_user) => {
       setAuthState(authAdapter.authState);
     });
 
