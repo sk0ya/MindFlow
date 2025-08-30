@@ -91,22 +91,78 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     const textY = hasImage ? node.y + actualImageHeight / 2 - 5 : node.y + 5;
     
     return (
-      <text
-        x={node.x}
-        y={textY}
-        textAnchor="middle"
-        fill="black"
-        fontSize={node.fontSize || '14px'}
-        fontWeight={node.fontWeight || 'normal'}
-        fontStyle={node.fontStyle || 'normal'}
-        style={{ 
-          pointerEvents: 'none', 
-          userSelect: 'none'
-        }}
-      >
-        <title>{node.text}</title>
-        {node.text}
-      </text>
+      <>
+        <text
+          x={node.x - (nodeWidth / 2) + 10}
+          y={textY}
+          textAnchor="start"
+          fill="black"
+          fontSize={node.fontSize || '14px'}
+          fontWeight={node.fontWeight || 'normal'}
+          fontStyle={node.fontStyle || 'normal'}
+          style={{ 
+            pointerEvents: 'none', 
+            userSelect: 'none'
+          }}
+        >
+          <title>{node.text}</title>
+          {node.text}
+        </text>
+        
+        {/* 添付ファイル数とアイコン（ノード右端付近） */}
+        {node.attachments && node.attachments.length > 0 && (
+          <g>
+            {/* 背景バッジ */}
+            <rect
+              x={node.x + (nodeWidth / 2) - 32}
+              y={textY - 8}
+              width="26"
+              height="12"
+              fill="white"
+              stroke="#ddd"
+              strokeWidth="1"
+              rx="6"
+              ry="6"
+              style={{ 
+                filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
+                pointerEvents: 'none'
+              }}
+            />
+            
+            {/* SVGアイコン: ペーパークリップ */}
+            <g 
+              transform={`translate(${node.x + (nodeWidth / 2) - 29}, ${textY - 8})`}
+              style={{ pointerEvents: 'none' }}
+            >
+              <path
+                d="M3 6.5L1.5 8C0.5 9 0.5 10.5 1.5 11.5C2.5 12.5 4 12.5 5 11.5L8.5 8C9.5 7 9.5 5.5 8.5 4.5C7.5 3.5 6 3.5 5 4.5L2 7.5C1.5 8 1.5 8.5 2 9C2.5 9.5 3 9.5 3.5 9L6 6.5"
+                stroke="#666"
+                strokeWidth="1.2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ transform: 'scale(0.75)' }}
+              />
+            </g>
+            
+            {/* ファイル数 */}
+            <text
+              x={node.x + (nodeWidth / 2) - 15}
+              y={textY + 1}
+              textAnchor="middle"
+              fill="#333"
+              fontSize="10px"
+              fontWeight="600"
+              style={{ 
+                pointerEvents: 'none', 
+                userSelect: 'none'
+              }}
+            >
+              {node.attachments.length}
+            </text>
+          </g>
+        )}
+      </>
     );
   }
 
@@ -136,9 +192,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
 
   return (
     <foreignObject 
-      x={node.x - nodeWidth / 2} 
+      x={node.x - nodeWidth / 2 + 5} 
       y={editY} 
-      width={nodeWidth} 
+      width={nodeWidth - 45} 
       height="24"
     >
       <input
@@ -154,14 +210,14 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           height: '100%',
           border: '1px solid #ccc',
           background: 'white',
-          textAlign: 'center',
+          textAlign: 'left',
           fontSize: node.fontSize || '14px',
           fontWeight: node.fontWeight || 'normal',
           fontStyle: node.fontStyle || 'normal',
           color: 'black',
           outline: 'none',
           borderRadius: '4px',
-          padding: '0',
+          padding: '0 8px',
           boxSizing: 'border-box'
         }}
       />

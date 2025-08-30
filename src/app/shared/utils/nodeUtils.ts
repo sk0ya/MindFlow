@@ -75,8 +75,12 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
     displayTextWidth = Math.max(calculateTextWidth(node.text), 5); // 最小5文字分の幅
   }
   
+  // 添付ファイルクリップアイコン用の余白を追加
+  const hasAttachments = node.attachments && node.attachments.length > 0;
+  const clipIconPadding = hasAttachments ? 40 : 0; // クリップアイコンと個数表示のための余白
+  
   // テキストベースの幅計算
-  const textBasedWidth = Math.max(displayTextWidth * 8, 20);
+  const textBasedWidth = Math.max(displayTextWidth * 8, 20) + clipIconPadding;
   
   // 画像がある場合は画像幅とテキスト幅の大きい方を使用（NodeRendererと同じロジック）
   const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 20) : textBasedWidth;
