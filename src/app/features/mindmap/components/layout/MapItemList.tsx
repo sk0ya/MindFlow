@@ -3,16 +3,16 @@ import type { MindMapData, MindMapNode } from '@shared/types';
 
 interface MapItemListProps {
   maps: MindMapData[];
+  categoryPath: string;
   currentMapId: string | null;
   editingMapId: string | null;
   editingTitle: string;
   onSelectMap: (mapId: string) => void;
-  onStartRename: (mapId: string, title: string) => void;
   onFinishRename: (mapId: string) => void;
   onCancelRename: () => void;
-  onDeleteMap: (mapId: string) => void;
   onEditingTitleChange: (title: string) => void;
   onDragStart: (e: React.DragEvent, map: MindMapData) => void;
+  onContextMenu?: (e: React.MouseEvent, targetPath: string | null, targetType: 'folder' | 'empty' | 'map', mapData?: MindMapData) => void;
 }
 
 // ユーティリティ関数
@@ -46,16 +46,16 @@ const getNodeCount = (rootNode?: MindMapNode): number => {
 
 const MapItemList: React.FC<MapItemListProps> = ({
   maps,
+  categoryPath,
   currentMapId,
   editingMapId,
   editingTitle,
   onSelectMap,
-  onStartRename,
   onFinishRename,
   onCancelRename,
-  onDeleteMap,
   onEditingTitleChange,
-  onDragStart
+  onDragStart,
+  onContextMenu
 }) => {
   const handleKeyPress = useCallback((e: React.KeyboardEvent, mapId: string) => {
     if (e.key === 'Enter') {
@@ -72,6 +72,7 @@ const MapItemList: React.FC<MapItemListProps> = ({
           key={map.id}
           className={`map-item ${currentMapId === map.id ? 'active' : ''}`}
           onClick={() => onSelectMap(map.id)}
+          onContextMenu={(e) => onContextMenu && onContextMenu(e, categoryPath, 'map', map)}
           draggable
           onDragStart={(e) => onDragStart(e, map)}
         >
@@ -87,44 +88,20 @@ const MapItemList: React.FC<MapItemListProps> = ({
             />
           ) : (
             <div className="map-info">
-              <div className="map-title">{map.title}</div>
-              <div className="map-meta">
-                <span className="node-count">
-                  {getNodeCount(map.rootNode)} ノード
-                </span>
-                <span className="update-date">
-                  {formatDate(map.updatedAt)}
-                </span>
+              <span className="map-file-icon">🗺️</span>
+              <div className="map-details">
+                <div className="map-title">{map.title}</div>
+                <div className="map-meta">
+                  <span className="node-count">
+                    {getNodeCount(map.rootNode)} ノード
+                  </span>
+                  <span className="update-date">
+                    {formatDate(map.updatedAt)}
+                  </span>
+                </div>
               </div>
             </div>
           )}
-          
-          <div className="map-actions">
-            <button
-              className="action-btn rename"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartRename(map.id, map.title);
-              }}
-              title="名前を変更"
-            >
-              ✏️
-            </button>
-            
-            <button
-              className="action-btn delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                // eslint-disable-next-line no-alert
-                if (window.confirm(`「${map.title}」を削除しますか？`)) {
-                  onDeleteMap(map.id);
-                }
-              }}
-              title="削除"
-            >
-              🗑️
-            </button>
-          </div>
         </div>
       ))}
     </>

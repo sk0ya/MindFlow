@@ -112,6 +112,16 @@ const SidebarStyles: React.FC = () => (
       transform: scale(1.05);
     }
 
+    .selected-folder-info {
+      background: rgba(0, 120, 212, 0.1);
+      border: 1px solid rgba(0, 120, 212, 0.3);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #0078d4;
+      text-align: center;
+    }
+
     .search-container {
       display: flex;
       gap: 8px;
@@ -212,11 +222,11 @@ const SidebarStyles: React.FC = () => (
     }
 
     .category-group {
-      margin: 8px 12px;
-      border-radius: 12px;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      transition: all 0.2s ease;
+      margin: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      transition: all 0.15s ease;
       overflow: hidden;
     }
 
@@ -226,85 +236,139 @@ const SidebarStyles: React.FC = () => (
     }
 
     .category-header {
-      padding: 14px 16px;
-      background: rgba(248, 250, 252, 0.8);
+      padding: 8px 12px;
+      background: transparent;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 600;
-      color: #374151;
-      transition: all 0.2s ease;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      gap: 6px;
+      font-weight: 500;
+      font-size: 13px;
+      color: #333;
+      transition: all 0.15s ease;
+      border-bottom: none;
+      height: 32px;
     }
 
     .category-header:hover {
-      background: rgba(243, 244, 246, 0.9);
-      color: #1f2937;
+      background: rgba(229, 229, 229, 0.6);
     }
 
-    .category-icon {
-      font-size: 12px;
-      color: #6c757d;
+    .category-header.selected {
+      background: #0078d4;
+      color: white;
+    }
+
+    .category-header.selected .category-folder-icon,
+    .category-header.selected .category-expand-icon,
+    .category-header.selected .category-name,
+    .category-header.selected .category-count {
+      color: white;
+    }
+
+    .category-expand-icon {
+      font-size: 10px;
+      color: #666;
+      width: 12px;
+      text-align: center;
+      transition: transform 0.15s ease;
+    }
+
+    .category-folder-icon {
+      font-size: 14px;
+      color: #dcb67a;
     }
 
     .category-name {
       flex: 1;
-      font-size: 14px;
+      font-size: 13px;
+      color: #333;
     }
 
     .category-count {
-      font-size: 12px;
-      color: #6c757d;
+      font-size: 11px;
+      color: #888;
+      background: rgba(200, 200, 200, 0.3);
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
     }
 
     .category-maps {
-      background: white;
+      background: transparent;
+      padding-left: 18px;
     }
 
     .map-item {
-      padding: 12px 16px;
-      margin: 4px 8px;
-      border-radius: 8px;
+      padding: 4px 12px;
+      margin: 0;
+      border-radius: 0;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       position: relative;
+      height: 28px;
+      font-size: 13px;
     }
 
     .map-item:hover {
-      background: rgba(59, 130, 246, 0.05);
-      transform: translateX(2px);
+      background: rgba(229, 229, 229, 0.6);
+      transform: none;
     }
 
     .map-item.active {
-      background: rgba(59, 130, 246, 0.1);
-      border-left: 3px solid #3b82f6;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+      background: #0078d4;
+      color: white;
+      border-left: none;
+      box-shadow: none;
+    }
+
+    .map-item.active .map-title {
+      color: white;
+    }
+
+    .map-item.active .map-meta {
+      color: rgba(255, 255, 255, 0.8);
     }
 
     .map-info {
       flex: 1;
       min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .map-file-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .map-details {
+      flex: 1;
+      min-width: 0;
     }
 
     .map-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 400;
+      color: #333;
+      margin-bottom: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
 
     .map-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 12px;
-      color: #6b7280;
+      display: none;
+      gap: 8px;
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
     }
 
     .node-count,
@@ -312,6 +376,7 @@ const SidebarStyles: React.FC = () => (
       white-space: nowrap;
     }
 
+    /* Action buttons removed - now using context menu
     .map-actions {
       display: flex;
       gap: 4px;
@@ -344,6 +409,7 @@ const SidebarStyles: React.FC = () => (
       background: rgba(239, 68, 68, 0.1);
       color: #dc2626;
     }
+    */
 
     .title-input {
       width: 100%;
@@ -382,6 +448,56 @@ const SidebarStyles: React.FC = () => (
     .empty-description {
       font-size: 14px;
       line-height: 1.5;
+    }
+
+    /* Context Menu Styles */
+    .context-menu {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 4px 0;
+      min-width: 180px;
+      font-size: 13px;
+      z-index: 9999;
+    }
+
+    .context-menu-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.15s ease;
+    }
+
+    .context-menu-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    .context-menu-item.disabled {
+      color: #999;
+      cursor: not-allowed;
+    }
+
+    .context-menu-item.disabled:hover {
+      background-color: transparent;
+    }
+
+    .context-menu-icon {
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .context-menu-label {
+      flex: 1;
+    }
+
+    .context-menu-separator {
+      height: 1px;
+      background-color: #e0e0e0;
+      margin: 4px 0;
     }
   `}</style>
 );
