@@ -34,6 +34,13 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           </button>
         )}
       </div>
+
+      <MapControlButtons
+        onAddMap={onAddMap}
+        onAddFolder={onAddFolder}
+        onExpandAll={onExpandAll}
+        onCollapseAll={onCollapseAll}
+      />
       
       <div className="search-container">
         <input
@@ -44,13 +51,6 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           className="search-input"
         />
       </div>
-
-      <MapControlButtons
-        onAddMap={onAddMap}
-        onAddFolder={onAddFolder}
-        onExpandAll={onExpandAll}
-        onCollapseAll={onCollapseAll}
-      />
     </div>
   );
 };
