@@ -2,6 +2,7 @@ import React from 'react';
 import MapItemList from './MapItemList';
 import type { MindMapData } from '@shared/types';
 import { getFolderName } from '../../../../shared/utils/folderUtils';
+import { highlightSearchTerm } from '../../../../shared/utils/highlightUtils';
 
 interface CategoryGroupProps {
   categories: string[];
@@ -12,6 +13,7 @@ interface CategoryGroupProps {
   editingMapId: string | null;
   editingTitle: string;
   dragOverCategory: string | null;
+  searchTerm: string;
   onToggleCategoryCollapse: (category: string) => void;
   onFolderSelect: (folderPath: string) => void;
   onContextMenu: (e: React.MouseEvent, targetPath: string | null, targetType: 'folder' | 'empty' | 'map', mapData?: MindMapData) => void;
@@ -36,6 +38,7 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
   editingMapId,
   editingTitle,
   dragOverCategory,
+  searchTerm,
   onToggleCategoryCollapse,
   onFolderSelect,
   onContextMenu,
@@ -70,6 +73,7 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
                 currentMapId={currentMapId}
                 editingMapId={editingMapId}
                 editingTitle={editingTitle}
+                searchTerm={searchTerm}
                 onSelectMap={onSelectMap}
                 onFinishRename={onFinishRename}
                 onCancelRename={onCancelRename}
@@ -150,7 +154,7 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
               <span className="category-folder-icon">
                 {isExpanded ? '📂' : '📁'}
               </span>
-              <span className="category-name">{folderName}</span>
+              <span className="category-name">{highlightSearchTerm(folderName, searchTerm)}</span>
               {hasMaps && (
                 <span className="category-count">
                   ({groupedMaps[category]?.length || 0})
@@ -166,6 +170,7 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
                   currentMapId={currentMapId}
                   editingMapId={editingMapId}
                   editingTitle={editingTitle}
+                  searchTerm={searchTerm}
                   onSelectMap={onSelectMap}
                   onFinishRename={onFinishRename}
                   onCancelRename={onCancelRename}

@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import type { MindMapData, MindMapNode } from '@shared/types';
+import { highlightSearchTerm } from '../../../../shared/utils/highlightUtils';
 
 interface MapItemListProps {
   maps: MindMapData[];
@@ -7,6 +8,7 @@ interface MapItemListProps {
   currentMapId: string | null;
   editingMapId: string | null;
   editingTitle: string;
+  searchTerm: string;
   onSelectMap: (mapId: string) => void;
   onFinishRename: (mapId: string) => void;
   onCancelRename: () => void;
@@ -50,6 +52,7 @@ const MapItemList: React.FC<MapItemListProps> = ({
   currentMapId,
   editingMapId,
   editingTitle,
+  searchTerm,
   onSelectMap,
   onFinishRename,
   onCancelRename,
@@ -90,7 +93,7 @@ const MapItemList: React.FC<MapItemListProps> = ({
             <div className="map-info">
               <span className="map-file-icon">🗺️</span>
               <div className="map-details">
-                <div className="map-title">{map.title}</div>
+                <div className="map-title">{highlightSearchTerm(map.title, searchTerm)}</div>
                 <div className="map-meta">
                   <span className="node-count">
                     {getNodeCount(map.rootNode)} ノード

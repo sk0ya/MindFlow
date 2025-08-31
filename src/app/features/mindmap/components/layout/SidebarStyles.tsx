@@ -605,6 +605,38 @@ const SidebarStyles: React.FC = () => (
       background-color: #e0e0e0;
       margin: 4px 0;
     }
+
+    /* 検索ハイライト */
+    .search-highlight {
+      background-color: #fef3c7;
+      color: #d97706;
+      padding: 1px 2px;
+      border-radius: 2px;
+      font-weight: 600;
+      box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2);
+    }
+
+    .search-highlight:first-child {
+      margin-left: 0;
+    }
+
+    .search-highlight:last-child {
+      margin-right: 0;
+    }
+
+    /* フォルダ名のハイライト */
+    .category-name .search-highlight {
+      background-color: #ecfdf5;
+      color: #059669;
+      box-shadow: 0 0 0 1px rgba(5, 150, 105, 0.2);
+    }
+
+    /* マップタイトルのハイライト */
+    .map-title .search-highlight {
+      background-color: #fef3c7;
+      color: #d97706;
+      box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2);
+    }
   `}</style>
 );
 

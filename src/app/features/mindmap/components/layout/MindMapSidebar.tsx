@@ -493,9 +493,14 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
 
   // フィルタリングとグループ化（階層フォルダ対応）
   const { filteredMaps, groupedMaps, visibleFolders } = useMemo(() => {
-    const filtered = mindMaps.filter(map =>
-      map.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const searchLower = searchTerm.toLowerCase();
+    
+    // マップのタイトルまたはカテゴリ名で検索
+    const filtered = mindMaps.filter(map => {
+      const titleMatch = map.title.toLowerCase().includes(searchLower);
+      const categoryMatch = map.category && map.category.toLowerCase().includes(searchLower);
+      return titleMatch || categoryMatch;
+    });
 
     const grouped = filtered.reduce((groups: { [key: string]: MindMapData[] }, map) => {
       const category = map.category || '';
@@ -516,11 +521,43 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       });
     });
 
-    // すべてのフォルダ（マップがあるもの + 空フォルダ）を取得
-    const allFolders = new Set([...Object.keys(grouped), ...Array.from(emptyFolders)]);
+    // 検索時のフォルダフィルタリング
+    let foldersToShow = new Set<string>();
+    
+    if (searchTerm) {
+      // 検索がある場合：マップが含まれるフォルダ + 検索にヒットするフォルダ名 + その親フォルダも含める
+      Object.keys(grouped).forEach(category => {
+        // マップが含まれるフォルダを追加
+        foldersToShow.add(category);
+        
+        // 親フォルダも追加（階層構造を維持するため）
+        const parts = category.split('/');
+        for (let i = 1; i < parts.length; i++) {
+          const parentPath = parts.slice(0, i).join('/');
+          foldersToShow.add(parentPath);
+        }
+      });
+      
+      // フォルダ名が検索条件にマッチするフォルダも追加
+      Array.from(emptyFolders).forEach(folder => {
+        if (folder.toLowerCase().includes(searchLower)) {
+          foldersToShow.add(folder);
+          
+          // その親フォルダも追加
+          const parts = folder.split('/');
+          for (let i = 1; i < parts.length; i++) {
+            const parentPath = parts.slice(0, i).join('/');
+            foldersToShow.add(parentPath);
+          }
+        }
+      });
+    } else {
+      // 検索がない場合：すべてのフォルダを表示
+      foldersToShow = new Set([...Object.keys(grouped), ...Array.from(emptyFolders)]);
+    }
     
     // 階層構造を保持したソート
-    const sortedFolders = Array.from(allFolders).sort((a, b) => {
+    const sortedFolders = Array.from(foldersToShow).sort((a, b) => {
       // パスを分割
       const partsA = a.split('/');
       const partsB = b.split('/');
@@ -716,6 +753,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
             editingMapId={editingMapId}
             editingTitle={editingTitle}
             dragOverCategory={dragOverCategory}
+            searchTerm={searchTerm}
             onToggleCategoryCollapse={toggleCategoryCollapse}
             onFolderSelect={handleFolderSelect}
             onContextMenu={handleContextMenu}
