@@ -221,6 +221,20 @@ const SidebarStyles: React.FC = () => (
       padding: 0;
     }
 
+    .maps-content-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .maps-content-wrapper.drag-over-root {
+      background: rgba(34, 197, 94, 0.05);
+      border: 2px dashed rgba(34, 197, 94, 0.3);
+      border-radius: 8px;
+      margin: 8px;
+    }
+
     .category-group {
       margin: 0;
       border-radius: 0;
@@ -233,6 +247,44 @@ const SidebarStyles: React.FC = () => (
     .category-group.drag-over {
       background-color: rgba(59, 130, 246, 0.05);
       border: 2px dashed rgba(59, 130, 246, 0.3);
+    }
+
+    /* Drag and Drop Visual Feedback */
+    .category-header[draggable="true"] {
+      cursor: grab;
+    }
+
+    .category-header[draggable="true"]:active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+
+    .map-item[draggable="true"] {
+      cursor: grab;
+    }
+
+    .map-item[draggable="true"]:active {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+
+    /* Drop zone highlighting */
+    .category-header.drag-over {
+      background: rgba(34, 197, 94, 0.1) !important;
+      border: 2px dashed rgba(34, 197, 94, 0.5);
+      transform: scale(1.02);
+      transition: all 0.2s ease;
+    }
+
+    /* Drag preview ghost */
+    .category-header:active {
+      transform: rotate(2deg);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .map-item:active {
+      transform: rotate(1deg);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .category-header {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMindMap, useKeyboardShortcuts, useMindMapStore } from '../../../../core';
+import { useMindMap, useKeyboardShortcuts, useMindMapStore, useMindMapPersistence } from '../../../../core';
 import MindMapSidebar from './MindMapSidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
@@ -56,6 +56,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const store = useMindMapStore();
+  
+  // 永続化フックを直接使用
+  const persistenceHook = useMindMapPersistence({
+    mode: storageMode,
+    authAdapter: undefined // 後で設定
+  });
   
   // Get auth adapter for cloud mode
   let auth;
@@ -183,6 +189,33 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     undo,
     redo
   } = mindMap;
+
+  // フォルダ移動用の一括カテゴリ更新関数
+  const updateMultipleMapCategories = React.useCallback(async (mapUpdates: Array<{id: string, category: string}>) => {
+    console.log('Updating multiple map categories:', mapUpdates);
+    
+    // 各マップを個別に更新
+    for (const update of mapUpdates) {
+      const mapToUpdate = allMindMaps.find(map => map.id === update.id);
+      if (mapToUpdate) {
+        const updatedMap = {
+          ...mapToUpdate,
+          category: update.category,
+          updatedAt: new Date().toISOString()
+        };
+        
+        console.log(`Updating map "${updatedMap.title}" from "${mapToUpdate.category}" to "${update.category}"`);
+        
+        try {
+          // 永続化フックを直接使用してマップリストを更新
+          await persistenceHook.updateMapInList(updatedMap);
+          console.log(`Successfully updated map: ${updatedMap.title}`);
+        } catch (error) {
+          console.error(`Failed to update map ${updatedMap.title}:`, error);
+        }
+      }
+    }
+  }, [allMindMaps, persistenceHook]);
 
   // キーボードショートカット設定
   useKeyboardShortcuts({
@@ -753,6 +786,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onDeleteMap={deleteMap}
           onRenameMap={(mapId, title) => updateMapMetadata(mapId, { title })}
           onChangeCategory={(mapId, category) => updateMapMetadata(mapId, { category })}
+          onChangeCategoryBulk={updateMultipleMapCategories}
           availableCategories={['仕事', 'プライベート', '学習', '未分類']}
           isCollapsed={ui.sidebarCollapsed}
           onToggleCollapse={toggleSidebar}

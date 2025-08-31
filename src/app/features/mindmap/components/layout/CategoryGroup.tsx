@@ -25,6 +25,8 @@ interface CategoryGroupProps {
   onDragOver: (e: React.DragEvent, category: string) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, category: string) => void;
+  onFolderDragStart?: (e: React.DragEvent, folderPath: string) => void;
+  onFolderDrop?: (e: React.DragEvent, targetFolderPath: string) => void;
 }
 
 const CategoryGroup: React.FC<CategoryGroupProps> = ({
@@ -47,7 +49,9 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
   onDragStart,
   onDragOver,
   onDragLeave,
-  onDrop
+  onDrop,
+  onFolderDragStart,
+  onFolderDrop
 }) => {
   return (
     <div className="maps-content">
@@ -64,13 +68,11 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
           <div 
             key={category} 
             className={`category-group ${dragOverCategory === category ? 'drag-over' : ''}`}
-            onDragOver={(e) => onDragOver(e, category)}
-            onDragLeave={onDragLeave}
-            onDrop={(e) => onDrop(e, category)}
             style={{ marginLeft: `${indentLevel * 18}px` }}
           >
             <div 
-              className={`category-header ${isSelected ? 'selected' : ''}`}
+              className={`category-header ${isSelected ? 'selected' : ''} ${dragOverCategory === category ? 'drag-over' : ''}`}
+              draggable
               onClick={(e) => {
                 if (e.ctrlKey || e.metaKey) {
                   // Ctrl/Cmd + Click for folder selection
@@ -81,6 +83,30 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
                 }
               }}
               onContextMenu={(e) => onContextMenu(e, category, 'folder')}
+              onDragStart={(e) => {
+                e.stopPropagation();
+                if (onFolderDragStart) {
+                  onFolderDragStart(e, category);
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDragOver(e, category);
+              }}
+              onDragLeave={(e) => {
+                e.stopPropagation();
+                onDragLeave(e);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onFolderDrop) {
+                  onFolderDrop(e, category);
+                } else {
+                  onDrop(e, category);
+                }
+              }}
             >
               <span className="category-expand-icon">
                 {(hasChildren || hasMaps) ? (isExpanded ? '▼' : '▶') : ''}

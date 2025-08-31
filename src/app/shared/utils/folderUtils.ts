@@ -20,7 +20,7 @@ export interface FolderTree {
  * e.g., "仕事/プロジェクト/開発" -> ["仕事", "プロジェクト", "開発"]
  */
 export function parseFolderPath(path: string): string[] {
-  if (!path || path === 'その他') return ['その他'];
+  if (!path || path === '未分類') return ['未分類'];
   return path.split('/').filter(segment => segment.trim());
 }
 
@@ -29,7 +29,7 @@ export function parseFolderPath(path: string): string[] {
  * e.g., "仕事/プロジェクト/開発" -> "仕事/プロジェクト"
  */
 export function getParentPath(path: string): string | null {
-  if (!path || path === 'その他') return null;
+  if (!path || path === '未分類') return null;
   const segments = parseFolderPath(path);
   if (segments.length <= 1) return null;
   return segments.slice(0, -1).join('/');
@@ -40,7 +40,7 @@ export function getParentPath(path: string): string | null {
  * e.g., "仕事/プロジェクト/開発" -> "開発"
  */
 export function getFolderName(path: string): string {
-  if (!path || path === 'その他') return 'その他';
+  if (!path || path === '未分類') return '未分類';
   const segments = parseFolderPath(path);
   return segments[segments.length - 1] || path;
 }
@@ -54,8 +54,8 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
 
   // Add all possible paths (including intermediate paths)
   categoryPaths.forEach(path => {
-    if (!path || path === 'その他') {
-      allPaths.add('その他');
+    if (!path || path === '未分類') {
+      allPaths.add('未分類');
       return;
     }
 
@@ -70,7 +70,7 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
   Array.from(allPaths).forEach(path => {
     const parent = getParentPath(path);
     const name = getFolderName(path);
-    const level = path === 'その他' ? 0 : parseFolderPath(path).length - 1;
+    const level = path === '未分類' ? 0 : parseFolderPath(path).length - 1;
 
     tree[path] = {
       path,
@@ -94,8 +94,8 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
     node.children.sort((a, b) => {
       const nameA = getFolderName(a);
       const nameB = getFolderName(b);
-      if (nameA === 'その他') return 1;
-      if (nameB === 'その他') return -1;
+      if (nameA === '未分類') return 1;
+      if (nameB === '未分類') return -1;
       return nameA.localeCompare(nameB, 'ja', {
         numeric: true,
         sensitivity: 'base'
@@ -116,8 +116,8 @@ export function getRootFolders(tree: FolderTree): string[] {
     .sort((a, b) => {
       const nameA = getFolderName(a);
       const nameB = getFolderName(b);
-      if (nameA === 'その他') return 1;
-      if (nameB === 'その他') return -1;
+      if (nameA === '未分類') return 1;
+      if (nameB === '未分類') return -1;
       return nameA.localeCompare(nameB, 'ja', {
         numeric: true,
         sensitivity: 'base'
@@ -150,7 +150,7 @@ export function getVisibleFolders(tree: FolderTree): string[] {
  * Create a new folder path under a parent
  */
 export function createChildFolderPath(parentPath: string | null, folderName: string): string {
-  if (!parentPath || parentPath === 'その他') {
+  if (!parentPath || parentPath === '未分類') {
     return folderName;
   }
   return `${parentPath}/${folderName}`;
