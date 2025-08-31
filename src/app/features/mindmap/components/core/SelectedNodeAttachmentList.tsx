@@ -106,13 +106,19 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
   const listY = node.y + nodeHeight / 2 + 5 + attachmentOffset; // ノードの下に最小限のスペース
   const listX = node.x - nodeWidth / 2; // ノードの左端に合わせる
   const listWidth = Math.max(nodeWidth, 300); // 最小幅300px
+  
+  // 動的高さ計算（各ファイルアイテム28px + パディング16px + 最大高さ制限240px）
+  const itemHeight = 28; // 各ファイルアイテムの高さ
+  const padding = 16; // 上下のパディング
+  const calculatedHeight = Math.min(node.attachments.length * itemHeight + padding, 240);
+  const listHeight = calculatedHeight;
 
   return (
     <foreignObject
       x={listX}
       y={listY}
       width={listWidth}
-      height="auto"
+      height={listHeight}
       style={{ 
         overflow: 'visible',
         pointerEvents: isVisible ? 'auto' : 'none'

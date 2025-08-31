@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { CanvasConnections, CanvasDragGuide } from '.';
 import { Node } from '../..';
 import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
@@ -88,13 +88,35 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onDragMove,
   onDragEnd
 }) => {
+  // SVGのwheelイベントを非passiveで設定
+  useEffect(() => {
+    const svgElement = svgRef.current;
+    if (svgElement) {
+      const handleWheelCapture = (e: WheelEvent) => {
+        // React SyntheticEventに変換
+        const syntheticEvent = {
+          ...e,
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+          deltaY: e.deltaY,
+          clientX: e.clientX,
+          clientY: e.clientY
+        } as React.WheelEvent;
+        onWheel(syntheticEvent);
+      };
+
+      svgElement.addEventListener('wheel', handleWheelCapture, { passive: false });
+      return () => {
+        svgElement.removeEventListener('wheel', handleWheelCapture);
+      };
+    }
+  }, [onWheel]);
   return (
     <div className="mindmap-canvas-container">
       <svg
         ref={svgRef}
         width="100%"
         height="calc(100vh)"
-        onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
         onContextMenu={onContextMenu}
