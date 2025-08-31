@@ -34,18 +34,17 @@ const SidebarStyles: React.FC = () => (
     }
 
     .sidebar-header {
-      padding: 20px !important;
+      padding: 12px !important;
       border-bottom: 1px solid rgba(148, 163, 184, 0.12);
       background: rgba(248, 250, 252, 0.5);
       backdrop-filter: blur(10px);
       display: flex !important;
       flex-direction: column !important;
-      gap: 16px !important;
+      gap: 8px !important;
       position: relative !important;
       z-index: 100 !important;
       width: 100% !important;
       overflow: visible !important;
-      min-height: 120px !important;
     }
 
     .sidebar-title {
@@ -65,7 +64,7 @@ const SidebarStyles: React.FC = () => (
       flex-wrap: nowrap;
       justify-content: flex-start;
       width: 100%;
-      min-height: 40px;
+      margin: 0;
       overflow: visible !important;
     }
 
@@ -142,6 +141,61 @@ const SidebarStyles: React.FC = () => (
       border-color: rgba(59, 130, 246, 0.5);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       background: white;
+    }
+
+    .map-control-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin: 0;
+    }
+
+    .control-button {
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+    }
+
+    .control-button:hover {
+      background: rgba(236, 239, 244, 0.9);
+      border-color: rgba(148, 163, 184, 0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .control-button.add-map:hover {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #059669;
+    }
+
+    .control-button.add-folder:hover {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #d97706;
+    }
+
+    .control-button.expand-all:hover {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #2563eb;
+    }
+
+    .control-button.collapse-all:hover {
+      background: rgba(107, 114, 128, 0.1);
+      border-color: rgba(107, 114, 128, 0.3);
+      color: #374151;
     }
 
     .action-button {

@@ -1,15 +1,24 @@
 import React from 'react';
+import MapControlButtons from './MapControlButtons';
 
 interface SidebarHeaderProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onToggleCollapse?: () => void;
+  onAddMap: () => void;
+  onAddFolder: () => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
 }
 
 const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   searchTerm,
   onSearchChange,
-  onToggleCollapse
+  onToggleCollapse,
+  onAddMap,
+  onAddFolder,
+  onExpandAll,
+  onCollapseAll
 }) => {
 
   return (
@@ -35,6 +44,13 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           className="search-input"
         />
       </div>
+
+      <MapControlButtons
+        onAddMap={onAddMap}
+        onAddFolder={onAddFolder}
+        onExpandAll={onExpandAll}
+        onCollapseAll={onCollapseAll}
+      />
     </div>
   );
 };

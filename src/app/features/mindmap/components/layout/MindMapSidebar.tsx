@@ -378,6 +378,33 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     }
   }, [onCreateMap, setEmptyFolders]);
 
+  // 新しいボタン用のハンドラー
+  const handleAddMap = useCallback(() => {
+    handleCreateMap(null);
+  }, [handleCreateMap]);
+
+  const handleAddFolder = useCallback(() => {
+    handleCreateFolder(null);
+  }, [handleCreateFolder]);
+
+  const handleExpandAll = useCallback(() => {
+    setCollapsedCategories(new Set());
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    // すべてのカテゴリを取得してから折りたたみ状態にする
+    const allFolders = new Set([...Object.keys(mindMaps.reduce((groups: { [key: string]: any[] }, map) => {
+      const category = map.category || '';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(map);
+      return groups;
+    }, {})), ...Array.from(emptyFolders)]);
+    
+    setCollapsedCategories(allFolders);
+  }, [mindMaps, emptyFolders]);
+
   // フォルダの削除ハンドラー
   const handleDeleteFolder = useCallback((folderPath: string) => {
     // そのフォルダに属するマップをチェック
@@ -643,6 +670,10 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onToggleCollapse={onToggleCollapse}
+        onAddMap={handleAddMap}
+        onAddFolder={handleAddFolder}
+        onExpandAll={handleExpandAll}
+        onCollapseAll={handleCollapseAll}
       />
 
       {filteredMaps.length === 0 ? (
