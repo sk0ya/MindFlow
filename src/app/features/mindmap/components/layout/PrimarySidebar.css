@@ -1,0 +1,104 @@
+.primary-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  height: calc(100vh - 60px);
+  background-color: #252526;
+  border-right: 1px solid #3e3e42;
+  position: fixed;
+  left: 48px;
+  top: 60px;
+  z-index: 950;
+  color: #cccccc;
+}
+
+.primary-sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #3e3e42;
+  background-color: #2d2d30;
+}
+
+.primary-sidebar-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #cccccc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primary-sidebar-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* MindMapSidebarを Primary Sidebar内で適切に表示 */
+.primary-sidebar .mindmap-sidebar {
+  background: none !important;
+  border: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+}
+
+.primary-sidebar .sidebar-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid #3e3e42 !important;
+  backdrop-filter: none !important;
+}
+
+.primary-sidebar .maps-content-wrapper {
+  background: none !important;
+}
+
+.primary-sidebar .sidebar-title {
+  color: #cccccc !important;
+}
+
+.primary-sidebar .header-actions {
+  display: flex !important;
+}
+
+/* Primary Sidebar内では折りたたみボタンを非表示 */
+.primary-sidebar .sidebar-collapse-toggle {
+  display: none !important;
+}
+
+/* ライトテーマでのオーバーライド */
+@media (prefers-color-scheme: light) {
+  .primary-sidebar .sidebar-header {
+    border-bottom: 1px solid #e5e5e5 !important;
+  }
+  
+  .primary-sidebar .sidebar-title {
+    color: #333333 !important;
+  }
+}
+
+/* ライトテーマ対応 */
+@media (prefers-color-scheme: light) {
+  .primary-sidebar {
+    background-color: #f3f3f3;
+    border-right: 1px solid #e5e5e5;
+    color: #333333;
+  }
+  
+  .primary-sidebar-header {
+    background-color: #e8e8e8;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  
+  .primary-sidebar-title {
+    color: #333333;
+  }
+  
+  .primary-sidebar .sidebar-header {
+    border-bottom: 1px solid #e5e5e5;
+  }
+}

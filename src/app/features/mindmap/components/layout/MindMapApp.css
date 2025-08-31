@@ -4,7 +4,7 @@
   position: relative;
   overflow-x: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* VSCode風の横並びレイアウト */
 }
 
 /* ローカルモード表示 */
@@ -37,11 +37,17 @@
   background: #f8f9fa;
 }
 
-.mindmap-content {
-  display: flex;
+/* VSCode風メインコンテンツエリア */
+.mindmap-main-content {
   flex: 1;
-  overflow: hidden;
-  height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  transition: margin-left 0.3s ease;
+}
+
+.mindmap-main-content.with-sidebar {
+  /* サイドバーが表示されている場合の調整 */
 }
 
 .workspace-container {
@@ -50,10 +56,6 @@
   overflow: hidden;
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
-}
-
-.mindmap-content.with-sidebar {
-  /* サイドバーありの場合の調整 */
 }
 
 .container {
@@ -186,4 +188,50 @@ button, input, select {
   color: #6c757d;
   margin: 0;
   font-size: 1rem;
+}
+
+/* Empty State共通スタイル */
+.notes-empty-state,
+.settings-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+}
+
+.notes-empty-icon,
+.settings-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+
+.notes-empty-title,
+.settings-empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.notes-empty-description,
+.settings-empty-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .notes-empty-title,
+  .settings-empty-title {
+    color: #cccccc;
+  }
+  
+  .notes-empty-description,
+  .settings-empty-description {
+    color: #999999;
+  }
 }

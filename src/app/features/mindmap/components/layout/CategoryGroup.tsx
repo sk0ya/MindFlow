@@ -1,7 +1,6 @@
 import React from 'react';
 import MapItemList from './MapItemList';
 import type { MindMapData } from '@shared/types';
-import type { FolderTree } from '../../../../shared/utils/folderUtils';
 import { getFolderName } from '../../../../shared/utils/folderUtils';
 
 interface CategoryGroupProps {

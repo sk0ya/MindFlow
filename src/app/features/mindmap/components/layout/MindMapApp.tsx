@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMindMap, useKeyboardShortcuts, useMindMapStore, useMindMapPersistence } from '../../../../core';
-import MindMapSidebar from './MindMapSidebar';
+import ActivityBar from './ActivityBar';
+import PrimarySidebar from './PrimarySidebar';
 import MindMapHeader from './MindMapHeader';
 import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
@@ -45,6 +46,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     retryDelay: 2000, // 2秒
     backoffMultiplier: 1.5, // 1.5倍ずつ増加
   });
+  
+  // VSCode風サイドバーの状態
+  const [activeView, setActiveView] = useState<string | null>('maps');
   
   // グローバルエラーハンドラーの設定
   React.useEffect(() => {
@@ -172,7 +176,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     closeAllPanels,
     setZoom,
     setPan,
-    toggleSidebar,
     setEditText,
     changeSiblingOrder,
     toggleNodeCollapse,
@@ -766,16 +769,26 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 
   return (
     <div className="mindmap-app">
-      <MindMapHeader 
-        data={data}
-        onTitleChange={handleTitleChange}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        zoom={ui.zoom}
-        onZoomReset={() => setZoom(1.0)}
-        onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
+      <ActivityBar
+        activeView={activeView}
+        onViewChange={setActiveView}
+      />
+      
+      <PrimarySidebar
+        activeView={activeView}
+        isVisible={activeView !== null}
+        mindMaps={allMindMaps}
+        currentMapId={currentMapId}
+        onSelectMap={(mapId) => { selectMapById(mapId); }}
+        onCreateMap={createAndSelectMap}
+        onDeleteMap={deleteMap}
+        onRenameMap={(mapId, title) => updateMapMetadata(mapId, { title })}
+        onChangeCategory={(mapId, category) => updateMapMetadata(mapId, { category })}
+        onChangeCategoryBulk={updateMultipleMapCategories}
+        availableCategories={['仕事', 'プライベート', '学習', '未分類']}
+        storageMode={storageMode}
+        onStorageModeChange={onModeChange}
+        onShowKeyboardHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
         onAutoLayout={() => {
           logger.info('Manual auto layout triggered');
           if (typeof mindMap.applyAutoLayout === 'function') {
@@ -784,27 +797,35 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             logger.error('applyAutoLayout function not available');
           }
         }}
-        storageMode={storageMode}
-        onStorageModeChange={onModeChange}
-        onToggleNotesPanel={() => store.toggleNotesPanel()}
-        showNotesPanel={ui.showNotesPanel}
         onExport={handleExport}
         onImport={handleImport}
       />
-      
-      <div className="mindmap-content">
-        <MindMapSidebar 
-          mindMaps={allMindMaps}
-          currentMapId={currentMapId}
-          onSelectMap={(mapId) => { selectMapById(mapId); }}
-          onCreateMap={createAndSelectMap}
-          onDeleteMap={deleteMap}
-          onRenameMap={(mapId, title) => updateMapMetadata(mapId, { title })}
-          onChangeCategory={(mapId, category) => updateMapMetadata(mapId, { category })}
-          onChangeCategoryBulk={updateMultipleMapCategories}
-          availableCategories={['仕事', 'プライベート', '学習', '未分類']}
-          isCollapsed={ui.sidebarCollapsed}
-          onToggleCollapse={toggleSidebar}
+
+      <div className={`mindmap-main-content ${activeView ? 'with-sidebar' : ''}`}>
+        <MindMapHeader 
+          data={data}
+          onTitleChange={handleTitleChange}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          zoom={ui.zoom}
+          onZoomReset={() => setZoom(1.0)}
+          onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
+          onAutoLayout={() => {
+            logger.info('Manual auto layout triggered');
+            if (typeof mindMap.applyAutoLayout === 'function') {
+              mindMap.applyAutoLayout();
+            } else {
+              logger.error('applyAutoLayout function not available');
+            }
+          }}
+          storageMode={storageMode}
+          onStorageModeChange={onModeChange}
+          onToggleNotesPanel={() => store.toggleNotesPanel()}
+          showNotesPanel={ui.showNotesPanel}
+          onExport={handleExport}
+          onImport={handleImport}
         />
         
         <div className="workspace-container">

@@ -12,7 +12,7 @@ const ToolbarStyles: React.FC = () => (
       padding: 0 20px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
       position: relative;
-      z-index: 1000;
+      z-index: 900;
       border-bottom: 1px solid rgba(148, 163, 184, 0.2);
     }
 

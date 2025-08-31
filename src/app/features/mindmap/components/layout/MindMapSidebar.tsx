@@ -492,7 +492,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
   }, [mindMaps, onChangeCategory, setEmptyFolders]);
 
   // フィルタリングとグループ化（階層フォルダ対応）
-  const { filteredMaps, groupedMaps, folderTree, visibleFolders } = useMemo(() => {
+  const { filteredMaps, groupedMaps, visibleFolders } = useMemo(() => {
     const filtered = mindMaps.filter(map =>
       map.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -711,7 +711,6 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
             categories={visibleFolders}
             groupedMaps={groupedMaps}
             collapsedCategories={collapsedCategories}
-            folderTree={folderTree}
             selectedFolder={selectedFolder}
             currentMapId={currentMapId}
             editingMapId={editingMapId}
