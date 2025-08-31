@@ -61,6 +61,32 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
         const isSelected = selectedFolder === category;
         const isExpanded = !collapsedCategories.has(category);
         
+        // 空のcategory（未分類）の場合は、フォルダヘッダーなしでマップを直接表示
+        if (category === '' && hasMaps) {
+          return (
+            <div key="uncategorized-maps" className="uncategorized-maps">
+              <MapItemList
+                maps={groupedMaps[category] || []}
+                categoryPath={category}
+                currentMapId={currentMapId}
+                editingMapId={editingMapId}
+                editingTitle={editingTitle}
+                onSelectMap={onSelectMap}
+                onFinishRename={onFinishRename}
+                onCancelRename={onCancelRename}
+                onEditingTitleChange={onEditingTitleChange}
+                onDragStart={onDragStart}
+                onContextMenu={onContextMenu}
+              />
+            </div>
+          );
+        }
+
+        // 空のcategoryでマップがない場合は何も表示しない
+        if (category === '' && !hasMaps) {
+          return null;
+        }
+        
         // 祖先フォルダのいずれかが非表示の場合は表示しない（再帰チェック）
         const pathSegments = category.split('/');
         if (pathSegments.length > 1) {

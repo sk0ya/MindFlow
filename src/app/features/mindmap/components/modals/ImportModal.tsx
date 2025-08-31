@@ -17,7 +17,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importOptions, setImportOptions] = useState<ImportOptions>({
     replaceMap: true,
-    category: '未分類',
+    category: '',
     title: ''
   });
   const [isImporting, setIsImporting] = useState(false);
@@ -75,7 +75,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
         setSelectedFile(null);
         setImportOptions({
           replaceMap: true,
-          category: '未分類',
+          category: '',
           title: ''
         });
       } else {
@@ -200,7 +200,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                   カテゴリ:
                   <input
                     type="text"
-                    value={importOptions.category || '未分類'}
+                    value={importOptions.category}
                     onChange={(e) => setImportOptions(prev => ({ ...prev, category: e.target.value }))}
                     placeholder="カテゴリ"
                     className="category-input"

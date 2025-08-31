@@ -232,9 +232,9 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     logger.debug('Root drop event triggered', { draggedFolder, draggedMap: draggedMap?.title });
 
     // マップをルートレベルに移動
-    if (draggedMap && draggedMap.category !== '未分類') {
+    if (draggedMap && draggedMap.category !== '') {
       logger.debug('Moving map to root level');
-      onChangeCategory(draggedMap.id, '未分類');
+      onChangeCategory(draggedMap.id, '');
       setDraggedMap(null);
       setDraggedFolder(null);
       setDragOverCategory(null);
@@ -471,7 +471,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     );
 
     const grouped = filtered.reduce((groups: { [key: string]: MindMapData[] }, map) => {
-      const category = map.category || '未分類';
+      const category = map.category || '';
       if (!groups[category]) {
         groups[category] = [];
       }
@@ -577,7 +577,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         }
       ];
     } else if (targetType === 'map' && mapData) {
-      const mapCategory = mapData.category || '未分類';
+      const mapCategory = mapData.category || '';
       return [
         {
           label: '同じフォルダにマップを作成',

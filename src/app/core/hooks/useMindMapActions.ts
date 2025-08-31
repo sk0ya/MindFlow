@@ -17,7 +17,7 @@ export const useMindMapActions = () => {
       const newMap = createInitialData();
       newMap.id = `map_${Date.now()}`;
       newMap.title = title;
-      newMap.category = category || '未分類';
+      newMap.category = category || '';
       newMap.createdAt = new Date().toISOString();
       newMap.updatedAt = new Date().toISOString();
       

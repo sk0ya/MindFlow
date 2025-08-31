@@ -33,7 +33,7 @@ export class MarkdownFileImporter {
     options: ImportOptions = {}
   ): Promise<ImportResult> {
     try {
-      const { category = '未分類', title } = options;
+      const { category = '', title } = options;
       
       // ファイル形式をチェック
       if (!this.isSupportedMarkdownFile(file)) {

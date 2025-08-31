@@ -126,7 +126,7 @@ export const generateMapId = () => {
 export const createInitialData = (): MindMapData => ({
   id: generateMapId(),
   title: DEFAULTS.NEW_MAP_TITLE,
-  category: '未分類',
+  category: '',
   theme: 'default',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
