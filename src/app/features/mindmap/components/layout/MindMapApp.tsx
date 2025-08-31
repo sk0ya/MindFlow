@@ -194,26 +194,41 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const updateMultipleMapCategories = React.useCallback(async (mapUpdates: Array<{id: string, category: string}>) => {
     console.log('Updating multiple map categories:', mapUpdates);
     
-    // 各マップを個別に更新
-    for (const update of mapUpdates) {
-      const mapToUpdate = allMindMaps.find(map => map.id === update.id);
-      if (mapToUpdate) {
-        const updatedMap = {
+    if (mapUpdates.length === 0) return;
+    
+    try {
+      // 一括でマップ情報を更新
+      const updatedMaps = mapUpdates.map(update => {
+        const mapToUpdate = allMindMaps.find(map => map.id === update.id);
+        if (!mapToUpdate) return null;
+        
+        return {
           ...mapToUpdate,
           category: update.category,
           updatedAt: new Date().toISOString()
         };
-        
-        console.log(`Updating map "${updatedMap.title}" from "${mapToUpdate.category}" to "${update.category}"`);
-        
-        try {
-          // 永続化フックを直接使用してマップリストを更新
-          await persistenceHook.updateMapInList(updatedMap);
-          console.log(`Successfully updated map: ${updatedMap.title}`);
-        } catch (error) {
-          console.error(`Failed to update map ${updatedMap.title}:`, error);
-        }
-      }
+      }).filter(Boolean);
+      
+      console.log(`Batch updating ${updatedMaps.length} maps`);
+      
+      // 各マップを並列更新（非同期処理を並列実行）
+      await Promise.all(
+        updatedMaps.map(async (updatedMap) => {
+          if (updatedMap) {
+            console.log(`Updating map "${updatedMap.title}" to "${updatedMap.category}"`);
+            await persistenceHook.updateMapInList(updatedMap);
+          }
+        })
+      );
+      
+      // 成功後にマップリストを強制更新してUIを即座に反映
+      await persistenceHook.refreshMapList();
+      
+      console.log(`Successfully batch updated ${updatedMaps.length} maps`);
+    } catch (error) {
+      console.error('Failed to batch update map categories:', error);
+      // エラーが発生した場合も、可能な限り状態を同期
+      await persistenceHook.refreshMapList();
     }
   }, [allMindMaps, persistenceHook]);
 

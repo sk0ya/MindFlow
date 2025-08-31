@@ -89,10 +89,20 @@ export const useMindMap = (
     }, [persistenceHook, dataHook, actionsHook]),
 
     updateMapMetadata: useCallback(async (mapId: string, updates: { title?: string; category?: string }): Promise<void> => {
-      actionsHook.updateMapMetadata(mapId, updates);
-      // リストも更新
+      // 現在選択中のマップの場合のみストアを更新
       if (dataHook.data?.id === mapId) {
-        await persistenceHook.updateMapInList(dataHook.data);
+        actionsHook.updateMapMetadata(mapId, updates);
+      }
+      
+      // マップリストを常に更新（全マップ中から該当するマップを探して更新）
+      const mapToUpdate = persistenceHook.allMindMaps.find(map => map.id === mapId);
+      if (mapToUpdate) {
+        const updatedMap = {
+          ...mapToUpdate,
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+        await persistenceHook.updateMapInList(updatedMap);
       }
     }, [actionsHook, dataHook, persistenceHook]),
 

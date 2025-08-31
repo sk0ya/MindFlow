@@ -8,7 +8,6 @@ interface CategoryGroupProps {
   categories: string[];
   groupedMaps: { [category: string]: MindMapData[] };
   collapsedCategories: Set<string>;
-  folderTree: FolderTree;
   selectedFolder: string | null;
   currentMapId: string | null;
   editingMapId: string | null;
@@ -33,7 +32,6 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
   categories,
   groupedMaps,
   collapsedCategories,
-  folderTree,
   selectedFolder,
   currentMapId,
   editingMapId,
@@ -56,13 +54,26 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
   return (
     <div className="maps-content">
       {categories.map((category) => {
-        const folderNode = folderTree[category];
         const folderName = getFolderName(category);
-        const indentLevel = folderNode?.level || 0;
-        const hasChildren = folderNode?.children && folderNode.children.length > 0;
+        const indentLevel = category.split('/').length - 1;
+        const hasChildren = categories.some(cat => cat.startsWith(category + '/') && cat.split('/').length === category.split('/').length + 1);
         const hasMaps = groupedMaps[category] && groupedMaps[category].length > 0;
         const isSelected = selectedFolder === category;
         const isExpanded = !collapsedCategories.has(category);
+        
+        // 祖先フォルダのいずれかが非表示の場合は表示しない（再帰チェック）
+        const pathSegments = category.split('/');
+        if (pathSegments.length > 1) {
+          // 全ての祖先パス（ルートから直接の親まで）をチェック
+          for (let i = 1; i < pathSegments.length; i++) {
+            const ancestorPath = pathSegments.slice(0, i).join('/');
+            
+            // 祖先パス自体が存在しない、または祖先パスが折りたたまれている場合は非表示
+            if (!categories.includes(ancestorPath) || collapsedCategories.has(ancestorPath)) {
+              return null;
+            }
+          }
+        }
 
         return (
           <div 

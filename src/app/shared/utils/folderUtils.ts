@@ -20,7 +20,7 @@ export interface FolderTree {
  * e.g., "仕事/プロジェクト/開発" -> ["仕事", "プロジェクト", "開発"]
  */
 export function parseFolderPath(path: string): string[] {
-  if (!path || path === '未分類') return ['未分類'];
+  if (!path) return ['未分類'];
   return path.split('/').filter(segment => segment.trim());
 }
 
@@ -29,7 +29,7 @@ export function parseFolderPath(path: string): string[] {
  * e.g., "仕事/プロジェクト/開発" -> "仕事/プロジェクト"
  */
 export function getParentPath(path: string): string | null {
-  if (!path || path === '未分類') return null;
+  if (!path) return null;
   const segments = parseFolderPath(path);
   if (segments.length <= 1) return null;
   return segments.slice(0, -1).join('/');
@@ -40,7 +40,7 @@ export function getParentPath(path: string): string | null {
  * e.g., "仕事/プロジェクト/開発" -> "開発"
  */
 export function getFolderName(path: string): string {
-  if (!path || path === '未分類') return '未分類';
+  if (!path) return '未分類';
   const segments = parseFolderPath(path);
   return segments[segments.length - 1] || path;
 }
@@ -54,7 +54,7 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
 
   // Add all possible paths (including intermediate paths)
   categoryPaths.forEach(path => {
-    if (!path || path === '未分類') {
+    if (!path) {
       allPaths.add('未分類');
       return;
     }
@@ -70,7 +70,7 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
   Array.from(allPaths).forEach(path => {
     const parent = getParentPath(path);
     const name = getFolderName(path);
-    const level = path === '未分類' ? 0 : parseFolderPath(path).length - 1;
+    const level = parseFolderPath(path).length - 1;
 
     tree[path] = {
       path,
@@ -78,7 +78,7 @@ export function buildFolderTree(categoryPaths: string[], expandedFolders: Set<st
       level,
       parent,
       children: [],
-      isExpanded: expandedFolders.has(path) || level === 0
+      isExpanded: expandedFolders.has(path)
     };
   });
 
@@ -150,7 +150,7 @@ export function getVisibleFolders(tree: FolderTree): string[] {
  * Create a new folder path under a parent
  */
 export function createChildFolderPath(parentPath: string | null, folderName: string): string {
-  if (!parentPath || parentPath === '未分類') {
+  if (!parentPath) {
     return folderName;
   }
   return `${parentPath}/${folderName}`;

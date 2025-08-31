@@ -5,7 +5,8 @@ import SidebarCollapsed from './SidebarCollapsed';
 import SidebarStyles from './SidebarStyles';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import type { MindMapData } from '@shared/types';
-import { buildFolderTree, getVisibleFolders, createChildFolderPath } from '../../../../shared/utils/folderUtils';
+import { createChildFolderPath } from '../../../../shared/utils/folderUtils';
+import { logger } from '../../../../shared/utils/logger';
 
 interface MindMapSidebarProps {
   mindMaps: MindMapData[];
@@ -91,7 +92,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     setDraggedFolder(null); // フォルダドラッグをクリア
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/map-id', map.id);
-    console.log('Map drag started:', map.title, 'category:', map.category);
+    logger.debug('Map drag started:', map.title, 'category:', map.category);
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent, category: string) => {
@@ -108,11 +109,11 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
 
   const handleDrop = useCallback((e: React.DragEvent, category: string) => {
     e.preventDefault();
-    console.log('Drop event triggered', { category, draggedMap, draggedFolder });
+    logger.debug('Drop event triggered', { category, draggedMap: draggedMap?.title, draggedFolder });
     
     // マップのドロップ処理
     if (draggedMap && draggedMap.category !== category) {
-      console.log('Moving map from', draggedMap.category, 'to', category);
+      logger.debug('Moving map from', draggedMap.category, 'to', category);
       onChangeCategory(draggedMap.id, category);
     }
     
@@ -127,18 +128,18 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     setDraggedMap(null); // マップドラッグをクリア
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/folder-path', folderPath);
-    console.log('Folder drag started:', folderPath);
+    logger.debug('Folder drag started:', folderPath);
   }, []);
 
   const handleFolderDrop = useCallback(async (e: React.DragEvent, targetFolderPath: string) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Folder drop event triggered', { targetFolderPath, draggedFolder, draggedMap });
+    logger.debug('Folder drop event triggered', { targetFolderPath, draggedFolder, draggedMap: draggedMap?.title });
 
     // マップをフォルダにドロップする場合
     if (draggedMap && draggedMap.category !== targetFolderPath) {
-      console.log('Moving map from', draggedMap.category, 'to folder', targetFolderPath);
+      logger.debug('Moving map from', draggedMap.category, 'to folder', targetFolderPath);
       onChangeCategory(draggedMap.id, targetFolderPath);
       setDraggedMap(null);
       setDraggedFolder(null);
@@ -165,15 +166,15 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     const draggedFolderName = draggedFolder.split('/').pop();
     const newFolderPath = targetFolderPath + '/' + draggedFolderName;
 
-    console.log('Moving folder from', draggedFolder, 'to', newFolderPath);
+    logger.info('Moving folder from', draggedFolder, 'to', newFolderPath);
 
     // そのフォルダ内のすべてのマップのカテゴリを更新
     const mapsToUpdate = mindMaps.filter(map => 
       map.category === draggedFolder || (map.category && map.category.startsWith(draggedFolder + '/'))
     );
 
-    console.log('Maps to update:', mapsToUpdate.map(m => ({id: m.id, title: m.title, category: m.category})));
-    console.log('Drag operation:', { draggedFolder, newFolderPath });
+    logger.debug('Maps to update:', mapsToUpdate.length, 'maps');
+    logger.debug('Drag operation:', { draggedFolder, newFolderPath });
 
     // 一括更新を使用
     if (onChangeCategoryBulk && mapsToUpdate.length > 0) {
@@ -182,14 +183,15 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         category: map.category?.replace(draggedFolder, newFolderPath) || newFolderPath
       })).filter(update => update.category !== undefined);
       
-      console.log('Bulk updating maps:', mapUpdates);
+      logger.info('Bulk updating', mapUpdates.length, 'maps');
       await onChangeCategoryBulk(mapUpdates);
     } else {
       // フォールバック: 個別更新
+      logger.warn('Bulk update not available, using individual updates');
       mapsToUpdate.forEach(map => {
         const updatedCategory = map.category?.replace(draggedFolder, newFolderPath);
         if (updatedCategory) {
-          console.log(`Updating map "${map.title}" from "${map.category}" to "${updatedCategory}"`);
+          logger.debug(`Updating map "${map.title}" from "${map.category}" to "${updatedCategory}"`);
           onChangeCategory(map.id, updatedCategory);
         }
       });
@@ -227,11 +229,11 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Root drop event triggered', { draggedFolder, draggedMap });
+    logger.debug('Root drop event triggered', { draggedFolder, draggedMap: draggedMap?.title });
 
     // マップをルートレベルに移動
     if (draggedMap && draggedMap.category !== '未分類') {
-      console.log('Moving map to root level');
+      logger.debug('Moving map to root level');
       onChangeCategory(draggedMap.id, '未分類');
       setDraggedMap(null);
       setDraggedFolder(null);
@@ -251,15 +253,15 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         return;
       }
 
-      console.log('Moving folder to root level:', draggedFolderName);
+      logger.info('Moving folder to root level:', draggedFolderName);
 
       // そのフォルダ内のすべてのマップとサブフォルダのカテゴリを更新
       const mapsToUpdate = mindMaps.filter(map => 
         map.category === draggedFolder || (map.category && map.category.startsWith(draggedFolder + '/'))
       );
 
-      console.log('Root drop - Maps to update:', mapsToUpdate.map(m => ({id: m.id, title: m.title, category: m.category})));
-      console.log('Root drop operation:', { draggedFolder, draggedFolderName });
+      logger.debug('Root drop - Maps to update:', mapsToUpdate.length, 'maps');
+      logger.debug('Root drop operation:', { draggedFolder, draggedFolderName });
 
       // 一括更新を使用
       if (onChangeCategoryBulk && mapsToUpdate.length > 0) {
@@ -268,14 +270,15 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
           category: map.category?.replace(draggedFolder, draggedFolderName) || draggedFolderName
         })).filter(update => update.category !== undefined);
         
-        console.log('Root drop - Bulk updating maps:', mapUpdates);
+        logger.info('Root drop - Bulk updating', mapUpdates.length, 'maps');
         await onChangeCategoryBulk(mapUpdates);
       } else {
         // フォールバック: 個別更新
+        logger.warn('Root drop - Bulk update not available, using individual updates');
         mapsToUpdate.forEach(map => {
           let updatedCategory = map.category?.replace(draggedFolder, draggedFolderName);
           if (updatedCategory) {
-            console.log(`Root drop - Updating map "${map.title}" from "${map.category}" to "${updatedCategory}"`);
+            logger.debug(`Root drop - Updating map "${map.title}" from "${map.category}" to "${updatedCategory}"`);
             onChangeCategory(map.id, updatedCategory);
           }
         });
@@ -417,7 +420,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         return newSet;
       });
       
-      console.log(`空のフォルダ「${folderPath}」を削除しました`);
+      logger.info(`空のフォルダ「${folderPath}」を削除しました`);
     }
   }, [mindMaps, setEmptyFolders]);
 
@@ -486,26 +489,33 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       });
     });
 
-    // 展開状態を反転させてfolderTreeに渡す（collapsedCategoriesは閉じているもの、folderTreeは開いているものを管理）
-    const expandedFolders = new Set<string>();
-    Object.keys(grouped).forEach(category => {
-      if (!collapsedCategories.has(category)) {
-        expandedFolders.add(category);
-      }
-    });
-
-    // マップがあるフォルダと空フォルダを統合
+    // すべてのフォルダ（マップがあるもの + 空フォルダ）を取得
     const allFolders = new Set([...Object.keys(grouped), ...Array.from(emptyFolders)]);
     
-    // フォルダツリーを構築
-    const tree = buildFolderTree(Array.from(allFolders), expandedFolders);
-    const visible = getVisibleFolders(tree);
+    // 階層構造を保持したソート
+    const sortedFolders = Array.from(allFolders).sort((a, b) => {
+      // パスを分割
+      const partsA = a.split('/');
+      const partsB = b.split('/');
+      
+      // 共通の親パスを見つけるまで比較
+      const minLength = Math.min(partsA.length, partsB.length);
+      for (let i = 0; i < minLength; i++) {
+        const comparison = partsA[i].localeCompare(partsB[i], 'ja', { 
+          numeric: true, 
+          sensitivity: 'base' 
+        });
+        if (comparison !== 0) return comparison;
+      }
+      
+      // 共通部分が同じ場合、階層の深い方を後に
+      return partsA.length - partsB.length;
+    });
 
     return { 
       filteredMaps: filtered, 
       groupedMaps: grouped, 
-      folderTree: tree,
-      visibleFolders: visible
+      visibleFolders: sortedFolders
     };
   }, [mindMaps, searchTerm, collapsedCategories, emptyFolders]);
 
