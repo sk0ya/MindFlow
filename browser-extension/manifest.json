@@ -6,13 +6,16 @@
   
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "webRequest"
   ],
   
   "host_permissions": [
     "http://localhost:11434/*",
+    "http://127.0.0.1:11434/*",
     "https://sk0ya.github.io/*",
-    "http://localhost:*/*"
+    "http://localhost:*/*",
+    "https://localhost:*/*"
   ],
   
   "background": {
@@ -23,11 +26,14 @@
     {
       "matches": [
         "https://sk0ya.github.io/*",
+        "https://*.github.io/*",
         "http://localhost:*/*",
-        "https://localhost:*/*"
+        "https://localhost:*/*",
+        "*://localhost:*/*"
       ],
       "js": ["scripts/content.js"],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   

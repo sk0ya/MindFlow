@@ -3,15 +3,30 @@
  * WebページにOllama Bridge APIを注入します
  */
 
-console.log('MindFlow Ollama Bridge content script loaded');
+console.log('🚀 MindFlow Ollama Bridge content script loaded');
+console.log('📍 Content script running on:', window.location.href);
+console.log('🔍 Document readyState:', document.readyState);
 
 // ページにMindFlowOllamaBridge APIを注入
-const script = document.createElement('script');
-script.src = chrome.runtime.getURL('scripts/injected.js');
-script.onload = function() {
-  this.remove();
-};
-(document.head || document.documentElement).appendChild(script);
+try {
+  const script = document.createElement('script');
+  const scriptUrl = chrome.runtime.getURL('scripts/injected.js');
+  console.log('📂 Injecting script from:', scriptUrl);
+  
+  script.src = scriptUrl;
+  script.onload = function() {
+    console.log('✅ Injected script loaded successfully');
+    this.remove();
+  };
+  script.onerror = function() {
+    console.error('❌ Failed to load injected script');
+  };
+  
+  (document.head || document.documentElement).appendChild(script);
+  console.log('📤 Script injection attempted');
+} catch (error) {
+  console.error('❌ Error injecting script:', error);
+}
 
 // バックグラウンドスクリプトとのメッセージング
 window.addEventListener('message', function(event) {
@@ -19,16 +34,28 @@ window.addEventListener('message', function(event) {
   if (event.source !== window) return;
   
   if (event.data.type === 'MINDFLOW_OLLAMA_REQUEST') {
-    console.log('Content script received request:', event.data);
+    console.log('📨 Content script received request:', event.data);
     
     // バックグラウンドスクリプトにリクエストを転送
-    chrome.runtime.sendMessage({
+    const message = {
       action: event.data.action,
       url: event.data.url,
       options: event.data.options,
       baseUrl: event.data.baseUrl
-    }, function(response) {
-      console.log('Content script received response:', response);
+    };
+    
+    console.log('📤 Content script forwarding to background:', message);
+    
+    chrome.runtime.sendMessage(message, function(response) {
+      if (chrome.runtime.lastError) {
+        console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
+        response = {
+          success: false,
+          error: chrome.runtime.lastError.message
+        };
+      }
+      
+      console.log('📥 Content script received response:', response);
       
       // 結果をWebページに送信
       window.postMessage({

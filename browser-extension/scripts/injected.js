@@ -3,7 +3,9 @@
  * WebページのグローバルスコープにOllama APIを提供します
  */
 
-console.log('MindFlow Ollama Bridge injected script loaded');
+console.log('🚀 MindFlow Ollama Bridge injected script loaded');
+console.log('📍 Current URL:', window.location.href);
+console.log('🔍 User Agent:', navigator.userAgent);
 
 // グローバルAPIオブジェクトを作成
 window.MindFlowOllamaBridge = {
@@ -23,24 +25,36 @@ window.MindFlowOllamaBridge = {
             event.data.requestId === requestId) {
           
           window.removeEventListener('message', responseListener);
+          clearTimeout(timeoutId);
+          
+          console.log('🔄 Extension response received:', event.data.response);
           
           if (event.data.response.success) {
             resolve(event.data.response);
           } else {
-            reject(new Error(event.data.response.error));
+            console.error('❌ Extension request failed:', event.data.response);
+            reject(new Error(event.data.response.error || 'Unknown extension error'));
           }
         }
       };
       
       window.addEventListener('message', responseListener);
       
-      // タイムアウト設定（30秒）
-      setTimeout(() => {
+      // タイムアウト設定（60秒 - 長いテキスト生成に対応）
+      const timeoutId = setTimeout(() => {
         window.removeEventListener('message', responseListener);
-        reject(new Error('Request timeout'));
-      }, 30000);
+        reject(new Error('Request timeout (60 seconds). The model might be processing a complex request.'));
+      }, 60000);
       
       // リクエストを送信
+      console.log('📤 Sending extension request:', {
+        type: 'MINDFLOW_OLLAMA_REQUEST',
+        action: 'ollamaRequest',
+        requestId: requestId,
+        url: url,
+        options: options
+      });
+      
       window.postMessage({
         type: 'MINDFLOW_OLLAMA_REQUEST',
         action: 'ollamaRequest',
@@ -63,15 +77,16 @@ window.MindFlowOllamaBridge = {
             event.data.requestId === requestId) {
           
           window.removeEventListener('message', responseListener);
+          clearTimeout(timeoutId);
           resolve(event.data.response);
         }
       };
       
       window.addEventListener('message', responseListener);
       
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         window.removeEventListener('message', responseListener);
-        reject(new Error('Connection test timeout'));
+        reject(new Error('Connection test timeout (10 seconds)'));
       }, 10000);
       
       window.postMessage({
@@ -95,6 +110,7 @@ window.MindFlowOllamaBridge = {
             event.data.requestId === requestId) {
           
           window.removeEventListener('message', responseListener);
+          clearTimeout(timeoutId);
           
           if (event.data.response.success) {
             resolve(event.data.response.models);
@@ -106,9 +122,9 @@ window.MindFlowOllamaBridge = {
       
       window.addEventListener('message', responseListener);
       
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         window.removeEventListener('message', responseListener);
-        reject(new Error('Get models timeout'));
+        reject(new Error('Get models timeout (10 seconds)'));
       }, 10000);
       
       window.postMessage({
@@ -122,6 +138,7 @@ window.MindFlowOllamaBridge = {
 };
 
 // 拡張機能が利用可能であることをページに通知
+console.log('🎉 Dispatching mindflowOllamaBridgeReady event');
 window.dispatchEvent(new CustomEvent('mindflowOllamaBridgeReady', {
   detail: {
     version: window.MindFlowOllamaBridge.version,
@@ -129,4 +146,14 @@ window.dispatchEvent(new CustomEvent('mindflowOllamaBridgeReady', {
   }
 }));
 
-console.log('MindFlowOllamaBridge API available:', window.MindFlowOllamaBridge);
+console.log('✅ MindFlowOllamaBridge API available:', window.MindFlowOllamaBridge);
+
+// グローバルスコープでも確認できるようにする
+window.testOllamaBridge = function() {
+  console.log('🧪 Extension test function called');
+  return {
+    available: !!window.MindFlowOllamaBridge,
+    version: window.MindFlowOllamaBridge?.version,
+    url: window.location.href
+  };
+};

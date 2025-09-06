@@ -48,7 +48,7 @@ export class OllamaService {
   }
   
   /**
-   * ブラウザ拡張機能が利用可能かチェック
+   * ブラウザ拡張機能が利用可能かチェック（リトライ機能付き）
    */
   private isExtensionAvailable(): boolean {
     return typeof window !== 'undefined' && 
@@ -57,12 +57,41 @@ export class OllamaService {
   }
   
   /**
+   * 拡張機能の初期化を待つ（最大3秒）
+   */
+  private async waitForExtension(maxWaitTime: number = 3000): Promise<boolean> {
+    if (this.isExtensionAvailable()) {
+      return true;
+    }
+    
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const maxAttempts = maxWaitTime / 100; // 100ms間隔でチェック
+      
+      const checkInterval = setInterval(() => {
+        attempts++;
+        
+        if (this.isExtensionAvailable()) {
+          clearInterval(checkInterval);
+          console.log('✅ Extension became available after', attempts * 100, 'ms');
+          resolve(true);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.warn('⚠️ Extension not available after', maxWaitTime, 'ms');
+          resolve(false);
+        }
+      }, 100);
+    });
+  }
+  
+  /**
    * Ollamaサーバーの接続をテストする
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      // 拡張機能が利用可能な場合は拡張機能経由で接続テスト
-      if (this.isExtensionAvailable()) {
+      // 拡張機能の初期化を待つ
+      const extensionAvailable = await this.waitForExtension();
+      if (extensionAvailable) {
         console.log('Using extension for connection test');
         const result = await window.MindFlowOllamaBridge.testConnection(this.baseUrl);
         return result;
@@ -95,8 +124,9 @@ export class OllamaService {
    */
   async getAvailableModels(): Promise<string[]> {
     try {
-      // 拡張機能が利用可能な場合は拡張機能経由で取得
-      if (this.isExtensionAvailable()) {
+      // 拡張機能の初期化を待つ
+      const extensionAvailable = await this.waitForExtension();
+      if (extensionAvailable) {
         console.log('Using extension for getting models');
         const models = await window.MindFlowOllamaBridge.getModels(this.baseUrl);
         return models;
@@ -158,9 +188,16 @@ export class OllamaService {
       let response;
       let data: OllamaResponse;
       
-      // 拡張機能が利用可能な場合は拡張機能経由でリクエスト
-      if (this.isExtensionAvailable()) {
-        console.log('Using extension for text generation');
+      // 拡張機能の初期化を待つ
+      const extensionAvailable = await this.waitForExtension();
+      if (extensionAvailable) {
+        console.log('🔄 Using extension for text generation');
+        console.log('📤 Extension request details:', {
+          url: `${this.baseUrl}/api/generate`,
+          model: request.model,
+          promptLength: request.prompt.length
+        });
+        
         const result = await window.MindFlowOllamaBridge.request(
           `${this.baseUrl}/api/generate`,
           {
@@ -172,8 +209,15 @@ export class OllamaService {
           }
         );
         
+        console.log('📥 Extension response:', {
+          success: result.success,
+          status: result.status,
+          hasData: !!result.data,
+          error: result.error
+        });
+        
         if (!result.success) {
-          throw new Error(`Extension request failed: ${result.error}`);
+          throw new Error(`Extension request failed: ${result.error} (Status: ${result.status || 'unknown'})`);
         }
         
         data = result.data;

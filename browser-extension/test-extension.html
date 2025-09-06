@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MindFlow Ollama Bridge Test</title>
+</head>
+<body>
+    <h1>MindFlow Ollama Bridge Test</h1>
+    
+    <button id="test-connection">Test Connection</button>
+    <button id="test-models">Get Models</button>
+    <button id="test-generate">Test Generation</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function log(message) {
+            console.log(message);
+            resultsDiv.innerHTML += `<p>${message}</p>`;
+        }
+        
+        // 拡張機能が読み込まれるまで待つ
+        function waitForExtension() {
+            return new Promise((resolve) => {
+                if (window.MindFlowOllamaBridge) {
+                    resolve();
+                } else {
+                    window.addEventListener('mindflowOllamaBridgeReady', resolve);
+                    setTimeout(() => {
+                        if (!window.MindFlowOllamaBridge) {
+                            log('❌ Extension not detected');
+                        }
+                        resolve();
+                    }, 3000);
+                }
+            });
+        }
+        
+        document.getElementById('test-connection').addEventListener('click', async () => {
+            log('🔄 Testing connection...');
+            await waitForExtension();
+            
+            if (!window.MindFlowOllamaBridge) {
+                log('❌ Extension not available');
+                return;
+            }
+            
+            try {
+                const result = await window.MindFlowOllameBridge.testConnection();
+                log(`✅ Connection test: ${JSON.stringify(result)}`);
+            } catch (error) {
+                log(`❌ Connection test failed: ${error.message}`);
+            }
+        });
+        
+        document.getElementById('test-models').addEventListener('click', async () => {
+            log('🔄 Getting models...');
+            await waitForExtension();
+            
+            if (!window.MindFlowOllamaBridge) {
+                log('❌ Extension not available');
+                return;
+            }
+            
+            try {
+                const models = await window.MindFlowOllamaBridge.getModels();
+                log(`✅ Models: ${JSON.stringify(models)}`);
+            } catch (error) {
+                log(`❌ Get models failed: ${error.message}`);
+            }
+        });
+        
+        document.getElementById('test-generate').addEventListener('click', async () => {
+            log('🔄 Testing generation...');
+            await waitForExtension();
+            
+            if (!window.MindFlowOllamaBridge) {
+                log('❌ Extension not available');
+                return;
+            }
+            
+            try {
+                const result = await window.MindFlowOllamaBridge.request(
+                    'http://localhost:11434/api/generate',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'qwen2.5:3b',
+                            prompt: 'Say hello',
+                            stream: false
+                        })
+                    }
+                );
+                log(`✅ Generation: ${JSON.stringify(result.data?.response?.substring(0, 100))}...`);
+            } catch (error) {
+                log(`❌ Generation failed: ${error.message}`);
+            }
+        });
+        
+        // 初期化
+        log('🔄 Waiting for extension...');
+        waitForExtension().then(() => {
+            if (window.MindFlowOllamaBridge) {
+                log(`✅ Extension detected: ${window.MindFlowOllamaBridge.version}`);
+            } else {
+                log('❌ Extension not detected');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -3,7 +3,12 @@
  * ローカルOllamaサーバーとの通信を処理します
  */
 
-console.log('MindFlow Ollama Bridge background script loaded');
+console.log('🚀 MindFlow Ollama Bridge background script loaded');
+
+// ハートビート機能でbackground scriptが生きているか確認
+setInterval(() => {
+  console.log('💓 Background script heartbeat');
+}, 60000); // 1分ごと
 
 // Ollama APIへのリクエストを処理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -32,27 +37,61 @@ async function handleOllamaRequest(request, sendResponse) {
   try {
     const { url, options } = request;
     
-    console.log('Making Ollama request to:', url);
-    console.log('Request options:', options);
+    console.log('🔄 Making Ollama request to:', url);
+    console.log('📤 Original request options:', JSON.stringify(options, null, 2));
     
-    // CORSヘッダーを追加
+    // Ollamaに適したヘッダーを設定（必要最小限）
     const requestOptions = {
-      ...options,
+      method: options.method || 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
+        'Content-Type': 'application/json'
+        // ブラウザ固有のヘッダーを除外してOllamaとの互換性を確保
+      },
+      // リダイレクトを許可
+      redirect: 'follow'
     };
+    
+    // POSTリクエストの場合のみbodyを追加
+    if (options.method === 'POST' && options.body) {
+      requestOptions.body = options.body;
+    }
+    
+    console.log('📤 Final request options:', JSON.stringify(requestOptions, null, 2));
     
     const response = await fetch(url, requestOptions);
     
+    console.log('📥 Response status:', response.status, response.statusText);
+    console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 詳細なエラー情報を取得
+      let errorDetails = '';
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+        errorDetails = errorBody ? ` - Body: ${errorBody}` : '';
+      } catch (e) {
+        console.warn('Failed to read error response body:', e);
+      }
+      
+      // 403エラーの場合は特別な処理
+      if (response.status === 403) {
+        console.error('🚫 Ollama CORS/Access Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: url,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: errorBody
+        });
+        throw new Error(`Ollama access denied (403). Please check OLLAMA_ORIGINS setting: ${response.statusText}${errorDetails}`);
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorDetails}`);
     }
     
     const data = await response.json();
     
-    console.log('Ollama response received:', data);
+    console.log('✅ Ollama response received:', data);
     
     sendResponse({
       success: true,
@@ -61,7 +100,8 @@ async function handleOllamaRequest(request, sendResponse) {
     });
     
   } catch (error) {
-    console.error('Ollama request failed:', error);
+    console.error('❌ Ollama request failed:', error);
+    console.error('Error stack:', error.stack);
     
     sendResponse({
       success: false,
@@ -77,24 +117,41 @@ async function handleOllamaRequest(request, sendResponse) {
 async function testOllamaConnection(request, sendResponse) {
   try {
     const baseUrl = request.baseUrl || 'http://localhost:11434';
+    console.log('🔄 Testing Ollama connection to:', baseUrl);
+    
     const response = await fetch(`${baseUrl}/api/tags`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       }
     });
     
+    console.log('📥 Connection test response:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // エラー詳細を取得
+      let errorDetails = '';
+      try {
+        const errorText = await response.text();
+        errorDetails = errorText ? ` - ${errorText}` : '';
+      } catch (e) {
+        console.warn('Failed to read error response body:', e);
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText}${errorDetails}`);
     }
+    
+    const data = await response.json();
+    console.log('✅ Connection test successful, models:', data.models?.length || 0);
     
     sendResponse({
       success: true,
-      message: 'Ollama接続成功'
+      message: `Ollama接続成功 (${data.models?.length || 0}個のモデル検出)`
     });
     
   } catch (error) {
-    console.error('Ollama connection test failed:', error);
+    console.error('❌ Ollama connection test failed:', error);
     
     sendResponse({
       success: false,
