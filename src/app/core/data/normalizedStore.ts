@@ -243,6 +243,57 @@ export function moveNormalizedNode(
 }
 
 /**
+ * 正規化されたデータで兄弟ノードを追加 - O(1)
+ */
+export function addSiblingNormalizedNode(
+  normalizedData: NormalizedData,
+  siblingNodeId: string,
+  newNode: MindMapNode,
+  insertAfter: boolean = true
+): NormalizedData {
+  const parentId = normalizedData.parentMap[siblingNodeId];
+  if (!parentId) {
+    throw new Error(`Parent not found for sibling node: ${siblingNodeId}`);
+  }
+
+  if (normalizedData.nodes[newNode.id]) {
+    throw new Error(`Node already exists: ${newNode.id}`);
+  }
+
+  const { children, ...nodeWithoutChildren } = newNode;
+  void children; // childrenは使用しないがdestructuringで除外する必要がある
+
+  const siblings = normalizedData.childrenMap[parentId] || [];
+  const siblingIndex = siblings.indexOf(siblingNodeId);
+  
+  if (siblingIndex === -1) {
+    throw new Error(`Sibling node not found in parent's children: ${siblingNodeId}`);
+  }
+
+  // 兄弟ノードの後に挿入
+  const insertionIndex = insertAfter ? siblingIndex + 1 : siblingIndex;
+  const newSiblings = [...siblings];
+  newSiblings.splice(insertionIndex, 0, newNode.id);
+
+  return {
+    ...normalizedData,
+    nodes: {
+      ...normalizedData.nodes,
+      [newNode.id]: { ...nodeWithoutChildren, children: [] }
+    },
+    parentMap: {
+      ...normalizedData.parentMap,
+      [newNode.id]: parentId
+    },
+    childrenMap: {
+      ...normalizedData.childrenMap,
+      [parentId]: newSiblings,
+      [newNode.id]: []
+    }
+  };
+}
+
+/**
  * 正規化されたデータで兄弟ノードの順序を変更 - O(1)
  */
 export function changeSiblingOrderNormalized(

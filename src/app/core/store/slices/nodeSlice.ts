@@ -5,6 +5,7 @@ import {
   updateNormalizedNode,
   deleteNormalizedNode,
   addNormalizedNode,
+  addSiblingNormalizedNode,
   moveNormalizedNode,
   changeSiblingOrderNormalized,
   denormalizeTreeData
@@ -122,8 +123,8 @@ export const createNodeSlice: StateCreator<
         
         // Color assignment - ルートノードの子は設定色、それ以外は親色継承
         const color = parentNode.id === 'root' 
-          ? (settings.defaultNodeColor || COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length])
-          : parentNode.color || settings.defaultNodeColor || '#666';
+          ? COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length]
+          : parentNode.color || '#666';
         
         // Update position and color
         newNode.x = newPosition.x;
@@ -173,69 +174,78 @@ export const createNodeSlice: StateCreator<
   },
 
   addSiblingNode: (nodeId: string, text: string = 'New Node') => {
-    const { normalizedData } = get();
-    if (!normalizedData || !normalizedData.nodes[nodeId]) return;
-    
-    const parentId = normalizedData.parentMap[nodeId];
-    if (!parentId) return; // ルートノードには兄弟を追加できない
-    
-    const newNodeId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const currentNode = normalizedData.nodes[nodeId];
-    
-    // 新しいノードを作成（兄弟ノードなので同じ階層レベルに配置）
-    const newNode: MindMapNode = {
-      id: newNodeId,
-      text: text,
-      x: currentNode.x + 200, // 兄弟ノードは横に配置
-      y: currentNode.y + 80,  // 少し下にずらす
-      fontSize: currentNode.fontSize || 14,
-      fontWeight: currentNode.fontWeight || 'normal',
-      color: currentNode.color || '#000000',
-      children: [],
-      collapsed: false,
-      attachments: []
-    };
+    let newNodeId: string | undefined;
     
     set((state) => {
       if (!state.normalizedData) return;
       
-      // ノードを追加
-      state.normalizedData.nodes[newNodeId] = newNode;
-      state.normalizedData.parentMap[newNodeId] = parentId;
-      
-      // 親ノードの子リストに追加（現在のノードの後に挿入）
-      const parentNode = state.normalizedData.nodes[parentId];
-      if (parentNode.children) {
-        const currentIndex = parentNode.children.findIndex(child => child.id === nodeId);
-        if (currentIndex !== -1) {
-          // 現在のノードの後に新しいノードを挿入
-          parentNode.children.splice(currentIndex + 1, 0, newNode);
-        } else {
-          // 見つからない場合は末尾に追加
-          parentNode.children.push(newNode);
-        }
-      } else {
-        parentNode.children = [newNode];
-      }
-      
-      // ルートノードも更新
-      const updateNodeInTree = (node: MindMapNode): MindMapNode => {
-        if (node.id === parentId) {
-          return { ...node, children: parentNode.children };
-        }
-        if (node.children) {
-          return {
-            ...node,
-            children: node.children.map(updateNodeInTree)
+      try {
+        const currentNode = state.normalizedData.nodes[nodeId];
+        if (!currentNode) return;
+        
+        const parentId = state.normalizedData.parentMap[nodeId];
+        if (!parentId) return; // ルートノードには兄弟を追加できない
+        
+        const parentNode = state.normalizedData.nodes[parentId];
+        if (!parentNode) return;
+        
+        // 設定を取得してノード作成時に適用
+        const settings = state.settings;
+        const newNode = createNewNode(text, parentNode, settings);
+        newNodeId = newNode.id;
+        
+        // 兄弟ノードは同じ階層レベルに配置
+        const position: Position = {
+          x: currentNode.x + 200, // 兄弟ノードは横に配置
+          y: currentNode.y + 80   // 少し下にずらす
+        };
+        
+        // 兄弟ノードは親の色を継承
+        const color = currentNode.color || parentNode.color || '#666';
+        
+        // 位置と色を更新
+        newNode.x = position.x;
+        newNode.y = position.y;
+        newNode.color = color;
+        
+        state.normalizedData = addSiblingNormalizedNode(state.normalizedData, nodeId, newNode, true);
+        
+        // 新しいノードを選択
+        state.selectedNodeId = newNode.id;
+        
+        // ツリー構造と同期
+        const newRootNode = denormalizeTreeData(state.normalizedData);
+        if (state.data) {
+          state.data = {
+            ...state.data,
+            rootNode: newRootNode,
+            updatedAt: new Date().toISOString()
           };
         }
-        return node;
-      };
-      
-      if (state.data?.rootNode) {
-        state.data.rootNode = updateNodeInTree(state.data.rootNode);
+      } catch (error) {
+        logger.error('addSiblingNode error:', error);
       }
     });
+    
+    // Apply auto layout if enabled
+    const { data } = get();
+    logger.debug('🔍 Auto layout check (addSiblingNode):', {
+      hasData: !!data,
+      hasSettings: !!data?.settings,
+      autoLayoutEnabled: data?.settings?.autoLayout,
+      settingsObject: data?.settings
+    });
+    if (data?.settings?.autoLayout) {
+      logger.debug('✅ Applying auto layout after addSiblingNode');
+      const applyAutoLayout = get().applyAutoLayout;
+      if (typeof applyAutoLayout === 'function') {
+        applyAutoLayout();
+      } else {
+        logger.error('❌ applyAutoLayout function not found');
+      }
+    } else {
+      logger.debug('❌ Auto layout disabled or settings missing');
+    }
     
     return newNodeId;
   },
