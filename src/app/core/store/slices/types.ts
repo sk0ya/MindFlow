@@ -1,6 +1,7 @@
 import type { MindMapData, MindMapNode, Position, FileAttachment } from '@shared/types';
 import type { ImageFile } from '../../../shared/types';
 import type { NormalizedData } from '../../data/normalizedStore';
+import type { AISlice } from './aiSlice';
 
 // UI State types
 export interface UIState {
@@ -47,7 +48,7 @@ export interface HistoryState {
 }
 
 // Combined Store Interface
-export interface MindMapStore extends DataState, HistoryState {
+export interface MindMapStore extends DataState, HistoryState, AISlice {
   ui: UIState;
   
   // Data Actions

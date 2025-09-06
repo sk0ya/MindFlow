@@ -15,3 +15,6 @@ export { useErrorBoundary } from './useErrorBoundary';         // エラーハ�
 
 // その他のHook
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+
+// AI機能
+export { useAI } from './useAI';

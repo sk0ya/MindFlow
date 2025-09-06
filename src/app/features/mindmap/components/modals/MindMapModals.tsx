@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { ContextMenu } from '../../../../shared';
 import NodeCustomizationPanel from '../panels/NodeCustomizationPanel';
 import { ImageModal, FileActionMenu } from '../../../files';
+import AIGenerationModal from './AIGenerationModal';
 import type { MindMapNode, FileAttachment } from '../../../../shared';
 
 interface MindMapModalsProps {
@@ -56,6 +57,40 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
   onCloseFileActionMenu,
   onShowImageModal
 }) => {
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiTargetNode, setAiTargetNode] = useState<MindMapNode | null>(null);
+  
+  const handleAIGenerate = (node: MindMapNode) => {
+    setAiTargetNode(node);
+    setShowAIModal(true);
+  };
+  
+  const handleAIGenerationComplete = (childTexts: string[]) => {
+    if (aiTargetNode) {
+      // 複数の子ノードを順番に作成
+      childTexts.forEach((text, index) => {
+        setTimeout(() => {
+          // 子ノードを追加
+          onAddChild(aiTargetNode.id);
+          
+          // 短い遅延の後にテキストを設定
+          setTimeout(() => {
+            const updatedParent = findNode(aiTargetNode.id);
+            if (updatedParent && updatedParent.children) {
+              // 新しく追加されたノードを見つける
+              const newChild = updatedParent.children[updatedParent.children.length - 1];
+              if (newChild && newChild.text === 'New Node') { // デフォルトテキストの場合
+                onUpdateNode(newChild.id, { text });
+              }
+            }
+          }, 50);
+        }, index * 100); // 各ノード作成を100ms間隔で実行
+      });
+    }
+    setShowAIModal(false);
+    setAiTargetNode(null);
+  };
+  
   return (
     <>
       {ui.showCustomizationPanel && (
@@ -79,6 +114,7 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
           onCopy={onCopyNode}
           onPaste={onPasteNode}
           onChangeColor={(nodeId: string, color: string) => onUpdateNode(nodeId, { color })}
+          onAIGenerate={handleAIGenerate}
           onClose={onCloseContextMenu}
         />
       )}
@@ -100,6 +136,17 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
         onView={(file: FileAttachment) => {
           onShowImageModal(file);
         }}
+      />
+      
+      <AIGenerationModal
+        isOpen={showAIModal}
+        parentNode={aiTargetNode}
+        contextNodes={[]} // コンテキストノードの取得ロジックは後で実装
+        onClose={() => {
+          setShowAIModal(false);
+          setAiTargetNode(null);
+        }}
+        onGenerationComplete={handleAIGenerationComplete}
       />
 
     </>

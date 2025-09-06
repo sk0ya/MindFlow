@@ -1,6 +1,7 @@
 import React from 'react';
 import { MindMapNode } from '../../../types';
 import ColorSubmenu, { ColorOption } from './ColorSubmenu';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface MenuItemAction {
   icon: string;
@@ -32,6 +33,7 @@ interface MenuItemsProps {
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
   onChangeColor: (nodeId: string, color: string) => void;
+  onAIGenerate?: (node: MindMapNode) => void;
   onClose: () => void;
 }
 
@@ -44,8 +46,12 @@ const MenuItems: React.FC<MenuItemsProps> = ({
   onCopy,
   onPaste,
   onChangeColor,
+  onAIGenerate,
   onClose
 }) => {
+  const store = useMindMapStore();
+  const aiEnabled = store.aiSettings?.enabled || false;
+  const isGenerating = store.isGenerating || false;
   const menuItems: MenuItem[] = [
     {
       icon: '➕',
@@ -65,6 +71,17 @@ const MenuItems: React.FC<MenuItemsProps> = ({
       },
       shortcut: 'Enter'
     },
+    ...(aiEnabled && onAIGenerate ? [{
+      icon: isGenerating ? '⏳' : '🤖',
+      label: isGenerating ? 'AI生成中...' : 'AI子ノード生成',
+      action: () => {
+        if (!isGenerating) {
+          onAIGenerate(selectedNode);
+          onClose();
+        }
+      },
+      disabled: isGenerating
+    }] : []),
     { type: 'separator' },
     {
       icon: '🎨',

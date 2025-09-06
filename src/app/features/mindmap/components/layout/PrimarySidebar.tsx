@@ -2,6 +2,7 @@ import React from 'react';
 import MindMapSidebar from './MindMapSidebar';
 import NotesSidebar from './NotesSidebar';
 import SettingsSidebar from './SettingsSidebar';
+import AISidebar from './AISidebar';
 import type { MindMapData } from '../../../../shared/types';
 import './PrimarySidebar.css';
 
@@ -73,6 +74,9 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       
       case 'notes':
         return <NotesSidebar />;
+      
+      case 'ai':
+        return <AISidebar />;
       
       case 'settings':
         return (

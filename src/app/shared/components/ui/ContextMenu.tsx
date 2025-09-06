@@ -20,6 +20,7 @@ interface ContextMenuProps {
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
   onChangeColor: (nodeId: string, color: string) => void;
+  onAIGenerate?: (node: MindMapNode) => void;
   onClose: () => void;
 }
 
@@ -34,6 +35,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onCopy,
   onPaste,
   onChangeColor,
+  onAIGenerate,
   onClose
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -94,6 +96,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         onCopy={onCopy}
         onPaste={onPaste}
         onChangeColor={onChangeColor}
+        onAIGenerate={onAIGenerate}
         onClose={onClose}
       />
       

@@ -9,10 +9,12 @@ import ExportModal from '../modals/ExportModal';
 import ImportModal from '../modals/ImportModal';
 import NodeNotesPanel from '../panels/NodeNotesPanel';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
+import ContextMenu from '../../../../shared/components/ui/ContextMenu';
 import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
 import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
 import { FileUploadProvider } from '../../../../shared/hooks/useFileUpload';
 import { useRetryableUpload } from '../../../../shared/hooks/useRetryableUpload';
+import { useAI } from '../../../../core/hooks/useAI';
 import { logger } from '../../../../shared/utils/logger';
 import './MindMapApp.css';
 
@@ -59,7 +61,22 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const [internalResetKey, setResetKey] = useState(resetKey);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    position: { x: number; y: number };
+    nodeId: string | null;
+  }>({
+    visible: false,
+    position: { x: 0, y: 0 },
+    nodeId: null
+  });
+  
   const store = useMindMapStore();
+  
+  // AI functionality
+  const ai = useAI();
   
   // 永続化フックを直接使用
   const persistenceHook = useMindMapPersistence({
@@ -657,6 +674,46 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     return null;
   };
 
+  // Context menu handlers
+  const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      position: { x: e.clientX, y: e.clientY },
+      nodeId: nodeId
+    });
+    selectNode(nodeId); // Select the node when right-clicking
+  };
+
+  const handleContextMenuClose = () => {
+    setContextMenu({
+      visible: false,
+      position: { x: 0, y: 0 },
+      nodeId: null
+    });
+  };
+
+  const handleAIGenerate = async (node: MindMapNode) => {
+    // 生成開始の通知
+    showNotification('info', 'AI子ノード生成中... 🤖');
+    
+    try {
+      const childTexts = await ai.generateChildNodes(node);
+      
+      // Generate child nodes based on AI suggestions
+      childTexts.forEach(text => {
+        addNode(node.id, text.trim());
+      });
+      
+      showNotification('success', `✅ ${childTexts.length}個の子ノードを生成しました`);
+    } catch (error) {
+      logger.error('AI child node generation failed:', error);
+      showNotification('error', '❌ AI子ノード生成に失敗しました');
+    } finally {
+      handleContextMenuClose();
+    }
+  };
+
   // UI用のハンドラー
   const handleTitleChange = (title: string) => {
     if (data) {
@@ -847,7 +904,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onAddChild={addNode}
             onAddSibling={(nodeId) => addNode(nodeId)}
             onDeleteNode={deleteNode}
-            onRightClick={() => {}}
+            onRightClick={handleRightClick}
             onToggleCollapse={toggleNodeCollapse}
             onFileUpload={(nodeId, files) => {
               if (files.length > 0) {
@@ -938,6 +995,24 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onClose={() => setShowImportModal(false)}
         onImportSuccess={handleImportSuccess}
       />
+      
+      {/* Context Menu */}
+      {contextMenu.visible && contextMenu.nodeId && (
+        <ContextMenu
+          visible={contextMenu.visible}
+          position={contextMenu.position}
+          selectedNode={data?.rootNode ? findNodeById(data.rootNode, contextMenu.nodeId) : null}
+          onAddChild={addNode}
+          onAddSibling={addNode}
+          onDelete={deleteNode}
+          onCustomize={() => {}} // TODO: Implement customization
+          onCopy={() => {}} // TODO: Implement copy
+          onPaste={() => {}} // TODO: Implement paste
+          onChangeColor={() => {}} // TODO: Implement color change
+          onAIGenerate={ai.aiSettings.enabled ? handleAIGenerate : undefined}
+          onClose={handleContextMenuClose}
+        />
+      )}
     </div>
   );
 };
