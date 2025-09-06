@@ -13,13 +13,10 @@ interface ContextMenuProps {
   visible: boolean;
   position: Position;
   selectedNode: MindMapNode | null;
-  onAddChild: (parentId: string) => void;
-  onAddSibling: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
   onCustomize: (node: MindMapNode) => void;
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
-  onChangeColor: (nodeId: string, color: string) => void;
   onAIGenerate?: (node: MindMapNode) => void;
   onClose: () => void;
 }
@@ -28,13 +25,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   visible,
   position,
   selectedNode,
-  onAddChild,
-  onAddSibling,
   onDelete,
   onCustomize,
   onCopy,
   onPaste,
-  onChangeColor,
   onAIGenerate,
   onClose
 }) => {
@@ -89,13 +83,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       
       <MenuItems
         selectedNode={selectedNode}
-        onAddChild={onAddChild}
-        onAddSibling={onAddSibling}
         onDelete={onDelete}
         onCustomize={onCustomize}
         onCopy={onCopy}
         onPaste={onPaste}
-        onChangeColor={onChangeColor}
         onAIGenerate={onAIGenerate}
         onClose={onClose}
       />

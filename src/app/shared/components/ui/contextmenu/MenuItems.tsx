@@ -1,6 +1,5 @@
 import React from 'react';
 import { MindMapNode } from '../../../types';
-import ColorSubmenu, { ColorOption } from './ColorSubmenu';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface MenuItemAction {
@@ -16,36 +15,24 @@ interface MenuItemSeparator {
   type: 'separator';
 }
 
-interface MenuItemSubmenu {
-  icon: string;
-  label: string;
-  submenu: ColorOption[];
-}
-
-export type MenuItem = MenuItemAction | MenuItemSeparator | MenuItemSubmenu;
+export type MenuItem = MenuItemAction | MenuItemSeparator;
 
 interface MenuItemsProps {
   selectedNode: MindMapNode;
-  onAddChild: (parentId: string) => void;
-  onAddSibling: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
   onCustomize: (node: MindMapNode) => void;
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
-  onChangeColor: (nodeId: string, color: string) => void;
   onAIGenerate?: (node: MindMapNode) => void;
   onClose: () => void;
 }
 
 const MenuItems: React.FC<MenuItemsProps> = ({
   selectedNode,
-  onAddChild,
-  onAddSibling,
   onDelete,
   onCustomize,
   onCopy,
   onPaste,
-  onChangeColor,
   onAIGenerate,
   onClose
 }) => {
@@ -53,24 +40,6 @@ const MenuItems: React.FC<MenuItemsProps> = ({
   const aiEnabled = store.aiSettings?.enabled || false;
   const isGenerating = store.isGenerating || false;
   const menuItems: MenuItem[] = [
-    {
-      icon: '➕',
-      label: '子ノードを追加',
-      action: () => {
-        onAddChild(selectedNode.id);
-        onClose();
-      },
-      shortcut: 'Tab'
-    },
-    {
-      icon: '↔️',
-      label: '兄弟ノードを追加',
-      action: () => {
-        onAddSibling(selectedNode.id);
-        onClose();
-      },
-      shortcut: 'Enter'
-    },
     ...(aiEnabled && onAIGenerate ? [{
       icon: isGenerating ? '⏳' : '🤖',
       label: isGenerating ? 'AI生成中...' : 'AI子ノード生成',
@@ -82,7 +51,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
       },
       disabled: isGenerating
     }] : []),
-    { type: 'separator' },
+    ...(aiEnabled && onAIGenerate ? [{ type: 'separator' as const }] : []),
     {
       icon: '🎨',
       label: 'カスタマイズ',
@@ -91,19 +60,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
         onClose();
       }
     },
-    {
-      icon: '🎯',
-      label: 'クイックカラー',
-      submenu: [
-        { color: '#4285f4', label: 'ブルー' },
-        { color: '#ea4335', label: 'レッド' },
-        { color: '#34a853', label: 'グリーン' },
-        { color: '#fbbc04', label: 'イエロー' },
-        { color: '#9c27b0', label: 'パープル' },
-        { color: '#ff9800', label: 'オレンジ' }
-      ]
-    },
-    { type: 'separator' },
+    { type: 'separator' as const },
     {
       icon: '📋',
       label: 'コピー',
@@ -121,9 +78,9 @@ const MenuItems: React.FC<MenuItemsProps> = ({
         onClose();
       },
       shortcut: 'Ctrl+V',
-      disabled: false
+      disabled: !store.ui?.clipboard
     },
-    { type: 'separator' },
+    { type: 'separator' as const },
     {
       icon: '🗑️',
       label: '削除',
@@ -139,30 +96,9 @@ const MenuItems: React.FC<MenuItemsProps> = ({
     }
   ];
 
-  const handleColorSelect = (color: string): void => {
-    onChangeColor(selectedNode.id, color);
-    onClose();
-  };
-
   const renderMenuItem = (item: MenuItem, index: number): React.ReactNode => {
     if ('type' in item && item.type === 'separator') {
       return <div key={index} className="menu-separator" />;
-    }
-
-    if ('submenu' in item) {
-      return (
-        <div key={index} className="menu-item submenu-parent">
-          <div className="menu-item-content">
-            <span className="menu-icon">{item.icon}</span>
-            <span className="menu-label">{item.label}</span>
-            <span className="submenu-arrow">▶</span>
-          </div>
-          <ColorSubmenu 
-            colors={item.submenu} 
-            onColorSelect={handleColorSelect}
-          />
-        </div>
-      );
     }
 
     const actionItem = item as MenuItemAction;

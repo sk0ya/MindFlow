@@ -902,7 +902,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onMoveNode={moveNode}
             onChangeSiblingOrder={changeSiblingOrder}
             onAddChild={addNode}
-            onAddSibling={(nodeId) => addNode(nodeId)}
+            onAddSibling={(nodeId) => store.addSiblingNode(nodeId)}
             onDeleteNode={deleteNode}
             onRightClick={handleRightClick}
             onToggleCollapse={toggleNodeCollapse}
@@ -936,8 +936,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         ui={ui}
         selectedNodeId={selectedNodeId}
         findNode={(nodeId) => findNodeById(data?.rootNode, nodeId)}
-        onAddChild={addNode}
-        onAddSibling={addNode}
         onDeleteNode={deleteNode}
         onUpdateNode={updateNode}
         onCopyNode={() => {}}
@@ -1002,13 +1000,56 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           visible={contextMenu.visible}
           position={contextMenu.position}
           selectedNode={data?.rootNode ? findNodeById(data.rootNode, contextMenu.nodeId) : null}
-          onAddChild={addNode}
-          onAddSibling={addNode}
           onDelete={deleteNode}
-          onCustomize={() => {}} // TODO: Implement customization
-          onCopy={() => {}} // TODO: Implement copy
-          onPaste={() => {}} // TODO: Implement paste
-          onChangeColor={() => {}} // TODO: Implement color change
+          onCustomize={(node) => {
+            selectNode(node.id);
+            store.showCustomization({ x: contextMenu.position.x, y: contextMenu.position.y });
+            handleContextMenuClose();
+          }}
+          onCopy={(node) => {
+            store.setClipboard(node);
+            showNotification('success', `「${node.text}」をコピーしました`);
+            handleContextMenuClose();
+          }}
+          onPaste={(parentId) => {
+            const clipboardNode = ui.clipboard;
+            if (!clipboardNode) {
+              showNotification('warning', 'コピーされたノードがありません');
+              return;
+            }
+            
+            // クリップボードのノードを再帰的にコピーして貼り付け
+            const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
+              const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
+              
+              // 新しく追加されたノードのプロパティを更新
+              if (newNodeId) {
+                updateNode(newNodeId, {
+                  fontSize: nodeToAdd.fontSize,
+                  fontWeight: nodeToAdd.fontWeight,
+                  color: nodeToAdd.color,
+                  collapsed: false, // 貼り付け時は展開状態にする
+                  attachments: nodeToAdd.attachments || []
+                });
+                
+                // 子ノードも再帰的にコピー
+                if (nodeToAdd.children && nodeToAdd.children.length > 0) {
+                  nodeToAdd.children.forEach(child => {
+                    pasteNodeRecursively(child, newNodeId);
+                  });
+                }
+              }
+              
+              return newNodeId;
+            };
+            
+            const newNodeId = pasteNodeRecursively(clipboardNode, parentId);
+            if (newNodeId) {
+              showNotification('success', `「${clipboardNode.text}」を貼り付けました`);
+              selectNode(newNodeId);
+            }
+            handleContextMenuClose();
+          }}
           onAIGenerate={ai.aiSettings.enabled ? handleAIGenerate : undefined}
           onClose={handleContextMenuClose}
         />

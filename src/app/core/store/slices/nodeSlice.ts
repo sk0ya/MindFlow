@@ -169,12 +169,70 @@ export const createNodeSlice: StateCreator<
 
   addSiblingNode: (nodeId: string, text: string = 'New Node') => {
     const { normalizedData } = get();
-    if (!normalizedData) return;
+    if (!normalizedData || !normalizedData.nodes[nodeId]) return;
     
     const parentId = normalizedData.parentMap[nodeId];
-    if (!parentId) return;
+    if (!parentId) return; // ルートノードには兄弟を追加できない
     
-    return get().addChildNode(parentId, text);
+    const newNodeId = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const currentNode = normalizedData.nodes[nodeId];
+    
+    // 新しいノードを作成（兄弟ノードなので同じ階層レベルに配置）
+    const newNode: MindMapNode = {
+      id: newNodeId,
+      text: text,
+      x: currentNode.x + 200, // 兄弟ノードは横に配置
+      y: currentNode.y + 80,  // 少し下にずらす
+      fontSize: currentNode.fontSize || 14,
+      fontWeight: currentNode.fontWeight || 'normal',
+      color: currentNode.color || '#000000',
+      children: [],
+      collapsed: false,
+      attachments: []
+    };
+    
+    set((state) => {
+      if (!state.normalizedData) return;
+      
+      // ノードを追加
+      state.normalizedData.nodes[newNodeId] = newNode;
+      state.normalizedData.parentMap[newNodeId] = parentId;
+      
+      // 親ノードの子リストに追加（現在のノードの後に挿入）
+      const parentNode = state.normalizedData.nodes[parentId];
+      if (parentNode.children) {
+        const currentIndex = parentNode.children.findIndex(child => child.id === nodeId);
+        if (currentIndex !== -1) {
+          // 現在のノードの後に新しいノードを挿入
+          parentNode.children.splice(currentIndex + 1, 0, newNode);
+        } else {
+          // 見つからない場合は末尾に追加
+          parentNode.children.push(newNode);
+        }
+      } else {
+        parentNode.children = [newNode];
+      }
+      
+      // ルートノードも更新
+      const updateNodeInTree = (node: MindMapNode): MindMapNode => {
+        if (node.id === parentId) {
+          return { ...node, children: parentNode.children };
+        }
+        if (node.children) {
+          return {
+            ...node,
+            children: node.children.map(updateNodeInTree)
+          };
+        }
+        return node;
+      };
+      
+      if (state.data?.rootNode) {
+        state.data.rootNode = updateNodeInTree(state.data.rootNode);
+      }
+    });
+    
+    return newNodeId;
   },
 
   deleteNode: (nodeId: string) => {

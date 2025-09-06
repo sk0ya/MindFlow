@@ -20,8 +20,6 @@ interface MindMapModalsProps {
   };
   selectedNodeId: string | null;
   findNode: (nodeId: string) => MindMapNode | null;
-  onAddChild: (parentId: string) => void;
-  onAddSibling: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onCopyNode: (node: MindMapNode) => void;
@@ -41,8 +39,6 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
   ui,
   selectedNodeId,
   findNode,
-  onAddChild,
-  onAddSibling,
   onDeleteNode,
   onUpdateNode,
   onCopyNode,
@@ -107,13 +103,10 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
           visible={true}
           position={ui.contextMenuPosition}
           selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
-          onAddChild={onAddChild}
-          onAddSibling={onAddSibling}
           onDelete={onDeleteNode}
           onCustomize={onShowCustomization}
           onCopy={onCopyNode}
           onPaste={onPasteNode}
-          onChangeColor={(nodeId: string, color: string) => onUpdateNode(nodeId, { color })}
           onAIGenerate={handleAIGenerate}
           onClose={onCloseContextMenu}
         />
