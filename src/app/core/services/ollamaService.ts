@@ -41,8 +41,19 @@ interface OllamaModelsResponse {
 export class OllamaService {
   private baseUrl: string;
   
-  constructor(baseUrl: string = 'http://localhost:11434') {
-    this.baseUrl = baseUrl.replace(/\/$/, ''); // 末尾のスラッシュを削除
+  constructor(baseUrl?: string) {
+    // 環境変数または設定から取得、なければデフォルトのlocalhostを使用
+    const defaultUrl = import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434';
+    this.baseUrl = (baseUrl || defaultUrl).replace(/\/$/, ''); // 末尾のスラッシュを削除
+  }
+  
+  /**
+   * ブラウザ拡張機能が利用可能かチェック
+   */
+  private isExtensionAvailable(): boolean {
+    return typeof window !== 'undefined' && 
+           window.MindFlowOllamaBridge && 
+           window.MindFlowOllamaBridge.available;
   }
   
   /**
@@ -50,6 +61,14 @@ export class OllamaService {
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
+      // 拡張機能が利用可能な場合は拡張機能経由で接続テスト
+      if (this.isExtensionAvailable()) {
+        console.log('Using extension for connection test');
+        const result = await window.MindFlowOllamaBridge.testConnection(this.baseUrl);
+        return result;
+      }
+      
+      // 通常のfetch（ローカル開発環境でのみ動作）
       const response = await fetch(`${this.baseUrl}/api/tags`, {
         method: 'GET',
         headers: {
@@ -76,6 +95,14 @@ export class OllamaService {
    */
   async getAvailableModels(): Promise<string[]> {
     try {
+      // 拡張機能が利用可能な場合は拡張機能経由で取得
+      if (this.isExtensionAvailable()) {
+        console.log('Using extension for getting models');
+        const models = await window.MindFlowOllamaBridge.getModels(this.baseUrl);
+        return models;
+      }
+      
+      // 通常のfetch（ローカル開発環境でのみ動作）
       const response = await fetch(`${this.baseUrl}/api/tags`, {
         method: 'GET',
         headers: {
@@ -124,22 +151,48 @@ export class OllamaService {
         systemPrompt: request.system?.substring(0, 50) + '...',
         temperature: request.options?.temperature,
         maxTokens: request.options?.num_predict,
-        fullPrompt: request.prompt.substring(0, 100) + '...'
+        fullPrompt: request.prompt.substring(0, 100) + '...',
+        usingExtension: this.isExtensionAvailable()
       });
       
-      const response = await fetch(`${this.baseUrl}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+      let response;
+      let data: OllamaResponse;
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 拡張機能が利用可能な場合は拡張機能経由でリクエスト
+      if (this.isExtensionAvailable()) {
+        console.log('Using extension for text generation');
+        const result = await window.MindFlowOllamaBridge.request(
+          `${this.baseUrl}/api/generate`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(request),
+          }
+        );
+        
+        if (!result.success) {
+          throw new Error(`Extension request failed: ${result.error}`);
+        }
+        
+        data = result.data;
+      } else {
+        // 通常のfetch（ローカル開発環境でのみ動作）
+        response = await fetch(`${this.baseUrl}/api/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        data = await response.json();
       }
-      
-      const data: OllamaResponse = await response.json();
       
       console.log('Received response from Ollama:', {
         model: data.model,
@@ -241,6 +294,7 @@ let ollamaService: OllamaService | null = null;
  * OllamaServiceのシングルトンインスタンスを取得する
  */
 export function getOllamaService(baseUrl?: string): OllamaService {
+  // baseURLが提供されていて、現在のインスタンスと異なる場合は新しいインスタンスを作成
   if (!ollamaService || (baseUrl && baseUrl !== ollamaService['baseUrl'])) {
     ollamaService = new OllamaService(baseUrl);
   }

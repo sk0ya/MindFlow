@@ -1,0 +1,9 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" fill="#2196f3" rx="19.2"/>
+  <circle cx="38.4" cy="38.4" r="10.24" fill="white"/>
+  <circle cx="89.6" cy="38.4" r="10.24" fill="white"/>
+  <path d="M 32 76.8 Q 64 102.4 96 76.8" 
+        stroke="white" stroke-width="3.84" fill="none"/>
+  <text x="64" y="115.2" font-family="Arial, sans-serif" 
+        font-size="15.36" fill="white" text-anchor="middle">🧠🤖</text>
+</svg>

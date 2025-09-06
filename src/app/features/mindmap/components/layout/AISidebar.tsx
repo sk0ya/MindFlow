@@ -17,6 +17,7 @@ const AISidebar: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string>('');
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [extensionAvailable, setExtensionAvailable] = useState(false);
   
   // 設定の妥当性をチェック
   const { errors: validationErrors } = validateSettings();
@@ -35,11 +36,22 @@ const AISidebar: React.FC = () => {
         await handleLoadModels();
       } else {
         setConnectionStatus('error');
-        setConnectionError(result.error || '接続に失敗しました');
+        // CORS エラーの場合は特別なメッセージを表示
+        const error = result.error || '接続に失敗しました';
+        if (error.includes('CORS') || error.includes('Failed to fetch')) {
+          setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
+        } else {
+          setConnectionError(error);
+        }
       }
     } catch (error) {
       setConnectionStatus('error');
-      setConnectionError(error instanceof Error ? error.message : '接続テストでエラーが発生しました');
+      const errorMessage = error instanceof Error ? error.message : '接続テストでエラーが発生しました';
+      if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+        setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
+      } else {
+        setConnectionError(errorMessage);
+      }
     }
   };
   
@@ -56,10 +68,44 @@ const AISidebar: React.FC = () => {
     } catch (error) {
       console.error('Failed to load models:', error);
       setAvailableModels([]);
+      // CORSエラーの場合は接続エラーも表示
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+        setConnectionStatus('error');
+        setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
+      }
     } finally {
       setIsLoadingModels(false);
     }
   };
+  
+  // 拡張機能の検出
+  useEffect(() => {
+    const checkExtension = () => {
+      const isAvailable = typeof window !== 'undefined' && 
+                         window.MindFlowOllamaBridge && 
+                         window.MindFlowOllamaBridge.available;
+      setExtensionAvailable(isAvailable);
+    };
+    
+    // 初期チェック
+    checkExtension();
+    
+    // 拡張機能の準備完了イベントをリッスン
+    const handleExtensionReady = () => {
+      checkExtension();
+    };
+    
+    window.addEventListener('mindflowOllamaBridgeReady', handleExtensionReady);
+    
+    // 定期的にチェック（拡張機能が後から読み込まれる場合）
+    const interval = setInterval(checkExtension, 1000);
+    
+    return () => {
+      window.removeEventListener('mindflowOllamaBridgeReady', handleExtensionReady);
+      clearInterval(interval);
+    };
+  }, []);
   
   // AI機能が有効になった時にモデル一覧を取得
   useEffect(() => {
@@ -78,6 +124,36 @@ const AISidebar: React.FC = () => {
       </div>
 
       <div className="ai-sidebar-content">
+        {/* 拡張機能ステータス */}
+        <div className="ai-section">
+          <h3 className="ai-section-title">🔌 接続方法</h3>
+          <div className="ai-section-content">
+            {extensionAvailable ? (
+              <div className="ai-extension-status success">
+                <span className="ai-status-icon">✅</span>
+                <div className="ai-status-info">
+                  <strong>MindFlow Ollama Bridge が利用可能</strong>
+                  <p>本番環境でもローカルLLMにアクセスできます</p>
+                </div>
+              </div>
+            ) : (
+              <div className="ai-extension-status warning">
+                <span className="ai-status-icon">⚠️</span>
+                <div className="ai-status-info">
+                  <strong>拡張機能なし - ローカル開発のみ</strong>
+                  <p>
+                    本番環境でローカルLLMを使用するには 
+                    <a href="https://github.com/sk0ya/MindFlow/tree/main/browser-extension" 
+                       target="_blank" rel="noopener noreferrer">
+                      MindFlow Ollama Bridge拡張機能
+                    </a> をインストールしてください。
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
         <div className="ai-section">
           <h3 className="ai-section-title">基本設定</h3>
           <div className="ai-section-content">
@@ -97,13 +173,17 @@ const AISidebar: React.FC = () => {
               <div className="ai-info-box">
                 <p>AI機能を有効にすると、ノードの右クリックメニューから「AI子ノード生成」オプションが利用できます。</p>
                 <div className="ai-setup-steps">
-                  <h4>セットアップ手順:</h4>
+                  <h4>ローカル環境でのセットアップ手順:</h4>
                   <ol>
                     <li>DockerでOllamaを起動</li>
                     <li>モデルをダウンロード（例: llama2）</li>
                     <li>下記の設定でOllamaに接続</li>
                     <li>AI機能を有効化</li>
                   </ol>
+                  <p className="ai-deployment-note">
+                    <strong>注意:</strong> デプロイされたアプリでは、ブラウザのCORSポリシーによりローカルのOllamaサーバーに直接アクセスできません。
+                    ローカル開発環境でのみ利用可能です。
+                  </p>
                 </div>
               </div>
             )}
@@ -409,6 +489,67 @@ const AISidebar: React.FC = () => {
 
         .ai-setup-steps li {
           margin-bottom: 4px;
+        }
+
+        .ai-deployment-note {
+          margin-top: 12px;
+          padding: 12px;
+          background: rgba(255, 152, 0, 0.1);
+          border: 1px solid #ff9800;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #ffb74d;
+        }
+
+        .ai-extension-status {
+          display: flex;
+          align-items: flex-start;
+          padding: 12px;
+          border-radius: 6px;
+          gap: 12px;
+        }
+
+        .ai-extension-status.success {
+          background: rgba(76, 175, 80, 0.1);
+          border: 1px solid #4caf50;
+        }
+
+        .ai-extension-status.warning {
+          background: rgba(255, 152, 0, 0.1);
+          border: 1px solid #ff9800;
+        }
+
+        .ai-status-icon {
+          font-size: 18px;
+          line-height: 1;
+          flex-shrink: 0;
+        }
+
+        .ai-status-info {
+          flex: 1;
+        }
+
+        .ai-status-info strong {
+          display: block;
+          margin-bottom: 6px;
+          color: #ffffff;
+          font-size: 13px;
+        }
+
+        .ai-status-info p {
+          margin: 0;
+          font-size: 12px;
+          line-height: 1.4;
+          color: #cccccc;
+        }
+
+        .ai-status-info a {
+          color: #2196f3;
+          text-decoration: none;
+        }
+
+        .ai-status-info a:hover {
+          text-decoration: underline;
         }
 
         .ai-setting-group {
