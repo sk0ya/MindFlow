@@ -17,6 +17,12 @@ const SidebarStyles: React.FC = () => (
       box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.05);
     }
 
+    [data-theme="dark"] .mindmap-sidebar {
+      background: #1f2937;
+      border-right: 1px solid rgba(75, 85, 99, 0.3);
+      box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
     .mindmap-sidebar.collapsed {
       width: 50px;
       height: calc(100vh - 60px);
@@ -33,6 +39,11 @@ const SidebarStyles: React.FC = () => (
       overflow: hidden;
     }
 
+    [data-theme="dark"] .mindmap-sidebar.collapsed {
+      background: linear-gradient(to bottom, #374151, #4b5563);
+      border-right: 2px solid #6b7280;
+    }
+
     .sidebar-header {
       padding: 12px !important;
       border-bottom: 1px solid rgba(148, 163, 184, 0.12);
@@ -47,6 +58,11 @@ const SidebarStyles: React.FC = () => (
       overflow: visible !important;
     }
 
+    [data-theme="dark"] .sidebar-header {
+      border-bottom: 1px solid rgba(75, 85, 99, 0.2);
+      background: rgba(31, 41, 55, 0.8);
+    }
+
     .sidebar-title {
       margin: 0;
       font-size: 18px;
@@ -55,6 +71,10 @@ const SidebarStyles: React.FC = () => (
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+
+    [data-theme="dark"] .sidebar-title {
+      color: #e5e7eb;
     }
 
     .header-actions {
@@ -134,6 +154,7 @@ const SidebarStyles: React.FC = () => (
       font-size: 14px;
       background: rgba(248, 250, 252, 0.8);
       transition: all 0.2s ease;
+      color: #333;
     }
 
     .search-input:focus {
@@ -141,6 +162,21 @@ const SidebarStyles: React.FC = () => (
       border-color: rgba(59, 130, 246, 0.5);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       background: white;
+    }
+
+    [data-theme="dark"] .search-input {
+      background: rgba(55, 65, 81, 0.8);
+      border: 1px solid rgba(75, 85, 99, 0.4);
+      color: #e5e7eb;
+    }
+
+    [data-theme="dark"] .search-input:focus {
+      background: #374151;
+      border-color: rgba(59, 130, 246, 0.6);
+    }
+
+    [data-theme="dark"] .search-input::placeholder {
+      color: #9ca3af;
     }
 
     .map-control-buttons {
@@ -360,6 +396,14 @@ const SidebarStyles: React.FC = () => (
       background: rgba(229, 229, 229, 0.6);
     }
 
+    [data-theme="dark"] .category-header {
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .category-header:hover {
+      background: rgba(75, 85, 99, 0.6);
+    }
+
     .category-header.selected {
       background: #0078d4;
       color: white;
@@ -401,6 +445,23 @@ const SidebarStyles: React.FC = () => (
       text-align: center;
     }
 
+    [data-theme="dark"] .category-expand-icon {
+      color: #9ca3af;
+    }
+
+    [data-theme="dark"] .category-folder-icon {
+      color: #f59e0b;
+    }
+
+    [data-theme="dark"] .category-name {
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .category-count {
+      color: #9ca3af;
+      background: rgba(75, 85, 99, 0.4);
+    }
+
     .category-maps {
       background: transparent;
       padding-left: 18px;
@@ -423,6 +484,10 @@ const SidebarStyles: React.FC = () => (
     .map-item:hover {
       background: rgba(229, 229, 229, 0.6);
       transform: none;
+    }
+
+    [data-theme="dark"] .map-item:hover {
+      background: rgba(75, 85, 99, 0.6);
     }
 
     .map-item.active {
@@ -475,6 +540,14 @@ const SidebarStyles: React.FC = () => (
       font-size: 11px;
       color: #888;
       margin-top: 2px;
+    }
+
+    [data-theme="dark"] .map-title {
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .map-meta {
+      color: #9ca3af;
     }
 
     .node-count,
@@ -556,6 +629,14 @@ const SidebarStyles: React.FC = () => (
       line-height: 1.5;
     }
 
+    [data-theme="dark"] .empty-state {
+      color: #9ca3af;
+    }
+
+    [data-theme="dark"] .empty-title {
+      color: #d1d5db;
+    }
+
     /* Context Menu Styles */
     .context-menu {
       background: white;
@@ -575,6 +656,7 @@ const SidebarStyles: React.FC = () => (
       align-items: center;
       gap: 8px;
       transition: background-color 0.15s ease;
+      color: #333;
     }
 
     .context-menu-item:hover {
@@ -588,6 +670,24 @@ const SidebarStyles: React.FC = () => (
 
     .context-menu-item.disabled:hover {
       background-color: transparent;
+    }
+
+    [data-theme="dark"] .context-menu {
+      background: #374151;
+      border: 1px solid #6b7280;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-theme="dark"] .context-menu-item {
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .context-menu-item:hover {
+      background-color: #4b5563;
+    }
+
+    [data-theme="dark"] .context-menu-item.disabled {
+      color: #6b7280;
     }
 
     .context-menu-icon {
@@ -604,6 +704,10 @@ const SidebarStyles: React.FC = () => (
       height: 1px;
       background-color: #e0e0e0;
       margin: 4px 0;
+    }
+
+    [data-theme="dark"] .context-menu-separator {
+      background-color: #6b7280;
     }
 
     /* 検索ハイライト */
@@ -636,6 +740,24 @@ const SidebarStyles: React.FC = () => (
       background-color: #fef3c7;
       color: #d97706;
       box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2);
+    }
+
+    [data-theme="dark"] .search-highlight {
+      background-color: #92400e;
+      color: #fbbf24;
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
+    }
+
+    [data-theme="dark"] .category-name .search-highlight {
+      background-color: #065f46;
+      color: #34d399;
+      box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.3);
+    }
+
+    [data-theme="dark"] .map-title .search-highlight {
+      background-color: #92400e;
+      color: #fbbf24;
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3);
     }
   `}</style>
 );
