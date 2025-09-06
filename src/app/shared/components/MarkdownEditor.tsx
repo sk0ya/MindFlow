@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Editor, OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { marked } from 'marked';
+import { useMindMapStore } from '../../core/store/mindMapStore';
 
 interface MarkdownEditorProps {
   value: string;
@@ -25,6 +26,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [isVimEnabled, setIsVimEnabled] = useState(vimMode);
   const [mode, setMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const { settings } = useMindMapStore();
 
   // Convert markdown to HTML
   const getPreviewHtml = (): string => {
@@ -116,6 +118,18 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     }
   };
 
+  // Update theme when settings change
+  useEffect(() => {
+    if (editorRef.current) {
+      const monaco = editorRef.current.getModel()?.getLanguageId();
+      if (monaco) {
+        import('monaco-editor').then((monacoModule) => {
+          monacoModule.editor.setTheme(settings.theme === 'dark' ? 'vs-dark' : 'vs');
+        });
+      }
+    }
+  }, [settings.theme]);
+
   useEffect(() => {
     return () => {
       // Cleanup Vim mode on unmount
@@ -190,7 +204,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 onChange(newValue ?? '');
               }}
               onMount={handleEditorDidMount}
-              theme="vs"
+              theme={settings.theme === 'dark' ? 'vs-dark' : 'vs'}
               loading="エディターを読み込み中..."
               options={{
                 selectOnLineNumbers: true,
@@ -240,15 +254,15 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         .markdown-editor {
           display: flex;
           flex-direction: column;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--border-color);
           border-radius: 6px;
           overflow: hidden;
-          background-color: #ffffff;
+          background-color: var(--bg-primary);
         }
 
         .editor-toolbar {
-          background-color: #f8f9fa;
-          border-bottom: 1px solid #e5e7eb;
+          background-color: var(--bg-secondary);
+          border-bottom: 1px solid var(--border-color);
           padding: 8px 12px;
           display: flex;
           justify-content: space-between;
@@ -267,9 +281,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .mode-toggle {
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          color: #374151;
+          background: var(--bg-primary);
+          border: 1px solid var(--border-color);
+          color: var(--text-primary);
           padding: 6px 10px;
           border-radius: 4px;
           cursor: pointer;
@@ -279,20 +293,20 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .mode-toggle:hover {
-          background: #f3f4f6;
-          border-color: #9ca3af;
+          background: var(--hover-color);
+          border-color: var(--border-color);
         }
 
         .mode-toggle.active {
-          background: #3b82f6;
-          border-color: #3b82f6;
+          background: var(--accent-color);
+          border-color: var(--accent-color);
           color: white;
         }
 
         .vim-toggle {
-          background: #ffffff;
-          border: 1px solid #d1d5db;
-          color: #374151;
+          background: var(--bg-primary);
+          border: 1px solid var(--border-color);
+          color: var(--text-primary);
           padding: 4px 8px;
           border-radius: 4px;
           cursor: pointer;
@@ -301,8 +315,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .vim-toggle:hover {
-          background: #f3f4f6;
-          border-color: #9ca3af;
+          background: var(--hover-color);
+          border-color: var(--border-color);
         }
 
         .vim-toggle.active {
@@ -312,8 +326,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .save-button {
-          background: #3b82f6;
-          border: 1px solid #3b82f6;
+          background: var(--accent-color);
+          border: 1px solid var(--accent-color);
           color: white;
           padding: 4px 12px;
           border-radius: 4px;
@@ -323,7 +337,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .save-button:hover {
-          background: #2563eb;
+          background: var(--accent-color);
+          opacity: 0.8;
         }
 
         .editor-container {
@@ -343,12 +358,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         .mode-split .editor-pane,
         .mode-split .preview-pane {
           width: 50%;
-          border-right: 1px solid #e5e7eb;
+          border-right: 1px solid var(--border-color);
         }
 
         .mode-split .preview-pane {
           border-right: none;
-          border-left: 1px solid #e5e7eb;
+          border-left: 1px solid var(--border-color);
         }
 
         .editor-pane {
@@ -361,7 +376,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           display: flex;
           flex-direction: column;
           height: 100%;
-          background: #ffffff;
+          background: var(--bg-primary);
         }
 
         .preview-content {
@@ -373,7 +388,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
         .markdown-preview {
           line-height: 1.6;
-          color: #333333;
+          color: var(--text-primary);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         }
 
@@ -390,13 +405,13 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
         .markdown-preview h1 {
           font-size: 2em;
-          border-bottom: 1px solid #eaecef;
+          border-bottom: 1px solid var(--border-color);
           padding-bottom: 10px;
         }
 
         .markdown-preview h2 {
           font-size: 1.5em;
-          border-bottom: 1px solid #eaecef;
+          border-bottom: 1px solid var(--border-color);
           padding-bottom: 8px;
         }
 
@@ -419,16 +434,16 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .markdown-preview pre {
-          background: #f6f8fa;
+          background: var(--bg-tertiary);
           border-radius: 6px;
           padding: 16px;
           overflow-x: auto;
-          border: 1px solid #e1e4e8;
+          border: 1px solid var(--border-color);
           margin: 12px 0;
         }
 
         .markdown-preview code {
-          background: #f6f8fa;
+          background: var(--bg-tertiary);
           padding: 2px 4px;
           border-radius: 3px;
           font-size: 85%;
@@ -441,10 +456,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .markdown-preview blockquote {
-          border-left: 4px solid #dfe2e5;
+          border-left: 4px solid var(--border-color);
           padding: 0 16px;
           margin: 12px 0;
-          color: #6a737d;
+          color: var(--text-secondary);
         }
 
         .markdown-preview table {
@@ -455,13 +470,13 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
         .markdown-preview th,
         .markdown-preview td {
-          border: 1px solid #dfe2e5;
+          border: 1px solid var(--border-color);
           padding: 8px 12px;
           text-align: left;
         }
 
         .markdown-preview th {
-          background: #f6f8fa;
+          background: var(--bg-secondary);
           font-weight: 600;
         }
 
@@ -472,7 +487,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .markdown-preview a {
-          color: #0366d6;
+          color: var(--accent-color);
           text-decoration: none;
         }
 
@@ -486,7 +501,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           align-items: center;
           justify-content: center;
           height: 100%;
-          color: #6b7280;
+          color: var(--text-secondary);
           text-align: center;
         }
 
@@ -502,12 +517,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         }
 
         .vim-statusbar {
-          background-color: #f8f9fa;
-          border-top: 1px solid #e5e7eb;
+          background-color: var(--bg-secondary);
+          border-top: 1px solid var(--border-color);
           padding: 4px 12px;
           font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
           font-size: 12px;
-          color: #374151;
+          color: var(--text-primary);
           min-height: 20px;
           display: flex;
           align-items: center;

@@ -224,8 +224,8 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background: #ffffff;
-      border-left: 1px solid #e5e7eb;
+      background: var(--bg-primary);
+      border-left: 1px solid var(--border-color);
       position: relative;
       user-select: ${isResizing ? 'none' : 'auto'};
     }
@@ -242,11 +242,11 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
     }
 
     .resize-handle:hover {
-      background: #3b82f6;
+      background: var(--accent-color);
     }
 
     .resize-handle.resizing {
-      background: #3b82f6;
+      background: var(--accent-color);
     }
 
     .panel-header {
@@ -254,8 +254,8 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
       justify-content: space-between;
       align-items: center;
       padding: 16px 20px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #f9fafb;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
       flex-shrink: 0;
     }
 
@@ -269,7 +269,7 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--text-primary);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -283,7 +283,7 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
 
     .node-name {
       font-size: 14px;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-weight: 500;
     }
 
@@ -305,7 +305,7 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
       border: none;
       font-size: 20px;
       line-height: 1;
-      color: #6b7280;
+      color: var(--text-secondary);
       cursor: pointer;
       padding: 4px;
       border-radius: 4px;
@@ -313,8 +313,8 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
     }
 
     .close-button:hover {
-      background: #e5e7eb;
-      color: #374151;
+      background: var(--hover-color);
+      color: var(--text-primary);
     }
 
     .editor-container {
@@ -348,13 +348,13 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
     .empty-message {
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--text-primary);
       margin-bottom: 8px;
     }
 
     .empty-description {
       font-size: 14px;
-      color: #6b7280;
+      color: var(--text-secondary);
       line-height: 1.5;
     }
 
@@ -363,19 +363,19 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
       justify-content: space-between;
       align-items: center;
       padding: 12px 20px;
-      background: #fef3c7;
-      border-top: 1px solid #f59e0b;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
       flex-shrink: 0;
     }
 
     .unsaved-changes {
       font-size: 14px;
-      color: #92400e;
+      color: var(--text-secondary);
       font-weight: 500;
     }
 
     .save-button {
-      background: #f59e0b;
+      background: var(--accent-color);
       color: white;
       border: none;
       padding: 6px 12px;
@@ -387,7 +387,8 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
     }
 
     .save-button:hover {
-      background: #d97706;
+      background: var(--accent-color);
+      opacity: 0.8;
     }
 
     @media (max-width: 768px) {
