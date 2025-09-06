@@ -9,13 +9,27 @@
 
 ## 📋 前提条件
 
-1. **Ollama の起動**
-   ```bash
-   # Dockerの場合
-   docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+1. **Ollama の起動と設定**
    
-   # 直接インストールの場合
+   **重要**: Ollamaサーバーを起動する前に、ブラウザ拡張機能からのアクセスを許可する環境変数を設定する必要があります：
+   
+   **Windows (PowerShell):**
+   ```powershell
+   $env:OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*"
    ollama serve
+   ```
+   
+   **macOS/Linux:**
+   ```bash
+   export OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*"
+   ollama serve
+   ```
+   
+   **Docker の場合:**
+   ```bash
+   docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama \
+     -e OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*" \
+     ollama/ollama
    ```
 
 2. **モデルのダウンロード**

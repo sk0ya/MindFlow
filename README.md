@@ -41,6 +41,11 @@ npm run preview
 - **ドラッグ&ドロップ**: ノードを自由に移動・配置
 - **ビジュアル表現**: 美しいノードデザイン（角丸、影効果）と滑らかなカーブ接続線
 
+### 🤖 AI機能
+- **AI子ノード生成**: ローカルOllama連携による自動的な関連ノード生成
+- **Chrome拡張機能**: CORS制限を回避してデプロイ版からローカルOllamaにアクセス
+- **右クリックメニュー**: ノードから簡単にAI子ノード生成を実行
+
 ### 💾 データ管理
 - **自動保存**: リアルタイムでの変更保存（ローカルストレージ）
 - **履歴管理**: Undo/Redo機能（最大50件）
@@ -62,15 +67,59 @@ npm run preview
 ### フロントエンド
 - **React 18.2.0**: コンポーネントベース開発
 - **Vite 4.3.0**: 高速ビルドツール
+- **TypeScript**: 型安全な開発
 - **SVG**: 描画エンジン（React親和性重視）
 - **CSS3**: スタイリングとアニメーション
-- **React Hooks**: 状態管理（useState, useRef, useCallback）
+- **Zustand**: 軽量状態管理ライブラリ
+
+### AI機能
+- **Ollama**: ローカルLLM実行環境
+- **Chrome Extension**: CORS制限回避のためのブラウザ拡張機能
+- **Content Scripts**: WebページへのAPI注入
 
 ### 主要なアーキテクチャ
-- **カスタムフック**: `useMindMap.js`による集約的状態管理
+- **フック化アーキテクチャ**: 機能別に分離されたカスタムフック
+  - `useMindMapData`: データ・ノード操作
+  - `useMindMapUI`: UI状態管理
+  - `useMindMapActions`: アクション・履歴管理
+  - `useMindMapPersistence`: ストレージ・永続化
+- **モジュラー設計**: 機能ベースの組織化
 - **SVGベース描画**: 高性能なベクター描画システム
-- **イミュータブル更新**: 効率的なデータ管理パターン
-- **最適化**: React.memo、useCallbackによるパフォーマンス最適化
+- **自動レイアウト**: ノード配置の自動計算
+- **ストレージモード**: ローカル・クラウドの動的切り替え
+
+## 🤖 AI機能の使い方
+
+### 1. ローカル環境での利用
+```bash
+# Ollamaの起動
+ollama serve
+
+# モデルのダウンロード
+ollama pull llama2
+```
+
+### 2. デプロイ版でのAI機能利用
+Chrome拡張機能を使用してCORS制限を回避：
+
+1. **拡張機能のインストール**
+   - `browser-extension/` フォルダをChrome拡張として読み込む
+   
+2. **Ollamaの設定**
+   ```bash
+   # Windows (PowerShell)
+   $env:OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*"
+   ollama serve
+   
+   # macOS/Linux
+   export OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*"
+   ollama serve
+   ```
+
+3. **使用方法**
+   - [GitHub Pages](https://sk0ya.github.io/MindFlow/)でMindFlowを開く
+   - サイドバーでAI機能を有効化
+   - ノードを右クリックして「AI子ノード生成」を実行
 
 ## 📄 ライセンス
 
