@@ -15,6 +15,7 @@ import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from 
 import { FileUploadProvider } from '../../../../shared/hooks/useFileUpload';
 import { useRetryableUpload } from '../../../../shared/hooks/useRetryableUpload';
 import { useAI } from '../../../../core/hooks/useAI';
+import { useTheme } from '../../../../shared/hooks/useTheme';
 import { logger } from '../../../../shared/utils/logger';
 import './MindMapApp.css';
 
@@ -77,6 +78,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   
   // AI functionality
   const ai = useAI();
+  
+  // テーマ管理
+  useTheme();
   
   // 永続化フックを直接使用
   const persistenceHook = useMindMapPersistence({

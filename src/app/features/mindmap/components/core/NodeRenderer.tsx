@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode } from '@shared/types';
 
 interface NodeRendererProps {
@@ -30,6 +31,8 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
   onDoubleClick,
   onContextMenu
 }) => {
+  const { settings } = useMindMapStore();
+  
   // propsで渡されたnodeWidth/nodeHeightを使用（nodeUtils.tsで計算済み）
   const actualNodeWidth = nodeWidth;
   const actualNodeHeight = nodeHeight;
@@ -44,7 +47,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
         y={node.y - actualNodeHeight / 2}
         width={actualNodeWidth}
         height={actualNodeHeight}
-        fill="rgba(255, 255, 255, 0.9)"
+        fill={settings.theme === 'dark' ? 'rgba(45, 45, 48, 0.9)' : 'rgba(255, 255, 255, 0.9)'}
         stroke="transparent"
         strokeWidth="0"
         rx="12"

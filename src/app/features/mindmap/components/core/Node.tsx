@@ -4,6 +4,7 @@ import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeProps {
@@ -63,6 +64,7 @@ const Node: React.FC<NodeProps> = ({
   const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previousPosition = useRef({ x: node.x, y: node.y });
+  const { settings } = useMindMapStore();
   
   // ドラッグハンドラーを使用
   const { isDragging, handleMouseDown } = useNodeDragHandler({
@@ -134,8 +136,8 @@ const Node: React.FC<NodeProps> = ({
   }, [node.id, onRightClick]);
 
 
-  // ノードのサイズ計算（共有ユーティリティ関数を使用）
-  const nodeSize = calculateNodeSize(node, editText, isEditing);
+  // ノードのサイズ計算（共有ユーティリティ関数を使用、グローバルフォントサイズを適用）
+  const nodeSize = calculateNodeSize(node, editText, isEditing, settings.fontSize);
   const nodeWidth = nodeSize.width;
   const nodeHeight = nodeSize.height;
   const imageHeight = nodeSize.imageHeight;

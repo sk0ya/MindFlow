@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface SettingsSidebarProps {
+  // 既存のprops（後方互換性のため保持）
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onShowKeyboardHelper?: () => void;
@@ -17,36 +19,49 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   onExport,
   onImport
 }) => {
+  const { settings, updateSetting, loadSettingsFromStorage } = useMindMapStore();
+
+  // 初回ロード時に設定をlocalStorageから読み込み
+  useEffect(() => {
+    loadSettingsFromStorage();
+  }, [loadSettingsFromStorage]);
+
+  const handleSettingChange = <K extends keyof typeof settings>(key: K, value: typeof settings[K]) => {
+    updateSetting(key, value);
+  };
+
   return (
     <div className="settings-sidebar">
+
+
       <div className="settings-section">
-        <h3 className="settings-section-title">ストレージモード</h3>
+        <h3 className="settings-section-title">テーマ</h3>
         <div className="settings-section-content">
-          <div className="storage-mode-selector">
-            <label className="storage-mode-option">
+          <div className="settings-radio-group">
+            <label className="settings-radio-option">
               <input
                 type="radio"
-                name="storageMode"
-                value="local"
-                checked={storageMode === 'local'}
-                onChange={() => onStorageModeChange?.('local')}
+                name="theme"
+                value="dark"
+                checked={settings.theme === 'dark'}
+                onChange={() => handleSettingChange('theme', 'dark')}
               />
-              <span className="storage-mode-label">
-                <span className="storage-mode-icon">💾</span>
-                ローカル
+              <span className="settings-radio-label">
+                <span className="settings-icon">🌙</span>
+                ダーク
               </span>
             </label>
-            <label className="storage-mode-option">
+            <label className="settings-radio-option">
               <input
                 type="radio"
-                name="storageMode"
-                value="cloud"
-                checked={storageMode === 'cloud'}
-                onChange={() => onStorageModeChange?.('cloud')}
+                name="theme"
+                value="light"
+                checked={settings.theme === 'light'}
+                onChange={() => handleSettingChange('theme', 'light')}
               />
-              <span className="storage-mode-label">
-                <span className="storage-mode-icon">☁️</span>
-                クラウド
+              <span className="settings-radio-label">
+                <span className="settings-icon">☀️</span>
+                ライト
               </span>
             </label>
           </div>
@@ -54,52 +69,68 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
       </div>
 
       <div className="settings-section">
-        <h3 className="settings-section-title">レイアウト</h3>
+        <h3 className="settings-section-title">フォント設定</h3>
         <div className="settings-section-content">
-          <button 
-            className="settings-button"
-            onClick={onAutoLayout}
-            title="マインドマップのレイアウトを自動調整します"
-          >
-            <span className="settings-button-icon">🎯</span>
-            自動整列
-          </button>
+          <div className="settings-input-group">
+            <label className="settings-input-label">フォントサイズ</label>
+            <input
+              type="number"
+              min="10"
+              max="24"
+              value={settings.fontSize}
+              onChange={(e) => handleSettingChange('fontSize', parseInt(e.target.value))}
+              className="settings-input"
+            />
+          </div>
+          <div className="settings-input-group">
+            <label className="settings-input-label">フォントファミリー</label>
+            <select
+              value={settings.fontFamily}
+              onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
+              className="settings-select"
+            >
+              <option value="system-ui">System UI</option>
+              <option value="Arial">Arial</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="sans-serif">Sans Serif</option>
+              <option value="serif">Serif</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="settings-section">
-        <h3 className="settings-section-title">インポート・エクスポート</h3>
-        <div className="settings-section-content">
-          <button 
-            className="settings-button"
-            onClick={onImport}
-            title="Markdownファイルからマインドマップをインポート"
-          >
-            <span className="settings-button-icon">📥</span>
-            インポート
-          </button>
-          <button 
-            className="settings-button"
-            onClick={onExport}
-            title="マインドマップをエクスポート"
-          >
-            <span className="settings-button-icon">📤</span>
-            エクスポート
-          </button>
-        </div>
-      </div>
 
       <div className="settings-section">
-        <h3 className="settings-section-title">ヘルプ</h3>
+        <h3 className="settings-section-title">ストレージモード</h3>
         <div className="settings-section-content">
-          <button 
-            className="settings-button"
-            onClick={onShowKeyboardHelper}
-            title="キーボードショートカットを表示"
-          >
-            <span className="settings-button-icon">⌨️</span>
-            ショートカット一覧
-          </button>
+          <div className="settings-radio-group">
+            <label className="settings-radio-option">
+              <input
+                type="radio"
+                name="storageMode"
+                value="local"
+                checked={storageMode === 'local'}
+                onChange={() => onStorageModeChange?.('local')}
+              />
+              <span className="settings-radio-label">
+                <span className="settings-icon">💾</span>
+                ローカル
+              </span>
+            </label>
+            <label className="settings-radio-option">
+              <input
+                type="radio"
+                name="storageMode"
+                value="cloud"
+                checked={storageMode === 'cloud'}
+                onChange={() => onStorageModeChange?.('cloud')}
+              />
+              <span className="settings-radio-label">
+                <span className="settings-icon">☁️</span>
+                クラウド
+              </span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -107,6 +138,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         .settings-sidebar {
           padding: 16px;
           overflow-y: auto;
+          background-color: var(--bg-primary);
         }
 
         .settings-section {
@@ -116,27 +148,82 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         .settings-section-title {
           font-size: 12px;
           font-weight: 600;
-          color: #cccccc;
+          color: var(--text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.5px;
           margin: 0 0 12px 0;
           padding-bottom: 8px;
-          border-bottom: 1px solid #3e3e42;
+          border-bottom: 1px solid var(--border-color);
         }
 
         .settings-section-content {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 12px;
         }
 
-        .storage-mode-selector {
+        .settings-toggle {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          padding: 4px 0;
+        }
+
+        .settings-toggle input[type="checkbox"] {
+          margin-right: 8px;
+          accent-color: #007acc;
+        }
+
+        .settings-toggle-label {
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+
+        .settings-input-group {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .settings-input-label {
+          font-size: 12px;
+          color: var(--text-secondary);
+          font-weight: 500;
+        }
+
+        .settings-input,
+        .settings-select {
+          padding: 6px 8px;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          background: var(--bg-primary);
+          color: var(--text-primary);
+          font-size: 14px;
+        }
+
+        .settings-input:focus,
+        .settings-select:focus {
+          outline: none;
+          border-color: var(--accent-color);
+        }
+
+        .settings-color-input {
+          padding: 4px;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          background: var(--bg-primary);
+          cursor: pointer;
+          width: 60px;
+          height: 32px;
+        }
+
+        .settings-radio-group {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
 
-        .storage-mode-option {
+        .settings-radio-option {
           display: flex;
           align-items: center;
           padding: 8px;
@@ -145,23 +232,23 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           transition: background-color 0.2s;
         }
 
-        .storage-mode-option:hover {
-          background-color: #2d2d30;
+        .settings-radio-option:hover {
+          background-color: var(--hover-color);
         }
 
-        .storage-mode-option input[type="radio"] {
+        .settings-radio-option input[type="radio"] {
           margin-right: 8px;
-          accent-color: #007acc;
+          accent-color: var(--accent-color);
         }
 
-        .storage-mode-label {
+        .settings-radio-label {
           display: flex;
           align-items: center;
-          color: #cccccc;
+          color: var(--text-primary);
           font-size: 14px;
         }
 
-        .storage-mode-icon {
+        .settings-icon {
           margin-right: 8px;
         }
 
@@ -170,47 +257,22 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           align-items: center;
           padding: 8px 12px;
           background: none;
-          border: 1px solid #464647;
+          border: 1px solid var(--border-color);
           border-radius: 4px;
-          color: #cccccc;
+          color: var(--text-primary);
           cursor: pointer;
           transition: all 0.2s;
           font-size: 14px;
         }
 
         .settings-button:hover {
-          background-color: #2d2d30;
-          border-color: #007acc;
-          color: #ffffff;
+          background-color: var(--hover-color);
+          border-color: var(--accent-color);
+          color: var(--text-primary);
         }
 
         .settings-button-icon {
           margin-right: 8px;
-        }
-
-        @media (prefers-color-scheme: light) {
-          .settings-section-title {
-            color: #333333;
-            border-bottom: 1px solid #e5e5e5;
-          }
-
-          .storage-mode-option:hover {
-            background-color: #f0f0f0;
-          }
-
-          .storage-mode-label {
-            color: #333333;
-          }
-
-          .settings-button {
-            color: #333333;
-            border-color: #d1d1d1;
-          }
-
-          .settings-button:hover {
-            background-color: #f0f0f0;
-            border-color: #007acc;
-          }
         }
       `}</style>
     </div>

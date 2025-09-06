@@ -18,9 +18,10 @@ interface AutoSaveCallbacks {
 export const useAutoSave = (
   data: MindMapData | null,
   callbacks: AutoSaveCallbacks,
-  options: AutoSaveOptions = {}
+  options: AutoSaveOptions = {},
+  settings?: { autoSave?: boolean; autoSaveInterval?: number }
 ) => {
-  const { debounceMs = 300, enabled = true } = options;
+  const { debounceMs = settings?.autoSaveInterval || 300, enabled = settings?.autoSave ?? options.enabled ?? true } = options;
   const { saveData, updateMapInList } = callbacks;
 
   const lastSaveTimeRef = useRef<string>('');

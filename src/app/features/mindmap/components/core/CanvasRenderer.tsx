@@ -4,6 +4,7 @@ import { Node } from '../..';
 import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
 import NodeActions from './NodeActions';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { FileAttachment, MindMapData, MindMapNode } from '../../../../shared';
 
 interface DragState {
@@ -88,6 +89,9 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onDragMove,
   onDragEnd
 }) => {
+  const { settings } = useMindMapStore();
+
+
   // SVGのwheelイベントを非passiveで設定
   useEffect(() => {
     const svgElement = svgRef.current;
@@ -121,9 +125,9 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
         onMouseUp={onMouseUp}
         onContextMenu={onContextMenu}
         style={{
-          background: 'white',
+          background: 'var(--bg-primary)',
           cursor,
-          border: '2px solid #e1e5e9',
+          border: `2px solid var(--border-color)`,
           borderRadius: '12px',
           userSelect: 'none',
           transition: 'all 0.2s ease'
@@ -180,7 +184,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
             (() => {
               const selectedNode = allNodes.find(node => node.id === selectedNodeId);
               if (selectedNode) {
-                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id);
+                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id, settings.fontSize);
                 return (
                   <SelectedNodeAttachmentList
                     key={`attachment-list-${selectedNodeId}`}
@@ -211,7 +215,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
             (() => {
               const selectedNode = allNodes.find(node => node.id === selectedNodeId);
               if (selectedNode) {
-                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id);
+                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id, settings.fontSize);
                 return (
                   <NodeActions
                     key={`actions-${selectedNodeId}`}

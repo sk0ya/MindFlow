@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode } from '@shared/types';
 import { logger } from '../../../../shared/utils/logger';
 
@@ -27,6 +28,16 @@ export const useNodeDragHandler = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [mouseDownPos, setMouseDownPos] = useState<MousePosition | null>(null);
+  const { settings } = useMindMapStore();
+
+  // グリッドスナップ用のヘルパー関数
+  const snapToGrid = useCallback((x: number, y: number, gridSize: number = 20) => {
+    if (!settings.snapToGrid) return { x, y };
+    return {
+      x: Math.round(x / gridSize) * gridSize,
+      y: Math.round(y / gridSize) * gridSize
+    };
+  }, [settings.snapToGrid]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // パン機能との競合を避けるため、stopPropagationを削除
@@ -81,10 +92,13 @@ export const useNodeDragHandler = ({
       const svgX = (e.clientX - svgRect.left) / (zoom * 1.5);
       const svgY = (e.clientY - svgRect.top) / (zoom * 1.5);
       
-      const newX = svgX - dragStart.x;
-      const newY = svgY - dragStart.y;
+      const rawX = svgX - dragStart.x;
+      const rawY = svgY - dragStart.y;
       
-      logger.debug('Node ドラッグ終了通知:', { nodeId: node.id, newX, newY, clientX: e.clientX, clientY: e.clientY });
+      // グリッドスナップを適用
+      const { x: newX, y: newY } = snapToGrid(rawX, rawY);
+      
+      logger.debug('Node ドラッグ終了通知:', { nodeId: node.id, rawX, rawY, newX, newY, snapToGrid: settings.snapToGrid });
       // ドラッグ終了を通知（親要素変更またはノード移動）
       if (onDragEnd) {
         onDragEnd(node.id, newX, newY);
@@ -94,7 +108,7 @@ export const useNodeDragHandler = ({
     // 状態をリセット
     setIsDragging(false);
     setMouseDownPos(null);
-  }, [isDragging, dragStart, node.id, onDragEnd, zoom, svgRef]);
+  }, [isDragging, dragStart, node.id, onDragEnd, zoom, svgRef, snapToGrid, settings.snapToGrid]);
 
   useEffect(() => {
     if (isDragging || mouseDownPos) {

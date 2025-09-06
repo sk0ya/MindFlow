@@ -8,7 +8,8 @@ import {
   createHistorySlice,
   createUISlice,
   createNodeSlice,
-  createAISlice
+  createAISlice,
+  createSettingsSlice
 } from './slices';
 
 export const useMindMapStore = create<MindMapStore>()(
@@ -20,6 +21,7 @@ export const useMindMapStore = create<MindMapStore>()(
         ...createUISlice(...args),
         ...createNodeSlice(...args),
         ...createAISlice(...args),
+        ...createSettingsSlice(...args),
       }))
     )
   )

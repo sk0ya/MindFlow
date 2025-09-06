@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode } from '@shared/types';
 
 interface NodeEditorProps {
@@ -23,6 +24,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   blurTimeoutRef
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { settings } = useMindMapStore();
 
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -96,10 +98,11 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           x={node.x - (nodeWidth / 2) + 8}
           y={textY}
           textAnchor="start"
-          fill="black"
-          fontSize={node.fontSize || '14px'}
+          fill={settings.theme === 'dark' ? 'var(--text-primary)' : 'black'}
+          fontSize={settings.fontSize || node.fontSize || '14px'}
           fontWeight={node.fontWeight || 'normal'}
           fontStyle={node.fontStyle || 'normal'}
+          fontFamily={settings.fontFamily || 'system-ui'}
           style={{ 
             pointerEvents: 'none', 
             userSelect: 'none'
@@ -209,12 +212,13 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           width: '100%',
           height: '100%',
           border: '1px solid #ccc',
-          background: 'white',
+          background: settings.theme === 'dark' ? 'var(--bg-primary)' : 'white',
           textAlign: 'left',
-          fontSize: node.fontSize || '14px',
+          fontSize: settings.fontSize || node.fontSize || '14px',
           fontWeight: node.fontWeight || 'normal',
           fontStyle: node.fontStyle || 'normal',
-          color: 'black',
+          fontFamily: settings.fontFamily || 'system-ui',
+          color: settings.theme === 'dark' ? 'var(--text-primary)' : 'black',
           outline: 'none',
           borderRadius: '4px',
           padding: '0 8px',

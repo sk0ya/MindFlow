@@ -149,14 +149,19 @@ export const createInitialData = (): MindMapData => ({
   }
 });
 
-export const createNewNode = (text: string = '', parentNode: MindMapNode | null = null): MindMapNode => {
+export const createNewNode = (
+  text: string = '', 
+  parentNode: MindMapNode | null = null, 
+  settings?: { defaultNodeColor?: string; fontSize?: number; fontFamily?: string }
+): MindMapNode => {
   return {
     id: generateId(),
     text,
     x: parentNode ? parentNode.x + LAYOUT.LEVEL_SPACING : COORDINATES.DEFAULT_CENTER_X,
     y: parentNode ? parentNode.y : COORDINATES.DEFAULT_CENTER_Y,
-    fontSize: TYPOGRAPHY.DEFAULT_FONT_SIZE - 2, // 子ノードは少し小さく
+    fontSize: settings?.fontSize || (TYPOGRAPHY.DEFAULT_FONT_SIZE - 2), // 子ノードは少し小さく
     fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
+    color: settings?.defaultNodeColor || COLORS.NODE_COLORS[0],
     children: [],
     attachments: [], // ファイル添付用
   };

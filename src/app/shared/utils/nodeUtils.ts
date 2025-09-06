@@ -36,7 +36,12 @@ function calculateTextWidth(text: string): number {
   return width;
 }
 
-export function calculateNodeSize(node: MindMapNode, editText?: string, isEditing: boolean = false): NodeSize {
+export function calculateNodeSize(
+  node: MindMapNode, 
+  editText?: string, 
+  isEditing: boolean = false,
+  globalFontSize?: number
+): NodeSize {
   // 画像の有無とサイズを確認
   const hasImages = node.attachments && node.attachments.some((file: FileAttachment) => file.isImage);
   
@@ -79,8 +84,10 @@ export function calculateNodeSize(node: MindMapNode, editText?: string, isEditin
   const hasAttachments = node.attachments && node.attachments.length > 0;
   const clipIconPadding = hasAttachments ? 40 : 0; // クリップアイコンと個数表示のための余白
   
-  // テキストベースの幅計算
-  const textBasedWidth = Math.max(displayTextWidth * 8, 20) + clipIconPadding;
+  // フォントサイズを考慮した幅計算
+  const fontSize = globalFontSize || node.fontSize || 14;
+  const fontScale = fontSize / 14; // 14pxを基準とした比率
+  const textBasedWidth = Math.max(displayTextWidth * 8 * fontScale, 20) + clipIconPadding;
   
   // 画像がある場合は画像幅とテキスト幅の大きい方を使用（画像の左右マージン10px追加）
   const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 10) : textBasedWidth;

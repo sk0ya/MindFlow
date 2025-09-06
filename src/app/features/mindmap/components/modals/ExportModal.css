@@ -12,7 +12,8 @@
 }
 
 .export-modal-content {
-  background: white;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -38,14 +39,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .export-modal-header h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .export-modal-close {

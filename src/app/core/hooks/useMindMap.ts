@@ -7,6 +7,7 @@ import { useInitialDataLoad } from './useInitialDataLoad';
 import { useDataReset } from './useDataReset';
 import { useStorageConfigChange } from './useStorageConfigChange';
 import { useAutoSave } from './useAutoSave';
+import { useMindMapStore } from '../store/mindMapStore';
 import type { StorageConfig } from '../storage/types';
 import type { MindMapData } from '@shared/types';
 
@@ -26,6 +27,7 @@ export const useMindMap = (
   const uiHook = useMindMapUI();
   const actionsHook = useMindMapActions();
   const persistenceHook = useMindMapPersistence(storageConfig);
+  const { settings } = useMindMapStore();
 
   // 各種データ処理を分離されたhookで管理
   useInitialDataLoad(isAppReady, {
@@ -58,7 +60,8 @@ export const useMindMap = (
     },
     {
       enabled: persistenceHook.isInitialized
-    }
+    },
+    settings // 設定を渡す
   );
 
   // マップ管理の高レベル操作（非同期対応）

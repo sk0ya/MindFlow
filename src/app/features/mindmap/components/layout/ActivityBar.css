@@ -3,8 +3,8 @@
   flex-direction: column;
   width: 48px;
   height: calc(100vh - 60px);
-  background-color: #2d2d30;
-  border-right: 1px solid #444;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   position: fixed;
   left: 0;
   top: 60px;
@@ -32,7 +32,7 @@
   height: 48px;
   border: none;
   background-color: transparent;
-  color: #cccccc;
+  color: var(--text-primary);
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
@@ -40,13 +40,13 @@
 }
 
 .activity-bar-item:hover {
-  background-color: #37373d;
-  color: #ffffff;
+  background-color: var(--hover-color);
+  color: var(--text-primary);
 }
 
 .activity-bar-item.active {
-  background-color: #37373d;
-  color: #ffffff;
+  background-color: var(--hover-color);
+  color: var(--text-primary);
 }
 
 .activity-bar-item.active::before {
@@ -56,46 +56,10 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #007acc;
+  background-color: var(--accent-color);
 }
 
 .activity-bar-icon {
   font-size: 20px;
   line-height: 1;
-}
-
-/* ダークテーマのスタイル */
-@media (prefers-color-scheme: dark) {
-  .activity-bar {
-    background-color: #252526;
-    border-right: 1px solid #3e3e42;
-  }
-  
-  .activity-bar-item {
-    color: #cccccc;
-  }
-  
-  .activity-bar-item:hover,
-  .activity-bar-item.active {
-    background-color: #2a2d2e;
-    color: #ffffff;
-  }
-}
-
-/* ライトテーマのスタイル */
-@media (prefers-color-scheme: light) {
-  .activity-bar {
-    background-color: #f3f3f3;
-    border-right: 1px solid #e5e5e5;
-  }
-  
-  .activity-bar-item {
-    color: #424242;
-  }
-  
-  .activity-bar-item:hover,
-  .activity-bar-item.active {
-    background-color: #e8e8e8;
-    color: #333333;
-  }
 }

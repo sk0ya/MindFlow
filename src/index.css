@@ -1,3 +1,28 @@
+/* CSS変数でテーマを定義 */
+:root {
+  /* ダークテーマ */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --text-primary: #cccccc;
+  --text-secondary: #969696;
+  --border-color: #3e3e42;
+  --accent-color: #007acc;
+  --hover-color: #2d2d30;
+}
+
+[data-theme="light"] {
+  /* ライトテーマ */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f8f8;
+  --bg-tertiary: #f0f0f0;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #e1e5e9;
+  --accent-color: #007acc;
+  --hover-color: #f0f0f0;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -6,6 +31,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {

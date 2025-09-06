@@ -87,6 +87,11 @@ export const createNodeSlice: StateCreator<
         const parentNode = state.normalizedData.nodes[parentId];
         if (!parentNode) return;
         
+        // 設定を取得してノード作成時に適用
+        const settings = state.settings;
+        const newNode = createNewNode(text, parentNode, settings);
+        newNodeId = newNode.id;
+        
         const childIds = state.normalizedData.childrenMap[parentId] || [];
         const childNodes = childIds.map(id => state.normalizedData?.nodes[id]).filter(Boolean);
         
@@ -115,15 +120,15 @@ export const createNodeSlice: StateCreator<
           }
         }
         
+        // Color assignment - ルートノードの子は設定色、それ以外は親色継承
         const color = parentNode.id === 'root' 
-          ? COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length] 
-          : parentNode.color || '#666';
+          ? (settings.defaultNodeColor || COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length])
+          : parentNode.color || settings.defaultNodeColor || '#666';
         
-        const newNode = createNewNode(text, parentNode);
+        // Update position and color
         newNode.x = newPosition.x;
         newNode.y = newPosition.y;
         newNode.color = color;
-        newNodeId = newNode.id;
         
         state.normalizedData = addNormalizedNode(state.normalizedData, parentId, newNode);
         
