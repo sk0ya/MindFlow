@@ -129,10 +129,10 @@ export function calculateIconLayout(node: MindMapNode, nodeWidth: number): IconL
   const hasLinks = node.links && node.links.length > 0;
   
   // アイコンの基本サイズ
-  const ICON_WIDTH = 26;
-  const ICON_HEIGHT = 12;
-  const ICON_SPACING = 5;
-  const RIGHT_MARGIN = 9; // ノード右端からの最小マージン
+  const ICON_WIDTH = 32;
+  const ICON_HEIGHT = 16;
+  const ICON_SPACING = 6;
+  const RIGHT_MARGIN = 12; // ノード右端からの最小マージン
   
   let totalWidth = 0;
   let attachmentIcon: { x: number; y: number } | undefined;
@@ -216,9 +216,9 @@ export function calculateNodeSize(
   // アイコンレイアウトに必要な最小幅を計算
   const hasAttachments = node.attachments && node.attachments.length > 0;
   const hasLinks = node.links && node.links.length > 0;
-  const ICON_WIDTH = 26;
-  const ICON_SPACING = 5;
-  const RIGHT_MARGIN = 9;
+  const ICON_WIDTH = 32;
+  const ICON_SPACING = 6;
+  const RIGHT_MARGIN = 12;
   
   let minIconWidth = 0;
   if (hasAttachments && hasLinks) {
@@ -239,7 +239,7 @@ export function calculateNodeSize(
   
   if (minIconWidth > 0) {
     // アイコンがある場合：テキスト幅 + アイコン幅 + 余白を確保
-    const TEXT_ICON_SPACING = 10; // テキストとアイコン間の余白
+    const TEXT_ICON_SPACING = 14; // テキストとアイコン間の余白
     const combinedWidth = textBasedWidth + minIconWidth + TEXT_ICON_SPACING;
     const imageBasedWidth = hasImages ? imageWidth + 10 : 0;
     finalWidth = Math.max(combinedWidth, imageBasedWidth);

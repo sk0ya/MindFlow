@@ -136,7 +136,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     // アイコンレイアウトを計算してテキスト位置を調整
     const iconLayout = calculateIconLayout(node, nodeWidth);
     // アイコンがある場合、テキストを左に移動してアイコンと重ならないようにする
-    const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 10) / 2 : 0;
+    const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 14) / 2 : 0;
     
     return (
       <>
@@ -172,42 +172,41 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                   <rect
                     x={node.x + iconLayout.attachmentIcon.x}
                     y={textY + iconLayout.attachmentIcon.y}
-                    width="26"
-                    height="12"
+                    width="32"
+                    height="16"
                     fill="white"
                     stroke="#ddd"
                     strokeWidth="1"
-                    rx="6"
-                    ry="6"
+                    rx="8"
+                    ry="8"
                     style={{ 
                       filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
                       pointerEvents: 'none'
                     }}
                   />
                   
-                  {/* SVGアイコン: ペーパークリップ */}
-                  <g 
-                    transform={`translate(${node.x + iconLayout.attachmentIcon.x + 3}, ${textY + iconLayout.attachmentIcon.y})`}
-                    style={{ pointerEvents: 'none' }}
+                  {/* Unicode 添付ファイルアイコン */}
+                  <text
+                    x={node.x + iconLayout.attachmentIcon.x + 8}
+                    y={textY + iconLayout.attachmentIcon.y + 10}
+                    textAnchor="middle"
+                    fill="#666"
+                    fontSize="12px"
+                    style={{ 
+                      pointerEvents: 'none', 
+                      userSelect: 'none'
+                    }}
                   >
-                    <path
-                      d="M3 6.5L1.5 8C0.5 9 0.5 10.5 1.5 11.5C2.5 12.5 4 12.5 5 11.5L8.5 8C9.5 7 9.5 5.5 8.5 4.5C7.5 3.5 6 3.5 5 4.5L2 7.5C1.5 8 1.5 8.5 2 9C2.5 9.5 3 9.5 3.5 9L6 6.5"
-                      stroke="#666"
-                      strokeWidth="1.2"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ transform: 'scale(0.75)' }}
-                    />
-                  </g>
+                    📎
+                  </text>
                   
                   {/* ファイル数 */}
                   <text
-                    x={node.x + iconLayout.attachmentIcon.x + 13}
-                    y={textY + iconLayout.attachmentIcon.y + 7}
-                    textAnchor="middle"
+                    x={node.x + iconLayout.attachmentIcon.x + 26}
+                    y={textY + iconLayout.attachmentIcon.y + 11}
+                    textAnchor="end"
                     fill="#333"
-                    fontSize="10px"
+                    fontSize="11px"
                     fontWeight="600"
                     style={{ 
                       pointerEvents: 'none', 
@@ -226,13 +225,13 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                   <rect
                     x={node.x + iconLayout.linkIcon.x}
                     y={textY + iconLayout.linkIcon.y}
-                    width="26"
-                    height="12"
+                    width="32"
+                    height="16"
                     fill="white"
                     stroke="#ddd"
                     strokeWidth="1"
-                    rx="6"
-                    ry="6"
+                    rx="8"
+                    ry="8"
                     style={{ 
                       filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
                       cursor: 'pointer'
@@ -243,27 +242,32 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                   
                   {/* SVGアイコン: リンク */}
                   <g 
-                    transform={`translate(${node.x + iconLayout.linkIcon.x + 3}, ${textY + iconLayout.linkIcon.y})`}
+                    transform={`translate(${node.x + iconLayout.linkIcon.x + 4}, ${textY + iconLayout.linkIcon.y + 2})`}
                     style={{ pointerEvents: 'none' }}
                   >
-                    <path
-                      d="M4 7h1a3 3 0 0 1 0 6h-1M12 7h-1a3 3 0 0 0 0 6h1M8 13h8"
-                      stroke="#666"
-                      strokeWidth="1.2"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ transform: 'scale(0.75)' }}
-                    />
+                    {/* Unicode リンクアイコン */}
+                    <text
+                      x="8"
+                      y="10"
+                      textAnchor="middle"
+                      fill="#666"
+                      fontSize="12px"
+                      style={{ 
+                        pointerEvents: 'none', 
+                        userSelect: 'none'
+                      }}
+                    >
+                      🔗
+                    </text>
                   </g>
                   
                   {/* リンク数 */}
                   <text
-                    x={node.x + iconLayout.linkIcon.x + 13}
-                    y={textY + iconLayout.linkIcon.y + 7}
-                    textAnchor="middle"
+                    x={node.x + iconLayout.linkIcon.x + 26}
+                    y={textY + iconLayout.linkIcon.y + 11}
+                    textAnchor="end"
                     fill="#333"
-                    fontSize="10px"
+                    fontSize="11px"
                     fontWeight="600"
                     style={{ 
                       pointerEvents: 'none', 
