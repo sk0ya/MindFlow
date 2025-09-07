@@ -15,18 +15,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run type-check:strict` - Run strict TypeScript checking
 - `npm run lint` - Run ESLint on source files
 - `npm run lint:fix` - Fix auto-fixable ESLint issues
-- `npm run test` - Run Jest test suite
+
+### Testing (Note: Test files not yet implemented)
+- `npm run test` - Run Jest test suite (configured but no tests exist)
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage report
-
-### Specialized Testing
-- `npm run test:cloud-sync` - Test cloud synchronization features
-- `npm run test:integration` - Run integration tests for sync and hooks
-- `npm run test:unit` - Run unit tests for utilities
 
 ### Security & Safety
 - `npm run scan:unsafe` - Detect unsafe patterns in code
 - `npm run scan:unsafe-ci` - Run unsafe pattern detection for CI
+- `npm run scan:unsafe-local` - Run unsafe pattern detection for local files only
 - `npm run validate` - Run validation checks before build
 
 ## Project Architecture
@@ -54,7 +52,13 @@ This is a React-based mindmap application with a modular architecture supporting
   - `useMindMapUI`: UI state management
   - `useMindMapActions`: Actions and history management
   - `useMindMapPersistence`: Storage and persistence logic
-- **Zustand Store**: Located in `src/app/core/store/` with slices for different domains
+- **Zustand Store**: Located in `src/app/core/store/` with slices:
+  - `dataSlice`: Core mindmap data management
+  - `uiSlice`: UI state and interactions
+  - `nodeSlice`: Node-specific operations and state
+  - `historySlice`: Undo/redo functionality
+  - `aiSlice`: AI integration features
+  - `settingsSlice`: Application settings
 - **Auto-save**: Debounced auto-save with manual save override
 
 #### Feature Structure (`src/app/features/`)
@@ -99,12 +103,27 @@ The main app component is lazy-loaded to support the dynamic storage mode switch
 The project has strict TypeScript checking. Always run `npm run type-check` before committing changes.
 
 #### Testing Strategy
-- Unit tests for utilities and pure functions
-- Integration tests for hooks and sync functionality  
-- Specialized tests for cloud sync features
+- Jest is configured with jsdom environment for React testing
+- Testing infrastructure is set up but test files are not yet implemented
+- When adding tests, focus on:
+  - Unit tests for utilities and pure functions
+  - Integration tests for hooks and sync functionality  
+  - Specialized tests for cloud sync features
 
 #### Security
 The project includes automated unsafe pattern detection. Run security scans before deploying.
+
+#### AI Integration
+- **Local Ollama Integration**: The project supports connecting to local Ollama instances
+- **Chrome Extension**: Includes browser extension to bypass CORS restrictions for deployed version
+- **AI Features**: AI-powered child node generation and content assistance
+- Hook: `useAI` manages AI integration and interactions
+
+#### Recent Development Focus
+- Dark theme support with improved header styling
+- Local data management and deletion capabilities
+- Code cleanup and TypeScript error resolution
+- Node styling improvements and layout optimizations
 
 # TODO
 - マークダウンエディタの組み込み
