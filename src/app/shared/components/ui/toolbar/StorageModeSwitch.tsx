@@ -67,19 +67,31 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
           align-items: center;
           gap: 0.5rem;
           padding: 0.5rem 0.75rem;
-          background: rgba(51, 65, 85, 0.08);
-          border: 1px solid rgba(51, 65, 85, 0.12);
-          border-radius: 8px;
-          color: #374151;
+          background: #f5f5f5;
+          border: 1px solid #cccccc;
+          border-radius: 6px;
+          color: #666666;
           font-size: 0.875rem;
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .storage-mode-button:hover {
-          background: rgba(51, 65, 85, 0.12);
-          border-color: rgba(51, 65, 85, 0.2);
-          color: #1f2937;
+          background: #eeeeee;
+          border-color: #aaaaaa;
+          color: #333333;
+        }
+
+        [data-theme="dark"] .storage-mode-button {
+          background: #333333;
+          border: 1px solid #555555;
+          color: #cccccc;
+        }
+
+        [data-theme="dark"] .storage-mode-button:hover {
+          background: #444444;
+          border-color: #777777;
+          color: #ffffff;
         }
 
         .storage-mode-icon {
@@ -101,14 +113,19 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
           top: 100%;
           right: 0;
           margin-top: 0.5rem;
-          background: rgba(30, 41, 59, 0.95);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 8px;
-          backdrop-filter: blur(20px);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          background: #ffffff;
+          border: 1px solid #cccccc;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           z-index: 1000;
           min-width: 200px;
           overflow: hidden;
+        }
+
+        [data-theme="dark"] .storage-mode-dropdown {
+          background: #2a2a2a;
+          border: 1px solid #555555;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         .storage-mode-option {
@@ -119,18 +136,30 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
           width: 100%;
           background: none;
           border: none;
-          color: white;
+          color: #333333;
           cursor: pointer;
           transition: background-color 0.2s ease;
           text-align: left;
         }
 
+        [data-theme="dark"] .storage-mode-option {
+          color: #ffffff;
+        }
+
         .storage-mode-option:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background: #f0f0f0;
+        }
+
+        [data-theme="dark"] .storage-mode-option:hover {
+          background: #444444;
         }
 
         .storage-mode-option.active {
-          background: rgba(59, 130, 246, 0.2);
+          background: #e5e5e5;
+        }
+
+        [data-theme="dark"] .storage-mode-option.active {
+          background: #555555;
         }
 
         .mode-icon {
@@ -154,8 +183,12 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
         }
 
         .mode-check {
-          color: #10b981;
+          color: #666666;
           font-weight: bold;
+        }
+
+        [data-theme="dark"] .mode-check {
+          color: #cccccc;
         }
       `}</style>
     </div>

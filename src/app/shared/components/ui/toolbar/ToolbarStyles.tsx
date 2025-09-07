@@ -4,16 +4,23 @@ const ToolbarStyles: React.FC = () => (
   <style>{`
     .toolbar {
       height: 60px;
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-      color: #1e293b;
+      background: #ffffff;
+      color: #333333;
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 20px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       position: relative;
       z-index: 900;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    [data-theme="dark"] .toolbar {
+      background: #1a1a1a;
+      color: #ffffff;
+      border-bottom: 1px solid #333333;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .logo-section {
@@ -23,12 +30,12 @@ const ToolbarStyles: React.FC = () => (
     }
 
     .sidebar-toggle {
-      background: rgba(51, 65, 85, 0.08);
-      border: 1px solid rgba(51, 65, 85, 0.12);
-      color: #475569;
+      background: #f5f5f5;
+      border: 1px solid #cccccc;
+      color: #666666;
       width: 32px;
       height: 32px;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -38,9 +45,19 @@ const ToolbarStyles: React.FC = () => (
     }
 
     .sidebar-toggle:hover {
-      background: rgba(51, 65, 85, 0.12);
-      color: #1e293b;
-      transform: scale(1.05);
+      background: #eeeeee;
+      color: #333333;
+    }
+
+    [data-theme="dark"] .sidebar-toggle {
+      background: #333333;
+      border: 1px solid #555555;
+      color: #cccccc;
+    }
+
+    [data-theme="dark"] .sidebar-toggle:hover {
+      background: #444444;
+      color: #ffffff;
     }
 
     .logo {
@@ -76,8 +93,12 @@ const ToolbarStyles: React.FC = () => (
 
     .logo-subtitle {
       font-size: 12px;
-      color: #64748b;
+      color: #999999;
       font-weight: 500;
+    }
+
+    [data-theme="dark"] .logo-subtitle {
+      color: #cccccc;
     }
 
     .title-section {
@@ -94,31 +115,46 @@ const ToolbarStyles: React.FC = () => (
       margin: 0;
       cursor: pointer;
       padding: 8px 16px;
-      border-radius: 12px;
+      border-radius: 8px;
       transition: all 0.2s ease;
-      background: rgba(59, 130, 246, 0.08);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      color: #1e293b;
+      background: #f5f5f5;
+      border: 1px solid #dddddd;
+      color: #333333;
     }
 
     .app-title:hover {
-      background: rgba(59, 130, 246, 0.12);
-      transform: scale(1.02);
-      border-color: rgba(59, 130, 246, 0.3);
+      background: #eeeeee;
+      border-color: #cccccc;
+    }
+
+    [data-theme="dark"] .app-title {
+      background: #333333;
+      border: 1px solid #555555;
+      color: #ffffff;
+    }
+
+    [data-theme="dark"] .app-title:hover {
+      background: #444444;
+      border-color: #666666;
     }
 
     .title-input {
       font-size: 20px;
       font-weight: 600;
-      border: 2px solid #4CAF50;
-      border-radius: 8px;
+      border: 2px solid #666666;
+      border-radius: 6px;
       padding: 8px 16px;
-      background: white;
-      color: #333;
+      background: #ffffff;
+      color: #333333;
       text-align: center;
       min-width: 200px;
       outline: none;
-      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    [data-theme="dark"] .title-input {
+      background: #333333;
+      color: #ffffff;
+      border: 2px solid #cccccc;
     }
 
     .toolbar-actions {
@@ -132,7 +168,7 @@ const ToolbarStyles: React.FC = () => (
       align-items: center;
       gap: 8px;
       padding: 0 8px;
-      border-left: 1px solid rgba(148, 163, 184, 0.2);
+      border-left: 1px solid #dddddd;
     }
 
     .action-group:first-child {
@@ -140,12 +176,16 @@ const ToolbarStyles: React.FC = () => (
       padding-left: 0;
     }
 
+    [data-theme="dark"] .action-group {
+      border-left: 1px solid #555555;
+    }
+
     .toolbar-btn {
-      background: rgba(51, 65, 85, 0.08);
-      border: 1px solid rgba(51, 65, 85, 0.12);
-      color: #475569;
+      background: #f5f5f5;
+      border: 1px solid #cccccc;
+      color: #666666;
       padding: 8px 12px;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
@@ -156,45 +196,79 @@ const ToolbarStyles: React.FC = () => (
     }
 
     .toolbar-btn:hover:not(.disabled) {
-      background: rgba(51, 65, 85, 0.12);
-      color: #1e293b;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-color: rgba(51, 65, 85, 0.2);
+      background: #eeeeee;
+      color: #333333;
+      border-color: #aaaaaa;
     }
 
     .toolbar-btn:active:not(.disabled) {
-      transform: translateY(0);
+      background: #e5e5e5;
     }
 
     .toolbar-btn.disabled {
-      opacity: 0.4;
+      opacity: 0.5;
       cursor: not-allowed;
-      background: rgba(51, 65, 85, 0.04);
+      background: #f9f9f9;
+    }
+
+    [data-theme="dark"] .toolbar-btn {
+      background: #333333;
+      border: 1px solid #555555;
+      color: #cccccc;
+    }
+
+    [data-theme="dark"] .toolbar-btn:hover:not(.disabled) {
+      background: #444444;
+      color: #ffffff;
+      border-color: #777777;
+    }
+
+    [data-theme="dark"] .toolbar-btn.disabled {
+      background: #2a2a2a;
     }
 
     .toolbar-btn.export {
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: #888888;
       color: white;
-      border-color: transparent;
+      border-color: #777777;
     }
 
     .toolbar-btn.export:hover {
-      background: linear-gradient(135deg, #059669, #047857);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      background: #777777;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.export {
+      background: #555555;
+      color: white;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.export:hover {
+      background: #666666;
+      border-color: #777777;
     }
 
     .toolbar-btn.import {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      background: #888888;
       color: white;
-      border-color: transparent;
+      border-color: #777777;
     }
 
     .toolbar-btn.import:hover {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      background: #777777;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.import {
+      background: #555555;
+      color: white;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.import:hover {
+      background: #666666;
+      border-color: #777777;
     }
 
     .toolbar-btn.zoom-reset {
@@ -208,33 +282,74 @@ const ToolbarStyles: React.FC = () => (
 
     .toolbar-btn.notes {
       font-size: 16px;
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      color: white;
-      border-color: transparent;
+      background: #f5f5f5;
+      color: #666666;
+      border-color: #cccccc;
     }
 
     .toolbar-btn.notes:hover {
-      background: linear-gradient(135deg, #7c3aed, #6d28d9);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      background: #eeeeee;
+      color: #333333;
+      border-color: #aaaaaa;
     }
 
     .toolbar-btn.notes.active {
-      background: linear-gradient(135deg, #6d28d9, #5b21b6);
-      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+      background: #333333;
+      color: white;
+      border-color: #222222;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toolbar-btn.notes.active:hover {
+      background: #444444;
+      border-color: #333333;
+    }
+
+    [data-theme="dark"] .toolbar-btn.notes {
+      background: #333333;
+      color: #cccccc;
+      border-color: #555555;
+    }
+
+    [data-theme="dark"] .toolbar-btn.notes:hover {
+      background: #444444;
+      color: #ffffff;
+      border-color: #777777;
+    }
+
+    [data-theme="dark"] .toolbar-btn.notes.active {
+      background: #ffffff;
+      color: #333333;
+      border-color: #cccccc;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .toolbar-btn.notes.active:hover {
+      background: #f5f5f5;
+      border-color: #aaaaaa;
     }
 
     .toolbar-btn.storage {
       font-size: 16px;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
+      background: #888888;
       color: white;
-      border-color: transparent;
+      border-color: #777777;
     }
 
     .toolbar-btn.storage:hover {
-      background: linear-gradient(135deg, #d97706, #b45309);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+      background: #777777;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.storage {
+      background: #555555;
+      color: white;
+      border-color: #666666;
+    }
+
+    [data-theme="dark"] .toolbar-btn.storage:hover {
+      background: #666666;
+      border-color: #777777;
     }
 
     .tooltip {
