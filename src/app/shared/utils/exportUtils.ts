@@ -43,6 +43,11 @@ export const exportToJSON = (
       cleanedNode.attachments = node.attachments;
     }
     
+    // リンクが存在する場合のみ追加
+    if (node.links && node.links.length > 0) {
+      cleanedNode.links = node.links;
+    }
+    
     return cleanedNode;
   };
   
@@ -65,6 +70,11 @@ export const exportToJSON = (
       // 添付ファイルがある場合のみ追加
       if (attachmentPaths.length > 0) {
         cleanedNode.attachments = attachmentPaths;
+      }
+      
+      // リンクがある場合のみ追加
+      if (node.links && node.links.length > 0) {
+        cleanedNode.links = node.links;
       }
       
       return cleanedNode;

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
-import type { MindMapNode } from '@shared/types';
+import { calculateIconLayout } from '../../../../shared/utils/nodeUtils';
+import type { MindMapNode, NodeLink } from '@shared/types';
 
 interface NodeEditorProps {
   node: MindMapNode;
@@ -11,6 +12,9 @@ interface NodeEditorProps {
   nodeWidth: number;
   imageHeight: number;
   blurTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  isSelected?: boolean;
+  onSelectNode?: (nodeId: string | null) => void;
+  onShowLinkActionMenu?: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
 }
 
 const NodeEditor: React.FC<NodeEditorProps> = ({
@@ -21,10 +25,53 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   onFinishEdit,
   nodeWidth,
   imageHeight: _imageHeight,
-  blurTimeoutRef
+  blurTimeoutRef,
+  isSelected = false,
+  onSelectNode,
+  onShowLinkActionMenu
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useMindMapStore();
+
+  // リンククリック時の処理（ノード選択 or メニュー表示）
+  const handleLinkClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // ノードが選択されていない場合は選択する
+    if (!isSelected && onSelectNode) {
+      onSelectNode(node.id);
+      return;
+    }
+    
+    // 既に選択されている場合は最初のリンクのアクションメニューを表示
+    if (onShowLinkActionMenu && node.links && node.links.length > 0) {
+      const firstLink = node.links[0];
+      const clientX = e.clientX || 0;
+      const clientY = e.clientY || 0;
+      
+      onShowLinkActionMenu(firstLink, node.id, {
+        x: clientX,
+        y: clientY
+      });
+    }
+  }, [isSelected, onSelectNode, onShowLinkActionMenu, node.id, node.links]);
+
+  const handleLinkContextMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (onShowLinkActionMenu && node.links && node.links.length > 0) {
+      const firstLink = node.links[0];
+      const clientX = e.clientX || 0;
+      const clientY = e.clientY || 0;
+      
+      onShowLinkActionMenu(firstLink, node.id, {
+        x: clientX,
+        y: clientY
+      });
+    }
+  }, [onShowLinkActionMenu, node.id, node.links]);
 
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -83,12 +130,18 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     
     const actualImageHeight = getActualImageHeight();
     const hasAttachments = node.attachments && node.attachments.length > 0;
-    const textY = hasImage ? node.y + actualImageHeight / 2 + 9 : node.y;
+    const hasLinks = node.links && node.links.length > 0;
+    const textY = hasImage ? node.y + actualImageHeight / 2 + 2 : node.y;
+    
+    // アイコンレイアウトを計算してテキスト位置を調整
+    const iconLayout = calculateIconLayout(node, nodeWidth);
+    // アイコンがある場合、テキストを左に移動してアイコンと重ならないようにする
+    const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 10) / 2 : 0;
     
     return (
       <>
         <text
-          x={node.x - (hasAttachments ? 15 : 0)}
+          x={node.x - textOffsetX}
           y={textY}
           textAnchor="middle"
           dominantBaseline="middle"
@@ -106,59 +159,124 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           {node.text}
         </text>
         
-        {/* 添付ファイル数とアイコン（ノード右端付近） */}
-        {node.attachments && node.attachments.length > 0 && (
-          <g>
-            {/* 背景バッジ */}
-            <rect
-              x={node.x + (nodeWidth / 2) - 35}
-              y={textY - 8}
-              width="26"
-              height="12"
-              fill="white"
-              stroke="#ddd"
-              strokeWidth="1"
-              rx="6"
-              ry="6"
-              style={{ 
-                filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
-                pointerEvents: 'none'
-              }}
-            />
-            
-            {/* SVGアイコン: ペーパークリップ */}
-            <g 
-              transform={`translate(${node.x + (nodeWidth / 2) - 32}, ${textY - 8})`}
-              style={{ pointerEvents: 'none' }}
-            >
-              <path
-                d="M3 6.5L1.5 8C0.5 9 0.5 10.5 1.5 11.5C2.5 12.5 4 12.5 5 11.5L8.5 8C9.5 7 9.5 5.5 8.5 4.5C7.5 3.5 6 3.5 5 4.5L2 7.5C1.5 8 1.5 8.5 2 9C2.5 9.5 3 9.5 3.5 9L6 6.5"
-                stroke="#666"
-                strokeWidth="1.2"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ transform: 'scale(0.75)' }}
-              />
+        {/* アイコン表示エリア（添付ファイルとリンク） */}
+        {(() => {
+          if (!hasAttachments && !hasLinks) return null;
+          
+          return (
+            <g>
+              {/* 添付ファイルアイコン */}
+              {hasAttachments && iconLayout.attachmentIcon && (
+                <g>
+                  {/* 背景バッジ */}
+                  <rect
+                    x={node.x + iconLayout.attachmentIcon.x}
+                    y={textY + iconLayout.attachmentIcon.y}
+                    width="26"
+                    height="12"
+                    fill="white"
+                    stroke="#ddd"
+                    strokeWidth="1"
+                    rx="6"
+                    ry="6"
+                    style={{ 
+                      filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                  
+                  {/* SVGアイコン: ペーパークリップ */}
+                  <g 
+                    transform={`translate(${node.x + iconLayout.attachmentIcon.x + 3}, ${textY + iconLayout.attachmentIcon.y})`}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    <path
+                      d="M3 6.5L1.5 8C0.5 9 0.5 10.5 1.5 11.5C2.5 12.5 4 12.5 5 11.5L8.5 8C9.5 7 9.5 5.5 8.5 4.5C7.5 3.5 6 3.5 5 4.5L2 7.5C1.5 8 1.5 8.5 2 9C2.5 9.5 3 9.5 3.5 9L6 6.5"
+                      stroke="#666"
+                      strokeWidth="1.2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ transform: 'scale(0.75)' }}
+                    />
+                  </g>
+                  
+                  {/* ファイル数 */}
+                  <text
+                    x={node.x + iconLayout.attachmentIcon.x + 13}
+                    y={textY + iconLayout.attachmentIcon.y + 7}
+                    textAnchor="middle"
+                    fill="#333"
+                    fontSize="10px"
+                    fontWeight="600"
+                    style={{ 
+                      pointerEvents: 'none', 
+                      userSelect: 'none'
+                    }}
+                  >
+                    {node.attachments?.length || 0}
+                  </text>
+                </g>
+              )}
+
+              {/* リンクアイコン */}
+              {hasLinks && iconLayout.linkIcon && (
+                <g>
+                  {/* 背景バッジ */}
+                  <rect
+                    x={node.x + iconLayout.linkIcon.x}
+                    y={textY + iconLayout.linkIcon.y}
+                    width="26"
+                    height="12"
+                    fill="white"
+                    stroke="#ddd"
+                    strokeWidth="1"
+                    rx="6"
+                    ry="6"
+                    style={{ 
+                      filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
+                      cursor: 'pointer'
+                    }}
+                    onClick={handleLinkClick}
+                    onContextMenu={handleLinkContextMenu}
+                  />
+                  
+                  {/* SVGアイコン: リンク */}
+                  <g 
+                    transform={`translate(${node.x + iconLayout.linkIcon.x + 3}, ${textY + iconLayout.linkIcon.y})`}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    <path
+                      d="M4 7h1a3 3 0 0 1 0 6h-1M12 7h-1a3 3 0 0 0 0 6h1M8 13h8"
+                      stroke="#666"
+                      strokeWidth="1.2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ transform: 'scale(0.75)' }}
+                    />
+                  </g>
+                  
+                  {/* リンク数 */}
+                  <text
+                    x={node.x + iconLayout.linkIcon.x + 13}
+                    y={textY + iconLayout.linkIcon.y + 7}
+                    textAnchor="middle"
+                    fill="#333"
+                    fontSize="10px"
+                    fontWeight="600"
+                    style={{ 
+                      pointerEvents: 'none', 
+                      userSelect: 'none'
+                    }}
+                  >
+                    {node.links?.length || 0}
+                  </text>
+                </g>
+              )}
             </g>
-            
-            {/* ファイル数 */}
-            <text
-              x={node.x + (nodeWidth / 2) - 18}
-              y={textY + 1}
-              textAnchor="middle"
-              fill="#333"
-              fontSize="10px"
-              fontWeight="600"
-              style={{ 
-                pointerEvents: 'none', 
-                userSelect: 'none'
-              }}
-            >
-              {node.attachments.length}
-            </text>
-          </g>
-        )}
+          );
+        })()}
       </>
     );
   }
@@ -177,7 +295,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   };
   
   const actualImageHeight = getActualImageHeight();
-  const editY = hasImage ? node.y + actualImageHeight / 2 + 5 : node.y - 8;
+  const editY = hasImage ? node.y + actualImageHeight / 2 - 2 : node.y - 8;
 
   return (
     <foreignObject 

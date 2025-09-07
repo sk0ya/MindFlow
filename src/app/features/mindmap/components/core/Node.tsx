@@ -4,7 +4,7 @@ import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
-import type { MindMapNode, FileAttachment } from '@shared/types';
+import type { MindMapNode, FileAttachment, NodeLink } from '@shared/types';
 
 interface NodeProps {
   node: MindMapNode;
@@ -25,6 +25,7 @@ interface NodeProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
   onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
   editText: string;
@@ -53,6 +54,7 @@ const Node: React.FC<NodeProps> = ({
   onFileUpload: _onFileUpload,
   onShowImageModal,
   onShowFileActionMenu,
+  onShowLinkActionMenu,
   onUpdateNode,
   onAutoLayout,
   editText,
@@ -174,6 +176,7 @@ const Node: React.FC<NodeProps> = ({
         onAutoLayout={onAutoLayout}
       />
 
+
       {/* 3. テキスト */}
       <NodeEditor
         node={node}
@@ -184,6 +187,9 @@ const Node: React.FC<NodeProps> = ({
         nodeWidth={nodeWidth}
         imageHeight={imageHeight}
         blurTimeoutRef={blurTimeoutRef}
+        isSelected={isSelected}
+        onSelectNode={onSelect}
+        onShowLinkActionMenu={onShowLinkActionMenu}
       />
 
       {/* 4. 選択枠線（最後に描画して最前面に） */}
@@ -218,6 +224,11 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
 
   // 添付ファイルが変わった場合は再レンダリング
   if (JSON.stringify(prevProps.node.attachments) !== JSON.stringify(nextProps.node.attachments)) {
+    return false;
+  }
+
+  // リンクが変わった場合は再レンダリング
+  if (JSON.stringify(prevProps.node.links) !== JSON.stringify(nextProps.node.links)) {
     return false;
   }
 

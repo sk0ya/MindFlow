@@ -9,6 +9,7 @@ interface NodeActionsProps {
   onAddChild: (parentId: string) => void;
   onDelete: (nodeId: string) => void;
   onFileUpload: (nodeId: string, files: FileList) => void;
+  onAddLink: (nodeId: string) => void;
 }
 
 const NodeActions: React.FC<NodeActionsProps> = ({
@@ -19,6 +20,7 @@ const NodeActions: React.FC<NodeActionsProps> = ({
   onAddChild,
   onDelete,
   onFileUpload,
+  onAddLink,
 }) => {
 
   const handleFileUpload = useCallback((e: React.MouseEvent) => {
@@ -223,12 +225,99 @@ const NodeActions: React.FC<NodeActionsProps> = ({
         </g>
       </g>
 
+      {/* リンク追加ボタン */}
+      <g className="action-button" style={{ cursor: 'pointer' }}>
+        {/* ツールチップ背景 */}
+        <rect
+          x={node.x + spacing / 2 - 25}
+          y={buttonY - 38}
+          width="50"
+          height="18"
+          rx="4"
+          ry="4"
+          fill="rgba(0, 0, 0, 0.8)"
+          style={{ opacity: 0, transition: 'opacity 0.2s ease', pointerEvents: 'none' }}
+          className="tooltip-bg"
+        />
+        {/* ツールチップテキスト */}
+        <text
+          x={node.x + spacing / 2}
+          y={buttonY - 26}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="white"
+          fontSize="10"
+          fontFamily="system-ui, sans-serif"
+          style={{ opacity: 0, transition: 'opacity 0.2s ease', pointerEvents: 'none' }}
+          className="tooltip-text"
+        >
+          リンク追加
+        </text>
+        
+        {/* ボタン背景 */}
+        <rect
+          x={node.x + spacing / 2 - buttonSize / 2}
+          y={buttonY - buttonSize / 2}
+          width={buttonSize}
+          height={buttonSize}
+          rx="4"
+          ry="4"
+          fill="#6366f1"
+          stroke="#6366f1"
+          strokeWidth="1.5"
+          style={{
+            filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.15))',
+            transition: 'all 0.2s ease'
+          }}
+          className="button-bg"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddLink(node.id);
+          }}
+        />
+        {/* ホバーエフェクト用の背景 */}
+        <rect
+          x={node.x + spacing / 2 - buttonSize / 2}
+          y={buttonY - buttonSize / 2}
+          width={buttonSize}
+          height={buttonSize}
+          rx="4"
+          ry="4"
+          fill="#6366f1"
+          opacity="0"
+          style={{
+            transition: 'opacity 0.2s ease',
+            pointerEvents: 'none'
+          }}
+          className="button-hover"
+        />
+        {/* リンクアイコン */}
+        <g style={{ pointerEvents: 'none' }} transform={`translate(${node.x + spacing / 2}, ${buttonY})`}>
+          <path
+            d="M-3 -1 Q-3 -3 -1 -3 L1 -3 Q3 -3 3 -1 L3 1 Q3 3 1 3 L-1 3 Q-3 3 -3 1 Z"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            className="icon-stroke"
+          />
+          <path
+            d="M-1 -3 L-1 3 M1 -3 L1 3"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            className="icon-stroke"
+          />
+        </g>
+      </g>
+
       {/* 削除ボタン（ルートノード以外） */}
       {node.id !== 'root' && (
         <g className="action-button" style={{ cursor: 'pointer' }}>
           {/* ツールチップ背景 */}
           <rect
-            x={node.x + spacing - 25}
+            x={node.x + spacing * 1.5 - 25}
             y={buttonY - 38}
             width="50"
             height="18"
@@ -240,7 +329,7 @@ const NodeActions: React.FC<NodeActionsProps> = ({
           />
           {/* ツールチップテキスト */}
           <text
-            x={node.x + spacing}
+            x={node.x + spacing * 1.5}
             y={buttonY - 26}
             textAnchor="middle"
             dominantBaseline="middle"
@@ -255,7 +344,7 @@ const NodeActions: React.FC<NodeActionsProps> = ({
           
           {/* ボタン背景 */}
           <rect
-            x={node.x + spacing - buttonSize / 2}
+            x={node.x + spacing * 1.5 - buttonSize / 2}
             y={buttonY - buttonSize / 2}
             width={buttonSize}
             height={buttonSize}
@@ -276,7 +365,7 @@ const NodeActions: React.FC<NodeActionsProps> = ({
           />
           {/* ホバーエフェクト用の背景 */}
           <rect
-            x={node.x + spacing - buttonSize / 2}
+            x={node.x + spacing * 1.5 - buttonSize / 2}
             y={buttonY - buttonSize / 2}
             width={buttonSize}
             height={buttonSize}
@@ -293,9 +382,9 @@ const NodeActions: React.FC<NodeActionsProps> = ({
           {/* 削除アイコン（×） */}
           <g style={{ pointerEvents: 'none' }}>
             <line
-              x1={node.x + spacing - 4}
+              x1={node.x + spacing * 1.5 - 4}
               y1={buttonY - 4}
-              x2={node.x + spacing + 4}
+              x2={node.x + spacing * 1.5 + 4}
               y2={buttonY + 4}
               stroke="white"
               strokeWidth="2"
@@ -303,9 +392,9 @@ const NodeActions: React.FC<NodeActionsProps> = ({
               className="icon-stroke"
             />
             <line
-              x1={node.x + spacing - 4}
+              x1={node.x + spacing * 1.5 - 4}
               y1={buttonY + 4}
-              x2={node.x + spacing + 4}
+              x2={node.x + spacing * 1.5 + 4}
               y2={buttonY - 4}
               stroke="white"
               strokeWidth="2"

@@ -2,10 +2,11 @@ import React, { memo, useEffect } from 'react';
 import { CanvasConnections, CanvasDragGuide } from '.';
 import { Node } from '../..';
 import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
+import SelectedNodeLinkList from './SelectedNodeLinkList';
 import NodeActions from './NodeActions';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
-import type { FileAttachment, MindMapData, MindMapNode } from '../../../../shared';
+import type { FileAttachment, MindMapData, MindMapNode, NodeLink } from '@shared/types';
 
 interface DragState {
   isDragging: boolean;
@@ -46,8 +47,14 @@ interface CanvasRendererProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onAddLink: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
+  
+  // Link display data
+  availableMaps?: { id: string; title: string }[];
+  currentMapData?: { id: string; rootNode: any };
 
   // Drag handlers
   onDragStart: (nodeId: string) => void;
@@ -83,8 +90,12 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onShowLinkActionMenu,
+  onAddLink,
   onUpdateNode,
   onAutoLayout,
+  availableMaps,
+  currentMapData,
   onDragStart,
   onDragMove,
   onDragEnd
@@ -174,6 +185,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                 onRemoveFile={onRemoveFile}
                 onShowImageModal={onShowImageModal}
                 onShowFileActionMenu={onShowFileActionMenu}
+                onShowLinkActionMenu={onShowLinkActionMenu}
                 onUpdateNode={onUpdateNode}
                 onAutoLayout={onAutoLayout}
                 zoom={zoom}
@@ -191,24 +203,41 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
               if (selectedNode) {
                 const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id, settings.fontSize);
                 return (
-                  <SelectedNodeAttachmentList
-                    key={`attachment-list-${selectedNodeId}`}
-                    node={selectedNode}
-                    isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
-                    nodeWidth={nodeSize.width}
-                    nodeHeight={nodeSize.height}
-                    onFileClick={(file) => {
-                      onShowFileActionMenu(file, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
-                    }}
-                    onFileDoubleClick={(file) => {
-                      if (file.isImage) {
-                        onShowImageModal(file);
-                      }
-                    }}
-                    onFileContextMenu={(file, position) => {
-                      onShowFileActionMenu(file, selectedNode.id, position);
-                    }}
-                  />
+                  <>
+                    <SelectedNodeAttachmentList
+                      key={`attachment-list-${selectedNodeId}`}
+                      node={selectedNode}
+                      isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
+                      nodeWidth={nodeSize.width}
+                      nodeHeight={nodeSize.height}
+                      onFileClick={(file) => {
+                        onShowFileActionMenu(file, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                      }}
+                      onFileDoubleClick={(file) => {
+                        if (file.isImage) {
+                          onShowImageModal(file);
+                        }
+                      }}
+                      onFileContextMenu={(file, position) => {
+                        onShowFileActionMenu(file, selectedNode.id, position);
+                      }}
+                    />
+                    <SelectedNodeLinkList
+                      key={`link-list-${selectedNodeId}`}
+                      node={selectedNode}
+                      isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
+                      nodeWidth={nodeSize.width}
+                      nodeHeight={nodeSize.height}
+                      onLinkClick={(link) => {
+                        onShowLinkActionMenu(link, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                      }}
+                      onLinkContextMenu={(link, position) => {
+                        onShowLinkActionMenu(link, selectedNode.id, position);
+                      }}
+                      availableMaps={availableMaps}
+                      currentMapData={currentMapData}
+                    />
+                  </>
                 );
               }
               return null;
@@ -231,6 +260,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                     onAddChild={onAddChild}
                     onDelete={onDeleteNode}
                     onFileUpload={onFileUpload}
+                    onAddLink={onAddLink}
                   />
                 );
               }

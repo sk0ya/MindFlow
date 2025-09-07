@@ -3,7 +3,7 @@ import CanvasRenderer from '../core/CanvasRenderer';
 import { useCanvasDragHandler } from '../core/CanvasDragHandler';
 import { useCanvasViewportHandler } from '../core/CanvasViewportHandler';
 import { useCanvasEventHandler } from '../core/CanvasEventHandler';
-import type { MindMapData, MindMapNode, FileAttachment } from '@shared/types';
+import type { MindMapData, MindMapNode, FileAttachment, NodeLink } from '@shared/types';
 
 interface MindMapCanvasProps {
   data: MindMapData;
@@ -26,8 +26,15 @@ interface MindMapCanvasProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onAddLink: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
+  
+  // Link display data
+  availableMaps?: { id: string; title: string }[];
+  currentMapData?: { id: string; rootNode: any };
+  
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: { x: number; y: number };
@@ -55,8 +62,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     onRemoveFile,
     onShowImageModal,
     onShowFileActionMenu,
+    onShowLinkActionMenu,
+    onAddLink,
     onUpdateNode,
     onAutoLayout,
+    availableMaps,
+    currentMapData,
     zoom,
     setZoom,
     pan,
@@ -158,8 +169,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       onRemoveFile={onRemoveFile}
       onShowImageModal={onShowImageModal}
       onShowFileActionMenu={onShowFileActionMenu}
+      onShowLinkActionMenu={onShowLinkActionMenu}
+      onAddLink={onAddLink}
       onUpdateNode={onUpdateNode}
       onAutoLayout={onAutoLayout}
+      availableMaps={availableMaps}
+      currentMapData={currentMapData}
       onDragStart={handleDragStartAdapter}
       onDragMove={handleDragMoveAdapter}
       onDragEnd={handleDragEndAdapter}

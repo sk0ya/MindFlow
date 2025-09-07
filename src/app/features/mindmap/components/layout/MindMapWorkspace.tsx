@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import MindMapCanvas from './MindMapCanvas';
-import type { MindMapData, Position, FileAttachment } from '@shared/types';
+import type { MindMapData, Position, FileAttachment, NodeLink } from '@shared/types';
 
 interface MindMapWorkspaceProps {
   data: MindMapData;
@@ -23,8 +23,15 @@ interface MindMapWorkspaceProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onAddLink: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<import('@shared/types').MindMapNode>) => void;
   onAutoLayout?: () => void;
+  
+  // Link display data
+  availableMaps?: { id: string; title: string }[];
+  currentMapData?: { id: string; rootNode: any };
+  
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: Position;
@@ -51,8 +58,12 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   onRemoveFile,
   onShowImageModal,
   onShowFileActionMenu,
+  onShowLinkActionMenu,
+  onAddLink,
   onUpdateNode,
   onAutoLayout,
+  availableMaps,
+  currentMapData,
   zoom,
   setZoom,
   pan,
@@ -82,8 +93,12 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         onRemoveFile={onRemoveFile}
         onShowImageModal={onShowImageModal}
         onShowFileActionMenu={onShowFileActionMenu}
+        onShowLinkActionMenu={onShowLinkActionMenu}
+        onAddLink={onAddLink}
         onUpdateNode={onUpdateNode}
         onAutoLayout={onAutoLayout}
+        availableMaps={availableMaps}
+        currentMapData={currentMapData}
         zoom={zoom}
         setZoom={setZoom}
         pan={pan}

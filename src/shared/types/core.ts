@@ -38,6 +38,7 @@ export interface MindMapNode {
   // Functional properties  
   collapsed?: boolean;
   attachments?: FileAttachment[];
+  links?: NodeLink[];
   
   // Image display properties
   customImageWidth?: number;
@@ -96,6 +97,15 @@ export interface FileAttachment {
   optimizedType?: string;
   thumbnail?: string;
   nodeId?: string;
+}
+
+// Node link interface for linking to other mindmaps or nodes
+export interface NodeLink {
+  id: string;
+  targetMapId?: string; // ID of target mindmap
+  targetNodeId?: string; // ID of target node (optional, for root if not specified)
+  createdAt: string;
+  updatedAt: string;
 }
 
 

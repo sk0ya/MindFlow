@@ -1,5 +1,18 @@
 import type { MindMapNode, FileAttachment } from '@shared/types';
 
+// アイコンレイアウト情報
+interface IconLayout {
+  totalWidth: number; // アイコン群の総幅
+  attachmentIcon?: {
+    x: number; // ノード中心からの相対X座標
+    y: number; // ノード中心からの相対Y座標
+  };
+  linkIcon?: {
+    x: number; // ノード中心からの相対X座標
+    y: number; // ノード中心からの相対Y座標
+  };
+}
+
 interface NodeSize {
   width: number;
   height: number;
@@ -108,6 +121,51 @@ function calculateTextWidthFallback(text: string): number {
   return width;
 }
 
+/**
+ * ノードのアイコンレイアウトを計算
+ */
+export function calculateIconLayout(node: MindMapNode, nodeWidth: number): IconLayout {
+  const hasAttachments = node.attachments && node.attachments.length > 0;
+  const hasLinks = node.links && node.links.length > 0;
+  
+  // アイコンの基本サイズ
+  const ICON_WIDTH = 26;
+  const ICON_HEIGHT = 12;
+  const ICON_SPACING = 5;
+  const RIGHT_MARGIN = 9; // ノード右端からの最小マージン
+  
+  let totalWidth = 0;
+  let attachmentIcon: { x: number; y: number } | undefined;
+  let linkIcon: { x: number; y: number } | undefined;
+  
+  if (hasAttachments && hasLinks) {
+    // 両方ある場合: 添付ファイル + スペース + リンク
+    totalWidth = ICON_WIDTH + ICON_SPACING + ICON_WIDTH;
+    const startX = nodeWidth / 2 - totalWidth - RIGHT_MARGIN;
+    
+    attachmentIcon = { x: startX, y: -ICON_HEIGHT / 2 };
+    linkIcon = { x: startX + ICON_WIDTH + ICON_SPACING, y: -ICON_HEIGHT / 2 };
+  } else if (hasAttachments) {
+    // 添付ファイルのみ
+    totalWidth = ICON_WIDTH;
+    const startX = nodeWidth / 2 - totalWidth - RIGHT_MARGIN;
+    
+    attachmentIcon = { x: startX, y: -ICON_HEIGHT / 2 };
+  } else if (hasLinks) {
+    // リンクのみ
+    totalWidth = ICON_WIDTH;
+    const startX = nodeWidth / 2 - totalWidth - RIGHT_MARGIN;
+    
+    linkIcon = { x: startX, y: -ICON_HEIGHT / 2 };
+  }
+  
+  return {
+    totalWidth,
+    attachmentIcon,
+    linkIcon
+  };
+}
+
 export function calculateNodeSize(
   node: MindMapNode, 
   editText?: string, 
@@ -155,19 +213,43 @@ export function calculateNodeSize(
     actualTextWidth = Math.max(measuredWidth, minWidth);
   }
   
-  // 添付ファイルクリップアイコン用の余白を追加
+  // アイコンレイアウトに必要な最小幅を計算
   const hasAttachments = node.attachments && node.attachments.length > 0;
-  const clipIconPadding = hasAttachments ? 40 : 0; // クリップアイコンと個数表示のための余白
+  const hasLinks = node.links && node.links.length > 0;
+  const ICON_WIDTH = 26;
+  const ICON_SPACING = 5;
+  const RIGHT_MARGIN = 9;
+  
+  let minIconWidth = 0;
+  if (hasAttachments && hasLinks) {
+    minIconWidth = ICON_WIDTH + ICON_SPACING + ICON_WIDTH + RIGHT_MARGIN;
+  } else if (hasAttachments || hasLinks) {
+    minIconWidth = ICON_WIDTH + RIGHT_MARGIN;
+  }
   
   // パディングを追加（左右に余白を持たせる）
   const horizontalPadding = fontSize * 1.5; // フォントサイズに比例したパディング
-  const textBasedWidth = Math.max(actualTextWidth + horizontalPadding + clipIconPadding, fontSize * 2);
+  const textBasedWidth = Math.max(actualTextWidth + horizontalPadding, fontSize * 2);
   
   // ノードの高さは最小限に（フォントサイズ + 少しの上下パディング）
   const baseNodeHeight = Math.max(fontSize + 8, 22); // フォントサイズ + 上下4pxずつの最小パディング
   
-  // 画像がある場合は画像幅とテキスト幅の大きい方を使用（画像の左右マージン10px追加）
-  const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 10) : textBasedWidth;
+  // アイコンとテキストが共存する場合の幅計算
+  let finalWidth: number;
+  
+  if (minIconWidth > 0) {
+    // アイコンがある場合：テキスト幅 + アイコン幅 + 余白を確保
+    const TEXT_ICON_SPACING = 10; // テキストとアイコン間の余白
+    const combinedWidth = textBasedWidth + minIconWidth + TEXT_ICON_SPACING;
+    const imageBasedWidth = hasImages ? imageWidth + 10 : 0;
+    finalWidth = Math.max(combinedWidth, imageBasedWidth);
+  } else {
+    // アイコンがない場合：従来通り
+    const imageBasedWidth = hasImages ? imageWidth + 10 : 0;
+    finalWidth = Math.max(textBasedWidth, imageBasedWidth);
+  }
+  
+  const nodeWidth = finalWidth;
   const nodeHeight = baseNodeHeight + imageHeight;
 
   return {

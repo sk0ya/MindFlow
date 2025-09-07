@@ -1,6 +1,11 @@
 import type { StateCreator } from 'zustand';
-import type { MindMapNode, Position } from '@shared/types';
+import type { MindMapNode, Position, NodeLink } from '@shared/types';
 import { logger } from '../../../shared/utils/logger';
+import { 
+  addLinkToNodeInTree, 
+  updateLinkInNodeTree, 
+  removeLinkFromNodeTree 
+} from '../../../shared/utils/linkUtils';
 import { 
   updateNormalizedNode,
   deleteNormalizedNode,
@@ -34,6 +39,11 @@ export interface NodeSlice {
   finishEditing: (nodeId: string, text: string) => void;
   cancelEditing: () => void;
   setEditText: (text: string) => void;
+
+  // Link operations
+  addNodeLink: (nodeId: string, linkData: Partial<NodeLink>) => void;
+  updateNodeLink: (nodeId: string, linkId: string, updates: Partial<NodeLink>) => void;
+  deleteNodeLink: (nodeId: string, linkId: string) => void;
 }
 
 export const createNodeSlice: StateCreator<
@@ -488,5 +498,95 @@ export const createNodeSlice: StateCreator<
     if (data?.settings?.autoLayout) {
       get().applyAutoLayout();
     }
+  },
+
+  // Link operations
+  addNodeLink: (nodeId: string, linkData: Partial<NodeLink>) => {
+    set((state) => {
+      if (!state.data) return;
+      
+      try {
+        // Update tree structure with new link
+        const updatedRootNode = addLinkToNodeInTree(state.data.rootNode, nodeId, linkData);
+        state.data = {
+          ...state.data,
+          rootNode: updatedRootNode,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Update normalized data if it exists
+        if (state.normalizedData) {
+          const node = state.normalizedData.nodes[nodeId];
+          if (node) {
+            const updatedNode = addLinkToNodeInTree(node, nodeId, linkData);
+            state.normalizedData.nodes[nodeId] = updatedNode;
+          }
+        }
+
+        logger.debug('Link added to node:', nodeId, linkData);
+      } catch (error) {
+        logger.error('addNodeLink error:', error);
+      }
+    });
+  },
+
+  updateNodeLink: (nodeId: string, linkId: string, updates: Partial<NodeLink>) => {
+    set((state) => {
+      if (!state.data) return;
+      
+      try {
+        // Update tree structure
+        const updatedRootNode = updateLinkInNodeTree(state.data.rootNode, nodeId, linkId, updates);
+        state.data = {
+          ...state.data,
+          rootNode: updatedRootNode,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Update normalized data if it exists
+        if (state.normalizedData) {
+          const node = state.normalizedData.nodes[nodeId];
+          if (node && node.links) {
+            const updatedLinks = node.links.map(link =>
+              link.id === linkId ? { ...link, ...updates, updatedAt: new Date().toISOString() } : link
+            );
+            state.normalizedData.nodes[nodeId] = { ...node, links: updatedLinks };
+          }
+        }
+
+        logger.debug('Link updated:', nodeId, linkId, updates);
+      } catch (error) {
+        logger.error('updateNodeLink error:', error);
+      }
+    });
+  },
+
+  deleteNodeLink: (nodeId: string, linkId: string) => {
+    set((state) => {
+      if (!state.data) return;
+      
+      try {
+        // Update tree structure
+        const updatedRootNode = removeLinkFromNodeTree(state.data.rootNode, nodeId, linkId);
+        state.data = {
+          ...state.data,
+          rootNode: updatedRootNode,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Update normalized data if it exists
+        if (state.normalizedData) {
+          const node = state.normalizedData.nodes[nodeId];
+          if (node && node.links) {
+            const filteredLinks = node.links.filter(link => link.id !== linkId);
+            state.normalizedData.nodes[nodeId] = { ...node, links: filteredLinks };
+          }
+        }
+
+        logger.debug('Link deleted from node:', nodeId, linkId);
+      } catch (error) {
+        logger.error('deleteNodeLink error:', error);
+      }
+    });
   },
 });

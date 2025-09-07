@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useMindMap, useKeyboardShortcuts, useMindMapStore, useMindMapPersistence } from '../../../../core';
 import ActivityBar from './ActivityBar';
 import PrimarySidebar from './PrimarySidebar';
@@ -7,6 +7,8 @@ import MindMapWorkspace from './MindMapWorkspace';
 import MindMapModals from '../modals/MindMapModals';
 import ExportModal from '../modals/ExportModal';
 import ImportModal from '../modals/ImportModal';
+import NodeLinkModal from '../modals/NodeLinkModal';
+import LinkActionMenu from '../modals/LinkActionMenu';
 import NodeNotesPanel from '../panels/NodeNotesPanel';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import ContextMenu from '../../../../shared/components/ui/ContextMenu';
@@ -20,7 +22,7 @@ import { logger } from '../../../../shared/utils/logger';
 import './MindMapApp.css';
 
 // Types
-import type { MindMapNode, FileAttachment, MindMapData } from '../../../../shared';
+import type { MindMapNode, FileAttachment, MindMapData, NodeLink } from '@shared/types';
 import type { StorageConfig } from '../../../../core/storage/types';
 import { 
   localModeConfig, 
@@ -62,6 +64,16 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   const [internalResetKey, setResetKey] = useState(resetKey);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  
+  // Link-related states
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLink, setEditingLink] = useState<NodeLink | null>(null);
+  const [linkModalNodeId, setLinkModalNodeId] = useState<string | null>(null);
+  const [showLinkActionMenu, setShowLinkActionMenu] = useState(false);
+  const [linkActionMenuData, setLinkActionMenuData] = useState<{
+    link: NodeLink;
+    position: { x: number; y: number };
+  } | null>(null);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -734,6 +746,33 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   };
 
+  // 他のマップのデータを取得する関数
+  const loadMapData = useCallback(async (mapId: string): Promise<MindMapData | null> => {
+    try {
+      if (data && mapId === data.id) {
+        // 現在のマップの場合はそのまま返す
+        return data;
+      }
+      
+      // 他のマップのデータを読み込む
+      // 永続化フックから適切なメソッドを使用
+      const targetMap = allMindMaps.find(map => map.id === mapId);
+      if (targetMap) {
+        // 既に読み込み済みのマップデータがある場合はそれを返す
+        return targetMap;
+      }
+      
+      // マップが見つからない場合
+      logger.warn('指定されたマップが見つかりません:', mapId);
+      showNotification('warning', '指定されたマップが見つかりません');
+      return null;
+    } catch (error) {
+      logger.error('マップデータの読み込みに失敗:', error);
+      showNotification('error', 'マップデータの読み込みに失敗しました');
+      return null;
+    }
+  }, [data, allMindMaps, showNotification]);
+
   // UI用のハンドラー
   const handleTitleChange = (title: string) => {
     if (data) {
@@ -818,6 +857,101 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       count += node.children.reduce((sum, child) => sum + countNodes(child), 0);
     }
     return count;
+  };
+
+  // Link-related handlers
+  const handleAddLink = (nodeId: string) => {
+    setEditingLink(null);
+    setLinkModalNodeId(nodeId);
+    setShowLinkModal(true);
+  };
+
+  const handleEditLink = (link: NodeLink, nodeId: string) => {
+    setEditingLink(link);
+    setLinkModalNodeId(nodeId);
+    setShowLinkModal(true);
+  };
+
+  const handleSaveLink = async (linkData: Partial<NodeLink>) => {
+    if (!linkModalNodeId) return;
+
+    try {
+      if (editingLink) {
+        // Update existing link
+        store.updateNodeLink(linkModalNodeId, editingLink.id, linkData);
+        showNotification('success', 'リンクを更新しました');
+      } else {
+        // Add new link
+        store.addNodeLink(linkModalNodeId, linkData);
+        showNotification('success', 'リンクを追加しました');
+      }
+    } catch (error) {
+      logger.error('Link save error:', error);
+      handleError(error as Error, 'リンク操作', 'リンクの保存');
+    }
+  };
+
+  const handleDeleteLink = async (linkId: string) => {
+    if (!linkModalNodeId) return;
+
+    try {
+      store.deleteNodeLink(linkModalNodeId, linkId);
+      showNotification('success', 'リンクを削除しました');
+    } catch (error) {
+      logger.error('Link delete error:', error);
+      handleError(error as Error, 'リンク操作', 'リンクの削除');
+    }
+  };
+
+  const handleLinkNavigate = async (link: NodeLink) => {
+    try {
+      // If targetMapId is specified and different from current map
+      if (link.targetMapId && link.targetMapId !== currentMapId) {
+        // Navigate to different map
+        try {
+          await selectMapById(link.targetMapId);
+          showNotification('success', `マップ "${link.targetMapId}" に移動しました`);
+          
+          // If targetNodeId is specified, select that node after map loads
+          if (link.targetNodeId) {
+            setTimeout(() => {
+              selectNode(link.targetNodeId!);
+            }, 500); // Wait for map to load
+          }
+        } catch (error) {
+          showNotification('error', `マップ "${link.targetMapId}" が見つかりません`);
+          return;
+        }
+      } else if (link.targetNodeId) {
+        // Navigate to node in current map
+        if (data) {
+          const targetNode = findNodeById(data.rootNode, link.targetNodeId);
+          if (targetNode) {
+            selectNode(link.targetNodeId);
+            showNotification('success', `ノード "${targetNode.text}" に移動しました`);
+          } else {
+            showNotification('error', `ノード "${link.targetNodeId}" が見つかりません`);
+          }
+        }
+      } else {
+        showNotification('info', 'リンク先が指定されていません');
+      }
+    } catch (error) {
+      logger.error('Link navigation error:', error);
+      handleError(error as Error, 'リンク操作', 'リンク先への移動');
+    }
+  };
+
+  const handleShowLinkActionMenu = (link: NodeLink, nodeId: string, position: { x: number; y: number }) => {
+    setLinkActionMenuData({ link, position });
+    setLinkModalNodeId(nodeId);
+    setShowLinkActionMenu(true);
+  };
+
+  const handleCloseLinkActionMenu = () => {
+    setShowLinkActionMenu(false);
+    setLinkActionMenuData(null);
+    setLinkModalNodeId(null);
   };
 
 
@@ -933,8 +1067,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onRemoveFile={handleFileDelete}
             onShowImageModal={showImageModal}
             onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
+            onShowLinkActionMenu={handleShowLinkActionMenu}
+            onAddLink={handleAddLink}
             onUpdateNode={updateNode}
             onAutoLayout={applyAutoLayout}
+            availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
+            currentMapData={data}
             zoom={ui.zoom}
             setZoom={setZoom}
             pan={ui.pan}
@@ -1012,6 +1150,46 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onClose={() => setShowImportModal(false)}
         onImportSuccess={handleImportSuccess}
       />
+
+      {/* Node Link Modal */}
+      {showLinkModal && linkModalNodeId && (
+        <NodeLinkModal
+          isOpen={showLinkModal}
+          onClose={() => {
+            setShowLinkModal(false);
+            setEditingLink(null);
+            setLinkModalNodeId(null);
+          }}
+          node={findNodeById(data.rootNode, linkModalNodeId)!}
+          link={editingLink}
+          onSave={handleSaveLink}
+          onDelete={handleDeleteLink}
+          availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
+          currentMapData={data}
+          onLoadMapData={loadMapData}
+        />
+      )}
+
+      {/* Link Action Menu */}
+      {showLinkActionMenu && linkActionMenuData && (
+        <LinkActionMenu
+          isOpen={showLinkActionMenu}
+          position={linkActionMenuData.position}
+          link={linkActionMenuData.link}
+          onClose={handleCloseLinkActionMenu}
+          onNavigate={handleLinkNavigate}
+          onEdit={(link) => {
+            handleCloseLinkActionMenu();
+            handleEditLink(link, linkModalNodeId!);
+          }}
+          onDelete={(linkId) => {
+            handleCloseLinkActionMenu();
+            handleDeleteLink(linkId);
+          }}
+          availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
+          currentMapData={data}
+        />
+      )}
       
       {/* Context Menu */}
       {contextMenu.visible && contextMenu.nodeId && (

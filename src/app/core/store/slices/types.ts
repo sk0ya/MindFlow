@@ -1,4 +1,4 @@
-import type { MindMapData, MindMapNode, Position, FileAttachment } from '@shared/types';
+import type { MindMapData, MindMapNode, Position, FileAttachment, NodeLink } from '@shared/types';
 import type { ImageFile } from '../../../shared/types';
 import type { NormalizedData } from '../../data/normalizedStore';
 import type { AISlice } from './aiSlice';
@@ -61,6 +61,11 @@ export interface MindMapStore extends DataState, HistoryState, AISlice, Settings
   moveNode: (nodeId: string, newParentId: string) => void;
   changeSiblingOrder: (draggedNodeId: string, targetNodeId: string, insertBefore?: boolean) => void;
   toggleNodeCollapse: (nodeId: string) => void;
+  
+  // Link operations
+  addNodeLink: (nodeId: string, linkData: Partial<NodeLink>) => void;
+  updateNodeLink: (nodeId: string, linkId: string, updates: Partial<NodeLink>) => void;
+  deleteNodeLink: (nodeId: string, linkId: string) => void;
   
   // Node operations (O(1) with normalized data)
   findNode: (nodeId: string) => MindMapNode | null;
