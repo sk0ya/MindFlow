@@ -90,14 +90,16 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     };
     
     const actualImageHeight = getActualImageHeight();
-    const textY = hasImage ? node.y + actualImageHeight / 2 + 9 : node.y + 3;
+    const hasAttachments = node.attachments && node.attachments.length > 0;
+    const textY = hasImage ? node.y + actualImageHeight / 2 + 9 : node.y;
     
     return (
       <>
         <text
-          x={node.x - (nodeWidth / 2) + 8}
+          x={node.x - (hasAttachments ? 15 : 0)}
           y={textY}
-          textAnchor="start"
+          textAnchor="middle"
+          dominantBaseline="middle"
           fill={settings.theme === 'dark' ? 'var(--text-primary)' : 'black'}
           fontSize={settings.fontSize || node.fontSize || '14px'}
           fontWeight={node.fontWeight || 'normal'}
@@ -191,14 +193,14 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   };
   
   const actualImageHeight = getActualImageHeight();
-  const editY = hasImage ? node.y + actualImageHeight / 2 + 5 : node.y - 12;
+  const editY = hasImage ? node.y + actualImageHeight / 2 + 5 : node.y - 8;
 
   return (
     <foreignObject 
       x={node.x - nodeWidth / 2 + 8} 
       y={editY} 
       width={nodeWidth - 16} 
-      height="24"
+      height="20"
     >
       <input
         ref={inputRef}

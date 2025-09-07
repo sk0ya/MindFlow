@@ -171,8 +171,8 @@ export function calculateNodeSize(
   const horizontalPadding = fontSize * 1.5; // フォントサイズに比例したパディング
   const textBasedWidth = Math.max(actualTextWidth + horizontalPadding + clipIconPadding, fontSize * 2);
   
-  // ノードの高さもフォントサイズに応じて調整
-  const baseNodeHeight = Math.max(fontSize * 2.5, 30); // フォントサイズに比例した最小高さ
+  // ノードの高さは最小限に（フォントサイズ + 少しの上下パディング）
+  const baseNodeHeight = Math.max(fontSize + 8, 22); // フォントサイズ + 上下4pxずつの最小パディング
   
   // 画像がある場合は画像幅とテキスト幅の大きい方を使用（画像の左右マージン10px追加）
   const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 10) : textBasedWidth;
