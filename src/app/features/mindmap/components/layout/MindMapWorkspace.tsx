@@ -32,6 +32,9 @@ interface MindMapWorkspaceProps {
   availableMaps?: { id: string; title: string }[];
   currentMapData?: { id: string; rootNode: any };
   
+  // Link navigation
+  onLinkNavigate?: (link: NodeLink) => void;
+  
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: Position;
@@ -64,6 +67,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   onAutoLayout,
   availableMaps,
   currentMapData,
+  onLinkNavigate,
   zoom,
   setZoom,
   pan,
@@ -99,6 +103,7 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         onAutoLayout={onAutoLayout}
         availableMaps={availableMaps}
         currentMapData={currentMapData}
+        onLinkNavigate={onLinkNavigate}
         zoom={zoom}
         setZoom={setZoom}
         pan={pan}

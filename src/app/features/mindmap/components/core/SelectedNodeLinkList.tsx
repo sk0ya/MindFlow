@@ -108,8 +108,8 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
   const listWidth = Math.max(nodeWidth, 300);
   
   // 動的高さ計算
-  const itemHeight = 32; // リンクアイテムの高さ（添付ファイルより少し大きく）
-  const padding = 16;
+  const itemHeight = 22; // さらに小さく調整
+  const padding = 4; // パディングをさらに削減
   const calculatedHeight = Math.min(node.links.length * itemHeight + padding, 240);
   const listHeight = calculatedHeight;
 
@@ -130,7 +130,7 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
           border: '1px solid #d0d7de',
           borderRadius: '6px',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-          padding: '8px',
+          padding: '2px',
           maxHeight: '240px',
           overflowY: 'auto',
           fontSize: '12px',
@@ -138,23 +138,9 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
           zIndex: 1000
         }}
       >
-        {/* ヘッダー */}
-        <div 
-          style={{
-            fontSize: '11px',
-            fontWeight: '600',
-            color: '#656d76',
-            marginBottom: '6px',
-            paddingLeft: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}
-        >
-          リンク ({node.links.length})
-        </div>
 
         {/* リンク一覧 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {node.links.map((link) => {
             const { mapTitle, nodeText } = getLinkDisplayInfo(link);
             
@@ -164,7 +150,7 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '8px',
+                  padding: '4px 6px',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   transition: 'background-color 0.15s ease',
@@ -187,8 +173,8 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                 {/* リンクアイコン */}
                 <span
                   style={{
-                    fontSize: '16px',
-                    marginRight: '10px',
+                    fontSize: '14px',
+                    marginRight: '8px',
                     flexShrink: 0,
                     color: '#0969da'
                   }}
@@ -200,13 +186,13 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                 <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: '500',
                       color: '#0969da',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      lineHeight: '1.3'
+                      lineHeight: '1.2'
                     }}
                   >
                     {mapTitle}
@@ -214,10 +200,10 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                   
                   <div
                     style={{
-                      fontSize: '11px',
+                      fontSize: '10px',
                       color: '#656d76',
-                      marginTop: '2px',
-                      lineHeight: '1.2',
+                      marginTop: '1px',
+                      lineHeight: '1.1',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'

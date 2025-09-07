@@ -35,6 +35,9 @@ interface MindMapCanvasProps {
   availableMaps?: { id: string; title: string }[];
   currentMapData?: { id: string; rootNode: any };
   
+  // Link navigation
+  onLinkNavigate?: (link: NodeLink) => void;
+  
   zoom: number;
   setZoom: (zoom: number) => void;
   pan: { x: number; y: number };
@@ -68,6 +71,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     onAutoLayout,
     availableMaps,
     currentMapData,
+    onLinkNavigate,
     zoom,
     setZoom,
     pan,
@@ -175,6 +179,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       onAutoLayout={onAutoLayout}
       availableMaps={availableMaps}
       currentMapData={currentMapData}
+      onLinkNavigate={onLinkNavigate}
       onDragStart={handleDragStartAdapter}
       onDragMove={handleDragMoveAdapter}
       onDragEnd={handleDragEndAdapter}

@@ -62,8 +62,8 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
   // 選択されたマップのノード一覧
   const availableNodes = useCallback(() => {
     if (!selectedMapId) {
-      // 現在のマップのノード
-      return currentMapData ? flattenNodes(currentMapData.rootNode, currentMapData.id) : [];
+      // マップが選択されていない場合は空の配列を返す
+      return [];
     }
     
     if (selectedMapId === currentMapData?.id) {
@@ -117,9 +117,14 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
   }, [selectedMapId, currentMapData?.id, onLoadMapData]);
 
   const handleSave = useCallback(() => {
+    // マップが選択されていない場合は保存しない
+    if (!selectedMapId) {
+      return;
+    }
+
     const linkData: Partial<NodeLink> = {
       ...(link?.id && { id: link.id }),
-      targetMapId: selectedMapId || undefined,
+      targetMapId: selectedMapId,
       targetNodeId: selectedNodeId || undefined,
       createdAt: link?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -181,7 +186,7 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
               value={selectedMapId}
               onChange={(e) => setSelectedMapId(e.target.value)}
             >
-              <option value="">現在のマップ</option>
+              <option value="">-- マップを選択 --</option>
               {availableMaps.map((map) => (
                 <option key={map.id} value={map.id}>
                   {map.title}
@@ -199,9 +204,9 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
               id="target-node"
               value={selectedNodeId}
               onChange={(e) => setSelectedNodeId(e.target.value)}
-              disabled={isLoadingMapData}
+              disabled={isLoadingMapData || !selectedMapId}
             >
-              <option value="">マップのルートノード</option>
+              <option value="">-- ノードを選択 --</option>
               {availableNodes().map((node) => (
                 <option key={node.id} value={node.id}>
                   {node.text}
@@ -209,11 +214,13 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
               ))}
             </select>
             <small className="field-help">
-              {isLoadingMapData
+              {!selectedMapId
+                ? 'まずマップを選択してください'
+                : isLoadingMapData
                 ? 'マップデータを読み込み中...'
                 : selectedMapId && selectedMapId !== currentMapData?.id && !loadedMapData
                 ? 'マップデータの読み込みに失敗しました'
-                : 'リンク先のノードを選択してください（省略時はルートノード）'
+                : 'リンク先のノードを選択してください'
               }
             </small>
           </div>
@@ -246,6 +253,7 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
             <button
               className="btn btn-primary"
               onClick={handleSave}
+              disabled={!selectedMapId}
             >
               {link ? '更新' : '作成'}
             </button>

@@ -903,6 +903,60 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   };
 
+  // ノードを画面中央に移動する関数
+  const centerNodeInView = useCallback((nodeId: string, animate = true) => {
+    if (!data) return;
+    
+    const targetNode = findNodeById(data.rootNode, nodeId);
+    if (!targetNode) return;
+
+    // ビューポートの中心座標を計算
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const viewportCenterX = viewportWidth / 2;
+    const viewportCenterY = viewportHeight / 2;
+
+    // ノードの現在の座標
+    const nodeX = targetNode.x || 0;
+    const nodeY = targetNode.y || 0;
+
+    // 現在のズーム率を取得（SVGでは1.5倍されている）
+    const currentZoom = ui.zoom * 1.5;
+
+    // SVGの transform="scale(s) translate(tx, ty)" の場合、
+    // 最終座標は s * (x + tx) となるため、中央に配置するには：
+    // centerX = currentZoom * (nodeX + panX) → panX = centerX/currentZoom - nodeX
+    const newPanX = viewportCenterX / currentZoom - nodeX;
+    const newPanY = viewportCenterY / currentZoom - nodeY;
+
+    if (animate) {
+      // アニメーション付きでパンを更新
+      const currentPan = ui.pan;
+      const duration = 300; // 300ms
+      const steps = 20;
+      
+      const deltaX = (newPanX - currentPan.x) / steps;
+      const deltaY = (newPanY - currentPan.y) / steps;
+      
+      let step = 0;
+      const animateStep = () => {
+        if (step < steps) {
+          step++;
+          const currentX = currentPan.x + (deltaX * step);
+          const currentY = currentPan.y + (deltaY * step);
+          setPan({ x: currentX, y: currentY });
+          
+          requestAnimationFrame(animateStep);
+        }
+      };
+      
+      requestAnimationFrame(animateStep);
+    } else {
+      // 即座にパンを更新
+      setPan({ x: newPanX, y: newPanY });
+    }
+  }, [data, ui.zoom, ui.pan, setPan]);
+
   const handleLinkNavigate = async (link: NodeLink) => {
     try {
       // If targetMapId is specified and different from current map
@@ -916,6 +970,10 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           if (link.targetNodeId) {
             setTimeout(() => {
               selectNode(link.targetNodeId!);
+              // マップロード後にノードを中央に移動
+              setTimeout(() => {
+                centerNodeInView(link.targetNodeId!);
+              }, 100);
             }, 500); // Wait for map to load
           }
         } catch (error) {
@@ -928,6 +986,10 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           const targetNode = findNodeById(data.rootNode, link.targetNodeId);
           if (targetNode) {
             selectNode(link.targetNodeId);
+            // ノードを画面中央に移動
+            setTimeout(() => {
+              centerNodeInView(link.targetNodeId);
+            }, 50); // DOM更新を待つ
             showNotification('success', `ノード "${targetNode.text}" に移動しました`);
           } else {
             showNotification('error', `ノード "${link.targetNodeId}" が見つかりません`);
@@ -1073,6 +1135,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             onAutoLayout={applyAutoLayout}
             availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
             currentMapData={data}
+            onLinkNavigate={handleLinkNavigate}
             zoom={ui.zoom}
             setZoom={setZoom}
             pan={ui.pan}

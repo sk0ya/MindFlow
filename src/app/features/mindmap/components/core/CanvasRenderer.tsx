@@ -55,6 +55,9 @@ interface CanvasRendererProps {
   // Link display data
   availableMaps?: { id: string; title: string }[];
   currentMapData?: { id: string; rootNode: any };
+  
+  // Link navigation
+  onLinkNavigate?: (link: NodeLink) => void;
 
   // Drag handlers
   onDragStart: (nodeId: string) => void;
@@ -96,6 +99,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onAutoLayout,
   availableMaps,
   currentMapData,
+  onLinkNavigate,
   onDragStart,
   onDragMove,
   onDragEnd
@@ -234,6 +238,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                       onLinkContextMenu={(link, position) => {
                         onShowLinkActionMenu(link, selectedNode.id, position);
                       }}
+                      onLinkNavigate={onLinkNavigate}
                       availableMaps={availableMaps}
                       currentMapData={currentMapData}
                     />
