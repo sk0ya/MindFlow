@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
+import { useDataCleanup, type DataCleanupStats } from '../../../../core/hooks/useDataCleanup';
 
 interface SettingsSidebarProps {
   // 既存のprops（後方互換性のため保持）
@@ -16,9 +17,44 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   onAutoLayout
 }) => {
   const { settings, updateSetting } = useMindMapStore();
+  const { clearAllData, getDataStats, isClearing, error } = useDataCleanup();
+  const [dataStats, setDataStats] = useState<DataCleanupStats | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleSettingChange = <K extends keyof typeof settings>(key: K, value: typeof settings[K]) => {
     updateSetting(key, value);
+  };
+
+  // データ統計の取得
+  useEffect(() => {
+    getDataStats().then(setDataStats);
+  }, [getDataStats]);
+
+  // データクリーンアップの実行
+  const handleClearData = async () => {
+    if (!showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    try {
+      await clearAllData();
+      setShowConfirmDialog(false);
+      // 統計を更新
+      const newStats = await getDataStats();
+      setDataStats(newStats);
+    } catch (err) {
+      // エラーはhookで管理される
+    }
+  };
+
+  // データサイズのフォーマット
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   return (
@@ -121,6 +157,66 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 クラウド
               </span>
             </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <h3 className="settings-section-title">データ管理</h3>
+        <div className="settings-section-content">
+          {dataStats && (
+            <div className="data-stats">
+              <div className="data-stats-item">
+                <span className="data-stats-label">ローカルストレージ項目:</span>
+                <span className="data-stats-value">{dataStats.localStorageItems}</span>
+              </div>
+              <div className="data-stats-item">
+                <span className="data-stats-label">使用容量:</span>
+                <span className="data-stats-value">{formatBytes(dataStats.indexedDBSize)}</span>
+              </div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="cleanup-error">
+              <span className="cleanup-error-icon">⚠️</span>
+              {error}
+            </div>
+          )}
+
+          <div className="cleanup-actions">
+            {!showConfirmDialog ? (
+              <button 
+                className="cleanup-button"
+                onClick={handleClearData}
+                disabled={isClearing}
+              >
+                <span className="settings-button-icon">🗑️</span>
+                {isClearing ? 'クリア中...' : 'すべてのデータを削除'}
+              </button>
+            ) : (
+              <div className="cleanup-confirm">
+                <p className="cleanup-confirm-text">
+                  すべてのローカルデータ（マインドマップ、設定など）が削除されます。この操作は元に戻せません。
+                </p>
+                <div className="cleanup-confirm-buttons">
+                  <button 
+                    className="cleanup-button cleanup-button-danger"
+                    onClick={handleClearData}
+                    disabled={isClearing}
+                  >
+                    {isClearing ? '削除中...' : '削除する'}
+                  </button>
+                  <button 
+                    className="cleanup-button cleanup-button-cancel"
+                    onClick={() => setShowConfirmDialog(false)}
+                    disabled={isClearing}
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -296,6 +392,122 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           display: flex;
           flex-direction: column;
           gap: 8px;
+        }
+
+        .data-stats {
+          padding: 12px;
+          background: var(--bg-secondary);
+          border-radius: 6px;
+          margin-bottom: 16px;
+        }
+
+        .data-stats-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .data-stats-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .data-stats-label {
+          font-size: 12px;
+          color: var(--text-secondary);
+        }
+
+        .data-stats-value {
+          font-size: 12px;
+          color: var(--text-primary);
+          font-weight: 500;
+        }
+
+        .cleanup-error {
+          display: flex;
+          align-items: center;
+          padding: 8px 12px;
+          background: rgba(255, 107, 107, 0.1);
+          border: 1px solid rgba(255, 107, 107, 0.3);
+          border-radius: 4px;
+          margin-bottom: 12px;
+          font-size: 12px;
+          color: #ff6b6b;
+        }
+
+        .cleanup-error-icon {
+          margin-right: 6px;
+        }
+
+        .cleanup-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .cleanup-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 16px;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          background: none;
+          color: var(--text-primary);
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 14px;
+          min-height: 40px;
+        }
+
+        .cleanup-button:hover:not(:disabled) {
+          background-color: var(--hover-color);
+          border-color: var(--accent-color);
+        }
+
+        .cleanup-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .cleanup-button-danger {
+          border-color: #ff6b6b;
+          color: #ff6b6b;
+        }
+
+        .cleanup-button-danger:hover:not(:disabled) {
+          background-color: rgba(255, 107, 107, 0.1);
+          border-color: #ff5252;
+        }
+
+        .cleanup-button-cancel {
+          border-color: var(--border-color);
+          color: var(--text-secondary);
+        }
+
+        .cleanup-confirm {
+          padding: 16px;
+          background: var(--bg-secondary);
+          border: 1px solid rgba(255, 107, 107, 0.3);
+          border-radius: 6px;
+        }
+
+        .cleanup-confirm-text {
+          font-size: 13px;
+          color: var(--text-secondary);
+          margin: 0 0 16px 0;
+          line-height: 1.4;
+        }
+
+        .cleanup-confirm-buttons {
+          display: flex;
+          gap: 8px;
+        }
+
+        .cleanup-confirm-buttons .cleanup-button {
+          flex: 1;
+          padding: 8px 12px;
+          min-height: 36px;
         }
       `}</style>
     </div>
