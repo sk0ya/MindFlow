@@ -156,20 +156,23 @@ export function calculateNodeSize(
   };
 }
 
-export function getToggleButtonPosition(node: MindMapNode, rootNode: MindMapNode, nodeSize: NodeSize) {
+export function getToggleButtonPosition(node: MindMapNode, rootNode: MindMapNode, nodeSize: NodeSize, globalFontSize?: number) {
   const isOnRight = node.x > rootNode.x;
   
-  // ノードサイズに応じた動的なマージン調整
-  // 画像が大きい場合は、より大きなマージンを適用
-  let baseMargin = 20;
+  // フォントサイズとノードサイズに応じた動的なマージン調整
+  const fontSize = globalFontSize || 14;
+  
+  // フォントサイズに比例した基本マージン
+  let baseMargin = Math.max(fontSize * 1.5, 20);
   
   // 画像の高さに応じてマージンを調整
   if (nodeSize.imageHeight > 100) {
-    baseMargin = 25 + (nodeSize.imageHeight - 100) * 0.1;
+    baseMargin = baseMargin + (nodeSize.imageHeight - 100) * 0.1;
   }
   
-  // 幅に応じた追加調整
-  const widthAdjustment = Math.max(0, (nodeSize.width - 100) * 0.05);
+  // 幅に応じた追加調整（フォントサイズも考慮）
+  const expectedMinWidth = fontSize * 8; // 想定される最小幅
+  const widthAdjustment = Math.max(0, (nodeSize.width - expectedMinWidth) * 0.08);
   const totalMargin = baseMargin + widthAdjustment;
   
   // ノードの右端から一定距離でトグルボタンを配置
