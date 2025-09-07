@@ -52,8 +52,8 @@ export class OllamaService {
    */
   private isExtensionAvailable(): boolean {
     return typeof window !== 'undefined' && 
-           window.MindFlowOllamaBridge && 
-           window.MindFlowOllamaBridge.available;
+           !!window.MindFlowOllamaBridge && 
+           window.MindFlowOllamaBridge.available === true;
   }
   
   /**
@@ -91,7 +91,7 @@ export class OllamaService {
     try {
       // 拡張機能の初期化を待つ
       const extensionAvailable = await this.waitForExtension();
-      if (extensionAvailable) {
+      if (extensionAvailable && window.MindFlowOllamaBridge) {
         console.log('Using extension for connection test');
         const result = await window.MindFlowOllamaBridge.testConnection(this.baseUrl);
         return result;
@@ -126,7 +126,7 @@ export class OllamaService {
     try {
       // 拡張機能の初期化を待つ
       const extensionAvailable = await this.waitForExtension();
-      if (extensionAvailable) {
+      if (extensionAvailable && window.MindFlowOllamaBridge) {
         console.log('Using extension for getting models');
         const models = await window.MindFlowOllamaBridge.getModels(this.baseUrl);
         return models;
@@ -190,7 +190,7 @@ export class OllamaService {
       
       // 拡張機能の初期化を待つ
       const extensionAvailable = await this.waitForExtension();
-      if (extensionAvailable) {
+      if (extensionAvailable && window.MindFlowOllamaBridge) {
         console.log('🔄 Using extension for text generation');
         console.log('📤 Extension request details:', {
           url: `${this.baseUrl}/api/generate`,

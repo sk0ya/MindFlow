@@ -289,7 +289,7 @@ export const saveBlobWithDialog = async (blob: Blob, defaultFilename: string): P
   // File System Access APIが利用可能かチェック
   if ('showSaveFilePicker' in window) {
     try {
-      const fileHandle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<unknown> }).showSaveFilePicker({
+      const fileHandle = await (window as unknown as { showSaveFilePicker: (options: unknown) => Promise<{ createWritable: () => Promise<{ write: (data: unknown) => Promise<void>; close: () => Promise<void> }> }> }).showSaveFilePicker({
         suggestedName: defaultFilename,
         types: [
           {

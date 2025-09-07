@@ -83,8 +83,8 @@ const AISidebar: React.FC = () => {
   useEffect(() => {
     const checkExtension = () => {
       const isAvailable = typeof window !== 'undefined' && 
-                         window.MindFlowOllamaBridge && 
-                         window.MindFlowOllamaBridge.available;
+                         !!window.MindFlowOllamaBridge && 
+                         window.MindFlowOllamaBridge.available === true;
       setExtensionAvailable(isAvailable);
     };
     

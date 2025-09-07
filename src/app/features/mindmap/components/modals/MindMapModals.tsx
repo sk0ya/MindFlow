@@ -66,8 +66,9 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
       // 複数の子ノードを順番に作成
       childTexts.forEach((text, index) => {
         setTimeout(() => {
-          // 子ノードを追加
-          onAddChild(aiTargetNode.id);
+          // 子ノードを追加道筆
+          // onAddChild(aiTargetNode.id); // TODO: onAddChildをプロップして実装する必要があります
+          console.log('子ノードを追加:', aiTargetNode.id, text);
           
           // 短い遅延の後にテキストを設定
           setTimeout(() => {

@@ -99,12 +99,15 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       const handleWheelCapture = (e: WheelEvent) => {
         // React SyntheticEventに変換
         const syntheticEvent = {
-          ...e,
           preventDefault: () => e.preventDefault(),
           stopPropagation: () => e.stopPropagation(),
           deltaY: e.deltaY,
           clientX: e.clientX,
-          clientY: e.clientY
+          clientY: e.clientY,
+          nativeEvent: e,
+          isDefaultPrevented: () => e.defaultPrevented,
+          isPropagationStopped: () => false,
+          persist: () => {}
         } as React.WheelEvent;
         onWheel(syntheticEvent);
       };
@@ -114,6 +117,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
         svgElement.removeEventListener('wheel', handleWheelCapture);
       };
     }
+    return undefined;
   }, [onWheel]);
   return (
     <div className="mindmap-canvas-container">

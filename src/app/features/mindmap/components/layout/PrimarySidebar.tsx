@@ -74,7 +74,7 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             onChangeCategoryBulk={onChangeCategoryBulk}
             availableCategories={availableCategories}
             isCollapsed={false}
-            onToggleCollapse={undefined}
+            onToggleCollapse={() => {}}
           />
         );
       

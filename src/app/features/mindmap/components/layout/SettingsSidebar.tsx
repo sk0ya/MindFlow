@@ -7,17 +7,13 @@ interface SettingsSidebarProps {
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onShowKeyboardHelper?: () => void;
   onAutoLayout?: () => void;
-  onExport?: () => void;
-  onImport?: () => void;
 }
 
 const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   storageMode,
   onStorageModeChange,
   onShowKeyboardHelper,
-  onAutoLayout,
-  onExport,
-  onImport
+  onAutoLayout
 }) => {
   const { settings, updateSetting } = useMindMapStore();
 

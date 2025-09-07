@@ -8,6 +8,9 @@ export interface AppSettings {
   // フォント設定
   fontSize: number;
   fontFamily: string;
+  
+  // レイアウト設定
+  snapToGrid: boolean;
 }
 
 export interface SettingsSlice {
@@ -24,7 +27,8 @@ export interface SettingsSlice {
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   fontSize: 14,
-  fontFamily: 'system-ui'
+  fontFamily: 'system-ui',
+  snapToGrid: false
 };
 
 export const createSettingsSlice: StateCreator<
