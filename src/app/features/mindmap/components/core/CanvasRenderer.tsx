@@ -229,7 +229,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                       nodeWidth={nodeSize.width}
                       nodeHeight={nodeSize.height}
                       onLinkClick={(link) => {
-                        onShowLinkActionMenu(link, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                        // リンククリック時は何もしない（メニュー表示を無効化）
                       }}
                       onLinkContextMenu={(link, position) => {
                         onShowLinkActionMenu(link, selectedNode.id, position);

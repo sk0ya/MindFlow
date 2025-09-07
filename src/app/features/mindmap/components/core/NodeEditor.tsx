@@ -33,7 +33,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useMindMapStore();
 
-  // リンククリック時の処理（ノード選択 or メニュー表示）
+  // リンククリック時の処理（ノード選択のみ）
   const handleLinkClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -44,18 +44,8 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       return;
     }
     
-    // 既に選択されている場合は最初のリンクのアクションメニューを表示
-    if (onShowLinkActionMenu && node.links && node.links.length > 0) {
-      const firstLink = node.links[0];
-      const clientX = e.clientX || 0;
-      const clientY = e.clientY || 0;
-      
-      onShowLinkActionMenu(firstLink, node.id, {
-        x: clientX,
-        y: clientY
-      });
-    }
-  }, [isSelected, onSelectNode, onShowLinkActionMenu, node.id, node.links]);
+    // 既に選択されている場合は何もしない（メニュー表示を無効化）
+  }, [isSelected, onSelectNode, node.id]);
 
   const handleLinkContextMenu = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
