@@ -420,6 +420,26 @@ export const createNodeSlice: StateCreator<
     if (text.trim()) {
       get().updateNode(nodeId, { text: text.trim() });
     }
+    
+    // Apply auto layout if enabled
+    const { data } = get();
+    logger.debug('🔍 Auto layout check (finishEditing):', {
+      hasData: !!data,
+      hasSettings: !!data?.settings,
+      autoLayoutEnabled: data?.settings?.autoLayout,
+      settingsObject: data?.settings
+    });
+    if (data?.settings?.autoLayout) {
+      logger.debug('✅ Applying auto layout after finishEditing');
+      const applyAutoLayout = get().applyAutoLayout;
+      if (typeof applyAutoLayout === 'function') {
+        applyAutoLayout();
+      } else {
+        logger.error('❌ applyAutoLayout function not found');
+      }
+    } else {
+      logger.debug('❌ Auto layout disabled or settings missing');
+    }
   },
 
   cancelEditing: () => {
