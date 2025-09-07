@@ -270,18 +270,34 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     editText,
     updateNode,
     addChildNode: async (parentId: string, text?: string, autoEdit?: boolean) => {
-      const newNodeId = store.addChildNode(parentId, text);
-      if (autoEdit && newNodeId) {
-        startEditing(newNodeId);
+      try {
+        const newNodeId = store.addChildNode(parentId, text);
+        if (autoEdit && newNodeId) {
+          // 編集モードを開始する前に、少し待機してDOMが更新されるのを待つ
+          setTimeout(() => {
+            startEditing(newNodeId);
+          }, 50);
+        }
+        return newNodeId || null;
+      } catch (error) {
+        logger.error('子ノード追加に失敗:', error);
+        return null;
       }
-      return newNodeId || null;
     },
     addSiblingNode: async (nodeId: string, text?: string, autoEdit?: boolean) => {
-      const newNodeId = store.addSiblingNode(nodeId, text);
-      if (autoEdit && newNodeId) {
-        startEditing(newNodeId);
+      try {
+        const newNodeId = store.addSiblingNode(nodeId, text);
+        if (autoEdit && newNodeId) {
+          // 編集モードを開始する前に、少し待機してDOMが更新されるのを待つ
+          setTimeout(() => {
+            startEditing(newNodeId);
+          }, 50);
+        }
+        return newNodeId || null;
+      } catch (error) {
+        logger.error('兄弟ノード追加に失敗:', error);
+        return null;
       }
-      return newNodeId || null;
     },
     deleteNode,
     undo,

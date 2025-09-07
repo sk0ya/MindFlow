@@ -1,5 +1,5 @@
 import { cloneDeep } from '../utils/lodash-utils';
-import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS as COLOR_CONSTANTS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
+import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
 import { logger } from '../utils/logger';
 
 // Import shared types to ensure compatibility
@@ -72,7 +72,7 @@ export const MAX_FILE_SIZE = STORAGE.MAX_FILE_SIZE;
 export const ALLOWED_FILE_TYPES = VALIDATION.ALLOWED_FILE_TYPES;
 
 // カラーパレット（定数ファイルから参照）
-export const COLORS = COLOR_CONSTANTS.NODE_COLORS;
+export const NODE_COLORS = COLORS.NODE_COLORS;
 
 export const THEMES: Record<string, Theme> = {
   default: {
@@ -152,7 +152,7 @@ export const createInitialData = (): MindMapData => ({
 export const createNewNode = (
   text: string = '', 
   parentNode: MindMapNode | null = null, 
-  settings?: { defaultNodeColor?: string; fontSize?: number; fontFamily?: string }
+  settings?: { fontSize?: number; fontFamily?: string }
 ): MindMapNode => {
   return {
     id: generateId(),
@@ -161,7 +161,7 @@ export const createNewNode = (
     y: parentNode ? parentNode.y : COORDINATES.DEFAULT_CENTER_Y,
     fontSize: settings?.fontSize || (TYPOGRAPHY.DEFAULT_FONT_SIZE - 2), // 子ノードは少し小さく
     fontWeight: TYPOGRAPHY.DEFAULT_FONT_WEIGHT,
-    color: settings?.defaultNodeColor || COLORS.NODE_COLORS[0],
+    color: NODE_COLORS[0],
     children: [],
     attachments: [], // ファイル添付用
   };
@@ -304,7 +304,7 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
     } else if (isRootChild) {
       // ルートノードの子要素の場合、色が未設定なら順番に割り当て
       if (!node.color) {
-        node.color = COLORS[childIndex % COLORS.length];
+        node.color = NODE_COLORS[childIndex % NODE_COLORS.length];
       }
     } else if (!node.color && parentColor) {
       // 他の場合は親の色を継承
