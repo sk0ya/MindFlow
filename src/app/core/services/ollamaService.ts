@@ -304,15 +304,15 @@ export class OllamaService {
       let cleanedLine = line
         .replace(/^\d+[.)]\s*/, '') // "1." や "1)" を除去
         .replace(/^[-*•→▶]\s*/, '')  // 各種リスト記号を除去
-        .replace(/^[（\(]?\d+[）\)]\s*/, '') // "(1)" や "（1）" を除去
+        .replace(/^[（(]?\d+[）)]\s*/, '') // "(1)" や "（1）" を除去
         .trim();
       
       // 引用符、かっこ、コロンを除去
       cleanedLine = cleanedLine
         .replace(/^["'「『【〈]/, '')
         .replace(/["'」』】〉]$/, '')
-        .replace(/^[（\(]/, '')
-        .replace(/[）\)]$/, '')
+        .replace(/^[（(]/, '')
+        .replace(/[）)]$/, '')
         .replace(/:$/, '') // 末尾のコロンを除去
         .trim();
       

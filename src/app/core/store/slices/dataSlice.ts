@@ -87,7 +87,9 @@ export const createDataSlice: StateCreator<
         childrenCount: state.data.rootNode.children?.length || 0
       });
       
-      const layoutedRootNode = autoSelectLayout(state.data.rootNode);
+      const layoutedRootNode = autoSelectLayout(state.data.rootNode, {
+        globalFontSize: state.settings.fontSize
+      });
       
       if (!layoutedRootNode) {
         logger.error('❌ Auto layout: layoutedRootNode is null or undefined');

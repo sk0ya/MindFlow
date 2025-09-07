@@ -30,6 +30,7 @@ export interface MindMapNode {
   
   // Optional visual properties
   fontSize?: number;
+  fontFamily?: string;
   fontWeight?: string;
   fontStyle?: string;
   color?: string;

@@ -6,12 +6,55 @@ interface NodeSize {
   imageHeight: number;
 }
 
+// Canvas要素を使用してテキストの実際の幅を測定するためのキャッシュ
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureContext: CanvasRenderingContext2D | null = null;
+
 /**
- * テキストの表示幅を計算（全角文字を考慮）
+ * Canvas APIを使用してテキストの実際の幅を測定
+ * @param text 計算対象のテキスト
+ * @param fontSize フォントサイズ（px）
+ * @param fontFamily フォントファミリー
+ * @param fontWeight フォントウェイト
+ * @param fontStyle フォントスタイル
+ * @returns 実際のピクセル幅
+ */
+function measureTextWidth(
+  text: string, 
+  fontSize: number = 14, 
+  fontFamily: string = 'system-ui, -apple-system, sans-serif',
+  fontWeight: string = 'normal',
+  fontStyle: string = 'normal'
+): number {
+  // 空文字の場合は0を返す
+  if (!text) return 0;
+  
+  // Canvasコンテキストを初期化（一度だけ）
+  if (!measureCanvas || !measureContext) {
+    measureCanvas = document.createElement('canvas');
+    measureContext = measureCanvas.getContext('2d');
+    
+    if (!measureContext) {
+      // Canvas APIが使用できない場合は従来の文字数ベースの計算にフォールバック
+      return calculateTextWidthFallback(text) * fontSize * 0.6;
+    }
+  }
+  
+  // フォント設定を適用
+  const fontString = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+  measureContext.font = fontString;
+  
+  // テキストの実際の幅を測定
+  const metrics = measureContext.measureText(text);
+  return metrics.width;
+}
+
+/**
+ * テキストの表示幅を計算（全角文字を考慮） - フォールバック用
  * @param text 計算対象のテキスト
  * @returns 表示幅（半角文字1文字を1とした単位）
  */
-function calculateTextWidth(text: string): number {
+function calculateTextWidthFallback(text: string): number {
   let width = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -71,27 +114,40 @@ export function calculateNodeSize(
   // 編集中は editText の長さ、非編集時は表示用の長さを使用
   const effectiveText = isEditing && editText !== undefined ? editText : node.text;
   
-  let displayTextWidth: number;
+  // フォント設定を取得
+  const fontSize = globalFontSize || node.fontSize || 14;
+  const fontFamily = node.fontFamily || 'system-ui, -apple-system, sans-serif';
+  const fontWeight = node.fontWeight || 'normal';
+  const fontStyle = node.fontStyle || 'normal';
+  
+  // Canvas APIを使用して実際のテキスト幅を測定
+  let actualTextWidth: number;
   if (isEditing) {
-    // 編集中は実際のテキスト幅を計算し、最小10文字分の幅を確保
-    displayTextWidth = Math.max(calculateTextWidth(effectiveText), 10);
+    // 編集中は実際のテキスト幅を計算し、最小幅を確保
+    const measuredWidth = measureTextWidth(effectiveText, fontSize, fontFamily, fontWeight, fontStyle);
+    const minWidth = fontSize * 8; // 最小8文字分の幅
+    actualTextWidth = Math.max(measuredWidth, minWidth);
   } else {
     // 非編集時は実際のテキスト幅を計算
-    displayTextWidth = Math.max(calculateTextWidth(node.text), 5); // 最小5文字分の幅
+    const measuredWidth = measureTextWidth(node.text, fontSize, fontFamily, fontWeight, fontStyle);
+    const minWidth = fontSize * 4; // 最小4文字分の幅
+    actualTextWidth = Math.max(measuredWidth, minWidth);
   }
   
   // 添付ファイルクリップアイコン用の余白を追加
   const hasAttachments = node.attachments && node.attachments.length > 0;
   const clipIconPadding = hasAttachments ? 40 : 0; // クリップアイコンと個数表示のための余白
   
-  // フォントサイズを考慮した幅計算
-  const fontSize = globalFontSize || node.fontSize || 14;
-  const fontScale = fontSize / 14; // 14pxを基準とした比率
-  const textBasedWidth = Math.max(displayTextWidth * 8 * fontScale, 20) + clipIconPadding;
+  // パディングを追加（左右に余白を持たせる）
+  const horizontalPadding = fontSize * 1.5; // フォントサイズに比例したパディング
+  const textBasedWidth = Math.max(actualTextWidth + horizontalPadding + clipIconPadding, fontSize * 2);
+  
+  // ノードの高さもフォントサイズに応じて調整
+  const baseNodeHeight = Math.max(fontSize * 2.5, 30); // フォントサイズに比例した最小高さ
   
   // 画像がある場合は画像幅とテキスト幅の大きい方を使用（画像の左右マージン10px追加）
   const nodeWidth = hasImages ? Math.max(textBasedWidth, imageWidth + 10) : textBasedWidth;
-  const nodeHeight = (hasImages ? 35 : 30) + imageHeight;
+  const nodeHeight = baseNodeHeight + imageHeight;
 
   return {
     width: nodeWidth,

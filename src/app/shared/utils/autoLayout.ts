@@ -10,14 +10,15 @@ interface LayoutOptions {
   centerY?: number;
   levelSpacing?: number;
   nodeSpacing?: number;
+  globalFontSize?: number;
 }
 
 /**
  * 親ノードの右端から子ノードの左端までの距離に基づいて子ノードのX座標を計算（非ルート）
  */
-const getChildNodeXFromParentEdge = (parentNode: MindMapNode, childNode: MindMapNode): number => {
-  const parentNodeSize = calculateNodeSize(parentNode);
-  const childNodeSize = calculateNodeSize(childNode);
+const getChildNodeXFromParentEdge = (parentNode: MindMapNode, childNode: MindMapNode, globalFontSize?: number): number => {
+  const parentNodeSize = calculateNodeSize(parentNode, undefined, false, globalFontSize);
+  const childNodeSize = calculateNodeSize(childNode, undefined, false, globalFontSize);
   
   // 親ノードの右端から子ノードの左端までの距離を計算
   const edgeToEdgeDistance = getDynamicNodeSpacing(parentNodeSize, childNodeSize, false);
@@ -27,9 +28,9 @@ const getChildNodeXFromParentEdge = (parentNode: MindMapNode, childNode: MindMap
 /**
  * ルートノードの右端から子ノードの左端までの距離に基づいて子ノードのX座標を計算
  */
-const getChildNodeXFromRootEdge = (rootNode: MindMapNode, childNode: MindMapNode): number => {
-  const rootNodeSize = calculateNodeSize(rootNode);
-  const childNodeSize = calculateNodeSize(childNode);
+const getChildNodeXFromRootEdge = (rootNode: MindMapNode, childNode: MindMapNode, globalFontSize?: number): number => {
+  const rootNodeSize = calculateNodeSize(rootNode, undefined, false, globalFontSize);
+  const childNodeSize = calculateNodeSize(childNode, undefined, false, globalFontSize);
   
   // ルートノードの右端から子ノードの左端までの距離を計算
   const edgeToEdgeDistance = getDynamicNodeSpacing(rootNodeSize, childNodeSize, true);
@@ -46,7 +47,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     centerX = COORDINATES.DEFAULT_CENTER_X,
     centerY = COORDINATES.DEFAULT_CENTER_Y,
     levelSpacing = LAYOUT.LEVEL_SPACING,
-    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN // 最小間隔を使用
+    nodeSpacing = LAYOUT.VERTICAL_SPACING_MIN, // 最小間隔を使用
+    globalFontSize
   } = options;
 
   const newRootNode = cloneDeep(rootNode);
@@ -58,7 +60,7 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
   // サブツリーの実際の高さを計算（画像サイズを考慮した適応的間隔）
   const calculateSubtreeActualHeight = (node: MindMapNode): number => {
     if (node.collapsed || !node.children || node.children.length === 0) {
-      const nodeSize = calculateNodeSize(node);
+      const nodeSize = calculateNodeSize(node, undefined, false, globalFontSize);
       return nodeSize.height;
     }
     
@@ -70,8 +72,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       let spacing = 0;
       if (index > 0) {
         const prevChild = node.children[index - 1];
-        const prevChildSize = calculateNodeSize(prevChild);
-        const currentChildSize = calculateNodeSize(child);
+        const prevChildSize = calculateNodeSize(prevChild, undefined, false, globalFontSize);
+        const currentChildSize = calculateNodeSize(child, undefined, false, globalFontSize);
         
         // 基本間隔に画像の高さに応じた追加間隔を加える
         spacing = nodeSpacing;
@@ -84,7 +86,7 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     }, 0);
     
     // 現在のノードの高さと子ノード群の高さの最大値
-    const nodeSize = calculateNodeSize(node);
+    const nodeSize = calculateNodeSize(node, undefined, false, globalFontSize);
     return Math.max(nodeSize.height, childrenTotalHeight);
   };
 
@@ -104,10 +106,10 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     if (parent) {
       if (depth === 1) {
         // ルートノードの直接の子要素: ルートノードの右端から子ノードの左端まで
-        node.x = getChildNodeXFromRootEdge(newRootNode, node);
+        node.x = getChildNodeXFromRootEdge(newRootNode, node, globalFontSize);
       } else {
         // それ以外: 親ノードの右端から子ノードの左端まで
-        node.x = getChildNodeXFromParentEdge(parent, node);
+        node.x = getChildNodeXFromParentEdge(parent, node, globalFontSize);
       }
     } else {
       // フォールバック: 従来の深度ベースの配置
@@ -128,8 +130,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         let spacing = 0;
         if (index > 0) {
           const prevChild = childrenWithHeights[index - 1];
-          const prevChildSize = calculateNodeSize(prevChild.node);
-          const currentChildSize = calculateNodeSize(child.node);
+          const prevChildSize = calculateNodeSize(prevChild.node, undefined, false, globalFontSize);
+          const currentChildSize = calculateNodeSize(child.node, undefined, false, globalFontSize);
           
           // 基本間隔に画像の高さに応じた追加間隔を加える
           spacing = nodeSpacing;
@@ -152,8 +154,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         // 次の子ノードのためのオフセット更新（画像サイズに応じた間隔）
         currentOffset += childInfo.actualHeight;
         if (index < childrenWithHeights.length - 1) {
-          const currentChildSize = calculateNodeSize(childInfo.node);
-          const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node);
+          const currentChildSize = calculateNodeSize(childInfo.node, undefined, false, globalFontSize);
+          const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node, undefined, false, globalFontSize);
           
           // 基本間隔に画像の高さに応じた追加間隔を加える
           let spacing = nodeSpacing;
@@ -179,8 +181,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       let spacing = 0;
       if (index > 0) {
         const prevChild = childrenWithHeights[index - 1];
-        const prevChildSize = calculateNodeSize(prevChild.node);
-        const currentChildSize = calculateNodeSize(child.node);
+        const prevChildSize = calculateNodeSize(prevChild.node, undefined, false, globalFontSize);
+        const currentChildSize = calculateNodeSize(child.node, undefined, false, globalFontSize);
         
         // 基本間隔に画像の高さに応じた追加間隔を加える
         spacing = nodeSpacing;
@@ -203,8 +205,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       // 次の子ノードのためのオフセット更新（画像サイズに応じた間隔）
       currentOffset += childInfo.actualHeight;
       if (index < childrenWithHeights.length - 1) {
-        const currentChildSize = calculateNodeSize(childInfo.node);
-        const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node);
+        const currentChildSize = calculateNodeSize(childInfo.node, undefined, false, globalFontSize);
+        const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node, undefined, false, globalFontSize);
         
         // 基本間隔に画像の高さに応じた追加間隔を加える
         let spacing = nodeSpacing;
