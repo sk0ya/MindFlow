@@ -211,7 +211,6 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
       prevProps.node.fontWeight !== nextProps.node.fontWeight ||
       prevProps.node.color !== nextProps.node.color ||
       prevProps.node.collapsed !== nextProps.node.collapsed ||
-      prevProps.node.imageSize !== nextProps.node.imageSize ||
       prevProps.node.customImageWidth !== nextProps.node.customImageWidth ||
       prevProps.node.customImageHeight !== nextProps.node.customImageHeight) {
     return false;

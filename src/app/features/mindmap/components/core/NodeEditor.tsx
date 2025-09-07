@@ -78,15 +78,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
         return node.customImageHeight;
       }
       
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': 70,
-        'medium': 105,
-        'large': 140,
-        'extra-large': 175
-      };
-      
-      return sizeMap[imageSize];
+      return 105;
     };
     
     const actualImageHeight = getActualImageHeight();
@@ -181,15 +173,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       return node.customImageHeight;
     }
     
-    const imageSize = node.imageSize || 'medium';
-    const sizeMap = {
-      'small': 70,
-      'medium': 105,
-      'large': 140,
-      'extra-large': 175
-    };
-    
-    return sizeMap[imageSize];
+    return 105;
   };
   
   const actualImageHeight = getActualImageHeight();

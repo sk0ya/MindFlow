@@ -126,17 +126,9 @@ export function calculateNodeSize(
       imageWidth = node.customImageWidth;
       imageHeight = node.customImageHeight;
     } else {
-      // ノードの画像サイズ設定を取得
-      const imageSize = node.imageSize || 'medium';
-      const sizeMap = {
-        'small': { width: 100, height: 70 },
-        'medium': { width: 150, height: 105 },
-        'large': { width: 200, height: 140 },
-        'extra-large': { width: 250, height: 175 }
-      };
-      const dimensions = sizeMap[imageSize];
-      imageWidth = dimensions.width;
-      imageHeight = dimensions.height;
+      // デフォルトの画像サイズを使用
+      imageWidth = 150;
+      imageHeight = 105;
     }
   }
   

@@ -239,8 +239,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     
     onUpdateNode(node.id, {
       customImageWidth: Math.round(newWidth),
-      customImageHeight: Math.round(newHeight),
-      imageSize: undefined // カスタムサイズ使用時はプリセットをクリア
+      customImageHeight: Math.round(newHeight)
     });
   }, [isResizing, onUpdateNode, svgRef, zoom, pan, resizeStartPos, resizeStartSize, originalAspectRatio, node.id]);
 
@@ -330,16 +329,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   // カスタムサイズを優先
   const imageDimensions = node.customImageWidth && node.customImageHeight
     ? { width: node.customImageWidth, height: node.customImageHeight }
-    : (() => {
-        const imageSize = node.imageSize || 'medium';
-        const sizeMap = {
-          'small': { width: 100, height: 70 },
-          'medium': { width: 150, height: 105 },
-          'large': { width: 200, height: 140 },
-          'extra-large': { width: 250, height: 175 }
-        };
-        return sizeMap[imageSize];
-      })();
+    : { width: 150, height: 105 };
 
   return (
     <>

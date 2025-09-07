@@ -4,8 +4,6 @@ interface NodeCustomizations {
   fontSize: string;
   fontWeight: string;
   fontStyle: string;
-  borderStyle: string;
-  borderWidth: string;
 }
 
 interface NodeFontPanelProps {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { MindMapNode } from '@shared/types';
 import NodeFontPanel from './NodeFontPanel';
-import NodeBorderPanel from './NodeBorderPanel';
 import NodePresetPanel from './NodePresetPanel';
 import NodeCustomizationStyles from './NodeCustomizationStyles';
 
@@ -16,8 +15,6 @@ interface NodeCustomizations {
   fontSize: string;
   fontWeight: string;
   fontStyle: string;
-  borderStyle: string;
-  borderWidth: string;
 }
 
 const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
@@ -29,9 +26,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
   const [customizations, setCustomizations] = useState<NodeCustomizations>({
     fontSize: '14px',
     fontWeight: 'bold',
-    fontStyle: 'normal',
-    borderStyle: 'solid',
-    borderWidth: '2px'
+    fontStyle: 'normal'
   });
 
   // 選択されたノードの現在の設定を反映
@@ -40,9 +35,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
       setCustomizations({
         fontSize: selectedNode.fontSize ? `${selectedNode.fontSize}px` : '14px',
         fontWeight: selectedNode.fontWeight || 'bold',
-        fontStyle: selectedNode.fontStyle || 'normal',
-        borderStyle: selectedNode.borderStyle || 'solid',
-        borderWidth: selectedNode.borderWidth ? `${selectedNode.borderWidth}px` : '2px'
+        fontStyle: selectedNode.fontStyle || 'normal'
       });
     }
   }, [selectedNode]);
@@ -58,8 +51,6 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
       // 数値型のプロパティは適切に変換
       if (property === 'fontSize') {
         updateData.fontSize = parseInt(value, 10);
-      } else if (property === 'borderWidth') {
-        updateData.borderWidth = parseInt(value, 10);
       } else {
         updateData[property] = value;
       }
@@ -95,10 +86,6 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
           onCustomizationChange={handleChange}
         />
         
-        <NodeBorderPanel 
-          customizations={customizations}
-          onCustomizationChange={handleChange}
-        />
         
         <NodePresetPanel 
           selectedNode={selectedNode}

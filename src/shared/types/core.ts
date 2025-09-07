@@ -34,16 +34,12 @@ export interface MindMapNode {
   fontWeight?: string;
   fontStyle?: string;
   color?: string;
-  borderStyle?: string;
-  borderWidth?: number;
-  backgroundColor?: string;
   
   // Functional properties  
   collapsed?: boolean;
   attachments?: FileAttachment[];
   
   // Image display properties
-  imageSize?: 'small' | 'medium' | 'large' | 'extra-large';
   customImageWidth?: number;
   customImageHeight?: number;
   

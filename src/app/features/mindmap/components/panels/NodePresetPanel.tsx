@@ -5,8 +5,6 @@ interface NodeCustomizations {
   fontSize: string;
   fontWeight: string;
   fontStyle: string;
-  borderStyle: string;
-  borderWidth: string;
 }
 
 interface NodePresetPanelProps {
@@ -34,16 +32,12 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
             {
               fontSize: 14,
               fontWeight: 'bold',
-              fontStyle: 'normal',
-              borderStyle: 'solid',
-              borderWidth: 2
+              fontStyle: 'normal'
             },
             {
               fontSize: '14px',
               fontWeight: 'bold',
-              fontStyle: 'normal',
-              borderStyle: 'solid',
-              borderWidth: '2px'
+              fontStyle: 'normal'
             }
           )}
           className="preset-btn"
@@ -55,16 +49,12 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
             {
               fontSize: 16,
               fontWeight: 'bold',
-              fontStyle: 'normal',
-              borderStyle: 'solid',
-              borderWidth: 3
+              fontStyle: 'normal'
             },
             {
               fontSize: '16px',
               fontWeight: 'bold',
-              fontStyle: 'normal',
-              borderStyle: 'solid',
-              borderWidth: '3px'
+              fontStyle: 'normal'
             }
           )}
           className="preset-btn"
@@ -76,16 +66,12 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
             {
               fontSize: 14,
               fontWeight: 'normal',
-              fontStyle: 'italic',
-              borderStyle: 'dashed',
-              borderWidth: 2
+              fontStyle: 'italic'
             },
             {
               fontSize: '14px',
               fontWeight: 'normal',
-              fontStyle: 'italic',
-              borderStyle: 'dashed',
-              borderWidth: '2px'
+              fontStyle: 'italic'
             }
           )}
           className="preset-btn"
