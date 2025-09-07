@@ -3,14 +3,20 @@ import React from 'react';
 const ContextMenuStyles: React.FC = () => (
   <style>{`
     .context-menu {
-      background: white;
+      background: var(--color-bg-secondary, white);
       border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      border: 1px solid #e1e5e9;
+      border: 1px solid var(--color-border, #e1e5e9);
       min-width: 200px;
       overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       animation: menuSlideIn 0.15s ease-out;
+    }
+
+    [data-theme="dark"] .context-menu {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     }
 
     @keyframes menuSlideIn {
@@ -26,19 +32,28 @@ const ContextMenuStyles: React.FC = () => (
 
     .menu-header {
       padding: 12px 16px;
-      background: #f8f9fa;
-      border-bottom: 1px solid #e1e5e9;
+      background: var(--color-bg-tertiary, #f8f9fa);
+      border-bottom: 1px solid var(--color-border, #e1e5e9);
+    }
+
+    [data-theme="dark"] .menu-header {
+      background: #333;
+      border-bottom: 1px solid #555;
     }
 
     .node-title {
       font-size: 14px;
       font-weight: 600;
-      color: #333;
+      color: var(--color-text-primary, #333);
       display: block;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 180px;
+    }
+
+    [data-theme="dark"] .node-title {
+      color: #e0e0e0;
     }
 
     .menu-items {
@@ -52,7 +67,11 @@ const ContextMenuStyles: React.FC = () => (
     }
 
     .menu-item:hover:not(.disabled) {
-      background: #f8f9ff;
+      background: var(--color-bg-hover, #f8f9ff);
+    }
+
+    [data-theme="dark"] .menu-item:hover:not(.disabled) {
+      background: #404040;
     }
 
     .menu-item.disabled {
@@ -64,8 +83,16 @@ const ContextMenuStyles: React.FC = () => (
       background: #fff5f5;
     }
 
+    [data-theme="dark"] .menu-item.danger:hover:not(.disabled) {
+      background: #4a2c2c;
+    }
+
     .menu-item.danger .menu-label {
       color: #ea4335;
+    }
+
+    [data-theme="dark"] .menu-item.danger .menu-label {
+      color: #ff6b6b;
     }
 
     .menu-item-content {
@@ -84,28 +111,45 @@ const ContextMenuStyles: React.FC = () => (
     .menu-label {
       flex: 1;
       font-size: 14px;
-      color: #333;
+      color: var(--color-text-primary, #333);
+    }
+
+    [data-theme="dark"] .menu-label {
+      color: #e0e0e0;
     }
 
     .menu-shortcut {
       font-size: 12px;
-      color: #666;
-      background: #f0f0f0;
+      color: var(--color-text-secondary, #666);
+      background: var(--color-bg-tertiary, #f0f0f0);
       padding: 2px 6px;
       border-radius: 3px;
       font-family: monospace;
     }
 
+    [data-theme="dark"] .menu-shortcut {
+      color: #aaa;
+      background: #444;
+    }
+
     .submenu-arrow {
       font-size: 10px;
-      color: #666;
+      color: var(--color-text-secondary, #666);
       margin-left: auto;
+    }
+
+    [data-theme="dark"] .submenu-arrow {
+      color: #aaa;
     }
 
     .menu-separator {
       height: 1px;
-      background: #e1e5e9;
+      background: var(--color-border, #e1e5e9);
       margin: 4px 0;
+    }
+
+    [data-theme="dark"] .menu-separator {
+      background: #555;
     }
 
     .submenu-parent:hover .submenu {
@@ -117,12 +161,18 @@ const ContextMenuStyles: React.FC = () => (
       position: absolute;
       left: 100%;
       top: 0;
-      background: white;
+      background: var(--color-bg-secondary, white);
       border-radius: 6px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      border: 1px solid #e1e5e9;
+      border: 1px solid var(--color-border, #e1e5e9);
       min-width: 120px;
       z-index: 3000;
+    }
+
+    [data-theme="dark"] .submenu {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
     .submenu-item {
@@ -135,7 +185,11 @@ const ContextMenuStyles: React.FC = () => (
     }
 
     .submenu-item:hover {
-      background: #f8f9ff;
+      background: var(--color-bg-hover, #f8f9ff);
+    }
+
+    [data-theme="dark"] .submenu-item:hover {
+      background: #404040;
     }
 
     .submenu-item:first-child {
@@ -155,7 +209,11 @@ const ContextMenuStyles: React.FC = () => (
 
     .submenu-item span {
       font-size: 13px;
-      color: #333;
+      color: var(--color-text-primary, #333);
+    }
+
+    [data-theme="dark"] .submenu-item span {
+      color: #e0e0e0;
     }
 
     /* レスポンシブ対応 */
