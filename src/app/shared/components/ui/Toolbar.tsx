@@ -20,8 +20,6 @@ interface ToolbarProps {
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
-  onExport?: () => void;
-  onImport?: () => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -38,9 +36,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   storageMode = 'local',
   onStorageModeChange,
   onToggleNotesPanel,
-  showNotesPanel = false,
-  onExport,
-  onImport
+  showNotesPanel = false
 }) => {
   return (
     <div className="toolbar">
@@ -62,8 +58,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         onAutoLayout={onAutoLayout}
         onToggleNotesPanel={onToggleNotesPanel}
         showNotesPanel={showNotesPanel}
-        onExport={onExport}
-        onImport={onImport}
       />
 
       {onStorageModeChange && (

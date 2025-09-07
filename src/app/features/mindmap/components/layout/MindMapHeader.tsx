@@ -17,8 +17,6 @@ interface MindMapHeaderProps {
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
-  onExport?: () => void;
-  onImport?: () => void;
 }
 
 const MindMapHeader: React.FC<MindMapHeaderProps> = ({
@@ -35,9 +33,7 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   storageMode = 'local',
   onStorageModeChange,
   onToggleNotesPanel,
-  showNotesPanel = false,
-  onExport,
-  onImport
+  showNotesPanel = false
 }) => {
   return (
     <Toolbar
@@ -55,8 +51,6 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       onStorageModeChange={onStorageModeChange}
       onToggleNotesPanel={onToggleNotesPanel}
       showNotesPanel={showNotesPanel}
-      onExport={onExport}
-      onImport={onImport}
     />
   );
 };

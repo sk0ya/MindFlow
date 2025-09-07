@@ -3,6 +3,8 @@ import MindMapSidebar from './MindMapSidebar';
 import NotesSidebar from './NotesSidebar';
 import SettingsSidebar from './SettingsSidebar';
 import AISidebar from './AISidebar';
+import ImportSidebar from './ImportSidebar';
+import ExportSidebar from './ExportSidebar';
 import type { MindMapData } from '../../../../shared/types';
 import './PrimarySidebar.css';
 
@@ -26,6 +28,8 @@ interface PrimarySidebarProps {
   onAutoLayout?: () => void;
   onExport?: () => void;
   onImport?: () => void;
+  // Current map data for export
+  currentMapData?: MindMapData | null;
 }
 
 const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
@@ -47,7 +51,9 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   onShowKeyboardHelper,
   onAutoLayout,
   onExport,
-  onImport
+  onImport,
+  // Current map data
+  currentMapData
 }) => {
   if (!isVisible || !activeView) {
     return null;
@@ -75,6 +81,12 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       case 'notes':
         return <NotesSidebar />;
       
+      case 'import':
+        return <ImportSidebar onImport={onImport} />;
+      
+      case 'export':
+        return <ExportSidebar currentMap={currentMapData} onExport={onExport} />;
+      
       case 'ai':
         return <AISidebar />;
       
@@ -85,8 +97,6 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             onStorageModeChange={onStorageModeChange}
             onShowKeyboardHelper={onShowKeyboardHelper}
             onAutoLayout={onAutoLayout}
-            onExport={onExport}
-            onImport={onImport}
           />
         );
       

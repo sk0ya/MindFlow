@@ -134,6 +134,32 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         </div>
       </div>
 
+      <div className="settings-section">
+        <h3 className="settings-section-title">その他</h3>
+        <div className="settings-section-content">
+          <div className="settings-action-group">
+            {onAutoLayout && (
+              <button 
+                className="settings-button"
+                onClick={onAutoLayout}
+              >
+                <span className="settings-button-icon">📐</span>
+                自動整列
+              </button>
+            )}
+            {onShowKeyboardHelper && (
+              <button 
+                className="settings-button"
+                onClick={onShowKeyboardHelper}
+              >
+                <span className="settings-button-icon">⌨️</span>
+                キーボードショートカット
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <style>{`
         .settings-sidebar {
           padding: 16px;
@@ -273,6 +299,12 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
 
         .settings-button-icon {
           margin-right: 8px;
+        }
+
+        .settings-action-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
       `}</style>
     </div>

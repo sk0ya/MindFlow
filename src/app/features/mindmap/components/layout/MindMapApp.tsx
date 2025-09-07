@@ -860,6 +860,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         }}
         onExport={handleExport}
         onImport={handleImport}
+        currentMapData={data}
       />
 
       <div className={`mindmap-main-content ${activeView ? 'with-sidebar' : ''}`}>
@@ -885,8 +886,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onStorageModeChange={onModeChange}
           onToggleNotesPanel={() => store.toggleNotesPanel()}
           showNotesPanel={ui.showNotesPanel}
-          onExport={handleExport}
-          onImport={handleImport}
         />
         
         <div className="workspace-container">

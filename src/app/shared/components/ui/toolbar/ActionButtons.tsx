@@ -12,8 +12,6 @@ interface ActionButtonsProps {
   onAutoLayout?: () => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
-  onExport?: () => void;
-  onImport?: () => void;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -26,9 +24,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onShowShortcutHelper,
   onAutoLayout,
   onToggleNotesPanel,
-  showNotesPanel = false,
-  onExport,
-  onImport
+  showNotesPanel = false
 }) => {
 
   return (
@@ -93,27 +89,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           </ShortcutTooltip>
         )}
         
-        {onImport && (
-          <ShortcutTooltip shortcut="Ctrl+I" description="インポート">
-            <button 
-              className="toolbar-btn import"
-              onClick={onImport}
-            >
-              📥
-            </button>
-          </ShortcutTooltip>
-        )}
-        
-        {onExport && (
-          <ShortcutTooltip shortcut="Ctrl+E" description="エクスポート">
-            <button 
-              className="toolbar-btn export"
-              onClick={onExport}
-            >
-              📤
-            </button>
-          </ShortcutTooltip>
-        )}
         
         <ShortcutTooltip shortcut="?" description="キーボードショートカット">
           <button 

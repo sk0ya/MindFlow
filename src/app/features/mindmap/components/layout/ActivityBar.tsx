@@ -28,6 +28,18 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
       isActive: activeView === 'notes'
     },
     {
+      id: 'import',
+      icon: '📥',
+      label: 'インポート',
+      isActive: activeView === 'import'
+    },
+    {
+      id: 'export',
+      icon: '📤',
+      label: 'エクスポート',
+      isActive: activeView === 'export'
+    },
+    {
       id: 'ai',
       icon: '🤖',
       label: 'AI設定',
