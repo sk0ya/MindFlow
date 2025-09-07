@@ -25,27 +25,6 @@ export const createCloudModeConfig = (authAdapter: AuthAdapter): StorageConfig =
 });
 
 
-/**
- * パフォーマンス重視設定
- * 自動保存を無効にして手動保存のみ
- */
-export const performanceModeConfig: StorageConfig = {
-  mode: 'local',
-  autoSave: false // 手動保存のみ
-};
-
-/**
- * 開発用設定
- * 頻繁な同期とデバッグ情報
- */
-export const developmentModeConfig = (authAdapter: AuthAdapter): StorageConfig => ({
-  mode: 'cloud',
-  authAdapter,
-  autoSave: true,
-  syncInterval: 10000, // 10秒間隔（開発用）
-  retryAttempts: 1,
-  enableOfflineMode: true
-});
 
 /**
  * 使用例:

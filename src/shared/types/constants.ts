@@ -80,31 +80,6 @@ export const TYPOGRAPHY_CONSTANTS = {
   }
 } as const;
 
-// Color palette
-export const COLOR_CONSTANTS = {
-  NODE_COLORS: [
-    '#3498db', // Blue
-    '#e74c3c', // Red  
-    '#2ecc71', // Green
-    '#f39c12', // Orange
-    '#9b59b6', // Purple
-    '#1abc9c', // Teal
-    '#34495e', // Dark Gray
-    '#e67e22', // Dark Orange
-    '#95a5a6', // Light Gray
-    '#f1c40f'  // Yellow
-  ],
-  BACKGROUNDS: {
-    PRIMARY: '#ffffff',
-    SECONDARY: '#f8f9fa',
-    ACCENT: '#e3f2fd'
-  },
-  BORDERS: {
-    DEFAULT: '#ddd',
-    ACTIVE: '#3498db',
-    ERROR: '#e74c3c'
-  }
-} as const;
 
 // Application defaults
 export const DEFAULT_VALUES = {
