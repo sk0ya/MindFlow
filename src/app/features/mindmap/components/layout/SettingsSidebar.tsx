@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface SettingsSidebarProps {
@@ -19,12 +19,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   onExport,
   onImport
 }) => {
-  const { settings, updateSetting, loadSettingsFromStorage } = useMindMapStore();
-
-  // 初回ロード時に設定をlocalStorageから読み込み
-  useEffect(() => {
-    loadSettingsFromStorage();
-  }, [loadSettingsFromStorage]);
+  const { settings, updateSetting } = useMindMapStore();
 
   const handleSettingChange = <K extends keyof typeof settings>(key: K, value: typeof settings[K]) => {
     updateSetting(key, value);

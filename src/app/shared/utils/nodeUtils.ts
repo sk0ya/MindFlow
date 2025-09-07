@@ -11,6 +11,34 @@ let measureCanvas: HTMLCanvasElement | null = null;
 let measureContext: CanvasRenderingContext2D | null = null;
 
 /**
+ * 測定用Canvasコンテキストを確実に初期化する
+ */
+function ensureMeasureContext(): CanvasRenderingContext2D | null {
+  if (!measureCanvas || !measureContext) {
+    measureCanvas = document.createElement('canvas');
+    // DOMの影響を受けないようにCanvasを完全に隠し、配置しない
+    measureCanvas.style.position = 'absolute';
+    measureCanvas.style.left = '-9999px';
+    measureCanvas.style.top = '-9999px';
+    measureCanvas.style.visibility = 'hidden';
+    measureCanvas.width = 1;
+    measureCanvas.height = 1;
+    
+    measureContext = measureCanvas.getContext('2d');
+    
+    if (!measureContext) {
+      return null;
+    }
+    
+    // デフォルトのフォント設定でコンテキストをリセット
+    measureContext.font = '14px system-ui, -apple-system, sans-serif';
+    measureContext.textBaseline = 'alphabetic';
+    measureContext.textAlign = 'left';
+  }
+  return measureContext;
+}
+
+/**
  * Canvas APIを使用してテキストの実際の幅を測定
  * @param text 計算対象のテキスト
  * @param fontSize フォントサイズ（px）
@@ -29,23 +57,24 @@ function measureTextWidth(
   // 空文字の場合は0を返す
   if (!text) return 0;
   
-  // Canvasコンテキストを初期化（一度だけ）
-  if (!measureCanvas || !measureContext) {
-    measureCanvas = document.createElement('canvas');
-    measureContext = measureCanvas.getContext('2d');
-    
-    if (!measureContext) {
-      // Canvas APIが使用できない場合は従来の文字数ベースの計算にフォールバック
-      return calculateTextWidthFallback(text) * fontSize * 0.6;
-    }
+  // 測定用Canvasコンテキストを確実に取得
+  const context = ensureMeasureContext();
+  
+  if (!context) {
+    // Canvas APIが使用できない場合は従来の文字数ベースの計算にフォールバック
+    return calculateTextWidthFallback(text) * fontSize * 0.6;
   }
   
-  // フォント設定を適用
+  // フォント設定を適用（毎回明示的に設定して一貫性を保つ）
   const fontString = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
-  measureContext.font = fontString;
+  context.font = fontString;
+  
+  // 一貫した測定のためにベースラインとアラインメントを再設定
+  context.textBaseline = 'alphabetic';
+  context.textAlign = 'left';
   
   // テキストの実際の幅を測定
-  const metrics = measureContext.measureText(text);
+  const metrics = context.measureText(text);
   return metrics.width;
 }
 

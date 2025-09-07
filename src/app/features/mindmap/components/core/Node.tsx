@@ -4,7 +4,6 @@ import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import { useNodeDragHandler } from './NodeDragHandler';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
-import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 
 interface NodeProps {
@@ -33,6 +32,7 @@ interface NodeProps {
   zoom: number;
   pan: { x: number; y: number };
   svgRef: React.RefObject<SVGSVGElement>;
+  globalFontSize?: number;
 }
 
 const Node: React.FC<NodeProps> = ({
@@ -59,12 +59,12 @@ const Node: React.FC<NodeProps> = ({
   setEditText,
   zoom,
   pan,
-  svgRef
+  svgRef,
+  globalFontSize
 }) => {
   const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previousPosition = useRef({ x: node.x, y: node.y });
-  const { settings } = useMindMapStore();
   
   // ドラッグハンドラーを使用
   const { isDragging, handleMouseDown } = useNodeDragHandler({
@@ -137,7 +137,7 @@ const Node: React.FC<NodeProps> = ({
 
 
   // ノードのサイズ計算（共有ユーティリティ関数を使用、グローバルフォントサイズを適用）
-  const nodeSize = calculateNodeSize(node, editText, isEditing, settings.fontSize);
+  const nodeSize = calculateNodeSize(node, editText, isEditing, globalFontSize);
   const nodeWidth = nodeSize.width;
   const nodeHeight = nodeSize.height;
   const imageHeight = nodeSize.imageHeight;
@@ -238,6 +238,11 @@ export default memo(Node, (prevProps: NodeProps, nextProps: NodeProps) => {
   if (prevProps.zoom !== nextProps.zoom ||
       prevProps.pan.x !== nextProps.pan.x ||
       prevProps.pan.y !== nextProps.pan.y) {
+    return false;
+  }
+
+  // グローバルフォントサイズが変わった場合は再レンダリング
+  if (prevProps.globalFontSize !== nextProps.globalFontSize) {
     return false;
   }
 

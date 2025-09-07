@@ -175,6 +175,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                 zoom={zoom}
                 pan={pan}
                 svgRef={svgRef}
+                globalFontSize={settings.fontSize}
               />
             ))}
           </g>
