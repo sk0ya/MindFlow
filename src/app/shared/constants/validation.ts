@@ -14,9 +14,9 @@ export const VALIDATION = {
   URL_REGEX: /^https?:\/\/.+/,
   
   // 許可ファイル形式
-  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
   ALLOWED_FILE_TYPES: [
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
     'text/plain', 'application/pdf', 'application/json'
   ],
 };

@@ -214,6 +214,10 @@ export const isImageFile = (file: File): boolean => {
 
 export const getFileIcon = (file: File): string => {
   if (isImageFile(file)) {
+    // SVGファイルの場合は専用のアイコンを表示
+    if (file.type === 'image/svg+xml') {
+      return '🎨';
+    }
     return '🖼️';
   }
   

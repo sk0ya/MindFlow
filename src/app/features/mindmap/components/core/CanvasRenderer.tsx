@@ -232,7 +232,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                       isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
                       nodeWidth={nodeSize.width}
                       nodeHeight={nodeSize.height}
-                      onLinkClick={(link) => {
+                      onLinkClick={() => {
                         // リンククリック時は何もしない（メニュー表示を無効化）
                       }}
                       onLinkContextMenu={(link, position) => {

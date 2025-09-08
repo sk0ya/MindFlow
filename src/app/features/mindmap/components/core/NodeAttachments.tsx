@@ -125,7 +125,7 @@ const CloudImage: React.FC<{
   if (loading) {
     return (
       <div style={style}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#f5f5f5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: 'transparent' }}>
           読み込み中...
         </div>
       </div>
@@ -135,7 +135,7 @@ const CloudImage: React.FC<{
   if (error) {
     return (
       <div style={style}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#fee', color: '#c00', fontSize: '12px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: 'rgba(255, 238, 238, 0.8)', color: '#c00', fontSize: '12px', textAlign: 'center' }}>
           画像読み込み<br />エラー
         </div>
       </div>
@@ -350,7 +350,7 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               overflow: 'hidden',
               border: 'none',
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              backgroundColor: '#fff',
+              backgroundColor: 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

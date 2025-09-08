@@ -1044,7 +1044,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     if (animate) {
       // アニメーション付きでパンを更新
       const currentPan = ui.pan;
-      const duration = 300; // 300ms
+      // const duration = 300; // 300ms (未使用)
       const steps = 20;
       
       const deltaX = (newPanX - currentPan.x) / steps;
@@ -1100,7 +1100,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             selectNode(link.targetNodeId);
             // ノードを画面中央に移動
             setTimeout(() => {
-              centerNodeInView(link.targetNodeId);
+              if (link.targetNodeId) {
+                centerNodeInView(link.targetNodeId);
+              }
             }, 50); // DOM更新を待つ
             showNotification('success', `ノード "${targetNode.text}" に移動しました`);
           } else {

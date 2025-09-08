@@ -231,6 +231,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
           object-fit: contain;
           border-radius: 8px;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          background: transparent;
         }
 
         .image-modal-info {
