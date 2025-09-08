@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../hooks/useTheme';
 
 interface Position {
   x: number;
@@ -26,6 +27,30 @@ const Connection: React.FC<ConnectionProps> = ({
   isToggleConnection = false, 
   color = '#666' 
 }) => {
+  const { theme } = useTheme();
+  
+  // テーマに応じたトグルボタンの配色
+  const getToggleColors = () => {
+    if (theme === 'dark') {
+      // ダークテーマ: アクセント付きグレー
+      return {
+        expandedFill: '#2d3748',
+        expandedStroke: '#4299e1',
+        collapsedFill: '#4a5568', 
+        collapsedStroke: '#ed8936'
+      };
+    } else {
+      // ライトテーマ: 従来の緑・黄色
+      return {
+        expandedFill: '#34a853',
+        expandedStroke: 'white',
+        collapsedFill: '#ff9800',
+        collapsedStroke: 'white'
+      };
+    }
+  };
+  
+  const toggleColors = getToggleColors();
   const createPath = (from: Position, to: Position): string => {
     if (hasToggleButton && from.x === to.x && from.y === to.y) {
       return '';
@@ -70,13 +95,13 @@ const Connection: React.FC<ConnectionProps> = ({
           <circle
             cx={to.x}
             cy={to.y}
-            r="12"
-            fill={isCollapsed ? "#ff9800" : "#34a853"}
-            stroke="white"
+            r="8"
+            fill={isCollapsed ? toggleColors.collapsedFill : toggleColors.expandedFill}
+            stroke={isCollapsed ? toggleColors.collapsedStroke : toggleColors.expandedStroke}
             strokeWidth="2"
             style={{ 
               cursor: 'pointer',
-              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'
+              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -85,10 +110,10 @@ const Connection: React.FC<ConnectionProps> = ({
           />
           <text
             x={to.x}
-            y={to.y + 4}
+            y={to.y + 3}
             textAnchor="middle"
             fill="white"
-            fontSize="14"
+            fontSize="11"
             fontWeight="bold"
             style={{ pointerEvents: 'none' }}
           >
