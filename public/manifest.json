@@ -1,0 +1,34 @@
+{
+  "name": "MindFlow - マインドマップツール",
+  "short_name": "MindFlow",
+  "description": "MindMeisterライクなマインドマップツール",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2196f3",
+  "background_color": "#ffffff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512.png", 
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png", 
+      "sizes": "180x180"
+    }
+  ]
+}

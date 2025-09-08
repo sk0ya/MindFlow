@@ -1,0 +1,42 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196f3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1976d2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e3f2fd;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="180" height="180" rx="28" fill="url(#brainGradient)" stroke="#1565c0" stroke-width="2"/>
+  
+  <!-- Central node -->
+  <circle cx="90" cy="90" r="20" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="3"/>
+  
+  <!-- Connected nodes -->
+  <circle cx="45" cy="55" r="12" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  <circle cx="135" cy="65" r="12" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  <circle cx="50" cy="125" r="12" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  <circle cx="130" cy="125" r="12" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  <circle cx="90" cy="40" r="10" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  <circle cx="90" cy="140" r="10" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="2"/>
+  
+  <!-- Connection lines -->
+  <line x1="73" y1="78" x2="54" y2="63" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <line x1="107" y1="78" x2="126" y2="72" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <line x1="75" y1="102" x2="58" y2="117" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <line x1="105" y1="102" x2="122" y2="117" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <line x1="90" y1="70" x2="90" y2="50" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <line x1="90" y1="110" x2="90" y2="130" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  
+  <!-- Additional smaller nodes for complexity -->
+  <circle cx="25" cy="90" r="8" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="1.5"/>
+  <circle cx="155" cy="90" r="8" fill="url(#nodeGradient)" stroke="#1976d2" stroke-width="1.5"/>
+  
+  <!-- More connection lines -->
+  <line x1="70" y1="88" x2="33" y2="90" stroke="#ffffff" stroke-width="3" opacity="0.7"/>
+  <line x1="110" y1="92" x2="147" y2="90" stroke="#ffffff" stroke-width="3" opacity="0.7"/>
+</svg>
