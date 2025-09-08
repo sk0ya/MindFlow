@@ -389,7 +389,88 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     showTutorial: ui.showTutorial,
     setShowTutorial: (show: boolean) => store.setShowTutorial(show),
     showKeyboardHelper: ui.showShortcutHelper,
-    setShowKeyboardHelper: (show: boolean) => store.setShowShortcutHelper(show)
+    setShowKeyboardHelper: (show: boolean) => store.setShowShortcutHelper(show),
+    copyNode: (nodeId: string) => {
+      const node = data?.rootNode ? findNodeById(data.rootNode, nodeId) : null;
+      if (node) {
+        store.setClipboard(node);
+        showNotification('success', `「${node.text}」をコピーしました`);
+      }
+    },
+    pasteNode: (parentId: string) => {
+      const clipboardNode = ui.clipboard;
+      if (!clipboardNode) {
+        showNotification('warning', 'コピーされたノードがありません');
+        return;
+      }
+      
+      const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
+        const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
+        
+        if (newNodeId) {
+          updateNode(newNodeId, {
+            fontSize: nodeToAdd.fontSize,
+            fontWeight: nodeToAdd.fontWeight,
+            color: nodeToAdd.color,
+            collapsed: false,
+            attachments: nodeToAdd.attachments || []
+          });
+          
+          if (nodeToAdd.children && nodeToAdd.children.length > 0) {
+            nodeToAdd.children.forEach(child => {
+              pasteNodeRecursively(child, newNodeId);
+            });
+          }
+        }
+        
+        return newNodeId;
+      };
+      
+      const newNodeId = pasteNodeRecursively(clipboardNode, parentId);
+      if (newNodeId) {
+        showNotification('success', `「${clipboardNode.text}」を貼り付けました`);
+        selectNode(newNodeId);
+      }
+    },
+    pasteImageFromClipboard: async (nodeId: string) => {
+      try {
+        // システムクリップボードアクセスの権限確認
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          throw new Error('クリップボードAPIが利用できません');
+        }
+
+        const clipboardItems = await navigator.clipboard.read();
+        let imageFound = false;
+
+        for (const clipboardItem of clipboardItems) {
+          for (const type of clipboardItem.types) {
+            if (type.startsWith('image/')) {
+              imageFound = true;
+              const blob = await clipboardItem.getType(type);
+              
+              // Blob を File に変換
+              const timestamp = Date.now();
+              const extension = type.split('/')[1] || 'png';
+              const fileName = `pasted-image-${timestamp}.${extension}`;
+              const file = new File([blob], fileName, { type });
+
+              // 既存のファイルアップロード処理を使用
+              await handleFileUpload(nodeId, file);
+              showNotification('success', '画像を貼り付けました');
+              return;
+            }
+          }
+        }
+
+        if (!imageFound) {
+          throw new Error('クリップボードに画像がありません');
+        }
+      } catch (error) {
+        // エラーは上位でキャッチされて通常のペーストにフォールバック
+        throw error;
+      }
+    },
+    findNodeById: (nodeId: string) => data?.rootNode ? findNodeById(data.rootNode, nodeId) : null
   });
 
   // UI state から個別に取得

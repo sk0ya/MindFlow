@@ -30,6 +30,10 @@ interface KeyboardShortcutHandlers {
   setShowTutorial: (_show: boolean) => void;
   showKeyboardHelper: boolean;
   setShowKeyboardHelper: (_show: boolean) => void;
+  copyNode: (_nodeId: string) => void;
+  pasteNode: (_parentId: string) => void;
+  pasteImageFromClipboard: (_nodeId: string) => Promise<void>;
+  findNodeById: (_nodeId: string) => MindMapNode | null;
 }
 
 export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
@@ -124,6 +128,24 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
             event.preventDefault();
             if (handlers.canRedo) {
               handlers.redo();
+            }
+            break;
+          case 'c':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.copyNode(handlers.selectedNodeId);
+            }
+            break;
+          case 'v':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              // まずシステムクリップボードから画像を確認
+              handlers.pasteImageFromClipboard(handlers.selectedNodeId).catch(() => {
+                // 画像がない場合は通常のノードペースト
+                if (handlers.selectedNodeId) {
+                  handlers.pasteNode(handlers.selectedNodeId);
+                }
+              });
             }
             break;
         }
