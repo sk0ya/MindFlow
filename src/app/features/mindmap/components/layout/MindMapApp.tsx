@@ -393,7 +393,38 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     copyNode: (nodeId: string) => {
       const node = data?.rootNode ? findNodeById(data.rootNode, nodeId) : null;
       if (node) {
+        // 内部クリップボードに保存
         store.setClipboard(node);
+        
+        // システムクリップボードにマークダウン形式で保存
+        const convertNodeToMarkdown = (node: MindMapNode, level: number = 0): string => {
+          const prefix = '#'.repeat(Math.min(level + 1, 6)) + ' ';
+          let markdown = `${prefix}${node.text}\n`;
+          
+          // ノートがあれば追加
+          if (node.note && node.note.trim()) {
+            markdown += `${node.note}\n`;
+          }
+          
+          // 子ノードを再帰的に処理
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(child => {
+              markdown += convertNodeToMarkdown(child, level + 1);
+            });
+          }
+          
+          return markdown;
+        };
+        
+        const markdownText = convertNodeToMarkdown(node);
+        
+        // システムクリップボードに書き込み
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(markdownText).catch((error) => {
+            console.warn('システムクリップボードへの書き込みに失敗:', error);
+          });
+        }
+        
         showNotification('success', `「${node.text}」をコピーしました`);
       }
     },
