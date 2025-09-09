@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import Connection from '../../../../shared/components/ui/Connection';
-import { calculateNodeSize, getToggleButtonPosition } from '../../../../shared/utils/nodeUtils';
+import { calculateNodeSize, getToggleButtonPosition, getBranchColor } from '../../../../shared/utils/nodeUtils';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { MindMapNode, MindMapData } from '@shared/types';
 
@@ -25,7 +25,7 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
   data, 
   onToggleCollapse 
 }) => {
-  const { settings } = useMindMapStore();
+  const { settings, normalizedData } = useMindMapStore();
   const connections: ConnectionData[] = [];
   
   allNodes.forEach(node => {
@@ -36,11 +36,12 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         if (isRootNode) {
           // ルートノードの場合は直接接続
           node.children.forEach((child: MindMapNode) => {
+            const color = normalizedData ? getBranchColor(child.id, normalizedData) : (child.color || '#666');
             connections.push({ 
               from: node, 
               to: child, 
               hasToggleButton: false,
-              color: child.color || '#666'
+              color: color
             });
           });
         } else {
@@ -51,12 +52,13 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           const toggleY = togglePosition.y;
           
           // 親からトグルボタンへの接続線
+          const parentColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
           connections.push({
             from: node,
             to: { x: toggleX, y: toggleY },
             hasToggleButton: false,
             isToggleConnection: true,
-            color: node.color || '#666'
+            color: parentColor
           });
           
           // トグルボタン自体
@@ -70,11 +72,12 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           
           // トグルボタンから各子要素への線
           node.children.forEach((child: MindMapNode) => {
+            const childColor = normalizedData ? getBranchColor(child.id, normalizedData) : (child.color || '#666');
             connections.push({
               from: { x: toggleX, y: toggleY },
               to: child,
               hasToggleButton: false,
-              color: node.color || '#666'
+              color: childColor
             });
           });
         }
@@ -86,12 +89,13 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         const toggleY = togglePosition.y;
         
         // 親からトグルボタンへの接続線
+        const collapsedColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
         connections.push({
           from: node,
           to: { x: toggleX, y: toggleY },
           hasToggleButton: false,
           isToggleConnection: true,
-          color: node.color || '#666'
+          color: collapsedColor
         });
         
         // トグルボタン自体

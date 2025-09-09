@@ -17,6 +17,7 @@ import {
 } from '../../data';
 import { createNewNode } from '../../../shared/types/dataTypes';
 import { COLORS, LAYOUT } from '../../../shared';
+import { getBranchColor } from '../../../shared/utils/nodeUtils';
 import type { MindMapStore } from './types';
 
 export interface NodeSlice {
@@ -131,17 +132,21 @@ export const createNodeSlice: StateCreator<
           }
         }
         
-        // Color assignment - ルートノードの子は設定色、それ以外は親色継承
-        const color = parentNode.id === 'root' 
-          ? COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length]
-          : parentNode.color || '#666';
-        
-        // Update position and color
+        // Update position first
         newNode.x = newPosition.x;
         newNode.y = newPosition.y;
-        newNode.color = color;
         
+        // Add node to normalized data first to establish parent-child relationship
         state.normalizedData = addNormalizedNode(state.normalizedData, parentId, newNode);
+        
+        // Color assignment - ブランチベースの色割り当て
+        const color = parentNode.id === 'root' 
+          ? COLORS.NODE_COLORS[childNodes.length % COLORS.NODE_COLORS.length]
+          : getBranchColor(newNode.id, state.normalizedData);
+        
+        // Update color after establishing relationship
+        newNode.color = color;
+        state.normalizedData.nodes[newNode.id] = { ...newNode };
         
         // Select the new node
         state.selectedNodeId = newNode.id;
@@ -210,15 +215,19 @@ export const createNodeSlice: StateCreator<
           y: currentNode.y + 80   // 少し下にずらす
         };
         
-        // 兄弟ノードは親の色を継承
-        const color = currentNode.color || parentNode.color || '#666';
-        
-        // 位置と色を更新
+        // 位置を更新
         newNode.x = position.x;
         newNode.y = position.y;
-        newNode.color = color;
         
+        // Add sibling node first to establish parent-child relationship
         state.normalizedData = addSiblingNormalizedNode(state.normalizedData, nodeId, newNode, true);
+        
+        // 兄弟ノードはブランチベースの色割り当て
+        const color = getBranchColor(newNode.id, state.normalizedData);
+        
+        // Update color after establishing relationship
+        newNode.color = color;
+        state.normalizedData.nodes[newNode.id] = { ...newNode };
         
         // 新しいノードを選択
         state.selectedNodeId = newNode.id;

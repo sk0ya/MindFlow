@@ -1,4 +1,5 @@
-import type { MindMapNode, FileAttachment } from '@shared/types';
+import type { MindMapNode, FileAttachment, NormalizedData } from '@shared/types';
+import { COLORS } from '../constants';
 
 // アイコンレイアウト情報
 interface IconLayout {
@@ -320,4 +321,48 @@ export function calculateChildNodeX(parentNode: MindMapNode, childNodeSize: Node
   const childCenterX = childLeftEdge + childNodeSize.width / 2;
   
   return childCenterX;
+}
+
+/**
+ * ノードのルートブランチを特定し、そのブランチに対応する色を返す
+ * @param nodeId ノードID
+ * @param normalizedData 正規化されたデータ
+ * @returns ブランチカラー
+ */
+export function getBranchColor(nodeId: string, normalizedData: NormalizedData): string {
+  if (!normalizedData || !nodeId) return '#666';
+  
+  // ルートノードの場合は基本色
+  if (nodeId === 'root') return '#333';
+  
+  // 現在のノードから親を辿ってルートノードの直接の子（ブランチルート）を見つける
+  let currentNodeId = nodeId;
+  let branchRootId: string | null = null;
+  
+  while (currentNodeId && currentNodeId !== 'root') {
+    const parentId = normalizedData.parentMap[currentNodeId];
+    
+    if (parentId === 'root') {
+      // ルートノードの直接の子が見つかった（これがブランチルート）
+      branchRootId = currentNodeId;
+      break;
+    }
+    
+    if (!parentId) break;
+    currentNodeId = parentId;
+  }
+  
+  // ブランチルートが見つからない場合はデフォルト色
+  if (!branchRootId) return '#666';
+  
+  // ルートノードの子ノード一覧を取得して、インデックスを特定
+  const rootChildren = normalizedData.childrenMap['root'] || [];
+  const branchIndex = rootChildren.indexOf(branchRootId);
+  
+  // インデックスに基づいて色を決定
+  if (branchIndex >= 0) {
+    return COLORS.NODE_COLORS[branchIndex % COLORS.NODE_COLORS.length];
+  }
+  
+  return '#666';
 }
