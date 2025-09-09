@@ -7,7 +7,6 @@ interface CanvasEventHandlerProps {
   onSelectNode: (nodeId: string | null) => void;
   onFinishEdit: (nodeId: string, text: string) => void;
   getIsPanning?: () => boolean;
-  isDragging?: boolean;
 }
 
 export const useCanvasEventHandler = ({
@@ -15,8 +14,7 @@ export const useCanvasEventHandler = ({
   editText,
   onSelectNode,
   onFinishEdit,
-  getIsPanning,
-  isDragging = false
+  getIsPanning
 }: CanvasEventHandlerProps) => {
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const wasPanningRef = useRef<boolean>(false);
@@ -73,7 +71,7 @@ export const useCanvasEventHandler = ({
     
     // マウスアップ時にパン状態をリセット
     wasPanningRef.current = false;
-  }, [editingNodeId, editText, onFinishEdit, onSelectNode, isDragging]);
+  }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
 
   // 右クリック処理
   const handleContextMenu = useCallback((e: React.MouseEvent) => {

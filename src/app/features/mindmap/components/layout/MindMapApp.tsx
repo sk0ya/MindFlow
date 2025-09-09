@@ -31,7 +31,7 @@ import {
   createCloudModeConfig, 
  
 } from '../../../../examples/StorageConfigExamples';
-import { useAuth, LoginModal } from '../../../../components/auth';
+import { useOptionalAuth, LoginModal } from '../../../../components/auth';
 import { validateFile } from '../../../../shared/types/dataTypes';
 
 interface MindMapAppProps {
@@ -90,17 +90,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     authAdapter: undefined // 後で設定
   });
   
-  // Get auth adapter for cloud mode
-  let auth;
-  let authAdapter;
-  try {
-    auth = useAuth();
-    authAdapter = auth.authAdapter;
-  } catch {
-    // useAuth throws if not within AuthProvider (local mode)
-    auth = undefined;
-    authAdapter = undefined;
-  }
+  // Get auth adapter for cloud mode (using optional hook)
+  const auth = useOptionalAuth();
+  const authAdapter = auth?.authAdapter;
   
   // For cloud mode, check if user is authenticated
   const isCloudMode = storageMode === 'cloud';

@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import type { FileAttachment } from '@shared/types';
-import { useAuth } from '../../../components/auth';
+import { useOptionalAuth } from '../../../components/auth';
 
 interface ImageModalProps {
   isOpen: boolean;
@@ -14,14 +14,8 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   
-  // 認証情報を取得
-  let auth;
-  try {
-    auth = useAuth();
-  } catch {
-    // AuthProviderの外で呼ばれた場合
-    auth = null;
-  }
+  // 認証情報を取得 (オプショナル)
+  const auth = useOptionalAuth();
 
   useEffect(() => {
     const loadImage = async () => {
@@ -76,7 +70,7 @@ const CloudModalImage: React.FC<{ file: FileAttachment }> = ({ file }) => {
         URL.revokeObjectURL(imageUrl);
       }
     };
-  }, [file.downloadUrl]);
+  }, [file.downloadUrl, auth?.authAdapter, imageUrl]);
 
   if (loading) {
     return <div style={{ color: 'white', textAlign: 'center' }}>読み込み中...</div>;

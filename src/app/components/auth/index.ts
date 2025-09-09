@@ -1,3 +1,3 @@
 // Authentication components barrel exports
-export { AuthProvider, useAuth, RequireAuth } from './AuthProvider';
+export { AuthProvider, useAuth, useOptionalAuth, RequireAuth } from './AuthProvider';
 export { LoginModal } from './LoginModal';

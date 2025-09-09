@@ -104,6 +104,14 @@ export const useAuth = (): AuthContextType => {
 };
 
 /**
+ * AuthProviderの外でも安全に使用できる認証フック
+ * nullを返す場合があることを考慮して使用すること
+ */
+export const useOptionalAuth = (): AuthContextType | null => {
+  return useContext(AuthContext);
+};
+
+/**
  * 認証が必要なコンポーネントをラップ
  */
 interface RequireAuthProps {

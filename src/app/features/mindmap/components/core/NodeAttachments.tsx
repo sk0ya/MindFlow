@@ -1,6 +1,6 @@
 import React, { useCallback, memo, useState, useEffect } from 'react';
 import type { MindMapNode, FileAttachment } from '@shared/types';
-import { useAuth } from '../../../../components/auth';
+import { useOptionalAuth } from '../../../../components/auth';
 
 interface NodeAttachmentsProps {
   node: MindMapNode;
@@ -28,14 +28,8 @@ const CloudImage: React.FC<{
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   
-  // 認証情報を取得
-  let auth;
-  try {
-    auth = useAuth();
-  } catch {
-    // AuthProviderの外で呼ばれた場合
-    auth = null;
-  }
+  // 認証情報を取得 (オプショナル)
+  const auth = useOptionalAuth();
 
 
   useEffect(() => {

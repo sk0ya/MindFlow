@@ -377,7 +377,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       groupedMaps: grouped, 
       visibleFolders: sortedFolders
     };
-  }, [mindMaps, searchTerm, collapsedCategories, emptyFolders]);
+  }, [mindMaps, searchTerm, emptyFolders]);
 
   // コンテキストメニューのアイテムを生成
   const contextMenuItems = useMemo((): ContextMenuItem[] => {
