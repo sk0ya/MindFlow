@@ -15,7 +15,7 @@ interface MarkdownEditorProps {
   autoFocus?: boolean;
 }
 
-export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
+export const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({
   value,
   onChange,
   onSave,
@@ -535,6 +535,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       `}</style>
     </div>
   );
-};
+});
 
 export default MarkdownEditor;

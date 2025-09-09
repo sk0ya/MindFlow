@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAI } from '../../../../core/hooks/useAI';
 import type { MindMapNode } from '../../../../shared/types';
 
@@ -10,7 +10,7 @@ interface AIGenerationModalProps {
   onGenerationComplete: (childTexts: string[]) => void;
 }
 
-const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
+const AIGenerationModal: React.FC<AIGenerationModalProps> = React.memo(({
   isOpen,
   parentNode,
   contextNodes = [],
@@ -35,30 +35,16 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   
   const { isValid: isSettingsValid, errors: validationErrors } = validateSettings();
   
-  // モーダルが開かれたときに自動生成を開始
-  useEffect(() => {
-    if (isOpen && parentNode && aiSettings.enabled && isSettingsValid) {
-      handleGenerate();
-    }
-  }, [isOpen, parentNode]);
-  
-  // モーダルが閉じられたときにリセット
-  useEffect(() => {
-    if (!isOpen) {
-      resetModal();
-    }
-  }, [isOpen]);
-  
-  const resetModal = () => {
+  const resetModal = useCallback(() => {
     setGeneratedChildren([]);
     setSelectedChildren([]);
     setCustomPrompt('');
     setShowCustomPrompt(false);
     setStep('generating');
     clearError();
-  };
+  }, [clearError]);
   
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!parentNode) return;
     
     setStep('generating');
@@ -74,7 +60,21 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
       console.error('AI generation failed:', error);
       // エラーが発生してもモーダルは開いたまま
     }
-  };
+  }, [parentNode, contextNodes, generateChildNodes, clearError]);
+  
+  // モーダルが開かれたときに自動生成を開始
+  useEffect(() => {
+    if (isOpen && parentNode && aiSettings.enabled && isSettingsValid) {
+      handleGenerate();
+    }
+  }, [isOpen, parentNode, aiSettings.enabled, handleGenerate, isSettingsValid]);
+  
+  // モーダルが閉じられたときにリセット
+  useEffect(() => {
+    if (!isOpen) {
+      resetModal();
+    }
+  }, [isOpen, resetModal]);
   
   const handleCustomGenerate = async () => {
     if (!parentNode || !customPrompt.trim()) return;
@@ -494,6 +494,6 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default AIGenerationModal;

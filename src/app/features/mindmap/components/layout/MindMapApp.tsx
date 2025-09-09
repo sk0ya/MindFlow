@@ -116,7 +116,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       logger.info('User authenticated, hiding login modal');
       setShowLoginModal(false);
     }
-  }, [needsAuth, auth?.isReady, auth?.authState.isAuthenticated, isCloudMode, showLoginModal]);
+  }, [needsAuth, auth?.isReady, auth?.authState.isAuthenticated, isCloudMode, showLoginModal, auth, setShowLoginModal]);
 
   // Force data reload when authentication status changes in cloud mode
   React.useEffect(() => {
@@ -141,7 +141,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       logger.info('Mode switched to local, hiding login modal');
       setShowLoginModal(false);
     }
-  }, [storageMode, isCloudMode, auth?.authState.isAuthenticated, auth?.isReady]);
+  }, [storageMode, isCloudMode, auth?.authState.isAuthenticated, auth?.isReady, auth, setShowLoginModal]);
   
   // Create storage configuration based on selected mode
   const storageConfig: StorageConfig = React.useMemo(() => {

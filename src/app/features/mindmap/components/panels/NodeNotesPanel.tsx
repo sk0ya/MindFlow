@@ -9,7 +9,7 @@ interface NodeNotesPanelProps {
   onClose?: () => void;
 }
 
-export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
+const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
   selectedNode,
   onUpdateNode,
   onClose
@@ -429,4 +429,4 @@ function getStyles(_panelWidth: number, isResizing: boolean) {
   `;
 }
 
-export default NodeNotesPanel;
+export default React.memo(NodeNotesPanel);
