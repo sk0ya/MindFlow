@@ -84,15 +84,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // テーマ管理
   useTheme();
   
-  // 永続化フックを直接使用
-  const persistenceHook = useMindMapPersistence({
-    mode: storageMode,
-    authAdapter: undefined // 後で設定
-  });
-  
   // Get auth adapter for cloud mode (using optional hook)
   const auth = useOptionalAuth();
   const authAdapter = auth?.authAdapter;
+  
+  // 永続化フックを適切なauth adapterで使用
+  const persistenceHook = useMindMapPersistence({
+    mode: storageMode,
+    authAdapter: authAdapter // 適切なauth adapterを設定
+  });
   
   // For cloud mode, check if user is authenticated
   const isCloudMode = storageMode === 'cloud';
