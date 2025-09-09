@@ -1,5 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import type { MindMapNode, FileAttachment } from '@shared/types';
+import { calculateAttachmentListHeight } from '../../../../shared/utils/listHeightUtils';
 
 interface SelectedNodeAttachmentListProps {
   node: MindMapNode;
@@ -108,11 +109,8 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
   const listX = node.x - nodeWidth / 2; // ノードの左端に合わせる
   const listWidth = Math.max(nodeWidth, 300); // 最小幅300px
   
-  // 動的高さ計算（各ファイルアイテム28px + パディング16px + 最大高さ制限240px）
-  const itemHeight = 28; // 各ファイルアイテムの高さ
-  const padding = 16; // 上下のパディング
-  const calculatedHeight = Math.min(node.attachments.length * itemHeight + padding, 240);
-  const listHeight = calculatedHeight;
+  // 動的高さ計算（共通ユーティリティを使用）
+  const listHeight = calculateAttachmentListHeight({ itemCount: node.attachments.length });
 
   return (
     <foreignObject
@@ -131,7 +129,7 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
           border: '1px solid #d0d7de',
           borderRadius: '6px',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-          padding: '8px',
+          padding: '6px',
           maxHeight: '240px',
           overflowY: 'auto',
           fontSize: '12px',
@@ -141,7 +139,7 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
       >
 
         {/* ファイル一覧 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           {node.attachments.map((file) => {
             const icon = getFileIcon(file.name, file.type);
             
@@ -171,7 +169,7 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '6px 8px',
+                  padding: '2px 6px',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   transition: 'background-color 0.15s ease',
@@ -191,8 +189,8 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
                 {/* ファイルアイコン */}
                 <span
                   style={{
-                    fontSize: '16px',
-                    marginRight: '8px',
+                    fontSize: '12px',
+                    marginRight: '4px',
                     flexShrink: 0
                   }}
                 >
@@ -203,13 +201,13 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
                 <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: '500',
                       color: '#24292f',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      lineHeight: '1.3'
+                      lineHeight: '1.1'
                     }}
                   >
                     {fileName}
@@ -218,10 +216,10 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
                   {fileSize && (
                     <div
                       style={{
-                        fontSize: '10px',
+                        fontSize: '9px',
                         color: '#656d76',
-                        marginTop: '1px',
-                        lineHeight: '1.2'
+                        marginTop: '0px',
+                        lineHeight: '1.1'
                       }}
                     >
                       {fileSize}
