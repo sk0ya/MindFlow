@@ -3,6 +3,7 @@ import { Editor, OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { marked } from 'marked';
 import { useMindMapStore } from '../../core/store/mindMapStore';
+import { logger } from '../utils/logger';
 
 interface MarkdownEditorProps {
   value: string;
@@ -34,7 +35,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       const result = marked.parse(value || '');
       return typeof result === 'string' ? result : '';
     } catch (error) {
-      console.warn('Markdown parsing error:', error);
+      logger.warn('Markdown parsing error:', error);
       return '<p>マークダウンの解析でエラーが発生しました</p>';
     }
   };
@@ -94,7 +95,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       // Store vim mode instance for cleanup
       (editor as any)._vimMode = vimMode;
     } catch (error) {
-      console.warn('Vim mode not available:', error);
+      logger.warn('Vim mode not available:', error);
       setIsVimEnabled(false);
     }
   };

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import MarkdownEditor from '../../../../shared/components/MarkdownEditor';
 import type { MindMapNode } from '@shared/types';
+import { STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../../shared/utils/localStorage';
 
 interface NodeNotesPanelProps {
   selectedNode: MindMapNode | null;
@@ -82,7 +83,7 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       // Save width to localStorage
-      localStorage.setItem('mindflow_notes_panel_width', currentWidth.toString());
+      setLocalStorage(STORAGE_KEYS.NOTES_PANEL_WIDTH, currentWidth);
     };
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -91,9 +92,9 @@ export const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
 
   // Load saved width on mount
   useEffect(() => {
-    const savedWidth = localStorage.getItem('mindflow_notes_panel_width');
-    if (savedWidth) {
-      const width = parseInt(savedWidth, 10);
+    const result = getLocalStorage<number>(STORAGE_KEYS.NOTES_PANEL_WIDTH);
+    if (result.success && result.data !== undefined) {
+      const width = result.data;
       if (width >= 300 && width <= 1200) {
         setPanelWidth(width);
       }

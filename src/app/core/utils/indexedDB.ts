@@ -1,274 +1,101 @@
-// Local Mode IndexedDB Utility
-// LocalStorageの代替としてIndexedDBを使用してパフォーマンスと容量を改善
+/**
+ * Local Mode IndexedDB Manager
+ * ベースクラスを使用してローカルモード専用の実装を提供
+ */
 
-import type { MindMapData } from '@shared/types';
-import { logger } from '../../shared/utils/logger';
+import type { MindMapData } from '../../../shared/types';
+import { IndexedDBBase, type CachedMindMap, type IndexedDBMetadata, type StoreDefinition } from './indexedDBBase';
 
-interface LocalCacheMetadata {
+interface LocalCacheMetadata extends IndexedDBMetadata {
   lastModified: string;
   version: number;
 }
 
-interface CachedLocalMindMap extends MindMapData {
+export interface CachedLocalMindMap extends CachedMindMap {
   _metadata: LocalCacheMetadata;
 }
 
-class LocalIndexedDB {
-  private dbName = 'MindFlow-Local';
-  private version = 1;
-  private db: IDBDatabase | null = null;
+/**
+ * ローカルモード用IndexedDBマネージャー
+ */
+class LocalIndexedDBManager extends IndexedDBBase<CachedLocalMindMap> {
+  protected readonly dbName = 'MindFlow-Local';
+  protected readonly version = 1;
   
-  private readonly STORES = {
-    MINDMAPS: 'mindmaps',
-    CURRENT_MAP: 'currentMap'
-  } as const;
+  protected readonly stores: Record<string, StoreDefinition> = {
+    MINDMAPS: {
+      name: 'mindmaps',
+      keyPath: 'id',
+      indexes: [
+        { name: 'title', keyPath: 'title', options: { unique: false } },
+        { name: 'lastModified', keyPath: '_metadata.lastModified', options: { unique: false } }
+      ]
+    },
+    CURRENT_MAP: {
+      name: 'currentMap',
+      keyPath: 'key'
+    }
+  };
 
-  // データベース初期化
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => {
-        logger.error('Local IndexedDB initialization failed:', request.error);
-        reject(request.error);
-      };
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        logger.info('Local IndexedDB initialized');
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // マインドマップリストストア
-        if (!db.objectStoreNames.contains(this.STORES.MINDMAPS)) {
-          const mindmapsStore = db.createObjectStore(this.STORES.MINDMAPS, { keyPath: 'id' });
-          mindmapsStore.createIndex('title', 'title', { unique: false });
-          mindmapsStore.createIndex('lastModified', '_metadata.lastModified', { unique: false });
-        }
-
-        // 現在のマップストア（単一レコード）
-        if (!db.objectStoreNames.contains(this.STORES.CURRENT_MAP)) {
-          db.createObjectStore(this.STORES.CURRENT_MAP, { keyPath: 'key' });
-        }
-
-        logger.info('Local IndexedDB schema upgraded');
-      };
-    });
+  /**
+   * メタデータ作成
+   */
+  createMetadata(data: MindMapData, additionalMetadata?: Partial<IndexedDBMetadata>): CachedLocalMindMap {
+    return {
+      ...data,
+      _metadata: {
+        lastModified: new Date().toISOString(),
+        version: 1,
+        ...additionalMetadata
+      } as LocalCacheMetadata
+    };
   }
 
-  // 現在のマインドマップを保存
+  /**
+   * 現在のマインドマップを保存
+   */
   async saveCurrentMap(data: MindMapData): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    const cachedData: CachedLocalMindMap = {
-      ...data,
-      _metadata: {
-        lastModified: new Date().toISOString(),
-        version: 1
-      }
-    };
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readwrite');
-      const store = transaction.objectStore(this.STORES.CURRENT_MAP);
-      const request = store.put({ key: 'currentMap', data: cachedData });
-
-      request.onsuccess = () => {
-        logger.debug('💾 IndexedDB: 現在のマップ保存完了', { 
-          id: data.id, 
-          title: data.title 
-        });
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error('❌ IndexedDB: 現在のマップ保存失敗', request.error);
-        reject(request.error);
-      };
-    });
+    const cachedData = this.createMetadata(data);
+    return this.saveData(this.stores.CURRENT_MAP.name, { key: 'currentMap', data: cachedData }, 'currentMap');
   }
 
-  // 現在のマインドマップを取得
+  /**
+   * 現在のマインドマップを取得
+   */
   async getCurrentMap(): Promise<CachedLocalMindMap | null> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.CURRENT_MAP], 'readonly');
-      const store = transaction.objectStore(this.STORES.CURRENT_MAP);
-      const request = store.get('currentMap');
-
-      request.onsuccess = () => {
-        const result = request.result;
-        const mapData = result?.data || null;
-        logger.debug('📋 IndexedDB: 現在のマップ取得', { 
-          found: !!mapData,
-          id: mapData?.id
-        });
-        resolve(mapData);
-      };
-
-      request.onerror = () => {
-        logger.error('❌ IndexedDB: 現在のマップ取得失敗', request.error);
-        reject(request.error);
-      };
-    });
+    const result = await this.getData<{ key: string; data: CachedLocalMindMap }>(
+      this.stores.CURRENT_MAP.name, 
+      'currentMap'
+    );
+    return result?.data || null;
   }
 
-  // マインドマップをリストに保存
+  /**
+   * マインドマップをリストに保存
+   */
   async saveMindMapToList(data: MindMapData): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    const cachedData: CachedLocalMindMap = {
-      ...data,
-      _metadata: {
-        lastModified: new Date().toISOString(),
-        version: 1
-      }
-    };
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.put(cachedData);
-
-      request.onsuccess = () => {
-        logger.debug('💾 IndexedDB: マップをリストに保存', { 
-          id: data.id, 
-          title: data.title
-        });
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error('❌ IndexedDB: マップリスト保存失敗', request.error);
-        reject(request.error);
-      };
-    });
+    const cachedData = this.createMetadata(data);
+    return this.saveData(this.stores.MINDMAPS.name, cachedData);
   }
 
-  // 全マインドマップを取得
+  /**
+   * 全マインドマップを取得
+   */
   async getAllMindMaps(): Promise<CachedLocalMindMap[]> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readonly');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const results = request.result || [];
-        logger.debug('📋 IndexedDB: 全マップ取得', { count: results.length });
-        resolve(results);
-      };
-
-      request.onerror = () => {
-        logger.error('❌ IndexedDB: 全マップ取得失敗', request.error);
-        reject(request.error);
-      };
-    });
+    const results = await this.getData<CachedLocalMindMap[]>(this.stores.MINDMAPS.name);
+    return Array.isArray(results) ? results : [];
   }
 
-  // マインドマップをリストから削除
+  /**
+   * マインドマップをリストから削除
+   */
   async removeMindMapFromList(id: string): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS], 'readwrite');
-      const store = transaction.objectStore(this.STORES.MINDMAPS);
-      const request = store.delete(id);
-
-      request.onsuccess = () => {
-        logger.debug('🗑️ IndexedDB: マップをリストから削除', { id });
-        resolve();
-      };
-
-      request.onerror = () => {
-        logger.error('❌ IndexedDB: マップ削除失敗', request.error);
-        reject(request.error);
-      };
-    });
-  }
-
-  // データベースクリア（開発用）
-  async clearAll(): Promise<void> {
-    if (!this.db) {
-      await this.init();
-    }
-
-    if (!this.db) {
-      throw new Error('Failed to initialize IndexedDB');
-    }
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.STORES.MINDMAPS, this.STORES.CURRENT_MAP], 'readwrite');
-      
-      const clearMindmaps = transaction.objectStore(this.STORES.MINDMAPS).clear();
-      const clearCurrentMap = transaction.objectStore(this.STORES.CURRENT_MAP).clear();
-
-      let completedStores = 0;
-      const totalStores = 2;
-
-      const checkCompletion = () => {
-        completedStores++;
-        if (completedStores === totalStores) {
-          logger.debug('🗑️ Local IndexedDB: 全データクリア完了');
-          resolve();
-        }
-      };
-
-      clearMindmaps.onsuccess = checkCompletion;
-      clearCurrentMap.onsuccess = checkCompletion;
-      
-      clearMindmaps.onerror = () => reject(clearMindmaps.error);
-      clearCurrentMap.onerror = () => reject(clearCurrentMap.error);
-    });
-  }
-
-  // 接続クローズ
-  close(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-      logger.debug('🔌 Local IndexedDB connection closed');
-    }
+    return this.deleteData(this.stores.MINDMAPS.name, id);
   }
 }
 
 // シングルトンインスタンス
-export const localIndexedDB = new LocalIndexedDB();
+export const localIndexedDB = new LocalIndexedDBManager();
 
 // 便利な関数をエクスポート
 export async function initLocalIndexedDB(): Promise<void> {
@@ -299,4 +126,4 @@ export async function clearLocalIndexedDB(): Promise<void> {
   return localIndexedDB.clearAll();
 }
 
-export type { CachedLocalMindMap, LocalCacheMetadata };
+export type { LocalCacheMetadata };

@@ -5,4 +5,5 @@ export * from './validation';
 export * from './exportUtils';
 export * from './importUtils';
 export * from './markdownImporter';
-export * from '@shared/utils/env';
+export * from './localStorage';
+export * from '../../../shared/utils/env';

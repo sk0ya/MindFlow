@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../shared/utils/localStorage';
 
 // AI設定の状態型
 export interface AISettings {
@@ -36,30 +37,18 @@ export interface AISlice {
   toggleAIEnabled: () => void;
 }
 
-// AI設定をlocalStorageに保存するキー
-const AI_SETTINGS_STORAGE_KEY = 'mindflow_ai_settings';
-
 // LocalStorageから設定を読み込む
 const loadAISettingsFromStorage = (): AISettings => {
-  try {
-    const stored = localStorage.getItem(AI_SETTINGS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return { ...defaultAISettings, ...parsed };
-    }
-  } catch (error) {
-    console.warn('Failed to load AI settings from localStorage:', error);
+  const result = getLocalStorage(STORAGE_KEYS.AI_SETTINGS, defaultAISettings);
+  if (result.success && result.data) {
+    return { ...defaultAISettings, ...result.data };
   }
   return defaultAISettings;
 };
 
 // LocalStorageに設定を保存する
 const saveAISettingsToStorage = (settings: AISettings): void => {
-  try {
-    localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  } catch (error) {
-    console.warn('Failed to save AI settings to localStorage:', error);
-  }
+  setLocalStorage(STORAGE_KEYS.AI_SETTINGS, settings);
 };
 
 export const createAISlice: StateCreator<any, [], [], AISlice> = (set, get) => ({

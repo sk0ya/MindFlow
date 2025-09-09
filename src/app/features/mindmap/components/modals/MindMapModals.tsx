@@ -3,56 +3,22 @@ import { ContextMenu } from '../../../../shared';
 import NodeCustomizationPanel from '../panels/NodeCustomizationPanel';
 import { ImageModal, FileActionMenu } from '../../../files';
 import AIGenerationModal from './AIGenerationModal';
-import type { MindMapNode, FileAttachment } from '../../../../shared';
+import {
+  MindMapModalsProvider,
+  useMindMapModals,
+  useSelectedNode,
+  useNodeOperations,
+  useFileOperations,
+  useUIOperations,
+  useMindMapUI,
+  type MindMapModalsProviderProps
+} from './MindMapModalsContext';
+import type { MindMapNode } from '../../../../shared';
 
-interface MindMapModalsProps {
-  ui: {
-    showCustomizationPanel: boolean;
-    showContextMenu: boolean;
-    showImageModal: boolean;
-    showFileActionMenu: boolean;
-    contextMenuPosition: { x: number; y: number };
-    customizationPosition: { x: number; y: number };
-    fileMenuPosition: { x: number; y: number };
-    selectedImage: FileAttachment | null;
-    selectedFile: FileAttachment | null;
-    clipboard: MindMapNode | null;
-  };
-  selectedNodeId: string | null;
-  findNode: (nodeId: string) => MindMapNode | null;
-  onDeleteNode: (nodeId: string) => void;
-  onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
-  onCopyNode: (node: MindMapNode) => void;
-  onPasteNode: (parentId: string) => void;
-  onShowCustomization: (node: MindMapNode) => void;
-  onFileDownload: (file: FileAttachment) => void;
-  onFileRename: (fileId: string, newName: string) => void;
-  onFileDelete: (fileId: string) => void;
-  onCloseCustomizationPanel: () => void;
-  onCloseContextMenu: () => void;
-  onCloseImageModal: () => void;
-  onCloseFileActionMenu: () => void;
-  onShowImageModal: (file: FileAttachment) => void;
-}
-
-const MindMapModals: React.FC<MindMapModalsProps> = ({
-  ui,
-  selectedNodeId,
-  findNode,
-  onDeleteNode,
-  onUpdateNode,
-  onCopyNode,
-  onPasteNode,
-  onShowCustomization,
-  onFileDownload,
-  onFileRename,
-  onFileDelete,
-  onCloseCustomizationPanel,
-  onCloseContextMenu,
-  onCloseImageModal,
-  onCloseFileActionMenu,
-  onShowImageModal
-}) => {
+/**
+ * AI生成モーダル管理フック
+ */
+const useAIModal = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiTargetNode, setAiTargetNode] = useState<MindMapNode | null>(null);
   
@@ -62,25 +28,28 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
   };
   
   const handleAIGenerationComplete = (childTexts: string[]) => {
+    const { nodeOperations } = useMindMapModals();
+    
     if (aiTargetNode) {
       // 複数の子ノードを順番に作成
       childTexts.forEach((text, index) => {
         setTimeout(() => {
-          // 子ノードを追加道筆
-          // onAddChild(aiTargetNode.id); // TODO: onAddChildをプロップして実装する必要があります
-          console.log('子ノードを追加:', aiTargetNode.id, text);
+          // 子ノードを追加して新しいノードIDを取得
+          const newNodeId = nodeOperations.onAddChild(aiTargetNode.id, text);
           
-          // 短い遅延の後にテキストを設定
-          setTimeout(() => {
-            const updatedParent = findNode(aiTargetNode.id);
-            if (updatedParent && updatedParent.children) {
-              // 新しく追加されたノードを見つける
-              const newChild = updatedParent.children[updatedParent.children.length - 1];
-              if (newChild && newChild.text === 'New Node') { // デフォルトテキストの場合
-                onUpdateNode(newChild.id, { text });
-              }
-            }
-          }, 50);
+          // 追加ログを出力（デバッグ用）
+          if (newNodeId) {
+            console.log('AI生成された子ノードを追加:', {
+              parentId: aiTargetNode.id,
+              childId: newNodeId,
+              text: text
+            });
+          } else {
+            console.warn('AI子ノード追加に失敗:', {
+              parentId: aiTargetNode.id,
+              text: text
+            });
+          }
         }, index * 100); // 各ノード作成を100ms間隔で実行
       });
     }
@@ -88,62 +57,162 @@ const MindMapModals: React.FC<MindMapModalsProps> = ({
     setAiTargetNode(null);
   };
   
+  const closeAIModal = () => {
+    setShowAIModal(false);
+    setAiTargetNode(null);
+  };
+  
+  return {
+    showAIModal,
+    aiTargetNode,
+    handleAIGenerate,
+    handleAIGenerationComplete,
+    closeAIModal
+  };
+};
+
+/**
+ * カスタマイゼーションパネルコンポーネント
+ */
+const CustomizationPanelModal: React.FC = () => {
+  const ui = useMindMapUI();
+  const selectedNode = useSelectedNode();
+  const { onUpdateNode } = useNodeOperations();
+  const { onCloseCustomizationPanel } = useUIOperations();
+
+  if (!ui.showCustomizationPanel) return null;
+
+  return (
+    <NodeCustomizationPanel
+      selectedNode={selectedNode}
+      onUpdateNode={onUpdateNode}
+      onClose={onCloseCustomizationPanel}
+      position={ui.customizationPosition}
+    />
+  );
+};
+
+/**
+ * コンテキストメニューコンポーネント
+ */
+const ContextMenuModal: React.FC<{ onAIGenerate: (node: MindMapNode) => void }> = ({ onAIGenerate }) => {
+  const ui = useMindMapUI();
+  const selectedNode = useSelectedNode();
+  const { onDeleteNode, onShowCustomization, onCopyNode, onPasteNode } = useNodeOperations();
+  const { onCloseContextMenu } = useUIOperations();
+
+  if (!ui.showContextMenu) return null;
+
+  return (
+    <ContextMenu
+      visible={true}
+      position={ui.contextMenuPosition}
+      selectedNode={selectedNode}
+      onDelete={onDeleteNode}
+      onCustomize={onShowCustomization}
+      onCopy={onCopyNode}
+      onPaste={onPasteNode}
+      onAIGenerate={onAIGenerate}
+      onClose={onCloseContextMenu}
+    />
+  );
+};
+
+/**
+ * 画像モーダルコンポーネント
+ */
+const ImageModalComponent: React.FC = () => {
+  const ui = useMindMapUI();
+  const { onCloseImageModal } = useUIOperations();
+
+  return (
+    <ImageModal
+      isOpen={ui.showImageModal}
+      image={ui.selectedImage}
+      onClose={onCloseImageModal}
+    />
+  );
+};
+
+/**
+ * ファイルアクションメニューコンポーネント
+ */
+const FileActionMenuComponent: React.FC = () => {
+  const ui = useMindMapUI();
+  const { onFileDownload, onFileRename, onFileDelete, onShowImageModal } = useFileOperations();
+  const { onCloseFileActionMenu } = useUIOperations();
+
+  return (
+    <FileActionMenu
+      isOpen={ui.showFileActionMenu}
+      file={ui.selectedFile}
+      position={ui.fileMenuPosition}
+      onClose={onCloseFileActionMenu}
+      onDownload={onFileDownload}
+      onRename={onFileRename}
+      onDelete={onFileDelete}
+      onView={onShowImageModal}
+    />
+  );
+};
+
+/**
+ * AI生成モーダルコンポーネント
+ */
+const AIGenerationModalComponent: React.FC<{ 
+  showAIModal: boolean;
+  aiTargetNode: MindMapNode | null;
+  onGenerationComplete: (childTexts: string[]) => void;
+  onClose: () => void;
+}> = ({ showAIModal, aiTargetNode, onGenerationComplete, onClose }) => {
+  return (
+    <AIGenerationModal
+      isOpen={showAIModal}
+      parentNode={aiTargetNode}
+      contextNodes={[]} // コンテキストノードの取得ロジックは後で実装
+      onClose={onClose}
+      onGenerationComplete={onGenerationComplete}
+    />
+  );
+};
+
+/**
+ * メインのモーダル管理コンポーネント（内部実装）
+ */
+const MindMapModalsInternal: React.FC = () => {
+  const {
+    showAIModal,
+    aiTargetNode,
+    handleAIGenerate,
+    handleAIGenerationComplete,
+    closeAIModal
+  } = useAIModal();
+
   return (
     <>
-      {ui.showCustomizationPanel && (
-        <NodeCustomizationPanel
-          selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
-          onUpdateNode={onUpdateNode}
-          onClose={onCloseCustomizationPanel}
-          position={ui.customizationPosition}
-        />
-      )}
-
-      {ui.showContextMenu && (
-        <ContextMenu
-          visible={true}
-          position={ui.contextMenuPosition}
-          selectedNode={selectedNodeId ? findNode(selectedNodeId) : null}
-          onDelete={onDeleteNode}
-          onCustomize={onShowCustomization}
-          onCopy={onCopyNode}
-          onPaste={onPasteNode}
-          onAIGenerate={handleAIGenerate}
-          onClose={onCloseContextMenu}
-        />
-      )}
-
-      <ImageModal
-        isOpen={ui.showImageModal}
-        image={ui.selectedImage}
-        onClose={onCloseImageModal}
-      />
-
-      <FileActionMenu
-        isOpen={ui.showFileActionMenu}
-        file={ui.selectedFile}
-        position={ui.fileMenuPosition}
-        onClose={onCloseFileActionMenu}
-        onDownload={onFileDownload}
-        onRename={onFileRename}
-        onDelete={onFileDelete}
-        onView={(file: FileAttachment) => {
-          onShowImageModal(file);
-        }}
-      />
-      
-      <AIGenerationModal
-        isOpen={showAIModal}
-        parentNode={aiTargetNode}
-        contextNodes={[]} // コンテキストノードの取得ロジックは後で実装
-        onClose={() => {
-          setShowAIModal(false);
-          setAiTargetNode(null);
-        }}
+      <CustomizationPanelModal />
+      <ContextMenuModal onAIGenerate={handleAIGenerate} />
+      <ImageModalComponent />
+      <FileActionMenuComponent />
+      <AIGenerationModalComponent
+        showAIModal={showAIModal}
+        aiTargetNode={aiTargetNode}
         onGenerationComplete={handleAIGenerationComplete}
+        onClose={closeAIModal}
       />
-
     </>
+  );
+};
+
+/**
+ * リファクタリング後のMindMapModalsコンポーネント
+ * プロバイダーパターンを使用して複雑なpropsを整理
+ */
+const MindMapModals: React.FC<Omit<MindMapModalsProviderProps, 'children'>> = (props) => {
+  return (
+    <MindMapModalsProvider {...props}>
+      <MindMapModalsInternal />
+    </MindMapModalsProvider>
   );
 };
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 interface UseModelLoaderOptions {
   getAvailableModels: () => Promise<string[]>;
@@ -34,7 +35,7 @@ export const useModelLoader = ({
         updateModel(models[0]);
       }
     } catch (error) {
-      console.error('Failed to load models:', error);
+      logger.error('Failed to load models:', error);
       setAvailableModels([]);
       
       // CORSエラーの場合は親コンポーネントに通知

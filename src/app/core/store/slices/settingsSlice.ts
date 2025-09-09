@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { MindMapStore } from './types';
+import { STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../shared/utils/localStorage';
 
 export interface AppSettings {
   // テーマ設定
@@ -67,25 +68,16 @@ export const createSettingsSlice: StateCreator<
   },
 
   loadSettingsFromStorage: () => {
-    try {
-      const savedSettings = localStorage.getItem('mindflow_app_settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        set((state) => {
-          state.settings = { ...DEFAULT_SETTINGS, ...parsedSettings };
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load settings from storage:', error);
+    const result = getLocalStorage(STORAGE_KEYS.APP_SETTINGS, DEFAULT_SETTINGS);
+    if (result.success && result.data) {
+      set((state) => {
+        state.settings = { ...DEFAULT_SETTINGS, ...result.data };
+      });
     }
   },
 
   saveSettingsToStorage: () => {
-    try {
-      const { settings } = get();
-      localStorage.setItem('mindflow_app_settings', JSON.stringify(settings));
-    } catch (error) {
-      console.error('Failed to save settings to storage:', error);
-    }
+    const { settings } = get();
+    setLocalStorage(STORAGE_KEYS.APP_SETTINGS, settings);
   },
 });

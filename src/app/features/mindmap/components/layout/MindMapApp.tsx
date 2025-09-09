@@ -1249,28 +1249,37 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       <MindMapModals 
         ui={ui}
         selectedNodeId={selectedNodeId}
-        findNode={(nodeId) => findNodeById(data?.rootNode, nodeId)}
-        onDeleteNode={deleteNode}
-        onUpdateNode={updateNode}
-        onCopyNode={() => {}}
-        onPasteNode={() => {}}
-        onShowCustomization={() => {}}
-        onFileDownload={handleFileDownload}
-        onFileRename={() => {}}
-        onFileDelete={(fileId: string) => {
-          // selectedFileとselectedNodeIdから適切なnodeIdを取得する必要があります
-          if (ui.selectedFile && ui.selectedFile.nodeId) {
-            handleFileDelete(ui.selectedFile.nodeId, fileId);
-          } else if (ui.selectedFile && selectedNodeId) {
-            // fallbackとしてselectedNodeIdを使用
-            handleFileDelete(selectedNodeId, fileId);
+        nodeOperations={{
+          findNode: (nodeId: string) => findNodeById(data?.rootNode, nodeId),
+          onDeleteNode: deleteNode,
+          onUpdateNode: updateNode,
+          onCopyNode: () => {},
+          onPasteNode: () => {},
+          onShowCustomization: () => {},
+          onAddChild: (parentId: string, text?: string) => {
+            return store.addChildNode(parentId, text || 'New Node');
           }
         }}
-        onCloseContextMenu={closeAllPanels}
-        onCloseCustomizationPanel={closeAllPanels}
-        onCloseImageModal={closeAllPanels}
-        onCloseFileActionMenu={closeAllPanels}
-        onShowImageModal={showImageModal}
+        fileOperations={{
+          onFileDownload: handleFileDownload,
+          onFileRename: () => {},
+          onFileDelete: (fileId: string) => {
+            // selectedFileとselectedNodeIdから適切なnodeIdを取得する必要があります
+            if (ui.selectedFile && ui.selectedFile.nodeId) {
+              handleFileDelete(ui.selectedFile.nodeId, fileId);
+            } else if (ui.selectedFile && selectedNodeId) {
+              // fallbackとしてselectedNodeIdを使用
+              handleFileDelete(selectedNodeId, fileId);
+            }
+          },
+          onShowImageModal: showImageModal
+        }}
+        uiOperations={{
+          onCloseContextMenu: closeAllPanels,
+          onCloseCustomizationPanel: closeAllPanels,
+          onCloseImageModal: closeAllPanels,
+          onCloseFileActionMenu: closeAllPanels
+        }}
       />
       
       {/* Keyboard Shortcut Helper */}

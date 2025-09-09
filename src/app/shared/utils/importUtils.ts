@@ -1,5 +1,6 @@
 import { type MindMapData, createInitialData, assignColorsToExistingNodes } from '../types/dataTypes';
 import { MarkdownImporter } from './markdownImporter';
+import { logger } from './logger';
 
 /**
  * インポートオプション
@@ -45,7 +46,7 @@ export class MarkdownFileImporter {
       
       // ファイル内容を読み取り
       const content = await this.readFileContent(file);
-      console.log('📄 ファイル内容読み取り完了', { 
+      logger.debug('📄 ファイル内容読み取り完了', { 
         fileName: file.name, 
         contentLength: content.length,
         firstLine: content.split('\n')[0],
@@ -59,7 +60,7 @@ export class MarkdownFileImporter {
         category
       );
       
-      console.log('🔄 マークダウン変換完了', {
+      logger.debug('🔄 マークダウン変換完了', {
         title: importedData.title,
         rootNodeText: importedData.rootNode.text,
         childrenCount: importedData.rootNode.children?.length || 0,
@@ -69,7 +70,7 @@ export class MarkdownFileImporter {
       // 色の自動割り当て（レイアウトは後でメインアプリで処理）
       const finalData = assignColorsToExistingNodes(importedData);
       
-      console.log('✅ 最終データ準備完了', {
+      logger.debug('✅ 最終データ準備完了', {
         title: finalData.title,
         rootNodeText: finalData.rootNode.text,
         childrenCount: finalData.rootNode.children?.length || 0

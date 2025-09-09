@@ -1,4 +1,5 @@
 import { type MindMapNode, createNewNode } from '../types/dataTypes';
+import { logger } from './logger';
 
 /**
  * マークダウンの見出し行を解析
@@ -18,7 +19,7 @@ export class MarkdownImporter {
    * マークダウンテキストをパースしてMindMapNode構造に変換
    */
   static parseMarkdownToNodes(markdownText: string): MindMapNode {
-    console.log('🔍 マークダウンパース開始', { 
+    logger.debug('🔍 マークダウンパース開始', { 
       textLength: markdownText.length, 
       firstLine: markdownText.split('\n')[0] 
     });
@@ -26,14 +27,14 @@ export class MarkdownImporter {
     const lines = markdownText.split('\n');
     const headings = this.extractHeadings(lines);
     
-    console.log('📝 見出し抽出結果', { 
+    logger.debug('📝 見出し抽出結果', { 
       headingsCount: headings.length,
       headings: headings.map(h => ({ level: h.level, text: h.text }))
     });
     
     if (headings.length === 0) {
       // 見出しがない場合は全体を1つのノートとする
-      console.log('⚠️ 見出しが見つからないため、全体をノートとして処理');
+      logger.info('⚠️ 見出しが見つからないため、全体をノートとして処理');
       const rootNode = createNewNode('インポートされた内容');
       rootNode.id = 'root';
       rootNode.note = markdownText;
@@ -42,14 +43,14 @@ export class MarkdownImporter {
     
     // 階層構造を正規化
     const normalizedHeadings = this.normalizeHeadingHierarchy(headings);
-    console.log('🔄 階層正規化結果', { 
+    logger.debug('🔄 階層正規化結果', { 
       normalizedCount: normalizedHeadings.length,
       normalized: normalizedHeadings.map(h => ({ level: h.level, text: h.text }))
     });
     
     // ノード構造を構築
     const result = this.buildNodeHierarchy(normalizedHeadings);
-    console.log('🏗️ ノード構築結果', { 
+    logger.debug('🏗️ ノード構築結果', { 
       rootText: result.text,
       childrenCount: result.children?.length || 0,
       result

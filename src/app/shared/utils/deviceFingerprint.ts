@@ -114,19 +114,27 @@ export function compareFingerprints(
  * ローカルストレージにフィンガープリントを保存
  */
 export function saveDeviceFingerprint(fingerprint: DeviceFingerprint): void {
-  localStorage.setItem('mindflow_device_fingerprint', JSON.stringify({
-    ...fingerprint,
-    createdAt: new Date().toISOString(),
-    lastUpdated: new Date().toISOString()
-  }));
+  // Dynamically import to avoid circular dependencies
+  import('./localStorage').then(({ setLocalStorage, STORAGE_KEYS }) => {
+    setLocalStorage(STORAGE_KEYS.DEVICE_FINGERPRINT, {
+      ...fingerprint,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    });
+  }).catch(error => {
+    console.warn('Failed to save device fingerprint:', error);
+  });
 }
 
 /**
  * ローカルストレージからフィンガープリントを取得
  */
-export function getStoredDeviceFingerprint(): DeviceFingerprint | null {
+export async function getStoredDeviceFingerprint(): Promise<DeviceFingerprint | null> {
   try {
-    const stored = localStorage.getItem('mindflow_device_fingerprint');
+    // Lazy load to avoid circular dependencies
+    const { getLocalStorage, STORAGE_KEYS } = await import('./localStorage');
+    const result = getLocalStorage<DeviceFingerprint>(STORAGE_KEYS.DEVICE_FINGERPRINT);
+    const stored = result.success && result.data ? JSON.stringify(result.data) : null;
     if (!stored) return null;
     
     const parsed = JSON.parse(stored);
@@ -136,7 +144,8 @@ export function getStoredDeviceFingerprint(): DeviceFingerprint | null {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     if (new Date(parsed.createdAt) < thirtyDaysAgo) {
-      localStorage.removeItem('mindflow_device_fingerprint');
+      const { removeLocalStorage, STORAGE_KEYS } = await import('./localStorage');
+      removeLocalStorage(STORAGE_KEYS.DEVICE_FINGERPRINT);
       return null;
     }
     
@@ -212,12 +221,21 @@ export async function detectDeviceChanges(): Promise<{
     };
   }
 
-  const comparison = compareFingerprints(current, stored);
+  const storedFingerprint = await stored;
+  if (!storedFingerprint) {
+    return {
+      hasChanges: false,
+      changes: [],
+      recommendation: 'allow'
+    };
+  }
+
+  const comparison = compareFingerprints(current, storedFingerprint);
   const changes: string[] = [];
 
   // 変更点を特定
   for (const [key, value] of Object.entries(current.components)) {
-    if (stored.components[key as keyof typeof stored.components] !== value) {
+    if (storedFingerprint.components[key as keyof typeof storedFingerprint.components] !== value) {
       changes.push(key);
     }
   }

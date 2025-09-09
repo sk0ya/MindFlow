@@ -2,6 +2,7 @@
 import type { AuthAdapter, AuthUser, AuthState, AuthConfig, LoginResponse } from './types';
 import { logger } from '../../shared/utils/logger';
 import { generateDeviceFingerprint, saveDeviceFingerprint } from '../../shared/utils/deviceFingerprint';
+import { STORAGE_KEYS, getLocalStorage, setLocalStorage, removeLocalStorageItems } from '../../shared/utils/localStorage';
 
 const DEFAULT_CONFIG: AuthConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://mindflow-api-production.shigekazukoya.workers.dev',
@@ -332,29 +333,30 @@ export class CloudAuthAdapter implements AuthAdapter {
    * トークンを保存
    */
   private storeToken(token: string): void {
-    localStorage.setItem(this.config.tokenKey, token);
+    setLocalStorage(STORAGE_KEYS.AUTH_TOKEN, token);
   }
 
   /**
    * 保存されたトークンを取得
    */
   private getStoredToken(): string | null {
-    return localStorage.getItem(this.config.tokenKey);
+    const result = getLocalStorage<string>(STORAGE_KEYS.AUTH_TOKEN);
+    return result.success ? result.data || null : null;
   }
 
   /**
    * リフレッシュトークンを取得
    */
   private getStoredRefreshToken(): string | null {
-    return localStorage.getItem(this.config.refreshTokenKey);
+    const result = getLocalStorage<string>(STORAGE_KEYS.REFRESH_TOKEN);
+    return result.success ? result.data || null : null;
   }
 
   /**
    * 保存されたトークンをクリア
    */
   private clearStoredTokens(): void {
-    localStorage.removeItem(this.config.tokenKey);
-    localStorage.removeItem(this.config.refreshTokenKey);
+    removeLocalStorageItems([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.REFRESH_TOKEN]);
   }
 
   /**

@@ -1,5 +1,5 @@
 // Cloud storage adapter - integrates cloud storage with Local architecture
-import type { MindMapData } from '@shared/types';
+import type { MindMapData } from '../../../../shared/types';
 import type { StorageAdapter } from '../types';
 import type { AuthAdapter } from '../../auth/types';
 import { createInitialData } from '../../../shared/types/dataTypes';
@@ -12,6 +12,7 @@ import {
   type CloudCachedMindMap
 } from '../../utils/cloudIndexedDB';
 import { logger } from '../../../shared/utils/logger';
+import { STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../shared/utils/localStorage';
 import { createCloudflareAPIClient, cleanEmptyNodesFromData, type CloudflareAPI, type FileInfo } from '../../cloud/api';
 import { SyncStatusService } from '../../services/SyncStatusService';
 import { EditingStateService } from '../../services/EditingStateService';
@@ -773,8 +774,8 @@ export class CloudStorageAdapter implements StorageAdapter {
       }
 
       // 前回のクリーンアップ時刻をチェック
-      const lastCleanupKey = `mindflow_last_cleanup_${userId}`;
-      const lastCleanup = localStorage.getItem(lastCleanupKey);
+      const result = getLocalStorage<string>(STORAGE_KEYS.LAST_CLEANUP);
+      const lastCleanup = result.success ? result.data : null;
       const now = new Date();
 
       // 24時間以内にクリーンアップ済みの場合はスキップ
@@ -831,7 +832,7 @@ export class CloudStorageAdapter implements StorageAdapter {
       }
 
       // クリーンアップ時刻を記録
-      localStorage.setItem(lastCleanupKey, now.toISOString());
+      setLocalStorage(STORAGE_KEYS.LAST_CLEANUP, now.toISOString());
 
       if (removedCount > 0) {
         logger.info(`🧹 CloudStorageAdapter: Startup cleanup completed - removed ${removedCount} cache entries`);

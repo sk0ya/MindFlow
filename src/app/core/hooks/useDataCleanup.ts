@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { clearLocalIndexedDB } from '../utils/indexedDB';
 import { logger } from '../../shared/utils/logger';
+import { localStorageManager } from '../../shared/utils/localStorage';
 
 export interface DataCleanupStats {
   localStorageItems: number;
@@ -17,16 +18,10 @@ export const useDataCleanup = () => {
       setError(null);
       
       // MindFlow関連のキーのみクリア
-      const keysToRemove: string[] = [];
-      
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('mindflow_')) {
-          keysToRemove.push(key);
-        }
-      }
-      
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      const keysToRemove = localStorageManager.getAllMindFlowKeys();
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
       
       logger.info(`🧹 LocalStorage cleaned: ${keysToRemove.length} items removed`);
     } catch (err) {
@@ -76,13 +71,7 @@ export const useDataCleanup = () => {
   const getDataStats = useCallback(async (): Promise<DataCleanupStats> => {
     try {
       // ローカルストレージアイテム数
-      let localStorageItems = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('mindflow_')) {
-          localStorageItems++;
-        }
-      }
+      const localStorageItems = localStorageManager.getAllMindFlowKeys().length;
 
       // IndexedDBのサイズは正確に取得するのが難しいため、概算値を返す
       // 実際の実装では、navigator.storage.estimate()を使用することができる
