@@ -1422,47 +1422,138 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             handleContextMenuClose();
           }}
           onCopy={(node) => {
-            store.setClipboard(node);
-            showNotification('success', `「${node.text}」をコピーしました`);
-            handleContextMenuClose();
-          }}
-          onPaste={(parentId) => {
-            const clipboardNode = ui.clipboard;
-            if (!clipboardNode) {
-              showNotification('warning', 'コピーされたノードがありません');
-              return;
-            }
-            
-            // クリップボードのノードを再帰的にコピーして貼り付け
-            const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
-              const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
-              
-              // 新しく追加されたノードのプロパティを更新
-              if (newNodeId) {
-                updateNode(newNodeId, {
-                  fontSize: nodeToAdd.fontSize,
-                  fontWeight: nodeToAdd.fontWeight,
-                  color: nodeToAdd.color,
-                  collapsed: false, // 貼り付け時は展開状態にする
-                  attachments: nodeToAdd.attachments || []
-                });
+            // ショートカットキーと同じcopyNode関数を使用
+            const copyNode = (nodeId: string) => {
+              const nodeToFind = data?.rootNode ? findNodeById(data.rootNode, nodeId) : null;
+              if (nodeToFind) {
+                // 内部クリップボードに保存
+                store.setClipboard(nodeToFind);
                 
-                // 子ノードも再帰的にコピー
-                if (nodeToAdd.children && nodeToAdd.children.length > 0) {
-                  nodeToAdd.children.forEach(child => {
-                    pasteNodeRecursively(child, newNodeId);
+                // システムクリップボードにマークダウン形式で保存
+                const convertNodeToMarkdown = (node: MindMapNode, level: number = 0): string => {
+                  const prefix = '#'.repeat(Math.min(level + 1, 6)) + ' ';
+                  let markdown = `${prefix}${node.text}\n`;
+                  
+                  // ノートがあれば追加
+                  if (node.note && node.note.trim()) {
+                    markdown += `${node.note}\n`;
+                  }
+                  
+                  // 子ノードを再帰的に処理
+                  if (node.children && node.children.length > 0) {
+                    node.children.forEach(child => {
+                      markdown += convertNodeToMarkdown(child, level + 1);
+                    });
+                  }
+                  
+                  return markdown;
+                };
+                
+                const markdownText = convertNodeToMarkdown(nodeToFind);
+                
+                // システムクリップボードに書き込み
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(markdownText).catch((error) => {
+                    console.warn('システムクリップボードへの書き込みに失敗:', error);
                   });
                 }
+                
+                showNotification('success', `「${nodeToFind.text}」をコピーしました`);
               }
-              
-              return newNodeId;
             };
             
-            const newNodeId = pasteNodeRecursively(clipboardNode, parentId);
-            if (newNodeId) {
-              showNotification('success', `「${clipboardNode.text}」を貼り付けました`);
-              selectNode(newNodeId);
-            }
+            copyNode(node.id);
+            handleContextMenuClose();
+          }}
+          onPaste={async (parentId) => {
+            // ショートカットキーと同じpasteNode関数を使用
+            const pasteNode = async (parentId: string) => {
+              // まずシステムクリップボードからMindMeisterのマークダウンを確認
+              try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                  const clipboardText = await navigator.clipboard.readText();
+                  
+                  // MindMeisterのマークダウン形式かチェック
+                  const { isMindMeisterFormat, parseMindMeisterMarkdown } = await import('../../../../shared/utils/mindMeisterParser');
+                  
+                  if (clipboardText && isMindMeisterFormat(clipboardText)) {
+                    const parsedNode = parseMindMeisterMarkdown(clipboardText);
+                    
+                    if (parsedNode) {
+                      // パースされたノード構造を貼り付け
+                      const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
+                        const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
+                        
+                        if (newNodeId) {
+                          updateNode(newNodeId, {
+                            fontSize: nodeToAdd.fontSize,
+                            fontWeight: nodeToAdd.fontWeight,
+                            color: nodeToAdd.color,
+                            collapsed: false,
+                            attachments: nodeToAdd.attachments || [],
+                            note: nodeToAdd.note
+                          });
+                          
+                          if (nodeToAdd.children && nodeToAdd.children.length > 0) {
+                            nodeToAdd.children.forEach(child => {
+                              pasteNodeRecursively(child, newNodeId);
+                            });
+                          }
+                        }
+                        
+                        return newNodeId;
+                      };
+                      
+                      const newNodeId = pasteNodeRecursively(parsedNode, parentId);
+                      if (newNodeId) {
+                        showNotification('success', `「${parsedNode.text}」をMindMeisterから貼り付けました`);
+                        selectNode(newNodeId);
+                        return;
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                console.warn('システムクリップボードからの読み取りに失敗:', error);
+              }
+              
+              // フォールバック: 内部クリップボードから貼り付け
+              const clipboardNode = ui.clipboard;
+              if (!clipboardNode) {
+                showNotification('warning', 'コピーされたノードがありません');
+                return;
+              }
+              
+              const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
+                const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
+                
+                if (newNodeId) {
+                  updateNode(newNodeId, {
+                    fontSize: nodeToAdd.fontSize,
+                    fontWeight: nodeToAdd.fontWeight,
+                    color: nodeToAdd.color,
+                    collapsed: false,
+                    attachments: nodeToAdd.attachments || []
+                  });
+                  
+                  if (nodeToAdd.children && nodeToAdd.children.length > 0) {
+                    nodeToAdd.children.forEach(child => {
+                      pasteNodeRecursively(child, newNodeId);
+                    });
+                  }
+                }
+                
+                return newNodeId;
+              };
+              
+              const newNodeId = pasteNodeRecursively(clipboardNode, parentId);
+              if (newNodeId) {
+                showNotification('success', `「${clipboardNode.text}」を貼り付けました`);
+                selectNode(newNodeId);
+              }
+            };
+            
+            await pasteNode(parentId);
             handleContextMenuClose();
           }}
           onAIGenerate={ai.aiSettings.enabled ? handleAIGenerate : undefined}
