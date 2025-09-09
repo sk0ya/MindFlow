@@ -1,4 +1,5 @@
-import type { MindMapNode, FileAttachment, NormalizedData } from '@shared/types';
+import type { MindMapNode, FileAttachment } from '@shared/types';
+import type { NormalizedData } from '../../core/data/normalizedStore';
 import { COLORS } from '../constants';
 
 // アイコンレイアウト情報
