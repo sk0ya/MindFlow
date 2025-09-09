@@ -13,12 +13,13 @@ import LinkActionMenu from '../modals/LinkActionMenu';
 import NodeNotesPanel from '../panels/NodeNotesPanel';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import ContextMenu from '../../../../shared/components/ui/ContextMenu';
-import { NotificationProvider, useNotification } from '../../../../shared/hooks/useNotification';
-import { ErrorHandlerProvider, useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
-import { FileUploadProvider } from '../../../../shared/hooks/useFileUpload';
+import { useNotification } from '../../../../shared/hooks/useNotification';
+import { useErrorHandler, setupGlobalErrorHandlers } from '../../../../shared/hooks/useErrorHandler';
 import { useRetryableUpload } from '../../../../shared/hooks/useRetryableUpload';
 import { useAI } from '../../../../core/hooks/useAI';
 import { useTheme } from '../../../../shared/hooks/useTheme';
+import { useModalState } from '../../../../shared/hooks/useModalState';
+import MindMapProviders from './MindMapProviders';
 import { logger } from '../../../../shared/utils/logger';
 import './MindMapApp.css';
 
@@ -61,31 +62,19 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     setupGlobalErrorHandlers(handleError);
   }, [handleError]);
   const [isAppReady] = useState(true);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [internalResetKey, setResetKey] = useState(resetKey);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  
-  // Link-related states
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [editingLink, setEditingLink] = useState<NodeLink | null>(null);
-  const [linkModalNodeId, setLinkModalNodeId] = useState<string | null>(null);
-  const [showLinkActionMenu, setShowLinkActionMenu] = useState(false);
-  const [linkActionMenuData, setLinkActionMenuData] = useState<{
-    link: NodeLink;
-    position: { x: number; y: number };
-  } | null>(null);
-  
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    position: { x: number; y: number };
-    nodeId: string | null;
-  }>({
-    visible: false,
-    position: { x: 0, y: 0 },
-    nodeId: null
-  });
+  // モーダル状態管理
+  const {
+    showExportModal, setShowExportModal,
+    showImportModal, setShowImportModal,
+    showLoginModal, setShowLoginModal,
+    showLinkModal, setShowLinkModal,
+    editingLink, setEditingLink,
+    linkModalNodeId, setLinkModalNodeId,
+    showLinkActionMenu, setShowLinkActionMenu,
+    linkActionMenuData, setLinkActionMenuData,
+    contextMenu, setContextMenu
+  } = useModalState();
   
   const store = useMindMapStore();
   
@@ -1425,13 +1414,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 
 const MindMapApp: React.FC<MindMapAppProps> = (props) => {
   return (
-    <NotificationProvider>
-      <ErrorHandlerProvider>
-        <FileUploadProvider>
-          <MindMapAppContent {...props} />
-        </FileUploadProvider>
-      </ErrorHandlerProvider>
-    </NotificationProvider>
+    <MindMapProviders>
+      <MindMapAppContent {...props} />
+    </MindMapProviders>
   );
 };
 

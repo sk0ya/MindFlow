@@ -51,9 +51,9 @@ export {
   isValidFileAttachment,
 } from '@shared/types';
 
-// Export new type safety modules
-export type { NodeId, MapId, FileId } from './brandedTypes';
-export { isNodeId, isMapId, isFileId, createNodeId, createMapId, createFileId } from './brandedTypes';
+// Export new type safety modules (consolidated into dataTypes)
+export type { NodeId, MapId, FileId } from './dataTypes';
+export { isNodeId, isMapId, isFileId, createNodeId, createMapId, createFileId } from './dataTypes';
 
 export type { Result } from './result';
 export { Success, Failure, isSuccess, isFailure, map, flatMap, match, collect, tryCatch, tryCatchAsync } from './result';
