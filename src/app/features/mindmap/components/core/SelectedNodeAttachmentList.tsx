@@ -103,8 +103,8 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
   // ノードに添付ファイルやリンクがある場合、それらの下に配置
   const hasAttachments = node.attachments && node.attachments.length > 0;
   const hasLinks = node.links && node.links.length > 0;
-  const iconOffset = (hasAttachments || hasLinks) ? 25 : 0; // アイコンの分だけオフセット
-  const listY = node.y + nodeHeight / 2 + 5 + iconOffset; // ノードの下に最小限のスペース
+  const iconOffset = (hasAttachments || hasLinks) ? 12 : 0; // アイコンの分だけオフセット（さらに縮小）
+  const listY = node.y + nodeHeight / 2 + 12 + iconOffset; // ノードの下に適切なスペース
   const listX = node.x - nodeWidth / 2; // ノードの左端に合わせる
   const listWidth = Math.max(nodeWidth, 300); // 最小幅300px
   

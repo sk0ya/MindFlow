@@ -98,12 +98,12 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
   // リストの位置計算（アイコンと添付ファイルリストの下に表示）
   const hasAttachments = node.attachments && node.attachments.length > 0;
   const hasLinks = node.links && node.links.length > 0;
-  const iconOffset = (hasAttachments || hasLinks) ? 25 : 0;
+  const iconOffset = (hasAttachments || hasLinks) ? 12 : 0;
   const hasAttachmentList = hasAttachments && node.attachments && node.attachments.length > 0;
   const attachmentListHeight = hasAttachmentList ? Math.min((node.attachments?.length || 0) * 28 + 16, 240) : 0;
   
   const linkListOffset = iconOffset + attachmentListHeight + (hasAttachmentList ? 10 : 0); // アイコンと添付ファイルリストとの間隔
-  const listY = node.y + nodeHeight / 2 + 5 + linkListOffset;
+  const listY = node.y + nodeHeight / 2 + 12 + linkListOffset;
   const listX = node.x - nodeWidth / 2;
   const listWidth = Math.max(nodeWidth, 300);
   
