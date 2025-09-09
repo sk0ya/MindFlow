@@ -152,7 +152,13 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         config = localModeConfig;
         break;
       case 'cloud':
-        config = authAdapter ? createCloudModeConfig(authAdapter) : localModeConfig;
+        if (authAdapter) {
+          config = createCloudModeConfig(authAdapter);
+        } else {
+          // Auth adapter not available, fall back to local mode
+          logger.warn('Cloud mode requested but auth adapter not available, falling back to local mode');
+          config = localModeConfig;
+        }
         break;
       default:
         config = localModeConfig;
