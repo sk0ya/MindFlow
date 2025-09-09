@@ -1219,6 +1219,13 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         onExport={handleExport}
         onImport={handleImport}
         currentMapData={data}
+        onNodeSelect={(nodeId) => {
+          selectNode(nodeId);
+          centerNodeInView(nodeId);
+        }}
+        onMapSwitch={(mapId) => {
+          selectMapById(mapId);
+        }}
       />
 
       <div className={`mindmap-main-content ${activeView ? 'with-sidebar' : ''}`}>

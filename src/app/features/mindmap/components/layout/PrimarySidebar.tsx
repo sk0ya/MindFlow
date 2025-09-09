@@ -5,6 +5,7 @@ import SettingsSidebar from './SettingsSidebar';
 import AISidebar from './AISidebar';
 import ImportSidebar from './ImportSidebar';
 import ExportSidebar from './ExportSidebar';
+import SearchSidebar from './SearchSidebar';
 import type { MindMapData } from '../../../../shared/types';
 import './PrimarySidebar.css';
 
@@ -30,6 +31,9 @@ interface PrimarySidebarProps {
   onImport?: () => void;
   // Current map data for export
   currentMapData?: MindMapData | null;
+  // Search props
+  onNodeSelect?: (nodeId: string) => void;
+  onMapSwitch?: (mapId: string) => void;
 }
 
 const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
@@ -53,7 +57,10 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   onExport,
   onImport,
   // Current map data
-  currentMapData
+  currentMapData,
+  // Search props
+  onNodeSelect,
+  onMapSwitch
 }) => {
   if (!isVisible || !activeView) {
     return null;
@@ -75,6 +82,16 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             availableCategories={availableCategories}
             isCollapsed={false}
             onToggleCollapse={() => {}}
+          />
+        );
+      
+      case 'search':
+        return (
+          <SearchSidebar
+            currentMapData={currentMapData}
+            allMapsData={mindMaps}
+            onNodeSelect={onNodeSelect}
+            onMapSwitch={onMapSwitch}
           />
         );
       

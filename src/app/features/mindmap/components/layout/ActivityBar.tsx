@@ -22,6 +22,12 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
       isActive: activeView === 'maps'
     },
     {
+      id: 'search',
+      icon: '🔍',
+      label: '検索',
+      isActive: activeView === 'search'
+    },
+    {
       id: 'notes',
       icon: '📝',
       label: 'ノート',
