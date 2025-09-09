@@ -42,7 +42,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = React.memo(({
     setShowCustomPrompt(false);
     setStep('generating');
     clearError();
-  }, [clearError]);
+  }, []); // 空の依存関係で固定
   
   const handleGenerate = useCallback(async () => {
     if (!parentNode) return;
@@ -60,14 +60,14 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = React.memo(({
       console.error('AI generation failed:', error);
       // エラーが発生してもモーダルは開いたまま
     }
-  }, [parentNode, contextNodes, generateChildNodes, clearError]);
+  }, []); // 空の依存関係で固定してループを防止
   
-  // モーダルが開かれたときに自動生成を開始
+  // モーダルが開かれたときに自動生成を開始 (無限ループを避けるため最低限の依存関係のみ)
   useEffect(() => {
     if (isOpen && parentNode && aiSettings.enabled && isSettingsValid) {
       handleGenerate();
     }
-  }, [isOpen, parentNode, aiSettings.enabled, isSettingsValid]);
+  }, [isOpen]);
   
   // モーダルが閉じられたときにリセット
   useEffect(() => {
