@@ -67,7 +67,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = React.memo(({
     if (isOpen && parentNode && aiSettings.enabled && isSettingsValid) {
       handleGenerate();
     }
-  }, [isOpen, parentNode, aiSettings.enabled, handleGenerate, isSettingsValid]);
+  }, [isOpen, parentNode, aiSettings.enabled, isSettingsValid]);
   
   // モーダルが閉じられたときにリセット
   useEffect(() => {
