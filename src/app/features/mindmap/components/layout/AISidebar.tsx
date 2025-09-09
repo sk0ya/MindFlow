@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAI } from '../../../../core/hooks/useAI';
+import { useConnectionTest } from '../../../../shared/hooks/useConnectionTest';
+import { useModelLoader } from '../../../../shared/hooks/useModelLoader';
 
 const AISidebar: React.FC = () => {
   const {
@@ -13,71 +15,38 @@ const AISidebar: React.FC = () => {
     clearError
   } = useAI();
   
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [connectionError, setConnectionError] = useState<string>('');
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [extensionAvailable, setExtensionAvailable] = useState(false);
+  
+  // 接続テスト用フック
+  const {
+    connectionStatus,
+    connectionError,
+    handleTestConnection
+  } = useConnectionTest({
+    testConnection,
+    clearError,
+    onSuccess: async () => {
+      await loadModels();
+    }
+  });
+  
+  // モデル読み込み用フック
+  const {
+    availableModels,
+    isLoadingModels,
+    loadModels
+  } = useModelLoader({
+    getAvailableModels,
+    currentModel: aiSettings.model,
+    updateModel: (model) => updateAISettings({ model }),
+    onCORSError: () => {
+      // CORSエラー時に接続状態をエラーに設定
+      // この処理は useConnectionTest で handleTestConnection を呼び出すことで対処
+    }
+  });
   
   // 設定の妥当性をチェック
   const { errors: validationErrors } = validateSettings();
-  
-  // 接続テスト
-  const handleTestConnection = async () => {
-    setConnectionStatus('testing');
-    setConnectionError('');
-    clearError();
-    
-    try {
-      const result = await testConnection();
-      if (result.success) {
-        setConnectionStatus('success');
-        // 接続成功時にモデル一覧も取得
-        await handleLoadModels();
-      } else {
-        setConnectionStatus('error');
-        // CORS エラーの場合は特別なメッセージを表示
-        const error = result.error || '接続に失敗しました';
-        if (error.includes('CORS') || error.includes('Failed to fetch')) {
-          setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
-        } else {
-          setConnectionError(error);
-        }
-      }
-    } catch (error) {
-      setConnectionStatus('error');
-      const errorMessage = error instanceof Error ? error.message : '接続テストでエラーが発生しました';
-      if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
-        setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
-      } else {
-        setConnectionError(errorMessage);
-      }
-    }
-  };
-  
-  // モデル一覧の取得
-  const handleLoadModels = async () => {
-    setIsLoadingModels(true);
-    try {
-      const models = await getAvailableModels();
-      setAvailableModels(models);
-      // 現在のモデルがリストにない場合、最初のモデルを選択
-      if (models.length > 0 && !models.includes(aiSettings.model)) {
-        updateAISettings({ model: models[0] });
-      }
-    } catch (error) {
-      console.error('Failed to load models:', error);
-      setAvailableModels([]);
-      // CORSエラーの場合は接続エラーも表示
-      const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
-        setConnectionStatus('error');
-        setConnectionError('CORSポリシーエラー: デプロイされたアプリからローカルOllamaにアクセスできません。ローカル開発環境（localhost）で実行してください。');
-      }
-    } finally {
-      setIsLoadingModels(false);
-    }
-  };
   
   // 拡張機能の検出
   useEffect(() => {
@@ -110,9 +79,9 @@ const AISidebar: React.FC = () => {
   // AI機能が有効になった時にモデル一覧を取得
   useEffect(() => {
     if (aiSettings.enabled && availableModels.length === 0) {
-      handleLoadModels();
+      loadModels();
     }
-  }, [aiSettings.enabled]);
+  }, [aiSettings.enabled, availableModels.length, loadModels]);
   
   return (
     <div className="ai-sidebar">
@@ -247,7 +216,7 @@ const AISidebar: React.FC = () => {
                     </select>
                   </label>
                   {availableModels.length === 0 && !isLoadingModels && (
-                    <button className="ai-refresh-button" onClick={handleLoadModels}>
+                    <button className="ai-refresh-button" onClick={loadModels}>
                       🔄 モデル一覧を更新
                     </button>
                   )}
