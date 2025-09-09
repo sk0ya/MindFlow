@@ -56,7 +56,7 @@ class LocalIndexedDBManager extends IndexedDBBase<CachedLocalMindMap> {
    */
   async saveCurrentMap(data: MindMapData): Promise<void> {
     const cachedData = this.createMetadata(data);
-    return this.saveData(this.stores.CURRENT_MAP.name, { key: 'currentMap', data: cachedData }, 'currentMap');
+    return this.saveData(this.stores.CURRENT_MAP.name, { key: 'currentMap', data: cachedData });
   }
 
   /**
