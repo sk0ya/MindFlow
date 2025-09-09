@@ -472,7 +472,7 @@ export const exportToZip = async (
             
             // ファイルをノード別フォルダに追加
             nodeFolder.file(attachment.name, fileData);
-            console.log(`Added attachment: ${nodeId}/${attachment.name}`);
+            // Successfully added attachment
             
           } catch (error) {
             console.error(`Failed to add attachment ${attachment.name} for node ${nodeId}:`, error);
@@ -501,14 +501,14 @@ export const exportToZip = async (
             
             try {
               nodeFolder.file(fileName, note);
-              console.log(`Added note file: attachments/${nodeId}/${fileName}`);
+              // Successfully added note file
             } catch (error) {
               console.warn(`Failed to add note file ${fileName}:`, error);
               // エラーが発生した場合は、ノードIDをファイル名として使用
               const fallbackFileName = `${nodeId}.md`;
               try {
                 nodeFolder.file(fallbackFileName, note);
-                console.log(`Added note file with fallback name: attachments/${nodeId}/${fallbackFileName}`);
+                // Successfully added note file with fallback name
               } catch (fallbackError) {
                 console.error(`Failed to add note file even with fallback name ${fallbackFileName}:`, fallbackError);
               }

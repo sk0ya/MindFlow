@@ -3,6 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from './AuthProvider';
 import { logger } from '../../shared/utils/logger';
+import {
+  modalOverlay,
+  modalContainer,
+} from '../../shared/styles/modalStyles';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -102,27 +106,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   const modalContent = (
     <div 
-      style={{ 
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+style={{
+        ...modalOverlay,
         zIndex: 99999,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         padding: '20px'
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div 
         style={{
-          backgroundColor: 'white',
+          ...modalContainer,
           padding: '30px',
-          borderRadius: '12px',
-          maxWidth: '400px',
           width: '100%',
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
         }}

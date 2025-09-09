@@ -99,7 +99,7 @@ export abstract class IndexedDBBase<T extends CachedMindMap> {
   /**
    * 汎用データ保存メソッド
    */
-  protected async saveData(storeName: string, data: any, key?: IDBValidKey): Promise<void> {
+  protected async saveData<T>(storeName: string, data: T, key?: IDBValidKey): Promise<void> {
     await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ export abstract class IndexedDBBase<T extends CachedMindMap> {
       request.onsuccess = () => {
         logger.debug(`IndexedDB ${this.dbName}: データ保存完了`, { 
           store: storeName,
-          id: data.id || 'no-id'
+          id: (data as any)?.id || 'no-id'
         });
         resolve();
       };
@@ -125,7 +125,7 @@ export abstract class IndexedDBBase<T extends CachedMindMap> {
   /**
    * 汎用データ取得メソッド
    */
-  protected async getData<R>(storeName: string, key?: any): Promise<R | null> {
+  protected async getData<R>(storeName: string, key?: IDBValidKey): Promise<R | null> {
     await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
@@ -153,7 +153,7 @@ export abstract class IndexedDBBase<T extends CachedMindMap> {
   /**
    * 汎用データ削除メソッド
    */
-  protected async deleteData(storeName: string, key: any): Promise<void> {
+  protected async deleteData(storeName: string, key: IDBValidKey): Promise<void> {
     await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
@@ -202,7 +202,7 @@ export abstract class IndexedDBBase<T extends CachedMindMap> {
   /**
    * インデックスを使ったデータ取得
    */
-  protected async getDataByIndex<R>(storeName: string, indexName: string, value: any): Promise<R[]> {
+  protected async getDataByIndex<R>(storeName: string, indexName: string, value: IDBValidKey): Promise<R[]> {
     await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
