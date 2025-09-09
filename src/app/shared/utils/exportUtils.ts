@@ -1,16 +1,7 @@
 import type { MindMapData, MindMapNode, FileAttachment } from '../types/dataTypes';
+import { formatFileSize } from './fileUtils';
 import JSZip from 'jszip';
 
-// ファイルサイズをフォーマットするヘルパー関数
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 interface ExportOptions {
   includeMetadata?: boolean;

@@ -1,6 +1,8 @@
 import { cloneDeep } from '../utils/lodash-utils';
 import { COORDINATES, LAYOUT, TYPOGRAPHY, COLORS, DEFAULTS, STORAGE, VALIDATION } from '../constants/index';
 import { logger } from '../utils/logger';
+import { generateNodeId, generateMapId } from '../utils/idGenerator';
+export { validateFile, formatFileSize } from '../utils/fileUtils';
 
 // Import shared types to ensure compatibility
 import type { 
@@ -83,45 +85,6 @@ export const THEMES: Record<string, Theme> = {
   }
 };
 
-// ID生成でタイムスタンプの重複を防ぐためのカウンター
-let idCounter = 0;
-let lastTimestamp = 0;
-
-export const generateId = () => {
-  const now = Date.now();
-  
-  // 同じタイムスタンプの場合はカウンターを増加
-  if (now === lastTimestamp) {
-    idCounter++;
-  } else {
-    idCounter = 0;
-    lastTimestamp = now;
-  }
-  
-  // より強固なランダム文字列を生成
-  const randomPart1 = Math.random().toString(36).substr(2, 9);
-  const randomPart2 = Math.random().toString(36).substr(2, 9);
-  
-  return `node_${now}_${idCounter}_${randomPart1}${randomPart2}`;
-};
-
-export const generateMapId = () => {
-  const now = Date.now();
-  
-  // 同じタイムスタンプの場合はカウンターを増加
-  if (now === lastTimestamp) {
-    idCounter++;
-  } else {
-    idCounter = 0;
-    lastTimestamp = now;
-  }
-  
-  // より強固なランダム文字列を生成
-  const randomPart1 = Math.random().toString(36).substr(2, 9);
-  const randomPart2 = Math.random().toString(36).substr(2, 9);
-  
-  return `map_${now}_${idCounter}_${randomPart1}${randomPart2}`;
-};
 
 export const createInitialData = (): MindMapData => ({
   id: generateMapId(),
@@ -155,7 +118,7 @@ export const createNewNode = (
   settings?: { fontSize?: number; fontFamily?: string }
 ): MindMapNode => {
   return {
-    id: generateId(),
+    id: generateNodeId(),
     text,
     x: parentNode ? parentNode.x + LAYOUT.LEVEL_SPACING : COORDINATES.DEFAULT_CENTER_X,
     y: parentNode ? parentNode.y : COORDINATES.DEFAULT_CENTER_Y,
@@ -268,7 +231,7 @@ export const createFileAttachment = (
   optimizationInfo: FileOptimizationInfo | null = null
 ): FileAttachment => {
   return {
-    id: uploadedFileInfo?.id || generateId(),
+    id: uploadedFileInfo?.id || generateNodeId(),
     name: file.name,
     type: file.type,
     size: file.size,
@@ -329,32 +292,4 @@ export const assignColorsToExistingNodes = (mindMapData: MindMapData): MindMapDa
   return clonedData;
 };
 
-export const validateFile = (file: File): string[] => {
-  const errors: string[] = [];
-  
-  if (!file) {
-    errors.push('ファイルが選択されていません');
-    return errors;
-  }
-  
-  if (file.size > MAX_FILE_SIZE) {
-    errors.push(`ファイルサイズが大きすぎます (${Math.round(file.size / 1024 / 1024)}MB > 10MB)`);
-  }
-  
-  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-    errors.push(`サポートされていないファイル形式です: ${file.type}`);
-  }
-  
-  return errors;
-};
-
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 

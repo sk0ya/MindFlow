@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useMindMap, useKeyboardShortcuts, useMindMapStore, useMindMapPersistence } from '../../../../core';
+import { findNodeById } from '../../../../shared/utils/nodeTreeUtils';
 import ActivityBar from './ActivityBar';
 import PrimarySidebar from './PrimarySidebar';
 import MindMapHeader from './MindMapHeader';
@@ -520,7 +521,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     // ファイルバリデーション
     const validationErrors = validateFile(file);
     if (validationErrors.length > 0) {
-      validationErrors.forEach(error => showNotification('error', error));
+      validationErrors.forEach((error: string) => showNotification('error', error));
       return;
     }
 
@@ -807,16 +808,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   };
 
   // ユーティリティ関数
-  const findNodeById = (rootNode: MindMapNode, nodeId: string): MindMapNode | null => {
-    if (rootNode.id === nodeId) return rootNode;
-    
-    for (const child of rootNode.children || []) {
-      const result = findNodeById(child, nodeId);
-      if (result) return result;
-    }
-    
-    return null;
-  };
 
   // Context menu handlers
   const handleRightClick = (e: React.MouseEvent, nodeId: string) => {

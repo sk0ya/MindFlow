@@ -1,9 +1,6 @@
 import type { NodeLink, MindMapNode, MindMapData } from '@shared/types';
-
-// ユニークIDを生成する関数
-export const generateLinkId = (): string => {
-  return `link_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
+import { generateLinkId } from './idGenerator';
+import { findNodeById } from './nodeTreeUtils';
 
 // ノードにリンクを追加する関数
 export const addLinkToNode = (
@@ -114,24 +111,6 @@ export const removeLinkFromNodeTree = (
   };
 };
 
-// ノードをIDで検索する関数
-export const findNodeById = (
-  rootNode: MindMapNode,
-  nodeId: string
-): MindMapNode | null => {
-  if (rootNode.id === nodeId) {
-    return rootNode;
-  }
-
-  for (const child of rootNode.children) {
-    const found = findNodeById(child, nodeId);
-    if (found) {
-      return found;
-    }
-  }
-
-  return null;
-};
 
 // リンクを検証する関数
 export const validateLink = (linkData: Partial<NodeLink>): {
