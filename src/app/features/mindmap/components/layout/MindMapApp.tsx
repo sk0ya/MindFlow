@@ -420,7 +420,57 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         showNotification('success', `「${node.text}」をコピーしました`);
       }
     },
-    pasteNode: (parentId: string) => {
+    pasteNode: async (parentId: string) => {
+      // まずシステムクリップボードからMindMeisterのマークダウンを確認
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const clipboardText = await navigator.clipboard.readText();
+          
+          // MindMeisterのマークダウン形式かチェック
+          const { isMindMeisterFormat, parseMindMeisterMarkdown } = await import('../../../../shared/utils/mindMeisterParser');
+          
+          if (clipboardText && isMindMeisterFormat(clipboardText)) {
+            const parsedNode = parseMindMeisterMarkdown(clipboardText);
+            
+            if (parsedNode) {
+              // パースされたノード構造を貼り付け
+              const pasteNodeRecursively = (nodeToAdd: MindMapNode, parentId: string): string | undefined => {
+                const newNodeId = store.addChildNode(parentId, nodeToAdd.text);
+                
+                if (newNodeId) {
+                  updateNode(newNodeId, {
+                    fontSize: nodeToAdd.fontSize,
+                    fontWeight: nodeToAdd.fontWeight,
+                    color: nodeToAdd.color,
+                    collapsed: false,
+                    attachments: nodeToAdd.attachments || [],
+                    note: nodeToAdd.note
+                  });
+                  
+                  if (nodeToAdd.children && nodeToAdd.children.length > 0) {
+                    nodeToAdd.children.forEach(child => {
+                      pasteNodeRecursively(child, newNodeId);
+                    });
+                  }
+                }
+                
+                return newNodeId;
+              };
+              
+              const newNodeId = pasteNodeRecursively(parsedNode, parentId);
+              if (newNodeId) {
+                showNotification('success', `「${parsedNode.text}」をMindMeisterから貼り付けました`);
+                selectNode(newNodeId);
+                return;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('システムクリップボードからの読み取りに失敗:', error);
+      }
+      
+      // フォールバック: 内部クリップボードから貼り付け
       const clipboardNode = ui.clipboard;
       if (!clipboardNode) {
         showNotification('warning', 'コピーされたノードがありません');

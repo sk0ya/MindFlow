@@ -31,7 +31,7 @@ interface KeyboardShortcutHandlers {
   showKeyboardHelper: boolean;
   setShowKeyboardHelper: (_show: boolean) => void;
   copyNode: (_nodeId: string) => void;
-  pasteNode: (_parentId: string) => void;
+  pasteNode: (_parentId: string) => Promise<void>;
   pasteImageFromClipboard: (_nodeId: string) => Promise<void>;
   findNodeById: (_nodeId: string) => MindMapNode | null;
 }
@@ -140,10 +140,10 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
             event.preventDefault();
             if (handlers.selectedNodeId) {
               // まずシステムクリップボードから画像を確認
-              handlers.pasteImageFromClipboard(handlers.selectedNodeId).catch(() => {
-                // 画像がない場合は通常のノードペースト
+              handlers.pasteImageFromClipboard(handlers.selectedNodeId).catch(async () => {
+                // 画像がない場合は通常のノードペースト（MindMeister形式も含む）
                 if (handlers.selectedNodeId) {
-                  handlers.pasteNode(handlers.selectedNodeId);
+                  await handlers.pasteNode(handlers.selectedNodeId);
                 }
               });
             }
