@@ -26,11 +26,15 @@ import './MindMapApp.css';
 // Types
 import type { MindMapNode, FileAttachment, MindMapData, NodeLink } from '@shared/types';
 import type { StorageConfig } from '../../../../core/storage/types';
-import { 
-  localModeConfig, 
-  createCloudModeConfig, 
- 
-} from '../../../../examples/StorageConfigExamples';
+// Storage configurations
+const localModeConfig: StorageConfig = {
+  mode: 'local'
+};
+
+const createCloudModeConfig = (authAdapter: any): StorageConfig => ({
+  mode: 'cloud',
+  authAdapter
+});
 import { useOptionalAuth, LoginModal } from '../../../../components/auth';
 import { validateFile } from '../../../../shared/types/dataTypes';
 
