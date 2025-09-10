@@ -1101,6 +1101,13 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   }, [data, ui.zoom, ui.pan, setPan]);
 
+  // ルートノードを中央に表示するハンドラー
+  const handleCenterRootNode = useCallback(() => {
+    if (data?.rootNode) {
+      centerNodeInView(data.rootNode.id, true);
+    }
+  }, [data?.rootNode, centerNodeInView]);
+
   const handleLinkNavigate = async (link: NodeLink) => {
     try {
       // If targetMapId is specified and different from current map
@@ -1251,6 +1258,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onStorageModeChange={onModeChange}
           onToggleNotesPanel={() => store.toggleNotesPanel()}
           showNotesPanel={ui.showNotesPanel}
+          onCenterRootNode={handleCenterRootNode}
         />
         
         <div className="workspace-container">

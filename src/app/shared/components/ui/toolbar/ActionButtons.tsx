@@ -12,6 +12,7 @@ interface ActionButtonsProps {
   onAutoLayout?: () => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
+  onCenterRootNode?: () => void;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -24,7 +25,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onShowShortcutHelper,
   onAutoLayout,
   onToggleNotesPanel,
-  showNotesPanel = false
+  showNotesPanel = false,
+  onCenterRootNode
 }) => {
 
   return (
@@ -71,6 +73,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               onClick={onAutoLayout}
             >
               📐
+            </button>
+          </ShortcutTooltip>
+        )}
+        
+        {onCenterRootNode && (
+          <ShortcutTooltip description="ルートノードを中央に表示">
+            <button 
+              className="toolbar-btn center-root"
+              onClick={onCenterRootNode}
+            >
+              🎯
             </button>
           </ShortcutTooltip>
         )}
