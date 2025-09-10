@@ -14,7 +14,6 @@ interface ToolbarProps {
   canRedo: boolean;
   zoom: number;
   onZoomReset: () => void;
-  onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
@@ -32,7 +31,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
   canRedo,
   zoom,
   onZoomReset,
-  onShowShortcutHelper,
   onAutoLayout,
   storageMode = 'local',
   onStorageModeChange,
@@ -56,7 +54,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
         canRedo={canRedo}
         zoom={zoom}
         onZoomReset={onZoomReset}
-        onShowShortcutHelper={onShowShortcutHelper}
         onAutoLayout={onAutoLayout}
         onToggleNotesPanel={onToggleNotesPanel}
         showNotesPanel={showNotesPanel}

@@ -11,9 +11,10 @@ interface ActivityBarItem {
 interface ActivityBarProps {
   activeView: string | null;
   onViewChange: (viewId: string | null) => void;
+  onShowKeyboardHelper: () => void;
 }
 
-const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) => {
+const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange, onShowKeyboardHelper }) => {
   const items: ActivityBarItem[] = [
     {
       id: 'maps',
@@ -89,6 +90,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
           className="activity-bar-item"
           title="キーボードショートカット"
           aria-label="キーボードショートカット"
+          onClick={onShowKeyboardHelper}
         >
           <span className="activity-bar-icon">⌨️</span>
         </button>

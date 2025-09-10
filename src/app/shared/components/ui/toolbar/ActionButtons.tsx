@@ -8,7 +8,6 @@ interface ActionButtonsProps {
   canRedo: boolean;
   zoom: number;
   onZoomReset: () => void;
-  onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
@@ -22,7 +21,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   canRedo,
   zoom,
   onZoomReset,
-  onShowShortcutHelper,
   onAutoLayout,
   onToggleNotesPanel,
   showNotesPanel = false,
@@ -102,15 +100,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           </ShortcutTooltip>
         )}
         
-        
-        <ShortcutTooltip shortcut="?" description="キーボードショートカット">
-          <button 
-            className="toolbar-btn shortcuts"
-            onClick={onShowShortcutHelper}
-          >
-            ⌨️
-          </button>
-        </ShortcutTooltip>
         
       </div>
     </div>

@@ -1198,6 +1198,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       <ActivityBar
         activeView={activeView}
         onViewChange={setActiveView}
+        onShowKeyboardHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
       />
       
       <PrimarySidebar
@@ -1245,7 +1246,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           canRedo={canRedo}
           zoom={ui.zoom}
           onZoomReset={() => setZoom(1.0)}
-          onShowShortcutHelper={() => setShowKeyboardHelper(!showKeyboardHelper)}
           onAutoLayout={() => {
             logger.info('Manual auto layout triggered');
             if (typeof mindMap.applyAutoLayout === 'function') {

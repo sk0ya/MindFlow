@@ -11,7 +11,6 @@ interface MindMapHeaderProps {
   canRedo: boolean;
   zoom: number;
   onZoomReset: () => void;
-  onShowShortcutHelper: () => void;
   onAutoLayout?: () => void;
   storageMode?: 'local' | 'cloud';
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
@@ -29,7 +28,6 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   canRedo,
   zoom,
   onZoomReset,
-  onShowShortcutHelper,
   onAutoLayout,
   storageMode = 'local',
   onStorageModeChange,
@@ -47,7 +45,6 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       canRedo={canRedo}
       zoom={zoom}
       onZoomReset={onZoomReset}
-      onShowShortcutHelper={onShowShortcutHelper}
       onAutoLayout={onAutoLayout}
       storageMode={storageMode}
       onStorageModeChange={onStorageModeChange}
