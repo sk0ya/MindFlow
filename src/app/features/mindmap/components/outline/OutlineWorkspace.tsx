@@ -52,7 +52,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
     const currentDataId = data.id || 'unknown';
     
     if (initialDataRef.current === '' || initialDataRef.current !== currentDataId) {
-      console.log('Setting up outline for new data:', currentDataId);
       initialDataRef.current = currentDataId;
       
       const outline = convertMindMapToOutline(data);
@@ -62,16 +61,11 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
       // ノードのメタデータを抽出
       const metadata = new Map<string, { attachments: any[], links: any[] }>();
       const extractMetadata = (node: MindMapNode) => {
-        console.log(`Extracting metadata for node ${node.id} (${node.text}):`, {
-          attachments: node.attachments?.length || 0,
-          links: node.links?.length || 0
-        });
         if (node.attachments?.length || node.links?.length) {
           metadata.set(node.id, {
             attachments: node.attachments || [],
             links: node.links || []
           });
-          console.log(`Added metadata for node ${node.id}`);
         }
         node.children?.forEach(extractMetadata);
       };
@@ -82,8 +76,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
       
       // Widget registryをリセット
       widgetRegistryRef.current.clear();
-    } else {
-      console.log('Skipping outline update - data already initialized');
     }
     
   }, [data]);
@@ -94,9 +86,7 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
     return () => {
       // コンポーネントアンマウント時にWidgetとdecorationを破棄
       if (editorRef.current) {
-        console.log('Cleaning up widgets on unmount');
         widgetRegistryRef.current.forEach((widgetInfo) => {
-          console.log(`Removing widget: ${widgetInfo.widget.getId()}`);
           editorRef.current!.removeContentWidget(widgetInfo.widget);
           editorRef.current!.deltaDecorations([widgetInfo.decorationId], []);
         });
@@ -117,9 +107,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
 
   const handleManualSave = useCallback(() => {
     try {
-      console.log('=== Manual Save Debug ===');
-      console.log('editorRef.current:', !!editorRef.current);
-      
       if (!editorRef.current) {
         console.error('Editor not available');
         return;
@@ -133,13 +120,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
         return;
       }
       
-      // Widget registryから現在のWidget情報を取得
-      console.log('widgetRegistry has:', Array.from(widgetRegistryRef.current.keys()));
-      
-      // 現在のエディタテキストから見出し行を抽出してWidgetとマッピング
-      const currentLines = outlineText.split('\n');
-      console.log('Current editor line count:', currentLines.length);
-      
       widgetRegistryRef.current.forEach((widgetInfo, nodeId) => {
         if (widgetInfo.metadata.attachments.length > 0 || widgetInfo.metadata.links.length > 0) {
           // BELOW positioning により Widget は自動で追従するので、直接現在位置を使用
@@ -152,15 +132,9 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
               attachments: widgetInfo.metadata.attachments,
               links: widgetInfo.metadata.links
             });
-            
-            console.log(`Widget ${nodeId} is at line ${currentLine}`, widgetInfo.metadata);
-          } else {
-            console.warn(`Widget ${nodeId} has no position information`);
           }
         }
       });
-      
-      console.log('Final currentLineToMetadataMap:', currentLineToMetadataMap);
       
       const updatedData = convertOutlineToMindMap(outlineText, data, currentLineToMetadataMap);
       onSave(updatedData);
@@ -289,11 +263,9 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
 
     // refから直接メタデータを取得
     const metadata = currentMetadataRef.current;
-    console.log('setupContentWidgets called with metadata:', Array.from(metadata.keys()));
 
     // 既存のwidgetとdecorationを削除
     widgetRegistryRef.current.forEach((widgetInfo) => {
-      console.log(`Removing existing widget: ${widgetInfo.widget.getId()}`);
       editor.removeContentWidget(widgetInfo.widget);
       // decorationも削除
       editor.deltaDecorations([widgetInfo.decorationId], []);
@@ -302,7 +274,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
 
     // メタデータがない場合は処理を中止
     if (metadata.size === 0) {
-      console.log('No metadata available, skipping widget creation');
       return;
     }
 
@@ -311,43 +282,25 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
     
     // 全ノードを順序通りに処理してWidgetを作成
     const createWidgetsForNode = (node: MindMapNode, level: number = 1) => {
-      console.log(`Processing node: ${node.id} (${node.text}) at level ${level}`);
-      console.log(`Has metadata:`, metadata.has(node.id));
-      
       // rootノード以外で、メタデータがある場合
       if (level >= 1 && metadata.has(node.id)) {
         const nodeMetadata = metadata.get(node.id)!;
-        console.log(`Metadata for ${node.id}:`, nodeMetadata);
         
         if (nodeMetadata.attachments.length > 0 || nodeMetadata.links.length > 0) {
-          console.log(`Looking for text "${node.text}" at level ${level}`);
-          
           // そのノードのテキストがある行を探す
           const lineCount = editorModel.getLineCount();
-          let found = false;
           
           for (let lineNumber = 1; lineNumber <= lineCount; lineNumber++) {
             const lineContent = editorModel.getLineContent(lineNumber);
             const headingMatch = lineContent.match(/^(#+)\s+(.+)$/);
             
             if (headingMatch) {
-              console.log(`Line ${lineNumber}: "${headingMatch[2].trim()}" (level ${headingMatch[1].length})`);
-              
               if (headingMatch[2].trim() === node.text && headingMatch[1].length === level) {
-                console.log(`MATCH! Creating widget for node ${node.id} (${node.text}) at line ${lineNumber}`);
                 createContentWidgetWithDecoration(editor, node.id, lineNumber, nodeMetadata);
-                
-                // Widget registryに記録は既にcreateContentWidgetWithDecoration内で行われている
-                
                 widgetCount++;
-                found = true;
                 break;
               }
             }
-          }
-          
-          if (!found) {
-            console.warn(`Could not find line for node ${node.id} (${node.text}) at level ${level}`);
           }
         }
       }
@@ -357,8 +310,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
     };
     
     createWidgetsForNode(data.rootNode, 0);
-
-    console.log(`Created ${widgetCount} widgets`);
   }, [createContentWidgetWithDecoration, data]);
 
 
@@ -422,7 +373,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
             value={outlineText}
             onChange={handleTextChange}
             onMount={(editor) => {
-              console.log('Editor mounted');
               editorRef.current = editor;
               editor.onKeyDown(handleEditorKeyDown);
               editor.focus();
@@ -435,7 +385,6 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
               }
 
               // エディタマウント後に即座にWidget作成を実行
-              console.log('Editor mounted, creating widgets');
               // 少し遅延させてエディタが完全に初期化されるのを待つ
               setTimeout(() => {
                 setupContentWidgets(editor);

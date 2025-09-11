@@ -1332,7 +1332,6 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
                 if (typeof applyAutoLayout === 'function') {
                   applyAutoLayout();
                 }
-                showNotification('success', 'アウトラインを保存しました');
               }}
               hasSidebar={activeView !== null}
             />
