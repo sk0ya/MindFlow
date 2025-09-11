@@ -428,6 +428,42 @@ export const createNodeSlice: StateCreator<
   },
 
   finishEditing: (nodeId: string, text: string) => {
+    const trimmedText = text.trim();
+    
+    // If text is empty, delete the node and select parent
+    if (!trimmedText) {
+      // Get parent info before deleting
+      let parentId: string | null = null;
+      const { normalizedData } = get();
+      if (normalizedData) {
+        parentId = normalizedData.parentMap[nodeId] || null;
+      }
+      
+      // Delete the empty node
+      get().deleteNode(nodeId);
+      
+      // Select parent node if it exists and is not root
+      if (parentId && parentId !== 'root') {
+        set((state) => {
+          state.selectedNodeId = parentId;
+        });
+      } else if (parentId === 'root') {
+        // If parent is root, select root
+        set((state) => {
+          state.selectedNodeId = 'root';
+        });
+      }
+      
+      // Clear editing state
+      set((state) => {
+        state.editingNodeId = null;
+        state.editText = '';
+      });
+      
+      return;
+    }
+    
+    // Normal text update flow
     set((state) => {
       state.editingNodeId = null;
       state.editText = '';
@@ -436,9 +472,7 @@ export const createNodeSlice: StateCreator<
     });
     
     // Update the node text
-    if (text.trim()) {
-      get().updateNode(nodeId, { text: text.trim() });
-    }
+    get().updateNode(nodeId, { text: trimmedText });
     
     // Apply auto layout if enabled
     const { data } = get();
