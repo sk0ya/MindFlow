@@ -11,6 +11,8 @@ import ImportModal from '../modals/ImportModal';
 import NodeLinkModal from '../modals/NodeLinkModal';
 import LinkActionMenu from '../modals/LinkActionMenu';
 import NodeNotesPanel from '../panels/NodeNotesPanel';
+import OutlineWorkspace from '../outline/OutlineWorkspace';
+import '../outline/OutlineWorkspace.css';
 import KeyboardShortcutHelper from '../../../../shared/components/ui/KeyboardShortcutHelper';
 import ContextMenu from '../../../../shared/components/ui/ContextMenu';
 import { useNotification } from '../../../../shared/hooks/useNotification';
@@ -1169,6 +1171,23 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     setLinkModalNodeId(null);
   };
 
+  const handleOutlineSave = async (updatedData: MindMapData) => {
+    try {
+      store.setData(updatedData);
+      
+      if (typeof applyAutoLayout === 'function') {
+        applyAutoLayout();
+      }
+      
+      showNotification('success', 'アウトラインをマインドマップに反映しました');
+      store.setShowOutlineEditor(false);
+    } catch (error) {
+      logger.error('Outline save failed:', error);
+      showNotification('error', 'アウトラインの保存に失敗しました');
+      handleError(error as Error, 'アウトライン保存', 'データ変換');
+    }
+  };
+
 
   // Show loading while auth is initializing in cloud mode
   if (isCloudMode && auth && !auth.isReady) {
@@ -1258,50 +1277,66 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
           onStorageModeChange={onModeChange}
           onToggleNotesPanel={() => store.toggleNotesPanel()}
           showNotesPanel={ui.showNotesPanel}
+          onToggleViewMode={() => store.toggleViewMode()}
+          viewMode={ui.viewMode}
           onCenterRootNode={handleCenterRootNode}
         />
         
         <div className="workspace-container">
-          <MindMapWorkspace 
-            data={data}
-            selectedNodeId={selectedNodeId}
-            editingNodeId={editingNodeId}
-            editText={editText}
-            setEditText={setEditText}
-            onSelectNode={(nodeId) => {
-              selectNode(nodeId);
-              // ノート表示フラグが有効な場合のみノートパネルを表示
-              // ノートフラグが無効な場合はノード選択してもノートパネルを表示しない
-            }}
-            onStartEdit={startEditing}
-            onFinishEdit={finishEditing}
-            onMoveNode={moveNode}
-            onChangeSiblingOrder={changeSiblingOrder}
-            onAddChild={addNode}
-            onAddSibling={(nodeId) => store.addSiblingNode(nodeId)}
-            onDeleteNode={deleteNode}
-            onRightClick={handleRightClick}
-            onToggleCollapse={toggleNodeCollapse}
-            onFileUpload={(nodeId, files) => {
-              if (files.length > 0) {
-                handleFileUpload(nodeId, files[0]);
-              }
-            }}
-            onRemoveFile={handleFileDelete}
-            onShowImageModal={showImageModal}
-            onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
-            onShowLinkActionMenu={handleShowLinkActionMenu}
-            onAddLink={handleAddLink}
-            onUpdateNode={updateNode}
-            onAutoLayout={applyAutoLayout}
-            availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
-            currentMapData={data}
-            onLinkNavigate={handleLinkNavigate}
-            zoom={ui.zoom}
-            setZoom={setZoom}
-            pan={ui.pan}
-            setPan={setPan}
-          />
+          {ui.viewMode === 'mindmap' ? (
+            <MindMapWorkspace 
+              data={data}
+              selectedNodeId={selectedNodeId}
+              editingNodeId={editingNodeId}
+              editText={editText}
+              setEditText={setEditText}
+              onSelectNode={(nodeId) => {
+                selectNode(nodeId);
+                // ノート表示フラグが有効な場合のみノートパネルを表示
+                // ノートフラグが無効な場合はノード選択してもノートパネルを表示しない
+              }}
+              onStartEdit={startEditing}
+              onFinishEdit={finishEditing}
+              onMoveNode={moveNode}
+              onChangeSiblingOrder={changeSiblingOrder}
+              onAddChild={addNode}
+              onAddSibling={(nodeId) => store.addSiblingNode(nodeId)}
+              onDeleteNode={deleteNode}
+              onRightClick={handleRightClick}
+              onToggleCollapse={toggleNodeCollapse}
+              onFileUpload={(nodeId, files) => {
+                if (files.length > 0) {
+                  handleFileUpload(nodeId, files[0]);
+                }
+              }}
+              onRemoveFile={handleFileDelete}
+              onShowImageModal={showImageModal}
+              onShowFileActionMenu={(file, _nodeId, position) => showFileActionMenu(file, position)}
+              onShowLinkActionMenu={handleShowLinkActionMenu}
+              onAddLink={handleAddLink}
+              onUpdateNode={updateNode}
+              onAutoLayout={applyAutoLayout}
+              availableMaps={allMindMaps.map(map => ({ id: map.id, title: map.title }))}
+              currentMapData={data}
+              onLinkNavigate={handleLinkNavigate}
+              zoom={ui.zoom}
+              setZoom={setZoom}
+              pan={ui.pan}
+              setPan={setPan}
+            />
+          ) : (
+            <OutlineWorkspace
+              data={data}
+              onSave={(updatedData) => {
+                store.setData(updatedData);
+                if (typeof applyAutoLayout === 'function') {
+                  applyAutoLayout();
+                }
+                showNotification('success', 'アウトラインを保存しました');
+              }}
+              hasSidebar={activeView !== null}
+            />
+          )}
           
           {ui.showNotesPanel && (
             <NodeNotesPanel
@@ -1424,6 +1459,16 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         />
       )}
       
+      {/* Outline Editor */}
+      {ui.showOutlineEditor && (
+        <OutlineWorkspace
+          data={data}
+          onSave={handleOutlineSave}
+          onClose={() => store.setShowOutlineEditor(false)}
+          hasSidebar={activeView !== null}
+        />
+      )}
+
       {/* Context Menu */}
       {contextMenu.visible && contextMenu.nodeId && (
         <ContextMenu

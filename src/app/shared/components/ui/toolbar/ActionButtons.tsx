@@ -11,6 +11,8 @@ interface ActionButtonsProps {
   onAutoLayout?: () => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
+  onToggleViewMode?: () => void;
+  viewMode?: 'mindmap' | 'outline';
   onCenterRootNode?: () => void;
 }
 
@@ -24,6 +26,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onAutoLayout,
   onToggleNotesPanel,
   showNotesPanel = false,
+  onToggleViewMode,
+  viewMode = 'mindmap',
   onCenterRootNode
 }) => {
 
@@ -100,6 +104,16 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           </ShortcutTooltip>
         )}
         
+        {onToggleViewMode && (
+          <ShortcutTooltip shortcut="Ctrl+Shift+V" description={viewMode === 'mindmap' ? 'アウトライン表示に切替' : 'マインドマップ表示に切替'}>
+            <button 
+              className={`toolbar-btn view-mode ${viewMode === 'outline' ? 'active' : ''}`}
+              onClick={onToggleViewMode}
+            >
+              {viewMode === 'mindmap' ? '📝' : '🗺️'}
+            </button>
+          </ShortcutTooltip>
+        )}
         
       </div>
     </div>

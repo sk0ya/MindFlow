@@ -16,6 +16,8 @@ interface MindMapHeaderProps {
   onStorageModeChange?: (mode: 'local' | 'cloud') => void;
   onToggleNotesPanel?: () => void;
   showNotesPanel?: boolean;
+  onToggleViewMode?: () => void;
+  viewMode?: 'mindmap' | 'outline';
   onCenterRootNode?: () => void;
 }
 
@@ -33,6 +35,8 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
   onStorageModeChange,
   onToggleNotesPanel,
   showNotesPanel = false,
+  onToggleViewMode,
+  viewMode = 'mindmap',
   onCenterRootNode
 }) => {
   return (
@@ -50,6 +54,8 @@ const MindMapHeader: React.FC<MindMapHeaderProps> = ({
       onStorageModeChange={onStorageModeChange}
       onToggleNotesPanel={onToggleNotesPanel}
       showNotesPanel={showNotesPanel}
+      onToggleViewMode={onToggleViewMode}
+      viewMode={viewMode}
       onCenterRootNode={onCenterRootNode}
     />
   );

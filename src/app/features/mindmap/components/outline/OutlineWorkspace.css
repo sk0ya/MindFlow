@@ -1,0 +1,235 @@
+.outline-workspace {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  margin-left: 48px; /* ActivityBarの幅分マージンを追加 */
+}
+
+.outline-workspace.with-sidebar {
+  margin-left: 328px; /* ActivityBar(48px) + Sidebar(280px) */
+}
+
+.outline-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.outline-workspace-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.outline-workspace-status {
+  font-size: 12px;
+  font-weight: 400;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.outline-workspace-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.outline-workspace-toggle-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  color: #6b7280;
+}
+
+.outline-workspace-toggle-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.outline-workspace-toggle-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.outline-workspace-save-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.outline-workspace-save-btn:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.outline-workspace-save-btn:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.outline-workspace-editor {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  border: none;
+  outline: none;
+}
+
+.outline-preview {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  line-height: 1.6;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.outline-preview h1, .outline-preview h2, .outline-preview h3,
+.outline-preview h4, .outline-preview h5, .outline-preview h6 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.outline-preview h1 { font-size: 1.5rem; }
+.outline-preview h2 { font-size: 1.25rem; }
+.outline-preview h3 { font-size: 1.125rem; }
+.outline-preview h4 { font-size: 1rem; }
+
+.outline-preview p {
+  margin-bottom: 16px;
+}
+
+.outline-preview ul, .outline-preview ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+}
+
+.outline-preview code {
+  background: #f3f4f6;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.875rem;
+}
+
+.outline-preview pre {
+  background: #f3f4f6;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.vim-status-line {
+  height: 20px;
+  background: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+}
+
+/* ダークモード対応 */
+.outline-workspace.dark-theme {
+  background: #1f2937;
+}
+
+.outline-workspace.dark-theme .outline-workspace-header {
+  background: #111827;
+  border-color: #374151;
+}
+
+.outline-workspace.dark-theme .outline-workspace-title {
+  color: #f3f4f6;
+}
+
+.outline-workspace.dark-theme .outline-workspace-status {
+  color: #f59e0b;
+  background: #451a03;
+}
+
+.outline-workspace.dark-theme .outline-workspace-toggle-btn {
+  background: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+.outline-workspace.dark-theme .outline-workspace-toggle-btn:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+.outline-workspace.dark-theme .outline-workspace-toggle-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.outline-workspace.dark-theme .outline-workspace-save-btn:disabled {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.outline-workspace.dark-theme .outline-preview {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.outline-workspace.dark-theme .outline-preview code {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.outline-workspace.dark-theme .outline-preview pre {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.outline-workspace.dark-theme .vim-status-line {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .outline-workspace-header {
+    padding: 8px 16px;
+  }
+
+  .outline-workspace-title {
+    font-size: 14px;
+  }
+
+  .outline-workspace-save-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}

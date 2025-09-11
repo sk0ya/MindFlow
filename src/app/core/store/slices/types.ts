@@ -21,6 +21,8 @@ export interface UIState {
   showLocalStoragePanel: boolean;
   showTutorial: boolean;
   showNotesPanel: boolean;
+  showOutlineEditor: boolean;
+  viewMode: 'mindmap' | 'outline';
   
   // File and image states
   selectedImage: ImageFile | null;
@@ -104,6 +106,10 @@ export interface MindMapStore extends DataState, HistoryState, AISlice, Settings
   setShowTutorial: (show: boolean) => void;
   setShowNotesPanel: (show: boolean) => void;
   toggleNotesPanel: () => void;
+  setShowOutlineEditor: (show: boolean) => void;
+  toggleOutlineEditor: () => void;
+  setViewMode: (mode: 'mindmap' | 'outline') => void;
+  toggleViewMode: () => void;
   setSelectedImage: (image: ImageFile | null) => void;
   setSelectedFile: (file: FileAttachment | null) => void;
   setFileMenuPosition: (position: Position) => void;

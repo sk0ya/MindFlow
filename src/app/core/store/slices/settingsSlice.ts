@@ -12,6 +12,11 @@ export interface AppSettings {
   
   // レイアウト設定
   snapToGrid: boolean;
+  
+  // エディタ設定
+  vimMode: boolean;
+  previewMode: boolean;
+  showOutlineWidgets: boolean;
 }
 
 export interface SettingsSlice {
@@ -29,7 +34,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   fontSize: 14,
   fontFamily: 'system-ui',
-  snapToGrid: false
+  snapToGrid: false,
+  vimMode: false,
+  previewMode: false,
+  showOutlineWidgets: false
 };
 
 export const createSettingsSlice: StateCreator<

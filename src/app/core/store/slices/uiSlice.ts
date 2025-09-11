@@ -23,6 +23,10 @@ export interface UISlice {
   setShowTutorial: (show: boolean) => void;
   setShowNotesPanel: (show: boolean) => void;
   toggleNotesPanel: () => void;
+  setShowOutlineEditor: (show: boolean) => void;
+  toggleOutlineEditor: () => void;
+  setViewMode: (mode: 'mindmap' | 'outline') => void;
+  toggleViewMode: () => void;
   
   // File and Image Management
   setSelectedImage: (image: ImageFile | null) => void;
@@ -60,6 +64,8 @@ export const createUISlice: StateCreator<
     showLocalStoragePanel: false,
     showTutorial: false,
     showNotesPanel: false,
+    showOutlineEditor: false,
+    viewMode: 'mindmap',
     selectedImage: null,
     selectedFile: null,
     fileMenuPosition: { x: 0, y: 0 },
@@ -153,6 +159,30 @@ export const createUISlice: StateCreator<
   toggleNotesPanel: () => {
     set((state) => {
       state.ui.showNotesPanel = !state.ui.showNotesPanel;
+    });
+  },
+
+  setShowOutlineEditor: (show: boolean) => {
+    set((state) => {
+      state.ui.showOutlineEditor = show;
+    });
+  },
+
+  toggleOutlineEditor: () => {
+    set((state) => {
+      state.ui.showOutlineEditor = !state.ui.showOutlineEditor;
+    });
+  },
+
+  setViewMode: (mode: 'mindmap' | 'outline') => {
+    set((state) => {
+      state.ui.viewMode = mode;
+    });
+  },
+
+  toggleViewMode: () => {
+    set((state) => {
+      state.ui.viewMode = state.ui.viewMode === 'mindmap' ? 'outline' : 'mindmap';
     });
   },
 
