@@ -183,6 +183,10 @@ export const createUISlice: StateCreator<
   toggleViewMode: () => {
     set((state) => {
       state.ui.viewMode = state.ui.viewMode === 'mindmap' ? 'outline' : 'mindmap';
+      // アウトラインモードに切り替える際は、ノートパネルを一時的に閉じる
+      if (state.ui.viewMode === 'outline') {
+        state.ui.showNotesPanel = false;
+      }
     });
   },
 
