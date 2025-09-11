@@ -24,6 +24,7 @@ export const createDataSlice: StateCreator<
   selectedNodeId: null,
   editingNodeId: null,
   editText: '',
+  editingMode: null,
 
   // Set data and normalize
   setData: (data: MindMapData) => {

@@ -195,6 +195,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     moveNode,
     selectNode,
     startEditing,
+    startEditingWithCursorAtEnd,
     finishEditing,
     
     // UI操作
@@ -268,6 +269,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     editingNodeId,
     setEditText,
     startEdit: startEditing,
+    startEditWithCursorAtEnd: startEditingWithCursorAtEnd,
     finishEdit: async (nodeId: string, text?: string) => {
       if (text !== undefined) {
         finishEditing(nodeId, text);

@@ -40,6 +40,10 @@ export const useMindMapData = () => {
       store.startEditing(nodeId);
     }, [store]),
 
+    startEditingWithCursorAtEnd: useCallback((nodeId: string) => {
+      store.startEditingWithCursorAtEnd(nodeId);
+    }, [store]),
+
     finishEditing: useCallback((nodeId: string, text: string) => {
       store.finishEditing(nodeId, text);
     }, [store]),
@@ -75,6 +79,7 @@ export const useMindMapData = () => {
     selectedNodeId: store.selectedNodeId,
     editingNodeId: store.editingNodeId,
     editText: store.editText,
+    editingMode: store.editingMode,
     
     // 操作
     ...dataOperations

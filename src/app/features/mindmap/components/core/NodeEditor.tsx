@@ -72,7 +72,17 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
-          inputRef.current.select();
+          
+          // 編集モードに応じてカーソル位置を制御
+          const editingMode = useMindMapStore.getState().editingMode;
+          if (editingMode === 'cursor-at-end') {
+            // カーソルを末尾に配置
+            const length = inputRef.current.value.length;
+            inputRef.current.setSelectionRange(length, length);
+          } else {
+            // デフォルト: 全選択
+            inputRef.current.select();
+          }
         }
       }, 10);
     }
@@ -127,8 +137,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     
     // アイコンレイアウトを計算してテキスト位置を調整
     const iconLayout = calculateIconLayout(node, nodeWidth);
-    // アイコンがある場合、テキストを左に移動してアイコンと重ならないようにする
-    const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 14) / 2 : 0;
     
     return (
       <>
@@ -292,10 +300,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   
   const actualImageHeight = getActualImageHeight();
   const editY = hasImage ? node.y + actualImageHeight / 2 - 2 : node.y - 8;
-
-  // アイコンレイアウトを計算して編集時も同じ位置に配置
-  const iconLayout = calculateIconLayout(node, nodeWidth);
-  const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 14) / 2 : 0;
   
   return (
     <foreignObject 

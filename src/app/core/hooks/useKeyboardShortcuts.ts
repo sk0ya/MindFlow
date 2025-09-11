@@ -11,6 +11,7 @@ interface KeyboardShortcutHandlers {
   editingNodeId: string | null;
   setEditText: (_text: string) => void;
   startEdit: (_nodeId: string) => void;
+  startEditWithCursorAtEnd: (_nodeId: string) => void;
   finishEdit: (_nodeId: string, _newText?: string, _options?: Partial<MindMapNode>) => Promise<void>;
   editText: string;
   updateNode: (_id: string, _updates: Partial<MindMapNode>) => void;
@@ -85,6 +86,12 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
             event.preventDefault();
             if (handlers.selectedNodeId) {
               handlers.startEdit(handlers.selectedNodeId);
+            }
+            break;
+          case 'F2': // F2
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.startEditWithCursorAtEnd(handlers.selectedNodeId);
             }
             break;
           case 'Tab':

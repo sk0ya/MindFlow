@@ -37,6 +37,7 @@ export interface NodeSlice {
   // Selection & Editing
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
+  startEditingWithCursorAtEnd: (nodeId: string) => void;
   finishEditing: (nodeId: string, text: string) => void;
   cancelEditing: () => void;
   setEditText: (text: string) => void;
@@ -423,6 +424,18 @@ export const createNodeSlice: StateCreator<
       if (node) {
         state.editingNodeId = nodeId;
         state.editText = node.text;
+        state.editingMode = 'select-all'; // テキスト選択モード
+      }
+    });
+  },
+
+  startEditingWithCursorAtEnd: (nodeId: string) => {
+    set((state) => {
+      const node = state.normalizedData?.nodes[nodeId];
+      if (node) {
+        state.editingNodeId = nodeId;
+        state.editText = node.text;
+        state.editingMode = 'cursor-at-end'; // カーソル末尾モード
       }
     });
   },
@@ -458,6 +471,7 @@ export const createNodeSlice: StateCreator<
       set((state) => {
         state.editingNodeId = null;
         state.editText = '';
+        state.editingMode = null;
       });
       
       return;
@@ -467,6 +481,7 @@ export const createNodeSlice: StateCreator<
     set((state) => {
       state.editingNodeId = null;
       state.editText = '';
+      state.editingMode = null;
       // Keep node selected after editing
       state.selectedNodeId = nodeId;
     });
@@ -499,6 +514,7 @@ export const createNodeSlice: StateCreator<
     set((state) => {
       state.editingNodeId = null;
       state.editText = '';
+      state.editingMode = null;
     });
   },
 

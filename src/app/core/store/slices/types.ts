@@ -42,6 +42,7 @@ export interface DataState {
   selectedNodeId: string | null;
   editingNodeId: string | null;
   editText: string;
+  editingMode: 'select-all' | 'cursor-at-end' | null;
 }
 
 // History State types
@@ -76,6 +77,7 @@ export interface MindMapStore extends DataState, HistoryState, AISlice, Settings
   // Selection & Editing
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
+  startEditingWithCursorAtEnd: (nodeId: string) => void;
   finishEditing: (nodeId: string, text: string) => void;
   cancelEditing: () => void;
   setEditText: (text: string) => void;

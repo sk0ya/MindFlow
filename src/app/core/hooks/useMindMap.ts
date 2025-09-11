@@ -139,6 +139,7 @@ export const useMindMap = (
     selectedNodeId: dataHook.selectedNodeId,
     editingNodeId: dataHook.editingNodeId,
     editText: dataHook.editText,
+    editingMode: dataHook.editingMode,
     
     // UI状態
     ui: uiHook.ui,
@@ -161,6 +162,7 @@ export const useMindMap = (
     changeSiblingOrder: dataHook.changeSiblingOrder,
     toggleNodeCollapse: dataHook.toggleNodeCollapse,
     startEditing: dataHook.startEditing,
+    startEditingWithCursorAtEnd: dataHook.startEditingWithCursorAtEnd,
     finishEditing: dataHook.finishEditing,
     cancelEditing: dataHook.cancelEditing,
     setEditText: dataHook.setEditText,
