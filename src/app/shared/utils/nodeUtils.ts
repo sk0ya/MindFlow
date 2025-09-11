@@ -261,6 +261,13 @@ export function calculateNodeSize(
   };
 }
 
+/**
+ * ノードの左端X座標を計算
+ */
+export function getNodeLeftX(node: MindMapNode, nodeWidth: number): number {
+  return node.x - nodeWidth / 2;
+}
+
 export function getToggleButtonPosition(node: MindMapNode, rootNode: MindMapNode, nodeSize: NodeSize, globalFontSize?: number) {
   const isOnRight = node.x > rootNode.x;
   

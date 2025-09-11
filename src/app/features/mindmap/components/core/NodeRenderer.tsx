@@ -4,6 +4,7 @@ import type { MindMapNode } from '@shared/types';
 
 interface NodeRendererProps {
   node: MindMapNode;
+  nodeLeftX: number;
   isSelected: boolean;
   isDragTarget?: boolean;
   isDragging: boolean;
@@ -19,6 +20,7 @@ interface NodeRendererProps {
 
 const NodeRenderer: React.FC<NodeRendererProps> = ({
   node,
+  nodeLeftX,
   isSelected,
   isDragTarget,
   isDragging,
@@ -43,7 +45,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
     <>
       {/* 通常のノード背景 */}
       <rect
-        x={node.x - actualNodeWidth / 2}
+        x={nodeLeftX}
         y={node.y - actualNodeHeight / 2}
         width={actualNodeWidth}
         height={actualNodeHeight}
@@ -79,6 +81,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({
 // 選択枠線のみを描画する新しいコンポーネント
 export const NodeSelectionBorder: React.FC<{
   node: MindMapNode;
+  nodeLeftX: number;
   isSelected: boolean;
   isDragTarget?: boolean;
   isDragging: boolean;
@@ -87,6 +90,7 @@ export const NodeSelectionBorder: React.FC<{
   nodeHeight: number;
 }> = ({
   node,
+  nodeLeftX,
   isSelected,
   isDragTarget,
   isDragging,
@@ -99,7 +103,7 @@ export const NodeSelectionBorder: React.FC<{
   // calculateNodeSizeで計算済みのサイズをそのまま使用
   const selectionWidth = nodeWidth;
   const selectionHeight = nodeHeight;
-  const selectionX = node.x - selectionWidth / 2;
+  const selectionX = nodeLeftX;
   const selectionY = node.y - selectionHeight / 2;
 
   return (

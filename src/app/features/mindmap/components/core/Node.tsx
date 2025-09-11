@@ -3,7 +3,7 @@ import NodeRenderer, { NodeSelectionBorder } from './NodeRenderer';
 import NodeEditor from './NodeEditor';
 import NodeAttachments from './NodeAttachments';
 import { useNodeDragHandler } from './NodeDragHandler';
-import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
+import { calculateNodeSize, getNodeLeftX } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode, FileAttachment, NodeLink } from '@shared/types';
 
 interface NodeProps {
@@ -144,11 +144,16 @@ const Node: React.FC<NodeProps> = ({
   const nodeHeight = nodeSize.height;
   const imageHeight = nodeSize.imageHeight;
 
+  // 非編集時のノード幅を基準とした左端位置を計算（ノードの左端位置を固定するため）
+  const baseNodeSize = calculateNodeSize(node, node.text, false, globalFontSize);
+  const nodeLeftX = getNodeLeftX(node, baseNodeSize.width);
+
   return (
     <g>
       {/* 1. ノード背景（最初に描画） */}
       <NodeRenderer
         node={node}
+        nodeLeftX={nodeLeftX}
         isSelected={isSelected}
         isDragTarget={isDragTarget}
         isDragging={isDragging}
@@ -180,6 +185,7 @@ const Node: React.FC<NodeProps> = ({
       {/* 3. テキスト */}
       <NodeEditor
         node={node}
+        nodeLeftX={nodeLeftX}
         isEditing={isEditing}
         editText={editText}
         setEditText={setEditText}
@@ -195,6 +201,7 @@ const Node: React.FC<NodeProps> = ({
       {/* 4. 選択枠線（最後に描画して最前面に） */}
       <NodeSelectionBorder
         node={node}
+        nodeLeftX={nodeLeftX}
         isSelected={isSelected}
         isDragTarget={isDragTarget}
         isDragging={isDragging}

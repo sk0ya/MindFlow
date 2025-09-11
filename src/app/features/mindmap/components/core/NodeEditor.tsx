@@ -5,6 +5,7 @@ import type { MindMapNode, NodeLink } from '@shared/types';
 
 interface NodeEditorProps {
   node: MindMapNode;
+  nodeLeftX: number;
   isEditing: boolean;
   editText: string;
   setEditText: (text: string) => void;
@@ -19,6 +20,7 @@ interface NodeEditorProps {
 
 const NodeEditor: React.FC<NodeEditorProps> = ({
   node,
+  nodeLeftX,
   isEditing,
   editText,
   setEditText,
@@ -131,9 +133,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     return (
       <>
         <text
-          x={node.x - textOffsetX}
+          x={nodeLeftX + 8}
           y={textY}
-          textAnchor="middle"
+          textAnchor="start"
           dominantBaseline="middle"
           fill={settings.theme === 'dark' ? 'var(--text-primary)' : 'black'}
           fontSize={settings.fontSize || node.fontSize || '14px'}
@@ -291,9 +293,13 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   const actualImageHeight = getActualImageHeight();
   const editY = hasImage ? node.y + actualImageHeight / 2 - 2 : node.y - 8;
 
+  // アイコンレイアウトを計算して編集時も同じ位置に配置
+  const iconLayout = calculateIconLayout(node, nodeWidth);
+  const textOffsetX = iconLayout.totalWidth > 0 ? (iconLayout.totalWidth + 14) / 2 : 0;
+  
   return (
     <foreignObject 
-      x={node.x - nodeWidth / 2 + 8} 
+      x={nodeLeftX + 8} 
       y={editY} 
       width={nodeWidth - 16} 
       height="20"
