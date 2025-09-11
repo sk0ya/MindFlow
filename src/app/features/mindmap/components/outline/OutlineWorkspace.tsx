@@ -157,7 +157,7 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
     const decorations = editor.deltaDecorations([], [{
       range: new monaco.Range(lineNumber, 1, lineNumber, 1),
       options: {
-        isWholeLine: false,
+        isWholeLine: true, // 行全体を対象にして削除時の検出を確実にする
         className: `outline-widget-anchor-${nodeId}`, // 識別用クラス
         stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
       }
@@ -393,8 +393,25 @@ const OutlineWorkspace: React.FC<OutlineWorkspaceProps> = ({
               // decorationベースのWidget追従のためにレイアウト更新を監視
               const layoutDisposable = editor.onDidChangeModelContent(() => {
                 // Widget位置をレイアウト更新
-                widgetRegistryRef.current.forEach((widgetInfo) => {
-                  editor.layoutContentWidget(widgetInfo.widget);
+                const widgetsToRemove: string[] = [];
+                
+                widgetRegistryRef.current.forEach((widgetInfo, nodeId) => {
+                  // decorationが有効かチェック
+                  const decorationRange = editor.getModel()?.getDecorationRange(widgetInfo.decorationId);
+                  
+                  if (!decorationRange) {
+                    // decorationが削除されている場合、Widgetも削除
+                    editor.removeContentWidget(widgetInfo.widget);
+                    widgetsToRemove.push(nodeId);
+                  } else {
+                    // decorationが残っている場合、レイアウト更新
+                    editor.layoutContentWidget(widgetInfo.widget);
+                  }
+                });
+                
+                // 削除されたWidgetをregistryから除去
+                widgetsToRemove.forEach(nodeId => {
+                  widgetRegistryRef.current.delete(nodeId);
                 });
               });
               

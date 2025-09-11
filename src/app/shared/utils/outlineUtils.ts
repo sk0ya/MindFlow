@@ -165,6 +165,26 @@ export const convertOutlineToMindMap = (
   originalData: MindMapData,
   lineToMetadataMap?: Map<number, { nodeId: string, attachments: any[], links: any[] }>
 ): MindMapData => {
+  const lines = markdown.split('\n');
+  let rootNote = '';
+  let noteLines: string[] = [];
+  
+  // ルートノードのnoteを抽出（最初の見出しより前のコンテンツ）
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    const headingMatch = trimmedLine.match(/^#+\s+(.+)$/);
+    
+    if (headingMatch) {
+      break;
+    }
+    
+    if (trimmedLine !== '' || noteLines.length > 0) {
+      noteLines.push(line);
+    }
+  }
+  
+  rootNote = noteLines.join('\n').trim();
+  
   const outlineNodes = parseMarkdownToOutlineNodes(markdown, lineToMetadataMap);
   
   let rootNode: MindMapNode;
@@ -172,20 +192,26 @@ export const convertOutlineToMindMap = (
   if (outlineNodes.length === 1) {
     rootNode = convertOutlineNodeToMindMapNode(outlineNodes[0]);
     rootNode.id = 'root';
+    rootNode.text = originalData.rootNode.text; // 元のルートノードテキストを保持
+    if (rootNote) {
+      rootNode.note = rootNote;
+    }
   } else if (outlineNodes.length > 1) {
     rootNode = {
       id: 'root',
-      text: originalData.title,
-      x: 0,
-      y: 0,
+      text: originalData.rootNode.text, // 元のルートノードテキストを保持
+      note: rootNote || originalData.rootNode.note, // ルートノートを保持
+      x: originalData.rootNode.x || 0,
+      y: originalData.rootNode.y || 0,
       children: outlineNodes.map(convertOutlineNodeToMindMapNode)
     };
   } else {
     rootNode = {
       id: 'root',
-      text: originalData.title,
-      x: 0,
-      y: 0,
+      text: originalData.rootNode.text, // 元のルートノードテキストを保持
+      note: rootNote || originalData.rootNode.note, // ルートノートを保持
+      x: originalData.rootNode.x || 0,
+      y: originalData.rootNode.y || 0,
       children: []
     };
   }
