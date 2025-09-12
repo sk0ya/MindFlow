@@ -46,7 +46,7 @@ interface CanvasRendererProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
-  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, position: { x: number; y: number }) => void;
   onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
   
@@ -253,7 +253,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                       // リンククリック時は何もしない（メニュー表示を無効化）
                     }}
                     onLinkContextMenu={(link, position) => {
-                      onShowLinkActionMenu(link, targetNode.id, position);
+                      onShowLinkActionMenu(link, position);
                     }}
                     onLinkNavigate={onLinkNavigate}
                     availableMaps={availableMaps}

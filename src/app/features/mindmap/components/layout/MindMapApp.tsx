@@ -1171,7 +1171,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     }
   };
 
-  const handleShowLinkActionMenu = (link: NodeLink, nodeId: string, position: { x: number; y: number }) => {
+  const handleShowLinkActionMenu = (link: NodeLink, position: { x: number; y: number }) => {
     setLinkActionMenuData({ link, position });
     setShowLinkActionMenu(true);
   };

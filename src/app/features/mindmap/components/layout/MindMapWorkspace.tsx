@@ -23,7 +23,7 @@ interface MindMapWorkspaceProps {
   onRemoveFile: (nodeId: string, fileId: string) => void;
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
-  onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onShowLinkActionMenu: (link: NodeLink, position: { x: number; y: number }) => void;
   onAddLink: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<import('@shared/types').MindMapNode>) => void;
   onAutoLayout?: () => void;

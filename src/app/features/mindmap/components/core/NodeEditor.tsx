@@ -42,13 +42,12 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     e.stopPropagation();
     e.preventDefault();
     
-    // ノードが選択されていない場合は選択する
+    // ノードが選択されていない場合は選択してからリンク一覧を表示
     if (!isSelected && onSelectNode) {
       onSelectNode(node.id);
-      return;
     }
     
-    // 既に選択されている場合はリンク一覧をトグル
+    // リンク一覧をトグル（選択状態に関わらず）
     if (onToggleLinkList) {
       onToggleLinkList(node.id);
     }
@@ -60,13 +59,12 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
     e.stopPropagation();
     e.preventDefault();
     
-    // ノードが選択されていない場合は選択する
+    // ノードが選択されていない場合は選択してから添付ファイル一覧を表示
     if (!isSelected && onSelectNode) {
       onSelectNode(node.id);
-      return;
     }
     
-    // 既に選択されている場合は添付ファイル一覧をトグル
+    // 添付ファイル一覧をトグル（選択状態に関わらず）
     if (onToggleAttachmentList) {
       onToggleAttachmentList(node.id);
     }
