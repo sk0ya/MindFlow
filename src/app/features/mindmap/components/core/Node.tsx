@@ -179,6 +179,7 @@ const Node: React.FC<NodeProps> = ({
         onShowFileActionMenu={onShowFileActionMenu}
         onUpdateNode={onUpdateNode}
         onAutoLayout={onAutoLayout}
+        nodeHeight={nodeHeight}
       />
 
 

@@ -13,6 +13,7 @@ interface NodeAttachmentsProps {
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
   onUpdateNode?: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
+  nodeHeight: number;
 }
 
 
@@ -166,7 +167,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
   onShowImageModal,
   onShowFileActionMenu,
   onUpdateNode,
-  onAutoLayout
+  onAutoLayout,
+  nodeHeight
 }) => {  
   // 画像リサイズ状態管理
   const [isResizing, setIsResizing] = useState(false);
@@ -325,14 +327,18 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
     ? { width: node.customImageWidth, height: node.customImageHeight }
     : { width: 150, height: 105 };
 
+  // 画像位置計算を統一（ノード上部に配置、4pxマージン）
+  const imageY = node.y - nodeHeight / 2 + 4;
+  const imageX = node.x - imageDimensions.width / 2;
+
   return (
     <>
       {/* 最初の画像ファイルのみ表示 */}
       {firstImageFile && (
         <g key={firstImageFile.id}>
           <foreignObject 
-            x={node.x - imageDimensions.width / 2} 
-            y={node.y - (imageDimensions.height + 35) / 2 + 5} 
+            x={imageX} 
+            y={imageY} 
             width={imageDimensions.width} 
             height={imageDimensions.height}
           >
@@ -403,8 +409,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
             <g>
               {/* 枠線 */}
               <rect
-                x={node.x - imageDimensions.width / 2 - 2}
-                y={node.y - (imageDimensions.height + 35) / 2 + 3}
+                x={imageX - 2}
+                y={imageY - 2}
                 width={imageDimensions.width + 4}
                 height={imageDimensions.height + 4}
                 fill="none"
@@ -423,8 +429,8 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
               <g>
                 {/* ハンドル背景 */}
                 <rect
-                  x={node.x + imageDimensions.width / 2 - 4}
-                  y={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
+                  x={imageX + imageDimensions.width - 4}
+                  y={imageY + imageDimensions.height - 4}
                   width="8"
                   height="8"
                   fill="white"
@@ -441,22 +447,22 @@ const NodeAttachments: React.FC<NodeAttachmentsProps> = ({
                 {/* リサイズハンドルのアイコン（斜め線） */}
                 <g stroke="#6b7280" strokeWidth="1" style={{ pointerEvents: 'none' }}>
                   <line
-                    x1={node.x + imageDimensions.width / 2 - 2}
-                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 2}
-                    x2={node.x + imageDimensions.width / 2 + 2}
-                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 6}
+                    x1={imageX + imageDimensions.width - 2}
+                    y1={imageY + imageDimensions.height - 2}
+                    x2={imageX + imageDimensions.width + 2}
+                    y2={imageY + imageDimensions.height - 6}
                   />
                   <line
-                    x1={node.x + imageDimensions.width / 2 - 1}
-                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 3}
-                    x2={node.x + imageDimensions.width / 2 + 1}
-                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 5}
+                    x1={imageX + imageDimensions.width - 1}
+                    y1={imageY + imageDimensions.height - 3}
+                    x2={imageX + imageDimensions.width + 1}
+                    y2={imageY + imageDimensions.height - 5}
                   />
                   <line
-                    x1={node.x + imageDimensions.width / 2}
-                    y1={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
-                    x2={node.x + imageDimensions.width / 2}
-                    y2={node.y - (imageDimensions.height + 35) / 2 + 5 + imageDimensions.height - 4}
+                    x1={imageX + imageDimensions.width}
+                    y1={imageY + imageDimensions.height - 4}
+                    x2={imageX + imageDimensions.width}
+                    y2={imageY + imageDimensions.height - 4}
                   />
                 </g>
               </g>
