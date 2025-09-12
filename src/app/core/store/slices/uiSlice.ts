@@ -1,54 +1,11 @@
 import type { StateCreator } from 'zustand';
 import type { Position, FileAttachment, MindMapNode } from '@shared/types';
 import type { ImageFile } from '../../../shared/types';
-import type { MindMapStore, UIState } from './types';
+import type { MindMapStore } from './types';
+import type { UIState, UIActions } from '../../../shared/types/uiTypes';
 
-export interface UISlice {
+export interface UISlice extends UIActions {
   ui: UIState;
-  
-  // Zoom and Pan
-  setZoom: (zoom: number) => void;
-  setPan: (pan: Position) => void;
-  resetZoom: () => void;
-  
-  // Panel Management
-  setShowCustomizationPanel: (show: boolean) => void;
-  setCustomizationPosition: (position: Position) => void;
-  setShowContextMenu: (show: boolean) => void;
-  setContextMenuPosition: (position: Position) => void;
-  setShowShortcutHelper: (show: boolean) => void;
-  setShowMapList: (show: boolean) => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-  setShowLocalStoragePanel: (show: boolean) => void;
-  setShowTutorial: (show: boolean) => void;
-  setShowNotesPanel: (show: boolean) => void;
-  toggleNotesPanel: () => void;
-  setShowOutlineEditor: (show: boolean) => void;
-  toggleOutlineEditor: () => void;
-  setViewMode: (mode: 'mindmap' | 'outline') => void;
-  toggleViewMode: () => void;
-  
-  // File and Image Management
-  setSelectedImage: (image: ImageFile | null) => void;
-  setSelectedFile: (file: FileAttachment | null) => void;
-  setFileMenuPosition: (position: Position) => void;
-  setShowImageModal: (show: boolean) => void;
-  setShowFileActionMenu: (show: boolean) => void;
-  
-  // Other UI States
-  setClipboard: (node: MindMapNode | null) => void;
-  
-  // Icon-triggered displays
-  setShowAttachmentListForNode: (nodeId: string | null) => void;
-  setShowLinkListForNode: (nodeId: string | null) => void;
-  toggleAttachmentListForNode: (nodeId: string) => void;
-  toggleLinkListForNode: (nodeId: string) => void;
-  closeAttachmentAndLinkLists: () => void;
-  
-  // Composite Actions
-  closeAllPanels: () => void;
-  toggleSidebar: () => void;
-  showCustomization: (position?: Position) => void;
 }
 
 export const createUISlice: StateCreator<

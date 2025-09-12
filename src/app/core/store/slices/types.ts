@@ -1,53 +1,16 @@
 import type { MindMapData, MindMapNode, Position, FileAttachment, NodeLink } from '@shared/types';
-import type { ImageFile } from '../../../shared/types';
 import type { NormalizedData } from '../../data/normalizedStore';
 import type { AISlice } from './aiSlice';
 import type { SettingsSlice } from './settingsSlice';
 import type { UISlice } from './uiSlice';
+import type { UIState } from '../../../shared/types/uiTypes';
+import type { DataState as NodeDataState } from '../../../shared/types/nodeTypes';
+import type { ImageFile } from '../../../shared/types';
 
-// UI State types
-export interface UIState {
-  // Basic UI state
-  zoom: number;
-  pan: Position;
-  
-  // Panel visibility
-  showCustomizationPanel: boolean;
-  customizationPosition: Position;
-  showContextMenu: boolean;
-  contextMenuPosition: Position;
-  showShortcutHelper: boolean;
-  showMapList: boolean;
-  sidebarCollapsed: boolean;
-  showLocalStoragePanel: boolean;
-  showTutorial: boolean;
-  showNotesPanel: boolean;
-  showOutlineEditor: boolean;
-  viewMode: 'mindmap' | 'outline';
-  
-  // File and image states
-  selectedImage: ImageFile | null;
-  selectedFile: FileAttachment | null;
-  fileMenuPosition: Position;
-  showImageModal: boolean;
-  showFileActionMenu: boolean;
-  
-  // Other UI states
-  clipboard: MindMapNode | null;
-  
-  // Icon-triggered displays
-  showAttachmentListForNode: string | null;
-  showLinkListForNode: string | null;
-}
-
-// Data State types
-export interface DataState {
-  data: MindMapData | null;
+// Re-export for backward compatibility
+export type { UIState };
+export interface DataState extends NodeDataState {
   normalizedData: NormalizedData | null;
-  selectedNodeId: string | null;
-  editingNodeId: string | null;
-  editText: string;
-  editingMode: 'select-all' | 'cursor-at-end' | null;
 }
 
 // History State types
