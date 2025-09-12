@@ -59,7 +59,7 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           
           // 親からトグルボタンへの接続線（親ノードの右端からトグルボタンの左端へ）
           const parentColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
-          const parentRightEdge = node.x + nodeSize.width / 2 - 20; // 開始点を20px左にずらす
+          const parentRightEdge = node.x + nodeSize.width / 2; // ノードの右端
           const toggleLeftEdge = toggleX - 8; // トグルボタンの半径分左にずらす
           connections.push({
             from: { x: parentRightEdge, y: node.y },
@@ -116,7 +116,7 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         
         // 親からトグルボタンへの接続線（親ノードの右端からトグルボタンの左端へ）
         const collapsedColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
-        const parentRightEdge = node.x + nodeSize.width / 2 - 20; // 開始点を20px左にずらす
+        const parentRightEdge = node.x + nodeSize.width / 2; // ノードの右端
         const toggleLeftEdge = toggleX - 8; // トグルボタンの半径分左にずらす
         connections.push({
           from: { x: parentRightEdge, y: node.y },
