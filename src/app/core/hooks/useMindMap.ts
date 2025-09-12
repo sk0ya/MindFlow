@@ -163,6 +163,7 @@ export const useMindMap = (
     toggleNodeCollapse: dataHook.toggleNodeCollapse,
     startEditing: dataHook.startEditing,
     startEditingWithCursorAtEnd: dataHook.startEditingWithCursorAtEnd,
+    startEditingWithCursorAtStart: dataHook.startEditingWithCursorAtStart,
     finishEditing: dataHook.finishEditing,
     cancelEditing: dataHook.cancelEditing,
     setEditText: dataHook.setEditText,

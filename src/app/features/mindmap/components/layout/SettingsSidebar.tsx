@@ -128,6 +128,27 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
 
 
       <div className="settings-section">
+        <h3 className="settings-section-title">エディタ設定</h3>
+        <div className="settings-section-content">
+          <div className="settings-toggle">
+            <input
+              type="checkbox"
+              id="vim-mode"
+              checked={settings.vimMode}
+              onChange={(e) => handleSettingChange('vimMode', e.target.checked)}
+            />
+            <label htmlFor="vim-mode" className="settings-toggle-label">
+              <span className="settings-icon">⌨️</span>
+              Vimモード
+            </label>
+          </div>
+          <div className="settings-description">
+            Vimライクなキーボード操作（hjkl移動、iで編集開始など）を有効にします
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
         <h3 className="settings-section-title">ストレージモード</h3>
         <div className="settings-section-content">
           <div className="settings-radio-group">
@@ -508,6 +529,14 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           flex: 1;
           padding: 8px 12px;
           min-height: 36px;
+        }
+
+        .settings-description {
+          font-size: 12px;
+          color: var(--text-secondary);
+          line-height: 1.4;
+          margin-top: 4px;
+          padding-left: 4px;
         }
       `}</style>
     </div>

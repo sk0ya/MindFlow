@@ -21,8 +21,10 @@ import { useRetryableUpload } from '../../../../shared/hooks/useRetryableUpload'
 import { useAI } from '../../../../core/hooks/useAI';
 import { useTheme } from '../../../../shared/hooks/useTheme';
 import { useModalState } from '../../../../shared/hooks/useModalState';
+import { useVimMode } from '../../../../core/hooks/useVimMode';
 import MindMapProviders from './MindMapProviders';
 import { logger } from '../../../../shared/utils/logger';
+import VimStatusBar from '../../../../shared/components/ui/VimStatusBar';
 import './MindMapApp.css';
 
 // Types
@@ -59,6 +61,17 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     retryDelay: 2000, // 2秒
     backoffMultiplier: 1.5, // 1.5倍ずつ増加
   });
+  
+  // Settings store for initialization
+  const { loadSettingsFromStorage } = useMindMapStore();
+  
+  // Initialize settings on mount
+  React.useEffect(() => {
+    loadSettingsFromStorage();
+  }, [loadSettingsFromStorage]);
+  
+  // Vim mode hook
+  const vim = useVimMode();
   
   // VSCode風サイドバーの状態
   const [activeView, setActiveView] = useState<string | null>('maps');
@@ -196,6 +209,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     selectNode,
     startEditing,
     startEditingWithCursorAtEnd,
+    startEditingWithCursorAtStart,
     finishEditing,
     
     // UI操作
@@ -270,6 +284,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     setEditText,
     startEdit: startEditing,
     startEditWithCursorAtEnd: startEditingWithCursorAtEnd,
+    startEditWithCursorAtStart: startEditingWithCursorAtStart,
     finishEdit: async (nodeId: string, text?: string) => {
       if (text !== undefined) {
         finishEditing(nodeId, text);
@@ -549,7 +564,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     },
     findNodeById: (nodeId: string) => data?.rootNode ? findNodeById(data.rootNode, nodeId) : null,
     closeAttachmentAndLinkLists: store.closeAttachmentAndLinkLists
-  });
+  }, vim);
 
   // UI state から個別に取得
   const { showKeyboardHelper, setShowKeyboardHelper } = {
@@ -1224,7 +1239,14 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   }
 
   return (
-    <div className="mindmap-app">
+    <div 
+      className="mindmap-app"
+      tabIndex={0}
+      onFocus={() => {
+        // Vimium対策: アプリケーションにフォーカス時にフォーカス状態を維持
+      }}
+      style={{ outline: 'none' }}
+    >
       <ActivityBar
         activeView={activeView}
         onViewChange={setActiveView}
@@ -1401,6 +1423,9 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         isVisible={showKeyboardHelper}
         onClose={() => setShowKeyboardHelper(false)}
       />
+      
+      {/* Vim status bar */}
+      <VimStatusBar />
       
       {/* Authentication Modal - Shows when cloud mode requires login */}
       {isCloudMode && authAdapter && (

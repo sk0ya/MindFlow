@@ -84,6 +84,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
             // カーソルを末尾に配置
             const length = inputRef.current.value.length;
             inputRef.current.setSelectionRange(length, length);
+          } else if (editingMode === 'cursor-at-start') {
+            // カーソルを先頭に配置
+            inputRef.current.setSelectionRange(0, 0);
           } else {
             // デフォルト: 全選択
             inputRef.current.select();

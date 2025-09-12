@@ -25,7 +25,7 @@ const Connection: React.FC<ConnectionProps> = ({
   onToggleCollapse, 
   nodeId, 
   isCollapsed = false, 
-  isToggleConnection = false, 
+  // isToggleConnection = false,  // Unused parameter
   color = '#666',
   isFromRoot = false
 }) => {

@@ -71,9 +71,9 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
       // 前の子ノードとのスペース計算（画像サイズを考慮）
       let spacing = 0;
       if (index > 0) {
-        const prevChild = node.children[index - 1];
-        const prevChildSize = calculateNodeSize(prevChild, undefined, false, globalFontSize);
-        const currentChildSize = calculateNodeSize(child, undefined, false, globalFontSize);
+        // const prevChild = node.children[index - 1];
+        // const prevChildSize = calculateNodeSize(prevChild, undefined, false, globalFontSize); // Unused
+        // const currentChildSize = calculateNodeSize(child, undefined, false, globalFontSize); // Unused
         
         // 基本間隔のみを使用（追加の画像間隔は除去）
         spacing = nodeSpacing;
@@ -151,8 +151,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         // 次の子ノードのためのオフセット更新（画像サイズに応じた間隔）
         currentOffset += childInfo.actualHeight;
         if (index < childrenWithHeights.length - 1) {
-          const currentChildSize = calculateNodeSize(childInfo.node, undefined, false, globalFontSize);
-          const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node, undefined, false, globalFontSize);
+          // const currentChildSize = calculateNodeSize(childInfo.node, undefined, false, globalFontSize); // Unused
+          // const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node, undefined, false, globalFontSize); // Unused
           
           // 基本間隔のみを使用（追加の画像間隔は除去）
           let spacing = nodeSpacing;
@@ -174,9 +174,9 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
     const totalActualHeight = childrenWithHeights.reduce((sum, child, index) => {
       let spacing = 0;
       if (index > 0) {
-        const prevChild = childrenWithHeights[index - 1];
-        const prevChildSize = calculateNodeSize(prevChild.node, undefined, false, globalFontSize);
-        const currentChildSize = calculateNodeSize(child.node, undefined, false, globalFontSize);
+        // const prevChild = childrenWithHeights[index - 1];
+        // const prevChildSize = calculateNodeSize(prevChild.node, undefined, false, globalFontSize); // Unused
+        // const currentChildSize = calculateNodeSize(child.node, undefined, false, globalFontSize); // Unused
         
         // 基本間隔のみを使用（追加の画像間隔は除去）
         spacing = nodeSpacing;

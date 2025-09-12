@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react';
 import type { MindMapNode } from '@shared/types';
+import type { VimModeHook } from './useVimMode';
 
 interface KeyboardShortcutHandlers {
   selectedNodeId: string | null;
@@ -12,7 +13,9 @@ interface KeyboardShortcutHandlers {
   setEditText: (_text: string) => void;
   startEdit: (_nodeId: string) => void;
   startEditWithCursorAtEnd: (_nodeId: string) => void;
+  startEditWithCursorAtStart: (_nodeId: string) => void;
   finishEdit: (_nodeId: string, _newText?: string, _options?: Partial<MindMapNode>) => Promise<void>;
+  cancelEditing: () => void;
   editText: string;
   updateNode: (_id: string, _updates: Partial<MindMapNode>) => void;
   addChildNode: (_parentId: string, _text?: string, _startEditing?: boolean) => Promise<string | null>;
@@ -38,10 +41,12 @@ interface KeyboardShortcutHandlers {
   closeAttachmentAndLinkLists: () => void;
 }
 
-export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
+export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers, vim?: VimModeHook) => {
+  
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't handle shortcuts when editing text
+      // Vimium対策: キーボードイベントを早期に捕獲
+      // Don't handle shortcuts when editing text  
       const target = event.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -53,9 +58,11 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
           if (event.key === 'Enter') {
             event.preventDefault();
             handlers.finishEdit(handlers.editingNodeId, handlers.editText);
+            if (vim && vim.isEnabled) vim.setMode('normal');
           } else if (event.key === 'Escape') {
             event.preventDefault();
-            handlers.finishEdit(handlers.editingNodeId, '');
+            handlers.finishEdit(handlers.editingNodeId, handlers.editText);
+            if (vim && vim.isEnabled) vim.setMode('normal');
           }
         }
         return;
@@ -64,8 +71,75 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const isModifier = ctrlKey || metaKey;
 
-      // Navigation shortcuts
-      if (!isModifier && handlers.selectedNodeId) {
+      // Vimium競合対策: hjklキーの場合は即座に preventDefault
+      if (vim && vim.isEnabled && vim.mode === 'normal' && !isModifier && handlers.selectedNodeId) {
+        const vimKeys = ['h', 'j', 'k', 'l', 'i', 'a', 'o'];
+        if (vimKeys.includes(key.toLowerCase())) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+        }
+      }
+
+      // Vim mode handling
+      if (vim && vim.isEnabled && vim.mode === 'normal' && !isModifier && handlers.selectedNodeId) {
+        switch (key.toLowerCase()) {
+          case 'h': // Left
+            handlers.closeAttachmentAndLinkLists();
+            handlers.navigateToDirection('left');
+            return;
+          case 'j': // Down
+            handlers.closeAttachmentAndLinkLists();
+            handlers.navigateToDirection('down');
+            return;
+          case 'k': // Up
+            handlers.closeAttachmentAndLinkLists();
+            handlers.navigateToDirection('up');
+            return;
+          case 'l': // Right
+            handlers.closeAttachmentAndLinkLists();
+            handlers.navigateToDirection('right');
+            return;
+          case 'i': // Insert mode (cursor at start)
+            vim.setMode('insert');
+            if (handlers.selectedNodeId) {
+              handlers.startEditWithCursorAtStart(handlers.selectedNodeId);
+            }
+            return;
+          case 'a': // Insert mode (cursor at end)
+            vim.setMode('insert');
+            if (handlers.selectedNodeId) {
+              handlers.startEditWithCursorAtEnd(handlers.selectedNodeId);
+            }
+            return;
+          case 'o': // New child node and edit
+            vim.setMode('insert');
+            if (handlers.selectedNodeId) {
+              handlers.addChildNode(handlers.selectedNodeId, '', true);
+            }
+            return;
+          case 'escape':
+            event.preventDefault();
+            vim.setMode('normal');
+            return;
+          case 'tab':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.addChildNode(handlers.selectedNodeId, '', true);
+            }
+            return;
+          case 'enter':
+            event.preventDefault();
+            if (handlers.selectedNodeId) {
+              handlers.addSiblingNode(handlers.selectedNodeId, '', true);
+            }
+            return;
+        }
+      }
+
+
+      // Standard navigation shortcuts (when vim is disabled)
+      if ((!vim || !vim.isEnabled) && !isModifier && handlers.selectedNodeId) {
         switch (key) {
           case 'ArrowUp':
             event.preventDefault();
@@ -182,12 +256,13 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    // Vimium対策: captureフェーズでイベントを捕獲
+    document.addEventListener('keydown', handleKeyDown, true);
     
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [handlers]);
+  }, [handlers, vim]);
 };
 
 export default useKeyboardShortcuts;

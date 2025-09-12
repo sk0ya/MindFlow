@@ -440,6 +440,17 @@ export const createNodeSlice: StateCreator<
     });
   },
 
+  startEditingWithCursorAtStart: (nodeId: string) => {
+    set((state) => {
+      const node = state.normalizedData?.nodes[nodeId];
+      if (node) {
+        state.editingNodeId = nodeId;
+        state.editText = node.text;
+        state.editingMode = 'cursor-at-start'; // カーソル先頭モード
+      }
+    });
+  },
+
   finishEditing: (nodeId: string, text: string) => {
     const trimmedText = text.trim();
     

@@ -44,6 +44,10 @@ export const useMindMapData = () => {
       store.startEditingWithCursorAtEnd(nodeId);
     }, [store]),
 
+    startEditingWithCursorAtStart: useCallback((nodeId: string) => {
+      store.startEditingWithCursorAtStart(nodeId);
+    }, [store]),
+
     finishEditing: useCallback((nodeId: string, text: string) => {
       store.finishEditing(nodeId, text);
     }, [store]),
