@@ -14,7 +14,6 @@ export { default as ActionButtons } from './ui/toolbar/ActionButtons';
 export { default as ColorSubmenu } from './ui/contextmenu/ColorSubmenu';
 export { default as ContextMenuStyles } from './ui/contextmenu/ContextMenuStyles';
 export { default as MenuItems } from './ui/contextmenu/MenuItems';
-export { default as MenuHeader } from './ui/contextmenu/MenuHeader';
 
 // Layout Components
 

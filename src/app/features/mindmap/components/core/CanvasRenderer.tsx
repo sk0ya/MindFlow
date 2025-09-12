@@ -47,7 +47,6 @@ interface CanvasRendererProps {
   onShowImageModal: (file: FileAttachment) => void;
   onShowFileActionMenu: (file: FileAttachment, nodeId: string, position: { x: number; y: number }) => void;
   onShowLinkActionMenu: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
-  onAddLink: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   onAutoLayout?: () => void;
   
@@ -93,7 +92,6 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onShowImageModal,
   onShowFileActionMenu,
   onShowLinkActionMenu,
-  onAddLink,
   onUpdateNode,
   onAutoLayout,
   availableMaps,

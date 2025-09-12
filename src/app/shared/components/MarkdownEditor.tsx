@@ -48,7 +48,8 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({
       wordWrap: 'on',
       minimap: { enabled: false },
       lineNumbers: 'on',
-      fontSize: 14,
+      fontSize: settings.fontSize || 14,
+      fontFamily: settings.fontFamily || 'system-ui',
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
@@ -119,17 +120,24 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({
     }
   };
 
-  // Update theme when settings change
+  // Update theme and font settings when settings change
   useEffect(() => {
     if (editorRef.current) {
+      // Update theme
       const monaco = editorRef.current.getModel()?.getLanguageId();
       if (monaco) {
         import('monaco-editor').then((monacoModule) => {
           monacoModule.editor.setTheme(settings.theme === 'dark' ? 'vs-dark' : 'vs');
         });
       }
+      
+      // Update font settings
+      editorRef.current.updateOptions({
+        fontSize: settings.fontSize || 14,
+        fontFamily: settings.fontFamily || 'system-ui'
+      });
     }
-  }, [settings.theme]);
+  }, [settings.theme, settings.fontSize, settings.fontFamily]);
 
   useEffect(() => {
     return () => {

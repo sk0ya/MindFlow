@@ -66,7 +66,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     onShowImageModal,
     onShowFileActionMenu,
     onShowLinkActionMenu,
-    onAddLink,
     onUpdateNode,
     onAutoLayout,
     availableMaps,
@@ -173,7 +172,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       onShowImageModal={onShowImageModal}
       onShowFileActionMenu={onShowFileActionMenu}
       onShowLinkActionMenu={onShowLinkActionMenu}
-      onAddLink={onAddLink}
       onUpdateNode={onUpdateNode}
       onAutoLayout={onAutoLayout}
       availableMaps={availableMaps}
