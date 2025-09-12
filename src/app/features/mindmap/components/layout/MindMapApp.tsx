@@ -857,6 +857,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
   // Context menu handlers
   const handleRightClick = (e: React.MouseEvent, nodeId: string) => {
     e.preventDefault();
+    
+    // リンクリストまたは添付ファイルリスト表示中は右クリックコンテキストメニューを無効化
+    if (ui.showLinkListForNode || ui.showAttachmentListForNode) {
+      return;
+    }
+    
     setContextMenu({
       visible: true,
       position: { x: e.clientX, y: e.clientY },
@@ -1009,16 +1015,20 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 
   // Link-related handlers
   const handleAddLink = (nodeId: string) => {
+    console.log('📝 handleAddLink called:', nodeId);
     setEditingLink(null);
     setLinkModalNodeId(nodeId);
     setShowLinkModal(true);
   };
 
   const handleEditLink = (link: NodeLink, nodeId: string) => {
+    console.log('🔥 handleEditLink called:', { link, nodeId });
+    console.trace('Call stack:');
     setEditingLink(link);
     setLinkModalNodeId(nodeId);
     setShowLinkModal(true);
   };
+
 
   const handleSaveLink = async (linkData: Partial<NodeLink>) => {
     if (!linkModalNodeId) return;
@@ -1163,14 +1173,12 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
 
   const handleShowLinkActionMenu = (link: NodeLink, nodeId: string, position: { x: number; y: number }) => {
     setLinkActionMenuData({ link, position });
-    setLinkModalNodeId(nodeId);
     setShowLinkActionMenu(true);
   };
 
   const handleCloseLinkActionMenu = () => {
     setShowLinkActionMenu(false);
     setLinkActionMenuData(null);
-    setLinkModalNodeId(null);
   };
 
   const handleOutlineSave = async (updatedData: MindMapData) => {
@@ -1325,6 +1333,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
               setZoom={setZoom}
               pan={ui.pan}
               setPan={setPan}
+              onToggleAttachmentList={store.toggleAttachmentListForNode}
+              onToggleLinkList={store.toggleLinkListForNode}
             />
           ) : (
             <OutlineWorkspace

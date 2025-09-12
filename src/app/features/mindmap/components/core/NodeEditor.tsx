@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import { calculateIconLayout } from '../../../../shared/utils/nodeUtils';
-import type { MindMapNode, NodeLink } from '@shared/types';
+import type { MindMapNode } from '@shared/types';
 
 interface NodeEditorProps {
   node: MindMapNode;
@@ -15,7 +15,8 @@ interface NodeEditorProps {
   blurTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
   isSelected?: boolean;
   onSelectNode?: (nodeId: string | null) => void;
-  onShowLinkActionMenu?: (link: NodeLink, nodeId: string, position: { x: number; y: number }) => void;
+  onToggleAttachmentList?: (nodeId: string) => void;
+  onToggleLinkList?: (nodeId: string) => void;
 }
 
 const NodeEditor: React.FC<NodeEditorProps> = ({
@@ -30,12 +31,13 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   blurTimeoutRef,
   isSelected = false,
   onSelectNode,
-  onShowLinkActionMenu
+  onToggleAttachmentList,
+  onToggleLinkList
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useMindMapStore();
 
-  // リンククリック時の処理（ノード選択のみ）
+  // リンククリック時の処理
   const handleLinkClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -46,24 +48,29 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
       return;
     }
     
-    // 既に選択されている場合は何もしない（メニュー表示を無効化）
-  }, [isSelected, onSelectNode, node.id]);
+    // 既に選択されている場合はリンク一覧をトグル
+    if (onToggleLinkList) {
+      onToggleLinkList(node.id);
+    }
+  }, [isSelected, onSelectNode, onToggleLinkList, node.id]);
 
-  const handleLinkContextMenu = useCallback((e: React.MouseEvent) => {
+
+  // 添付ファイルアイコンクリック時の処理
+  const handleAttachmentClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
-    if (onShowLinkActionMenu && node.links && node.links.length > 0) {
-      const firstLink = node.links[0];
-      const clientX = e.clientX || 0;
-      const clientY = e.clientY || 0;
-      
-      onShowLinkActionMenu(firstLink, node.id, {
-        x: clientX,
-        y: clientY
-      });
+    // ノードが選択されていない場合は選択する
+    if (!isSelected && onSelectNode) {
+      onSelectNode(node.id);
+      return;
     }
-  }, [onShowLinkActionMenu, node.id, node.links]);
+    
+    // 既に選択されている場合は添付ファイル一覧をトグル
+    if (onToggleAttachmentList) {
+      onToggleAttachmentList(node.id);
+    }
+  }, [isSelected, onSelectNode, onToggleAttachmentList, node.id]);
 
   // 編集モードになった時に確実にフォーカスを設定
   useEffect(() => {
@@ -181,8 +188,9 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                     ry="8"
                     style={{ 
                       filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))',
-                      pointerEvents: 'none'
+                      cursor: 'pointer'
                     }}
+                    onClick={handleAttachmentClick}
                   />
                   
                   {/* Unicode 添付ファイルアイコン */}
@@ -237,7 +245,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                       cursor: 'pointer'
                     }}
                     onClick={handleLinkClick}
-                    onContextMenu={handleLinkContextMenu}
                   />
                   
                   {/* SVGアイコン: リンク */}

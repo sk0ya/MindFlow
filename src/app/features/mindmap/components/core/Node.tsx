@@ -34,6 +34,8 @@ interface NodeProps {
   pan: { x: number; y: number };
   svgRef: React.RefObject<SVGSVGElement>;
   globalFontSize?: number;
+  onToggleAttachmentList?: (nodeId: string) => void;
+  onToggleLinkList?: (nodeId: string) => void;
 }
 
 const Node: React.FC<NodeProps> = ({
@@ -54,7 +56,6 @@ const Node: React.FC<NodeProps> = ({
   onFileUpload: _onFileUpload,
   onShowImageModal,
   onShowFileActionMenu,
-  onShowLinkActionMenu,
   onUpdateNode,
   onAutoLayout,
   editText,
@@ -62,7 +63,9 @@ const Node: React.FC<NodeProps> = ({
   zoom,
   pan,
   svgRef,
-  globalFontSize
+  globalFontSize,
+  onToggleAttachmentList,
+  onToggleLinkList
 }) => {
   const [isLayoutTransitioning, setIsLayoutTransitioning] = useState(false);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,7 +199,8 @@ const Node: React.FC<NodeProps> = ({
         blurTimeoutRef={blurTimeoutRef}
         isSelected={isSelected}
         onSelectNode={onSelect}
-        onShowLinkActionMenu={onShowLinkActionMenu}
+        onToggleAttachmentList={onToggleAttachmentList}
+        onToggleLinkList={onToggleLinkList}
       />
 
       {/* 4. 選択枠線（最後に描画して最前面に） */}

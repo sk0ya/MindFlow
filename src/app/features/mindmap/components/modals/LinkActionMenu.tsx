@@ -89,6 +89,7 @@ const LinkActionMenu: React.FC<LinkActionMenuProps> = ({
     onClose();
   }, [link, onEdit, onClose]);
 
+
   // リンク情報を取得するヘルパー関数
   const getLinkDisplayInfo = useCallback(() => {
     if (!link.targetMapId) {

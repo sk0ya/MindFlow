@@ -38,6 +38,12 @@ export interface UISlice {
   // Other UI States
   setClipboard: (node: MindMapNode | null) => void;
   
+  // Icon-triggered displays
+  setShowAttachmentListForNode: (nodeId: string | null) => void;
+  setShowLinkListForNode: (nodeId: string | null) => void;
+  toggleAttachmentListForNode: (nodeId: string) => void;
+  toggleLinkListForNode: (nodeId: string) => void;
+  
   // Composite Actions
   closeAllPanels: () => void;
   toggleSidebar: () => void;
@@ -72,6 +78,8 @@ export const createUISlice: StateCreator<
     showImageModal: false,
     showFileActionMenu: false,
     clipboard: null,
+    showAttachmentListForNode: null,
+    showLinkListForNode: null,
   },
 
   // Zoom and Pan Actions
@@ -228,6 +236,36 @@ export const createUISlice: StateCreator<
     });
   },
 
+  // Icon-triggered display actions
+  setShowAttachmentListForNode: (nodeId: string | null) => {
+    set((state) => {
+      state.ui.showAttachmentListForNode = nodeId;
+    });
+  },
+
+  setShowLinkListForNode: (nodeId: string | null) => {
+    set((state) => {
+      state.ui.showLinkListForNode = nodeId;
+    });
+  },
+
+  toggleAttachmentListForNode: (nodeId: string) => {
+    set((state) => {
+      state.ui.showAttachmentListForNode = 
+        state.ui.showAttachmentListForNode === nodeId ? null : nodeId;
+      // リンクリストを閉じる
+      state.ui.showLinkListForNode = null;
+    });
+  },
+
+  toggleLinkListForNode: (nodeId: string) => {
+    set((state) => {
+      state.ui.showLinkListForNode = 
+        state.ui.showLinkListForNode === nodeId ? null : nodeId;
+      // 添付ファイルリストを閉じる
+      state.ui.showAttachmentListForNode = null;
+    });
+  },
 
   // Composite Actions
   closeAllPanels: () => {
@@ -240,6 +278,8 @@ export const createUISlice: StateCreator<
       state.ui.showImageModal = false;
       state.ui.showFileActionMenu = false;
       state.ui.showTutorial = false;
+      state.ui.showAttachmentListForNode = null;
+      state.ui.showLinkListForNode = null;
       // Note: showNotesPanel は意図的に closeAllPanels から除外
     });
   },

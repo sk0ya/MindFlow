@@ -39,6 +39,10 @@ interface MindMapWorkspaceProps {
   setZoom: (zoom: number) => void;
   pan: Position;
   setPan: (pan: Position | ((prev: Position) => Position)) => void;
+  
+  // Icon toggle handlers
+  onToggleAttachmentList?: (nodeId: string) => void;
+  onToggleLinkList?: (nodeId: string) => void;
 }
 
 const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
@@ -71,7 +75,9 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
   zoom,
   setZoom,
   pan,
-  setPan
+  setPan,
+  onToggleAttachmentList,
+  onToggleLinkList
 }) => {
   
   return (
@@ -108,6 +114,8 @@ const MindMapWorkspace: React.FC<MindMapWorkspaceProps> = ({
         setZoom={setZoom}
         pan={pan}
         setPan={setPan}
+        onToggleAttachmentList={onToggleAttachmentList}
+        onToggleLinkList={onToggleLinkList}
       />
     </ErrorBoundary>
   );

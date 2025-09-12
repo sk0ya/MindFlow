@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react';
 import type { MindMapNode, NodeLink } from '@shared/types';
-import { calculateAttachmentListHeight, calculateLinkListHeight } from '../../../../shared/utils/listHeightUtils';
+import { calculateLinkListHeight } from '../../../../shared/utils/listHeightUtils';
 
 interface SelectedNodeLinkListProps {
   node: MindMapNode;
@@ -28,7 +28,12 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
   availableMaps = [],
   currentMapData
 }) => {
-  const handleLinkClick = useCallback((link: NodeLink) => {
+  const handleLinkClick = useCallback((e: React.MouseEvent, link: NodeLink) => {
+    // 右クリックの場合は処理しない
+    if (e.button === 2) {
+      return;
+    }
+    e.stopPropagation();
     onLinkClick(link);
   }, [onLinkClick]);
 
@@ -44,6 +49,13 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
   const handleLinkContextMenu = useCallback((e: React.MouseEvent, link: NodeLink) => {
     e.preventDefault();
     e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation(); // 他のイベントリスナーも停止
+    
+    // さらに確実にイベントを停止
+    if (e.nativeEvent.stopPropagation) {
+      e.nativeEvent.stopPropagation();
+    }
+    
     onLinkContextMenu(link, { x: e.clientX, y: e.clientY });
   }, [onLinkContextMenu]);
 
@@ -96,20 +108,10 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
     return null;
   }
 
-  // リストの位置計算（アイコンと添付ファイルリストの下に表示）
-  const hasAttachments = node.attachments && node.attachments.length > 0;
-  const hasLinks = node.links && node.links.length > 0;
-  const iconOffset = (hasAttachments || hasLinks) ? 12 : 0;
-  const hasAttachmentList = hasAttachments && node.attachments && node.attachments.length > 0;
-  // 添付ファイル一覧の高さを共通ユーティリティで計算
-  const attachmentListHeight = hasAttachmentList 
-    ? calculateAttachmentListHeight({ itemCount: node.attachments?.length || 0 }) 
-    : 0;
-  
-  const linkListOffset = iconOffset + attachmentListHeight + (hasAttachmentList ? 4 : 0); // アイコンと添付ファイルリストとの間隔
-  const listY = node.y + nodeHeight / 2 + 12 + linkListOffset;
-  const listX = node.x - nodeWidth / 2;
-  const listWidth = Math.max(nodeWidth, 300);
+  // リストの位置計算（ノードのすぐ下に表示）
+  const listY = node.y + nodeHeight / 2 + 8; // ノードのすぐ下に表示
+  const listX = node.x - nodeWidth / 2; // ノードの左端に合わせる
+  const listWidth = Math.max(nodeWidth, 300); // 最小幅300px
   
   // 動的高さ計算（共通ユーティリティを使用）
   const listHeight = calculateLinkListHeight({ itemCount: node.links.length });
@@ -167,7 +169,7 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                   e.currentTarget.style.backgroundColor = 'transparent';
                   e.currentTarget.style.borderColor = 'transparent';
                 }}
-                onClick={() => handleLinkClick(link)}
+                onClick={(e) => handleLinkClick(e, link)}
                 onDoubleClick={() => handleLinkDoubleClick(link)}
                 onContextMenu={(e) => handleLinkContextMenu(e, link)}
               >

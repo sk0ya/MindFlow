@@ -61,6 +61,10 @@ interface CanvasRendererProps {
   onDragStart: (nodeId: string) => void;
   onDragMove: (x: number, y: number) => void;
   onDragEnd: (nodeId: string, x: number, y: number) => void;
+  
+  // Icon toggle handlers
+  onToggleAttachmentList?: (nodeId: string) => void;
+  onToggleLinkList?: (nodeId: string) => void;
 }
 
 const CanvasRenderer: React.FC<CanvasRendererProps> = ({
@@ -99,7 +103,9 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   onLinkNavigate,
   onDragStart,
   onDragMove,
-  onDragEnd
+  onDragEnd,
+  onToggleAttachmentList,
+  onToggleLinkList
 }) => {
   const { settings } = useMindMapStore();
 
@@ -193,58 +199,72 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
                 pan={pan}
                 svgRef={svgRef}
                 globalFontSize={settings.fontSize}
+                onToggleAttachmentList={onToggleAttachmentList}
+                onToggleLinkList={onToggleLinkList}
               />
             ))}
           </g>
 
-          {/* 選択されたノードの添付ファイル一覧を最前面に表示 */}
-          {selectedNodeId && (
-            (() => {
-              const selectedNode = allNodes.find(node => node.id === selectedNodeId);
-              if (selectedNode) {
-                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id, settings.fontSize);
+          {/* アイコンクリック時の一覧表示 */}
+          {(() => {
+            const { showAttachmentListForNode, showLinkListForNode } = useMindMapStore().ui;
+            
+            // 添付ファイル一覧の表示
+            if (showAttachmentListForNode) {
+              const targetNode = allNodes.find(node => node.id === showAttachmentListForNode);
+              if (targetNode) {
+                const nodeSize = calculateNodeSize(targetNode, editText, editingNodeId === targetNode.id, settings.fontSize);
                 return (
-                  <>
-                    <SelectedNodeAttachmentList
-                      key={`attachment-list-${selectedNodeId}`}
-                      node={selectedNode}
-                      isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
-                      nodeWidth={nodeSize.width}
-                      nodeHeight={nodeSize.height}
-                      onFileClick={(file) => {
-                        onShowFileActionMenu(file, selectedNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
-                      }}
-                      onFileDoubleClick={(file) => {
-                        if (file.isImage) {
-                          onShowImageModal(file);
-                        }
-                      }}
-                      onFileContextMenu={(file, position) => {
-                        onShowFileActionMenu(file, selectedNode.id, position);
-                      }}
-                    />
-                    <SelectedNodeLinkList
-                      key={`link-list-${selectedNodeId}`}
-                      node={selectedNode}
-                      isVisible={selectedNodeId === selectedNode.id && editingNodeId !== selectedNode.id}
-                      nodeWidth={nodeSize.width}
-                      nodeHeight={nodeSize.height}
-                      onLinkClick={() => {
-                        // リンククリック時は何もしない（メニュー表示を無効化）
-                      }}
-                      onLinkContextMenu={(link, position) => {
-                        onShowLinkActionMenu(link, selectedNode.id, position);
-                      }}
-                      onLinkNavigate={onLinkNavigate}
-                      availableMaps={availableMaps}
-                      currentMapData={currentMapData}
-                    />
-                  </>
+                  <SelectedNodeAttachmentList
+                    key={`attachment-list-${showAttachmentListForNode}`}
+                    node={targetNode}
+                    isVisible={true}
+                    nodeWidth={nodeSize.width}
+                    nodeHeight={nodeSize.height}
+                    onFileClick={(file) => {
+                      onShowFileActionMenu(file, targetNode.id, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                    }}
+                    onFileDoubleClick={(file) => {
+                      if (file.isImage) {
+                        onShowImageModal(file);
+                      }
+                    }}
+                    onFileContextMenu={(file, position) => {
+                      onShowFileActionMenu(file, targetNode.id, position);
+                    }}
+                  />
                 );
               }
-              return null;
-            })()
-          )}
+            }
+            
+            // リンク一覧の表示
+            if (showLinkListForNode) {
+              const targetNode = allNodes.find(node => node.id === showLinkListForNode);
+              if (targetNode) {
+                const nodeSize = calculateNodeSize(targetNode, editText, editingNodeId === targetNode.id, settings.fontSize);
+                return (
+                  <SelectedNodeLinkList
+                    key={`link-list-${showLinkListForNode}`}
+                    node={targetNode}
+                    isVisible={true}
+                    nodeWidth={nodeSize.width}
+                    nodeHeight={nodeSize.height}
+                    onLinkClick={() => {
+                      // リンククリック時は何もしない（メニュー表示を無効化）
+                    }}
+                    onLinkContextMenu={(link, position) => {
+                      onShowLinkActionMenu(link, targetNode.id, position);
+                    }}
+                    onLinkNavigate={onLinkNavigate}
+                    availableMaps={availableMaps}
+                    currentMapData={currentMapData}
+                  />
+                );
+              }
+            }
+            
+            return null;
+          })()}
 
         </g>
       </svg>

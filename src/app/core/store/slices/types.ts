@@ -33,6 +33,10 @@ export interface UIState {
   
   // Other UI states
   clipboard: MindMapNode | null;
+  
+  // Icon-triggered displays
+  showAttachmentListForNode: string | null;
+  showLinkListForNode: string | null;
 }
 
 // Data State types
@@ -118,6 +122,13 @@ export interface MindMapStore extends DataState, HistoryState, AISlice, Settings
   setShowImageModal: (show: boolean) => void;
   setShowFileActionMenu: (show: boolean) => void;
   setClipboard: (node: MindMapNode | null) => void;
+  
+  // Icon-triggered displays
+  setShowAttachmentListForNode: (nodeId: string | null) => void;
+  setShowLinkListForNode: (nodeId: string | null) => void;
+  toggleAttachmentListForNode: (nodeId: string) => void;
+  toggleLinkListForNode: (nodeId: string) => void;
+  
   closeAllPanels: () => void;
   toggleSidebar: () => void;
   showCustomization: (position?: Position) => void;

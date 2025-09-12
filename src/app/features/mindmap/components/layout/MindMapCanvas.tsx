@@ -42,6 +42,10 @@ interface MindMapCanvasProps {
   setZoom: (zoom: number) => void;
   pan: { x: number; y: number };
   setPan: (pan: { x: number; y: number } | ((prev: { x: number; y: number }) => { x: number; y: number })) => void;
+  
+  // Icon toggle handlers
+  onToggleAttachmentList?: (nodeId: string) => void;
+  onToggleLinkList?: (nodeId: string) => void;
 }
 
 const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
@@ -74,7 +78,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
     zoom,
     setZoom,
     pan,
-    setPan
+    setPan,
+    onToggleAttachmentList,
+    onToggleLinkList
   } = props;
 
   const svgRef = useRef<SVGSVGElement>(null);
@@ -180,6 +186,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = (props) => {
       onDragStart={handleDragStartAdapter}
       onDragMove={handleDragMoveAdapter}
       onDragEnd={handleDragEndAdapter}
+      onToggleAttachmentList={onToggleAttachmentList}
+      onToggleLinkList={onToggleLinkList}
     />
   );
 };
