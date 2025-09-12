@@ -138,29 +138,35 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers, vim?: V
       }
 
 
-      // Standard navigation shortcuts (when vim is disabled)
-      if ((!vim || !vim.isEnabled) && !isModifier && handlers.selectedNodeId) {
+      // Arrow key navigation (works in both vim and normal mode)
+      if (!isModifier && handlers.selectedNodeId) {
         switch (key) {
           case 'ArrowUp':
             event.preventDefault();
             handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('up');
-            break;
+            return;
           case 'ArrowDown':
             event.preventDefault();
             handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('down');
-            break;
+            return;
           case 'ArrowLeft':
             event.preventDefault();
             handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('left');
-            break;
+            return;
           case 'ArrowRight':
             event.preventDefault();
             handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('right');
-            break;
+            return;
+        }
+      }
+
+      // Standard navigation shortcuts (when vim is disabled)
+      if ((!vim || !vim.isEnabled) && !isModifier && handlers.selectedNodeId) {
+        switch (key) {
           case ' ': // Space
             event.preventDefault();
             if (handlers.selectedNodeId) {

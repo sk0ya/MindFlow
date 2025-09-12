@@ -54,3 +54,35 @@ export function removeNodeFromTree(rootNode: MindMapNode, nodeId: string): MindM
       .map(child => removeNodeFromTree(child, nodeId))
   };
 }
+
+export function findParentNode(rootNode: MindMapNode, nodeId: string): MindMapNode | null {
+  if (!rootNode.children) return null;
+  
+  for (const child of rootNode.children) {
+    if (child.id === nodeId) return rootNode;
+    const parent = findParentNode(child, nodeId);
+    if (parent) return parent;
+  }
+  
+  return null;
+}
+
+export function getSiblingNodes(rootNode: MindMapNode, nodeId: string): { siblings: MindMapNode[], currentIndex: number } {
+  const parent = findParentNode(rootNode, nodeId);
+  if (!parent || !parent.children) {
+    return { siblings: [], currentIndex: -1 };
+  }
+  
+  const siblings = parent.children;
+  const currentIndex = siblings.findIndex(node => node.id === nodeId);
+  
+  return { siblings, currentIndex };
+}
+
+export function getFirstVisibleChild(node: MindMapNode): MindMapNode | null {
+  if (!node.children || node.children.length === 0 || node.collapsed) {
+    return null;
+  }
+  
+  return node.children[0];
+}

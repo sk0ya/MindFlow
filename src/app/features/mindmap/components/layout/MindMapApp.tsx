@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useMindMap, useKeyboardShortcuts, useMindMapStore, useMindMapPersistence } from '../../../../core';
-import { findNodeById } from '../../../../shared/utils/nodeTreeUtils';
+import { findNodeById, findParentNode, getSiblingNodes, getFirstVisibleChild } from '../../../../shared/utils/nodeTreeUtils';
 import ActivityBar from './ActivityBar';
 import PrimarySidebar from './PrimarySidebar';
 import MindMapHeader from './MindMapHeader';
@@ -41,6 +41,69 @@ const createCloudModeConfig = (authAdapter: any): StorageConfig => ({
 });
 import { useOptionalAuth, LoginModal } from '../../../../components/auth';
 import { validateFile } from '../../../../shared/types/dataTypes';
+
+// Helper function for spatial navigation fallback
+const findNodeBySpatialDirection = (
+  currentNodeId: string,
+  direction: 'up' | 'down' | 'left' | 'right',
+  rootNode: MindMapNode
+): string | null => {
+  const currentNode = findNodeById(rootNode, currentNodeId);
+  if (!currentNode) return null;
+  
+  // Get all nodes in a flat list for distance calculation
+  const allNodes: MindMapNode[] = [];
+  const collectNodes = (node: MindMapNode) => {
+    allNodes.push(node);
+    if (node.children && !node.collapsed) {
+      node.children.forEach(collectNodes);
+    }
+  };
+  collectNodes(rootNode);
+  
+  // Filter out the current node
+  const otherNodes = allNodes.filter(node => node.id !== currentNodeId);
+  if (otherNodes.length === 0) return null;
+  
+  // Find the best node in the specified direction
+  let bestNode: MindMapNode | null = null;
+  let bestScore = Infinity;
+  
+  for (const node of otherNodes) {
+    const deltaX = node.x - currentNode.x;
+    const deltaY = node.y - currentNode.y;
+    
+    // Check if the node is in the correct direction
+    let isInDirection = false;
+    let directionalScore = 0;
+    
+    switch (direction) {
+      case 'right':
+        isInDirection = deltaX > 20;
+        directionalScore = deltaX + Math.abs(deltaY) * 0.5;
+        break;
+      case 'left':
+        isInDirection = deltaX < -20;
+        directionalScore = -deltaX + Math.abs(deltaY) * 0.5;
+        break;
+      case 'down':
+        isInDirection = deltaY > 20;
+        directionalScore = deltaY + Math.abs(deltaX) * 0.5;
+        break;
+      case 'up':
+        isInDirection = deltaY < -20;
+        directionalScore = -deltaY + Math.abs(deltaX) * 0.5;
+        break;
+    }
+    
+    if (isInDirection && directionalScore < bestScore) {
+      bestScore = directionalScore;
+      bestNode = node;
+    }
+  }
+  
+  return bestNode?.id || null;
+};
 
 interface MindMapAppProps {
   storageMode?: 'local' | 'cloud';
@@ -330,65 +393,52 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
     navigateToDirection: (direction: 'up' | 'down' | 'left' | 'right') => {
       if (!selectedNodeId || !data?.rootNode) return;
       
-      const findNextNode = (currentNodeId: string, direction: 'up' | 'down' | 'left' | 'right'): string | null => {
-        const currentNode = findNodeById(data.rootNode, currentNodeId);
-        if (!currentNode) return null;
-        
-        // Get all nodes in a flat list for easier distance calculation
-        const allNodes: MindMapNode[] = [];
-        const collectNodes = (node: MindMapNode) => {
-          allNodes.push(node);
-          if (node.children) {
-            node.children.forEach(collectNodes);
-          }
-        };
-        collectNodes(data.rootNode);
-        
-        // Filter out the current node
-        const otherNodes = allNodes.filter(node => node.id !== currentNodeId);
-        if (otherNodes.length === 0) return null;
-        
-        // Find the best node in the specified direction
-        let bestNode: MindMapNode | null = null;
-        let bestScore = Infinity;
-        
-        for (const node of otherNodes) {
-          const deltaX = node.x - currentNode.x;
-          const deltaY = node.y - currentNode.y;
-          
-          // Check if the node is in the correct direction
-          let isInDirection = false;
-          let directionalScore = 0;
-          
-          switch (direction) {
-            case 'right':
-              isInDirection = deltaX > 20; // Must be significantly to the right
-              directionalScore = deltaX + Math.abs(deltaY) * 0.5; // Prefer more to the right, penalize vertical distance
-              break;
-            case 'left':
-              isInDirection = deltaX < -20; // Must be significantly to the left
-              directionalScore = -deltaX + Math.abs(deltaY) * 0.5; // Prefer more to the left, penalize vertical distance
-              break;
-            case 'down':
-              isInDirection = deltaY > 20; // Must be significantly down
-              directionalScore = deltaY + Math.abs(deltaX) * 0.5; // Prefer more down, penalize horizontal distance
-              break;
-            case 'up':
-              isInDirection = deltaY < -20; // Must be significantly up
-              directionalScore = -deltaY + Math.abs(deltaX) * 0.5; // Prefer more up, penalize horizontal distance
-              break;
-          }
-          
-          if (isInDirection && directionalScore < bestScore) {
-            bestScore = directionalScore;
-            bestNode = node;
-          }
-        }
-        
-        return bestNode?.id || null;
-      };
+      const currentNode = findNodeById(data.rootNode, selectedNodeId);
+      if (!currentNode) return;
       
-      const nextNodeId = findNextNode(selectedNodeId, direction);
+      let nextNodeId: string | null = null;
+      
+      switch (direction) {
+        case 'left': // h - Move to parent node
+          const parent = findParentNode(data.rootNode, selectedNodeId);
+          if (parent) {
+            nextNodeId = parent.id;
+          }
+          break;
+          
+        case 'right': // l - Move to first child (expand if collapsed)
+          const firstChild = getFirstVisibleChild(currentNode);
+          if (firstChild) {
+            nextNodeId = firstChild.id;
+          } else if (currentNode.children && currentNode.children.length > 0 && currentNode.collapsed) {
+            // Expand collapsed node and move to first child
+            updateNode(selectedNodeId, { collapsed: false });
+            nextNodeId = currentNode.children[0].id;
+          }
+          break;
+          
+        case 'up': // k - Move to previous sibling
+        case 'down': // j - Move to next sibling
+          const { siblings, currentIndex } = getSiblingNodes(data.rootNode, selectedNodeId);
+          if (siblings.length > 1 && currentIndex !== -1) {
+            let targetIndex = -1;
+            if (direction === 'up' && currentIndex > 0) {
+              targetIndex = currentIndex - 1;
+            } else if (direction === 'down' && currentIndex < siblings.length - 1) {
+              targetIndex = currentIndex + 1;
+            }
+            if (targetIndex !== -1) {
+              nextNodeId = siblings[targetIndex].id;
+            }
+          }
+          break;
+      }
+      
+      // Fallback to spatial navigation if hierarchical navigation doesn't work
+      if (!nextNodeId) {
+        nextNodeId = findNodeBySpatialDirection(selectedNodeId, direction, data.rootNode);
+      }
+      
       if (nextNodeId) {
         selectNode(nextNodeId);
       }
