@@ -24,6 +24,8 @@ interface MenuItemsProps {
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
   onAIGenerate?: (node: MindMapNode) => void;
+  onFileUpload?: (nodeId: string, files: FileList) => void;
+  onAddLink?: (nodeId: string) => void;
   onClose: () => void;
 }
 
@@ -34,6 +36,8 @@ const MenuItems: React.FC<MenuItemsProps> = ({
   onCopy,
   onPaste,
   onAIGenerate,
+  onFileUpload,
+  onAddLink,
   onClose
 }) => {
   const store = useMindMapStore();
@@ -80,6 +84,34 @@ const MenuItems: React.FC<MenuItemsProps> = ({
       shortcut: 'Ctrl+V',
       disabled: !store.ui?.clipboard
     },
+    { type: 'separator' as const },
+    ...(onFileUpload ? [{
+      icon: '📎',
+      label: 'ファイル添付',
+      action: () => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*,text/plain,application/pdf,application/json';
+        fileInput.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const files = target.files;
+          if (files && files.length > 0 && onFileUpload) {
+            onFileUpload(selectedNode.id, files);
+          }
+          target.value = '';
+        });
+        fileInput.click();
+        onClose();
+      }
+    }] : []),
+    ...(onAddLink ? [{
+      icon: '🔗',
+      label: 'リンク追加',
+      action: () => {
+        onAddLink(selectedNode.id);
+        onClose();
+      }
+    }] : []),
     { type: 'separator' as const },
     {
       icon: '🗑️',

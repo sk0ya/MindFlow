@@ -7,7 +7,7 @@ const ContextMenuStyles: React.FC = () => (
       border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       border: 1px solid var(--color-border, #e1e5e9);
-      min-width: 200px;
+      min-width: 180px;
       overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       animation: menuSlideIn 0.15s ease-out;
@@ -57,7 +57,7 @@ const ContextMenuStyles: React.FC = () => (
     }
 
     .menu-items {
-      padding: 4px 0;
+      padding: 2px 0;
     }
 
     .menu-item {
@@ -98,8 +98,8 @@ const ContextMenuStyles: React.FC = () => (
     .menu-item-content {
       display: flex;
       align-items: center;
-      padding: 8px 16px;
-      gap: 12px;
+      padding: 6px 12px;
+      gap: 8px;
     }
 
     .menu-icon {
@@ -145,7 +145,7 @@ const ContextMenuStyles: React.FC = () => (
     .menu-separator {
       height: 1px;
       background: var(--color-border, #e1e5e9);
-      margin: 4px 0;
+      margin: 2px 0;
     }
 
     [data-theme="dark"] .menu-separator {

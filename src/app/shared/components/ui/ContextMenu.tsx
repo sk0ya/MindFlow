@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { MindMapNode } from '../../types';
-import MenuHeader from './contextmenu/MenuHeader';
 import MenuItems from './contextmenu/MenuItems';
 import ContextMenuStyles from './contextmenu/ContextMenuStyles';
 
@@ -18,6 +17,8 @@ interface ContextMenuProps {
   onCopy: (node: MindMapNode) => void;
   onPaste: (parentId: string) => void;
   onAIGenerate?: (node: MindMapNode) => void;
+  onFileUpload?: (nodeId: string, files: FileList) => void;
+  onAddLink?: (nodeId: string) => void;
   onClose: () => void;
 }
 
@@ -30,6 +31,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onCopy,
   onPaste,
   onAIGenerate,
+  onFileUpload,
+  onAddLink,
   onClose
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,8 +82,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         zIndex: 2000
       }}
     >
-      <MenuHeader selectedNode={selectedNode} />
-      
       <MenuItems
         selectedNode={selectedNode}
         onDelete={onDelete}
@@ -88,6 +89,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         onCopy={onCopy}
         onPaste={onPaste}
         onAIGenerate={onAIGenerate}
+        onFileUpload={onFileUpload}
+        onAddLink={onAddLink}
         onClose={onClose}
       />
       

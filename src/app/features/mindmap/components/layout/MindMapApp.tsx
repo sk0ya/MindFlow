@@ -1482,6 +1482,15 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             store.showCustomization({ x: contextMenu.position.x, y: contextMenu.position.y });
             handleContextMenuClose();
           }}
+          onFileUpload={(nodeId, files) => {
+            if (files.length > 0) {
+              handleFileUpload(nodeId, files[0]);
+            }
+          }}
+          onAddLink={(nodeId) => {
+            setLinkModalNodeId(nodeId);
+            setShowLinkModal(true);
+          }}
           onCopy={(node) => {
             // ショートカットキーと同じcopyNode関数を使用
             const copyNode = (nodeId: string) => {

@@ -3,7 +3,6 @@ import { CanvasConnections, CanvasDragGuide } from '.';
 import { Node } from '../..';
 import SelectedNodeAttachmentList from './SelectedNodeAttachmentList';
 import SelectedNodeLinkList from './SelectedNodeLinkList';
-import NodeActions from './NodeActions';
 import { calculateNodeSize } from '../../../../shared/utils/nodeUtils';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import type { FileAttachment, MindMapData, MindMapNode, NodeLink } from '@shared/types';
@@ -249,29 +248,6 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
             })()
           )}
 
-          {/* 選択されたノードのアクションボタンを最前面に表示 */}
-          {selectedNodeId && (
-            (() => {
-              const selectedNode = allNodes.find(node => node.id === selectedNodeId);
-              if (selectedNode) {
-                const nodeSize = calculateNodeSize(selectedNode, editText, editingNodeId === selectedNode.id, settings.fontSize);
-                return (
-                  <NodeActions
-                    key={`actions-${selectedNodeId}`}
-                    node={selectedNode}
-                    isSelected={selectedNodeId === selectedNode.id}
-                    isEditing={editingNodeId === selectedNode.id}
-                    nodeHeight={nodeSize.height}
-                    onAddChild={onAddChild}
-                    onDelete={onDeleteNode}
-                    onFileUpload={onFileUpload}
-                    onAddLink={onAddLink}
-                  />
-                );
-              }
-              return null;
-            })()
-          )}
         </g>
       </svg>
 
