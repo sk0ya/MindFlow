@@ -78,9 +78,15 @@ const Connection: React.FC<ConnectionProps> = ({
       controlX2 = to.x - Math.abs(dx) * 0.6;
       controlY2 = to.y;
     } else if (isFromRoot) {
-      // ルートノードからの接続線：上に向かってから子ノードへ
-      controlX1 = from.x + Math.abs(dx) * 0.2;
-      controlY1 = from.y - 40; // 上に向かう
+      // ルートノードからの接続線：子ノードの方向に応じて曲がる
+      controlX1 = from.x + Math.abs(dx) * 0.3;
+      if (dy > 0) {
+        // 子ノードが下にある場合：下向きに曲がる
+        controlY1 = from.y + Math.min(40, Math.abs(dy) * 0.4);
+      } else {
+        // 子ノードが上にある場合：上向きに曲がる
+        controlY1 = from.y - Math.min(40, Math.abs(dy) * 0.4);
+      }
       controlX2 = to.x - Math.abs(dx) * 0.6;
       controlY2 = to.y;
     } else if (dy > 0) {
