@@ -63,7 +63,6 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
             from: { x: parentRightEdge, y: node.y },
             to: { x: toggleLeftEdge, y: toggleY },
             hasToggleButton: false,
-            isToggleConnection: true,
             color: parentColor
           });
           
@@ -105,7 +104,6 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           from: { x: parentRightEdge, y: node.y },
           to: { x: toggleLeftEdge, y: toggleY },
           hasToggleButton: false,
-          isToggleConnection: true,
           color: collapsedColor
         });
         
@@ -132,7 +130,6 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
             hasToggleButton={false}
             onToggleCollapse={onToggleCollapse}
             nodeId={conn.nodeId || ''}
-            isToggleConnection={conn.isToggleConnection}
             color={conn.color}
           />
         ))}

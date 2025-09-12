@@ -82,11 +82,11 @@ const Connection: React.FC<ConnectionProps> = ({
       {path && (
         <path
           d={path}
-          stroke={isToggleConnection ? "#999" : color}
-          strokeWidth={isToggleConnection ? "2" : "3"}
+          stroke={color}
+          strokeWidth="3"
           fill="none"
-          opacity={isToggleConnection ? "0.5" : "0.8"}
-          strokeDasharray={isToggleConnection ? "5,5" : "none"}
+          opacity="0.8"
+          strokeDasharray="none"
         />
       )}
       
