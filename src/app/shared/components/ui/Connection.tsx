@@ -15,6 +15,7 @@ interface ConnectionProps {
   isCollapsed?: boolean;
   isToggleConnection?: boolean;
   color?: string;
+  isFromRoot?: boolean;
 }
 
 const Connection: React.FC<ConnectionProps> = ({ 
@@ -25,7 +26,8 @@ const Connection: React.FC<ConnectionProps> = ({
   nodeId, 
   isCollapsed = false, 
   isToggleConnection = false, 
-  color = '#666' 
+  color = '#666',
+  isFromRoot = false
 }) => {
   const { theme } = useTheme();
   
@@ -64,13 +66,38 @@ const Connection: React.FC<ConnectionProps> = ({
       return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
     }
     
-    const controlDistance = Math.min(distance * 0.5, 100);
+    // プロップスで渡されたルートノード判定を使用
     
-    const angle = Math.atan2(dy, dx);
-    const controlX1 = from.x + Math.cos(angle) * controlDistance;
-    const controlY1 = from.y;
-    const controlX2 = to.x - Math.cos(angle) * controlDistance;
-    const controlY2 = to.y;
+    // 方向に応じて制御点を調整
+    let controlX1, controlY1, controlX2, controlY2;
+    
+    if (Math.abs(dy) < 10) {
+      // 純粋に水平方向の場合：右端から水平に進む
+      controlX1 = from.x + Math.abs(dx) * 0.6;
+      controlY1 = from.y;
+      controlX2 = to.x - Math.abs(dx) * 0.6;
+      controlY2 = to.y;
+    } else if (isFromRoot) {
+      // ルートノードからの接続線：上に向かってから子ノードへ
+      controlX1 = from.x + Math.abs(dx) * 0.2;
+      controlY1 = from.y - 40; // 上に向かう
+      controlX2 = to.x - Math.abs(dx) * 0.6;
+      controlY2 = to.y;
+    } else if (dy > 0) {
+      // 下向きの場合：まず下に向かう（目標地点より下には行かない）
+      const downwardOffset = Math.min(30, Math.abs(dy) * 0.3 + 15);
+      controlX1 = from.x;
+      controlY1 = Math.max(from.y + downwardOffset, to.y); // 目標地点より下には行かない
+      controlX2 = to.x - Math.abs(dx) * 0.4;
+      controlY2 = to.y;
+    } else {
+      // 上向きの場合：まず上に向かう（目標地点より上には行かない）
+      const upwardOffset = Math.min(30, Math.abs(dy) * 0.3 + 15);
+      controlX1 = from.x;
+      controlY1 = Math.min(from.y - upwardOffset, to.y);
+      controlX2 = to.x - Math.abs(dx) * 0.4;
+      controlY2 = to.y;
+    }
     
     return `M ${from.x} ${from.y} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${to.x} ${to.y}`;
   };
