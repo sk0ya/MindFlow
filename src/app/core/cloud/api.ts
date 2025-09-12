@@ -412,6 +412,49 @@ export class CloudflareAPI {
   }
 
   /**
+   * すべてのファイル情報を取得
+   */
+  async getAllFiles(): Promise<FileInfo[]> {
+    logger.info('📋 API: Getting all files for user');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/files`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      logger.info('📡 API: Get all files response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('❌ API: Get all files failed:', { 
+          status: response.status, 
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`ファイル一覧の取得に失敗しました: ${response.status} ${response.statusText}`);
+      }
+
+      const result: ApiResponse<FileInfo[]> = await response.json();
+      logger.info('📥 API: All files response:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'ファイル一覧の取得に失敗しました');
+      }
+
+      return result.data || [];
+    } catch (error) {
+      logger.error('❌ API: getAllFiles failed:', error);
+      // エラーの場合は空配列を返す（サーバーにエンドポイントがない可能性もあるため）
+      return [];
+    }
+  }
+
+  /**
    * ヘルスチェック
    */
   async healthCheck(): Promise<boolean> {

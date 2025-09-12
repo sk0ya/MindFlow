@@ -35,6 +35,12 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange, onS
       isActive: activeView === 'notes'
     },
     {
+      id: 'attachments',
+      icon: '📎',
+      label: '添付ファイル',
+      isActive: activeView === 'attachments'
+    },
+    {
       id: 'import',
       icon: '📥',
       label: 'インポート',

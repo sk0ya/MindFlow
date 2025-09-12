@@ -38,6 +38,7 @@ export interface NodeSlice {
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
   startEditingWithCursorAtEnd: (nodeId: string) => void;
+  startEditingWithCursorAtStart: (nodeId: string) => void;
   finishEditing: (nodeId: string, text: string) => void;
   cancelEditing: () => void;
   setEditText: (text: string) => void;

@@ -481,6 +481,30 @@ export class CloudStorageAdapter implements StorageAdapter {
   }
 
   /**
+   * すべてのファイル情報を取得
+   */
+  async getAllFiles(): Promise<FileInfo[]> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (!this.authAdapter.isAuthenticated) {
+      throw new Error('User not authenticated for file access');
+    }
+
+    try {
+      logger.info('📋 CloudStorageAdapter: Getting all files');
+      const files = await this.apiClient.getAllFiles();
+      logger.info(`✅ CloudStorageAdapter: Retrieved ${files.length} files`);
+      return files;
+    } catch (error) {
+      logger.error('❌ CloudStorageAdapter: Failed to get all files:', error);
+      // エラーの場合は空配列を返す（fallback）
+      return [];
+    }
+  }
+
+  /**
    * クリーンアップ
    */
   cleanup(): void {

@@ -66,9 +66,12 @@ export async function handleRequest(request, env) {
         } else if (nodeId) {
           // 特定ノードの全ファイル取得
           response = await getNodeFiles(env.DB, userId, mindmapId, nodeId, env);
-        } else {
+        } else if (mindmapId) {
           // マインドマップの全ファイル取得
           response = await getMindmapFiles(env.DB, userId, mindmapId, env);
+        } else {
+          // 全ユーザーファイル取得
+          response = await getAllUserFiles(env.DB, userId, env);
         }
         break;
       
@@ -382,6 +385,71 @@ async function getMindmapFiles(db, userId, mindmapId, env) {
   } catch (error) {
     console.error('❌ Failed to list mindmap files from R2:', error);
     return [];
+  }
+}
+
+/**
+ * 全ユーザーファイル取得（すべてのマインドマップのファイルを取得）
+ */
+async function getAllUserFiles(db, userId, env) {
+  console.log('📁 Getting all files for user:', userId);
+  
+  try {
+    // R2からユーザーの全ファイルを取得
+    const prefix = `${userId}/`;
+    const listResult = await env.FILES.list({ prefix });
+    console.log('📋 R2 all user files result:', { 
+      objectCount: listResult.objects.length,
+      truncated: listResult.truncated 
+    });
+
+    const files = [];
+    for (const obj of listResult.objects) {
+      try {
+        // オブジェクトの詳細を取得してメタデータを読む
+        const fileObject = await env.FILES.get(obj.key);
+        if (fileObject) {
+          const pathParts = obj.key.split('/');
+          
+          // パスの構造を解析: userId/mindmapId/nodeId/fileId
+          if (pathParts.length >= 4) {
+            const [userIdPart, mindmapId, nodeId, ...fileIdParts] = pathParts;
+            const fileId = fileIdParts.join('/'); // ファイル名にスラッシュが含まれる場合に備える
+            const fileName = fileObject.customMetadata?.originalName || fileId;
+            const attachmentType = fileObject.customMetadata?.attachmentType || getAttachmentType(fileObject.httpMetadata?.contentType);
+            
+            files.push({
+              id: fileId,
+              name: fileName,
+              fileName: fileName,
+              type: attachmentType,
+              mimeType: fileObject.httpMetadata?.contentType || 'application/octet-stream',
+              size: obj.size,
+              fileSize: obj.size,
+              url: `/api/files/${mindmapId}/${encodeURIComponent(nodeId)}/${encodeURIComponent(fileId)}`,
+              downloadUrl: `/api/files/${mindmapId}/${encodeURIComponent(nodeId)}/${encodeURIComponent(fileId)}?type=download`,
+              storagePath: obj.key,
+              attachmentType: attachmentType,
+              uploadedAt: obj.uploaded?.toISOString() || new Date().toISOString(),
+              isImage: attachmentType === 'image',
+              // 追加のメタデータ（フロントエンドがマッチングに使用）
+              mindmapId: mindmapId,
+              nodeId: nodeId
+            });
+          }
+        }
+      } catch (objError) {
+        console.warn(`⚠️ Failed to process object ${obj.key}:`, objError.message);
+        // 個々のファイル処理でエラーが発生しても続行
+      }
+    }
+
+    console.log(`✅ Retrieved ${files.length} files for user ${userId}`);
+    return { success: true, data: files };
+  } catch (error) {
+    console.error('❌ Failed to list all user files from R2:', error);
+    // エラーの場合は空配列を返す
+    return { success: true, data: [] };
   }
 }
 

@@ -7,7 +7,7 @@ export interface DataState {
   selectedNodeId: string | null;
   editingNodeId: string | null;
   editText: string;
-  editingMode: 'select-all' | 'cursor-at-end' | null;
+  editingMode: 'select-all' | 'cursor-at-end' | 'cursor-at-start' | null;
 }
 
 // Node Operations interface
@@ -28,6 +28,7 @@ export interface NodeOperations {
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
   startEditingWithCursorAtEnd: (nodeId: string) => void;
+  startEditingWithCursorAtStart: (nodeId: string) => void;
   finishEditing: (nodeId: string, text: string) => void;
   cancelEditing: () => void;
   setEditText: (text: string) => void;
@@ -61,5 +62,5 @@ export interface NodeSlice extends NodeActions {
   selectedNodeId: string | null;
   editingNodeId: string | null;
   editText: string;
-  editingMode: 'select-all' | 'cursor-at-end' | null;
+  editingMode: 'select-all' | 'cursor-at-end' | 'cursor-at-start' | null;
 }

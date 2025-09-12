@@ -613,7 +613,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
       }
     },
     findNodeById: (nodeId: string) => data?.rootNode ? findNodeById(data.rootNode, nodeId) : null,
-    closeAttachmentAndLinkLists: store.closeAttachmentAndLinkLists
+    closeAttachmentAndLinkLists: store.closeAttachmentAndLinkLists,
+    cancelEditing: store.cancelEditing
   }, vim);
 
   // UI state から個別に取得

@@ -6,6 +6,7 @@ import AISidebar from './AISidebar';
 import ImportSidebar from './ImportSidebar';
 import ExportSidebar from './ExportSidebar';
 import SearchSidebar from './SearchSidebar';
+import AttachmentsSidebar from './AttachmentsSidebar';
 import type { MindMapData } from '../../../../shared/types';
 import './PrimarySidebar.css';
 
@@ -97,6 +98,9 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       
       case 'notes':
         return <NotesSidebar />;
+      
+      case 'attachments':
+        return <AttachmentsSidebar isVisible={true} />;
       
       case 'import':
         return <ImportSidebar onImport={onImport} />;
