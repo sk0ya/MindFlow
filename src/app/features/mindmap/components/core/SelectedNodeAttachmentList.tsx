@@ -132,6 +132,7 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
           fontFamily: 'system-ui, -apple-system, sans-serif',
           zIndex: 1000
         }}
+        onClick={(e) => e.stopPropagation()}
       >
 
         {/* ファイル一覧 */}

@@ -3,6 +3,7 @@ import type { ImageFile } from '../../../shared/types';
 import type { NormalizedData } from '../../data/normalizedStore';
 import type { AISlice } from './aiSlice';
 import type { SettingsSlice } from './settingsSlice';
+import type { UISlice } from './uiSlice';
 
 // UI State types
 export interface UIState {
@@ -56,7 +57,7 @@ export interface HistoryState {
 }
 
 // Combined Store Interface
-export interface MindMapStore extends DataState, HistoryState, AISlice, SettingsSlice {
+export interface MindMapStore extends DataState, HistoryState, AISlice, SettingsSlice, UISlice {
   ui: UIState;
   
   // Data Actions

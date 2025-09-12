@@ -35,6 +35,7 @@ interface KeyboardShortcutHandlers {
   pasteNode: (_parentId: string) => Promise<void>;
   pasteImageFromClipboard: (_nodeId: string) => Promise<void>;
   findNodeById: (_nodeId: string) => MindMapNode | null;
+  closeAttachmentAndLinkLists: () => void;
 }
 
 export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
@@ -68,18 +69,22 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
         switch (key) {
           case 'ArrowUp':
             event.preventDefault();
+            handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('up');
             break;
           case 'ArrowDown':
             event.preventDefault();
+            handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('down');
             break;
           case 'ArrowLeft':
             event.preventDefault();
+            handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('left');
             break;
           case 'ArrowRight':
             event.preventDefault();
+            handlers.closeAttachmentAndLinkLists();
             handlers.navigateToDirection('right');
             break;
           case ' ': // Space
@@ -171,6 +176,8 @@ export const useKeyboardShortcuts = (handlers: KeyboardShortcutHandlers) => {
           if (handlers.showLocalStorage) handlers.setShowLocalStorage(false);
           if (handlers.showTutorial) handlers.setShowTutorial(false);
           if (handlers.showKeyboardHelper) handlers.setShowKeyboardHelper(false);
+          // 添付ファイル・リンク一覧を閉じる
+          handlers.closeAttachmentAndLinkLists();
           break;
       }
     };

@@ -547,7 +547,8 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
         throw error;
       }
     },
-    findNodeById: (nodeId: string) => data?.rootNode ? findNodeById(data.rootNode, nodeId) : null
+    findNodeById: (nodeId: string) => data?.rootNode ? findNodeById(data.rootNode, nodeId) : null,
+    closeAttachmentAndLinkLists: store.closeAttachmentAndLinkLists
   });
 
   // UI state から個別に取得

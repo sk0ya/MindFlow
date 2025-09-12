@@ -43,6 +43,7 @@ export interface UISlice {
   setShowLinkListForNode: (nodeId: string | null) => void;
   toggleAttachmentListForNode: (nodeId: string) => void;
   toggleLinkListForNode: (nodeId: string) => void;
+  closeAttachmentAndLinkLists: () => void;
   
   // Composite Actions
   closeAllPanels: () => void;
@@ -264,6 +265,13 @@ export const createUISlice: StateCreator<
         state.ui.showLinkListForNode === nodeId ? null : nodeId;
       // 添付ファイルリストを閉じる
       state.ui.showAttachmentListForNode = null;
+    });
+  },
+
+  closeAttachmentAndLinkLists: () => {
+    set((state) => {
+      state.ui.showAttachmentListForNode = null;
+      state.ui.showLinkListForNode = null;
     });
   },
 

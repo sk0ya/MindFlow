@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { logger } from '../../../../shared/utils/logger';
+import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface CanvasEventHandlerProps {
   editingNodeId: string | null;
@@ -16,6 +17,7 @@ export const useCanvasEventHandler = ({
   onFinishEdit,
   getIsPanning
 }: CanvasEventHandlerProps) => {
+  const store = useMindMapStore();
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const wasPanningRef = useRef<boolean>(false);
   const DRAG_THRESHOLD = 5; // ピクセル
@@ -67,11 +69,13 @@ export const useCanvasEventHandler = ({
       }
       // ノード選択をクリア
       onSelectNode(null);
+      // 添付ファイル・リンク一覧を閉じる
+      store.closeAttachmentAndLinkLists();
     }
     
     // マウスアップ時にパン状態をリセット
     wasPanningRef.current = false;
-  }, [editingNodeId, editText, onFinishEdit, onSelectNode]);
+  }, [editingNodeId, editText, onFinishEdit, onSelectNode, store]);
 
   // 右クリック処理
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -84,8 +88,15 @@ export const useCanvasEventHandler = ({
     if (editingNodeId && editingNodeId !== nodeId) {
       logger.debug('Canvas: 別ノード選択時の編集確定をNode.jsxに委任');
     }
+    
+    // ノード選択時に添付ファイル・リンク一覧を閉じる（ただし、アイコンクリックでの表示切り替えは除く）
+    const { showAttachmentListForNode, showLinkListForNode } = store.ui;
+    if (showAttachmentListForNode !== nodeId && showLinkListForNode !== nodeId) {
+      store.closeAttachmentAndLinkLists();
+    }
+    
     onSelectNode(nodeId);
-  }, [editingNodeId, onSelectNode]);
+  }, [editingNodeId, onSelectNode, store]);
 
   return {
     handleMouseUp,
