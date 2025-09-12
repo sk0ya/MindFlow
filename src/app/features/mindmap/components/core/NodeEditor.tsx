@@ -299,13 +299,13 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
   };
   
   const actualImageHeight = getActualImageHeight();
-  const editY = hasImage ? node.y + actualImageHeight / 2 - 2 : node.y - 8;
+  const editY = hasImage ? node.y + actualImageHeight / 2 - 10 : node.y - 10;
   
   return (
     <foreignObject 
-      x={nodeLeftX + 8} 
+      x={nodeLeftX + 4} 
       y={editY} 
-      width={nodeWidth - 16} 
+      width={nodeWidth - 8} 
       height="20"
     >
       <input
@@ -329,7 +329,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
           color: settings.theme === 'dark' ? 'var(--text-primary)' : 'black',
           outline: 'none',
           borderRadius: '4px',
-          padding: '0 8px',
+          padding: '0 4px',
           boxSizing: 'border-box'
         }}
       />
