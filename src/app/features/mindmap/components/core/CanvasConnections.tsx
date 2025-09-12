@@ -34,12 +34,16 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
       
       if (!node.collapsed) {
         if (isRootNode) {
-          // ルートノードの場合は直接接続
+          // ルートノードの場合は直接接続（ルートノードの右端から子ノードの左端へ）
           node.children.forEach((child: MindMapNode) => {
             const color = normalizedData ? getBranchColor(child.id, normalizedData) : (child.color || '#666');
+            const childSize = calculateNodeSize(child, undefined, false, settings.fontSize);
+            const rootSize = calculateNodeSize(node, undefined, false, settings.fontSize);
+            const rootRightEdge = node.x + rootSize.width / 2;
+            const childLeftEdge = child.x - childSize.width / 2;
             connections.push({ 
-              from: node, 
-              to: child, 
+              from: { x: rootRightEdge, y: node.y }, 
+              to: { x: childLeftEdge, y: child.y }, 
               hasToggleButton: false,
               color: color
             });
@@ -51,11 +55,13 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           const toggleX = togglePosition.x;
           const toggleY = togglePosition.y;
           
-          // 親からトグルボタンへの接続線
+          // 親からトグルボタンへの接続線（親ノードの右端からトグルボタンの左端へ）
           const parentColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
+          const parentRightEdge = node.x + nodeSize.width / 2;
+          const toggleLeftEdge = toggleX - 8; // トグルボタンの半径分左にずらす
           connections.push({
-            from: node,
-            to: { x: toggleX, y: toggleY },
+            from: { x: parentRightEdge, y: node.y },
+            to: { x: toggleLeftEdge, y: toggleY },
             hasToggleButton: false,
             isToggleConnection: true,
             color: parentColor
@@ -70,12 +76,15 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
             isCollapsed: false
           });
           
-          // トグルボタンから各子要素への線
+          // トグルボタンから各子要素への線（トグルボタンの右端から子ノードの左端へ）
           node.children.forEach((child: MindMapNode) => {
             const childColor = normalizedData ? getBranchColor(child.id, normalizedData) : (child.color || '#666');
+            const childSize = calculateNodeSize(child, undefined, false, settings.fontSize);
+            const toggleRightEdge = toggleX + 8; // トグルボタンの半径分右にずらす
+            const childLeftEdge = child.x - childSize.width / 2;
             connections.push({
-              from: { x: toggleX, y: toggleY },
-              to: child,
+              from: { x: toggleRightEdge, y: toggleY },
+              to: { x: childLeftEdge, y: child.y },
               hasToggleButton: false,
               color: childColor
             });
@@ -88,11 +97,13 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
         const toggleX = togglePosition.x;
         const toggleY = togglePosition.y;
         
-        // 親からトグルボタンへの接続線
+        // 親からトグルボタンへの接続線（親ノードの右端からトグルボタンの左端へ）
         const collapsedColor = normalizedData ? getBranchColor(node.id, normalizedData) : (node.color || '#666');
+        const parentRightEdge = node.x + nodeSize.width / 2;
+        const toggleLeftEdge = toggleX - 8; // トグルボタンの半径分左にずらす
         connections.push({
-          from: node,
-          to: { x: toggleX, y: toggleY },
+          from: { x: parentRightEdge, y: node.y },
+          to: { x: toggleLeftEdge, y: toggleY },
           hasToggleButton: false,
           isToggleConnection: true,
           color: collapsedColor
