@@ -15,7 +15,7 @@
 .activity-bar-items {
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 0;
 }
 
 .activity-bar-bottom {

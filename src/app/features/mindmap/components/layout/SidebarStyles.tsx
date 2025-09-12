@@ -4,13 +4,13 @@ const SidebarStyles: React.FC = () => (
   <style>{`
     .mindmap-sidebar {
       width: 280px;
-      height: 100vh;
+      height: calc(100vh - 60px);
       background: #ffffff;
       border-right: 1px solid rgba(148, 163, 184, 0.2);
       display: flex;
       flex-direction: column;
       position: fixed;
-      left: 0;
+      left: 48px;
       top: 60px;
       z-index: 100;
       overflow: hidden;
@@ -45,13 +45,13 @@ const SidebarStyles: React.FC = () => (
     }
 
     .sidebar-header {
-      padding: 12px !important;
+      padding: 8px !important;
       border-bottom: 1px solid rgba(148, 163, 184, 0.12);
       background: rgba(248, 250, 252, 0.5);
       backdrop-filter: blur(10px);
       display: flex !important;
       flex-direction: column !important;
-      gap: 8px !important;
+      gap: 2px !important;
       position: relative !important;
       z-index: 100 !important;
       width: 100% !important;
@@ -75,6 +75,13 @@ const SidebarStyles: React.FC = () => (
 
     [data-theme="dark"] .sidebar-title {
       color: #e5e7eb;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
     }
 
     .header-actions {
@@ -109,6 +116,18 @@ const SidebarStyles: React.FC = () => (
       transform: scale(1.05);
     }
 
+    [data-theme="dark"] .sidebar-collapse-toggle {
+      background: rgba(75, 85, 99, 0.3);
+      border: 1px solid rgba(107, 114, 128, 0.4);
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .sidebar-collapse-toggle:hover {
+      background: rgba(107, 114, 128, 0.4);
+      color: #f3f4f6;
+      transform: scale(1.05);
+    }
+
     .sidebar-expand-toggle {
       background: rgba(51, 65, 85, 0.08);
       border: 1px solid rgba(51, 65, 85, 0.12);
@@ -128,6 +147,18 @@ const SidebarStyles: React.FC = () => (
     .sidebar-expand-toggle:hover {
       background: rgba(51, 65, 85, 0.12);
       color: #1e293b;
+      transform: scale(1.05);
+    }
+
+    [data-theme="dark"] .sidebar-expand-toggle {
+      background: rgba(75, 85, 99, 0.3);
+      border: 1px solid rgba(107, 114, 128, 0.4);
+      color: #d1d5db;
+    }
+
+    [data-theme="dark"] .sidebar-expand-toggle:hover {
+      background: rgba(107, 114, 128, 0.4);
+      color: #f3f4f6;
       transform: scale(1.05);
     }
 
@@ -180,10 +211,10 @@ const SidebarStyles: React.FC = () => (
     }
 
     .map-control-buttons {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      display: flex;
+      gap: 2px;
       margin: 0;
+      justify-content: flex-start;
     }
 
     .control-button {
@@ -191,6 +222,7 @@ const SidebarStyles: React.FC = () => (
       border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: 8px;
       padding: 0;
+      margin: 0;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -232,6 +264,42 @@ const SidebarStyles: React.FC = () => (
       background: rgba(107, 114, 128, 0.1);
       border-color: rgba(107, 114, 128, 0.3);
       color: #374151;
+    }
+
+    [data-theme="dark"] .control-button {
+      background: rgba(55, 65, 81, 0.9);
+      border: 1px solid rgba(75, 85, 99, 0.3);
+      color: #e5e7eb;
+      margin: 0;
+    }
+
+    [data-theme="dark"] .control-button:hover {
+      background: rgba(75, 85, 99, 0.9);
+      border-color: rgba(107, 114, 128, 0.4);
+    }
+
+    [data-theme="dark"] .control-button.add-map:hover {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10b981;
+    }
+
+    [data-theme="dark"] .control-button.add-folder:hover {
+      background: rgba(251, 191, 36, 0.15);
+      border-color: rgba(251, 191, 36, 0.4);
+      color: #fbbf24;
+    }
+
+    [data-theme="dark"] .control-button.expand-all:hover {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.4);
+      color: #3b82f6;
+    }
+
+    [data-theme="dark"] .control-button.collapse-all:hover {
+      background: rgba(156, 163, 175, 0.15);
+      border-color: rgba(156, 163, 175, 0.4);
+      color: #d1d5db;
     }
 
     .action-button {

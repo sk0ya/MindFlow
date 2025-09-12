@@ -23,7 +23,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
 
   return (
     <div className="sidebar-header">
-      <div className="header-actions">
+      <div className="header-top">
         {onToggleCollapse && (
           <button
             className="sidebar-collapse-toggle"
@@ -33,14 +33,13 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             ◀
           </button>
         )}
+        <MapControlButtons
+          onAddMap={onAddMap}
+          onAddFolder={onAddFolder}
+          onExpandAll={onExpandAll}
+          onCollapseAll={onCollapseAll}
+        />
       </div>
-
-      <MapControlButtons
-        onAddMap={onAddMap}
-        onAddFolder={onAddFolder}
-        onExpandAll={onExpandAll}
-        onCollapseAll={onCollapseAll}
-      />
       
       <div className="search-container">
         <input
