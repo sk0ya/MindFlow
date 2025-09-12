@@ -75,11 +75,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         const prevChildSize = calculateNodeSize(prevChild, undefined, false, globalFontSize);
         const currentChildSize = calculateNodeSize(child, undefined, false, globalFontSize);
         
-        // 基本間隔に画像の高さに応じた追加間隔を加える
+        // 基本間隔のみを使用（追加の画像間隔は除去）
         spacing = nodeSpacing;
-        if (prevChildSize.imageHeight > 80 || currentChildSize.imageHeight > 80) {
-          spacing += Math.max(prevChildSize.imageHeight, currentChildSize.imageHeight) * 0.1;
-        }
       }
       
       return sum + childHeight + spacing;
@@ -157,11 +154,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
           const currentChildSize = calculateNodeSize(childInfo.node, undefined, false, globalFontSize);
           const nextChildSize = calculateNodeSize(childrenWithHeights[index + 1].node, undefined, false, globalFontSize);
           
-          // 基本間隔に画像の高さに応じた追加間隔を加える
+          // 基本間隔のみを使用（追加の画像間隔は除去）
           let spacing = nodeSpacing;
-          if (currentChildSize.imageHeight > 80 || nextChildSize.imageHeight > 80) {
-            spacing += Math.max(currentChildSize.imageHeight, nextChildSize.imageHeight) * 0.1;
-          }
           currentOffset += spacing;
         }
       });
@@ -184,11 +178,8 @@ export const simpleHierarchicalLayout = (rootNode: MindMapNode, options: LayoutO
         const prevChildSize = calculateNodeSize(prevChild.node, undefined, false, globalFontSize);
         const currentChildSize = calculateNodeSize(child.node, undefined, false, globalFontSize);
         
-        // 基本間隔に画像の高さに応じた追加間隔を加える
+        // 基本間隔のみを使用（追加の画像間隔は除去）
         spacing = nodeSpacing;
-        if (prevChildSize.imageHeight > 80 || currentChildSize.imageHeight > 80) {
-          spacing += Math.max(prevChildSize.imageHeight, currentChildSize.imageHeight) * 0.1;
-        }
       }
       return sum + child.actualHeight + spacing;
     }, 0);

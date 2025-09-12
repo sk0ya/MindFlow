@@ -252,6 +252,7 @@ export function calculateNodeSize(
   }
   
   const nodeWidth = finalWidth;
+  // 画像マージンはレイアウト計算に含めず、描画時のみ使用
   const nodeHeight = baseNodeHeight + imageHeight;
 
   return {
