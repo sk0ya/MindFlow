@@ -1423,7 +1423,7 @@ const MindMapAppContent: React.FC<MindMapAppProps> = ({
             />
           )}
           
-          {ui.showNotesPanel && (
+          {ui.showNotesPanel && ui.viewMode === 'mindmap' && (
             <NodeNotesPanel
               selectedNode={selectedNodeId ? findNodeById(data?.rootNode, selectedNodeId) : null}
               onUpdateNode={updateNode}

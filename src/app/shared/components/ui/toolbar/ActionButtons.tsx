@@ -94,7 +94,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
       {/* ノート・ヘルプ・設定 */}
       <div className="action-group help-actions">
-        {onToggleNotesPanel && (
+        {onToggleNotesPanel && viewMode === 'mindmap' && (
           <ShortcutTooltip shortcut="Ctrl+Shift+N" description="ノートパネル">
             <button 
               className={`toolbar-btn notes ${showNotesPanel ? 'active' : ''}`}

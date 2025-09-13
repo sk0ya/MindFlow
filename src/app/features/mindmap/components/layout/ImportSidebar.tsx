@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, FileText, File } from 'lucide-react';
+import { Download, File } from 'lucide-react';
 
 interface ImportSidebarProps {
   onImport?: () => void;

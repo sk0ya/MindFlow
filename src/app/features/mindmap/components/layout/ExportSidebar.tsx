@@ -1,5 +1,5 @@
 import React from 'react';
-import { Workflow, FileText, File, Folder, Package, Inbox } from 'lucide-react';
+import { Workflow, Package, Inbox } from 'lucide-react';
 import type { MindMapData } from '../../../../shared/types';
 
 interface ExportSidebarProps {
