@@ -463,7 +463,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
             onClick={loadAllAttachments}
             disabled={loading}
           >
-<RefreshCw size={16} />
+<RefreshCw size={16} className="refresh-icon" />
           </button>
         </div>
       </div>
@@ -471,7 +471,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
       {error && (
         <div className="attachments-error">
           {error}
-          <button onClick={() => setError(null)}><X size={16} /></button>
+          <button onClick={() => setError(null)}><X size={16} className="error-close-icon" /></button>
         </div>
       )}
 
@@ -574,7 +574,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
                 disabled={loading}
                 title="ダウンロード"
               >
-<Download size={16} />
+<Download size={16} className="download-icon" />
               </button>
               <button
                 className="delete-button"
@@ -582,7 +582,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
                 disabled={loading}
                 title="削除"
               >
-<Trash2 size={16} />
+<Trash2 size={16} className="delete-icon" />
               </button>
             </div>
           </div>

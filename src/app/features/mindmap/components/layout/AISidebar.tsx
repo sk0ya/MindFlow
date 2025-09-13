@@ -672,78 +672,96 @@ const AISidebar: React.FC = () => {
           gap: 8px;
         }
 
-        @media (prefers-color-scheme: light) {
-          .ai-sidebar {
-            background: #ffffff;
-            color: #333333;
-          }
+        /* ライトテーマ（デフォルト） */
+        [data-theme="light"] .ai-sidebar,
+        :root:not([data-theme="dark"]) .ai-sidebar {
+          background: #ffffff;
+          color: #333333;
+        }
 
-          .ai-sidebar-header {
-            background: #f5f5f5;
-            border-bottom-color: #e0e0e0;
-          }
+        [data-theme="light"] .ai-sidebar-header,
+        :root:not([data-theme="dark"]) .ai-sidebar-header {
+          background: #f5f5f5;
+          border-bottom-color: #e0e0e0;
+        }
 
-          .ai-sidebar-title {
-            color: #333333;
-          }
+        [data-theme="light"] .ai-sidebar-title,
+        :root:not([data-theme="dark"]) .ai-sidebar-title {
+          color: #333333;
+        }
 
-          .ai-sidebar-description {
-            color: #666666;
-          }
+        [data-theme="light"] .ai-sidebar-description,
+        :root:not([data-theme="dark"]) .ai-sidebar-description {
+          color: #666666;
+        }
 
-          .ai-section-title {
-            color: #333333;
-            border-bottom-color: #e0e0e0;
-          }
+        [data-theme="light"] .ai-section-title,
+        :root:not([data-theme="dark"]) .ai-section-title {
+          color: #333333;
+          border-bottom-color: #e0e0e0;
+        }
 
-          .ai-toggle {
-            border-color: #d1d1d1;
-          }
+        [data-theme="light"] .ai-toggle,
+        :root:not([data-theme="dark"]) .ai-toggle {
+          border-color: #d1d1d1;
+        }
 
-          .ai-toggle:hover {
-            background-color: #f5f5f5;
-          }
+        [data-theme="light"] .ai-toggle:hover,
+        :root:not([data-theme="dark"]) .ai-toggle:hover {
+          background-color: #f5f5f5;
+        }
 
-          .ai-toggle-label {
-            color: #333333;
-          }
+        [data-theme="light"] .ai-toggle-label,
+        :root:not([data-theme="dark"]) .ai-toggle-label {
+          color: #333333;
+        }
 
-          .ai-setting-label {
-            color: #333333;
-          }
+        [data-theme="light"] .ai-setting-label,
+        :root:not([data-theme="dark"]) .ai-setting-label {
+          color: #333333;
+        }
 
-          .ai-input,
-          .ai-select,
-          .ai-textarea {
-            background: #ffffff;
-            border-color: #d1d1d1;
-            color: #333333;
-          }
+        [data-theme="light"] .ai-input,
+        [data-theme="light"] .ai-select,
+        [data-theme="light"] .ai-textarea,
+        :root:not([data-theme="dark"]) .ai-input,
+        :root:not([data-theme="dark"]) .ai-select,
+        :root:not([data-theme="dark"]) .ai-textarea {
+          background: #ffffff;
+          border-color: #d1d1d1;
+          color: #333333;
+        }
 
-          .ai-input:focus,
-          .ai-select:focus,
-          .ai-textarea:focus {
-            border-color: #007acc;
-          }
+        [data-theme="light"] .ai-input:focus,
+        [data-theme="light"] .ai-select:focus,
+        [data-theme="light"] .ai-textarea:focus,
+        :root:not([data-theme="dark"]) .ai-input:focus,
+        :root:not([data-theme="dark"]) .ai-select:focus,
+        :root:not([data-theme="dark"]) .ai-textarea:focus {
+          border-color: #007acc;
+        }
 
-          .ai-slider {
-            background: #d1d1d1;
-          }
+        [data-theme="light"] .ai-slider,
+        :root:not([data-theme="dark"]) .ai-slider {
+          background: #d1d1d1;
+        }
 
-          .ai-button-secondary {
-            background: rgba(0, 0, 0, 0.1);
-            border-color: #d1d1d1;
-            color: #333333;
-          }
+        [data-theme="light"] .ai-button-secondary,
+        :root:not([data-theme="dark"]) .ai-button-secondary {
+          background: rgba(0, 0, 0, 0.1);
+          border-color: #d1d1d1;
+          color: #333333;
+        }
 
-          .ai-button-secondary:hover {
-            background: rgba(0, 0, 0, 0.2);
-          }
+        [data-theme="light"] .ai-button-secondary:hover,
+        :root:not([data-theme="dark"]) .ai-button-secondary:hover {
+          background: rgba(0, 0, 0, 0.2);
+        }
 
-          .ai-error {
-            background: rgba(244, 67, 54, 0.1);
-            color: #d32f2f;
-          }
+        [data-theme="light"] .ai-error,
+        :root:not([data-theme="dark"]) .ai-error {
+          background: rgba(244, 67, 54, 0.1);
+          color: #d32f2f;
         }
       `}</style>
     </div>
