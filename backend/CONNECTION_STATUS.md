@@ -67,7 +67,7 @@ wrangler d1 migrations apply mindflow-db --remote
 ### 1. 開発サーバー起動確認
 ```bash
 # ターミナル1
-cd cloudflare-worker
+cd backend
 npx wrangler dev --port 8787
 ```
 

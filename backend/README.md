@@ -7,7 +7,7 @@ MindFlow アプリケーション用の Cloudflare Workers API です。D1 デ�
 ### 1. 依存関係のインストール
 
 ```bash
-cd cloudflare-worker
+cd backend
 npm install
 ```
 

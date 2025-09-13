@@ -20,17 +20,23 @@
 git clone https://github.com/sk0ya/MindFlow.git
 cd MindFlow
 
-# 依存関係のインストール
+# フロントエンド
+cd frontend
 npm install
-
-# 開発サーバーの起動
-npm run dev
-
-# ビルド
-npm run build
-
-# プレビュー
+npm run dev   # 開発
+npm run build # ビルド
 npm run preview
+
+## 🧩 バックエンド（Cloudflare Workers）
+
+バックエンドは `backend/` にあります。デプロイには `wrangler.toml` が必要です（`wrangler.toml.example` をコピーして設定）。
+
+```bash
+cd backend
+npm install
+npx wrangler dev        # ローカル開発（要 Cloudflare アカウント）
+npx wrangler deploy     # デプロイ（要 API トークンなど）
+```
 ```
 
 ## ✨ 主要機能
@@ -130,4 +136,3 @@ Chrome拡張機能を使用してCORS制限を回避：
 - **デザインインスピレーション**: MindMeister
 - **アイコン**: 絵文字を使用
 - **フォント**: システムフォントを使用
-

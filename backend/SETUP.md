@@ -24,7 +24,7 @@ wrangler login
 
 ### データベース作成
 ```bash
-cd cloudflare-worker
+cd backend
 wrangler d1 create mindflow-db
 ```
 
