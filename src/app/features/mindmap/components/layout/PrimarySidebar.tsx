@@ -1,6 +1,5 @@
 import React from 'react';
 import MindMapSidebar from './MindMapSidebar';
-import NotesSidebar from './NotesSidebar';
 import SettingsSidebar from './SettingsSidebar';
 import AISidebar from './AISidebar';
 import ImportSidebar from './ImportSidebar';
@@ -95,9 +94,6 @@ const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             onMapSwitch={onMapSwitch}
           />
         );
-      
-      case 'notes':
-        return <NotesSidebar />;
       
       case 'attachments':
         return <AttachmentsSidebar isVisible={true} />;

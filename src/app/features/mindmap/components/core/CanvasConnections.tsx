@@ -39,7 +39,6 @@ const CanvasConnections: React.FC<CanvasConnectionsProps> = ({
           node.children.forEach((child: MindMapNode) => {
             const color = normalizedData ? getBranchColor(child.id, normalizedData) : (child.color || '#666');
             const childSize = calculateNodeSize(child, undefined, false, settings.fontSize);
-            const rootSize = calculateNodeSize(node, undefined, false, settings.fontSize);
             const rootCenter = node.x; // ノードの中央
             const childLeftX = getNodeLeftX(child, childSize.width);
             connections.push({ 
