@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from 'react';
+import { Image, FileText, Presentation, BarChart3, Video, Music, Archive, Paperclip } from 'lucide-react';
 import type { MindMapNode, FileAttachment } from '@shared/types';
 import { calculateAttachmentListHeight } from '../../../../shared/utils/listHeightUtils';
 
@@ -13,53 +14,53 @@ interface SelectedNodeAttachmentListProps {
 }
 
 // ファイルタイプに応じたアイコンを取得
-const getFileIcon = (fileName: string, fileType?: string): string => {
+const getFileIcon = (fileName: string, fileType?: string): React.ReactNode => {
   const ext = fileName.split('.').pop()?.toLowerCase();
   const type = fileType?.toLowerCase();
   
   // 画像ファイル
   if (type?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext || '')) {
-    return '🖼️';
+    return <Image size={12} />;
   }
   
   // PDFファイル
   if (type === 'application/pdf' || ext === 'pdf') {
-    return '📄';
+    return <FileText size={12} />;
   }
   
   // Officeドキュメント
   if (type?.includes('word') || ['doc', 'docx'].includes(ext || '')) {
-    return '📝';
+    return <FileText size={12} />;
   }
   if (type?.includes('excel') || type?.includes('spreadsheet') || ['xls', 'xlsx', 'csv'].includes(ext || '')) {
-    return '📊';
+    return <BarChart3 size={12} />;
   }
   if (type?.includes('presentation') || ['ppt', 'pptx'].includes(ext || '')) {
-    return '📈';
+    return <Presentation size={12} />;
   }
   
   // テキストファイル
   if (type?.startsWith('text/') || ['txt', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts', 'py', 'java', 'cpp'].includes(ext || '')) {
-    return '📄';
+    return <FileText size={12} />;
   }
   
   // 動画ファイル
   if (type?.startsWith('video/') || ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '')) {
-    return '🎬';
+    return <Video size={12} />;
   }
   
   // 音声ファイル
   if (type?.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext || '')) {
-    return '🎵';
+    return <Music size={12} />;
   }
   
   // アーカイブファイル
   if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) {
-    return '🗜️';
+    return <Archive size={12} />;
   }
   
   // デフォルト
-  return '📎';
+  return <Paperclip size={12} />;
 };
 
 // ファイルサイズを人間が読みやすい形式に変換
@@ -186,9 +187,10 @@ const SelectedNodeAttachmentList: React.FC<SelectedNodeAttachmentListProps> = ({
                 {/* ファイルアイコン */}
                 <span
                   style={{
-                    fontSize: '12px',
-                    marginRight: '4px',
-                    flexShrink: 0
+                    marginRight: '6px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                 >
                   {icon}

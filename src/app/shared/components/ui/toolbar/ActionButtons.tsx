@@ -1,4 +1,5 @@
 import React from 'react';
+import { RotateCcw, RotateCw, Search, Ruler, Target, FileText, Map } from 'lucide-react';
 import { ShortcutTooltip } from '../KeyboardShortcutHelper';
 
 interface ActionButtonsProps {
@@ -42,7 +43,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             onClick={onUndo}
             disabled={!canUndo}
           >
-            ↶
+            <RotateCcw size={16} />
           </button>
         </ShortcutTooltip>
         
@@ -52,7 +53,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             onClick={onRedo}
             disabled={!canRedo}
           >
-            ↷
+            <RotateCw size={16} />
           </button>
         </ShortcutTooltip>
       </div>
@@ -64,7 +65,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
             className="toolbar-btn zoom-reset"
             onClick={onZoomReset}
           >
-            🔍 {Math.round(zoom * 100)}%
+            <Search size={16} /> {Math.round(zoom * 100)}%
           </button>
         </ShortcutTooltip>
         
@@ -74,7 +75,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               className="toolbar-btn auto-layout"
               onClick={onAutoLayout}
             >
-              📐
+              <Ruler size={16} />
             </button>
           </ShortcutTooltip>
         )}
@@ -85,7 +86,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               className="toolbar-btn center-root"
               onClick={onCenterRootNode}
             >
-              🎯
+              <Target size={16} />
             </button>
           </ShortcutTooltip>
         )}
@@ -99,7 +100,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               className={`toolbar-btn notes ${showNotesPanel ? 'active' : ''}`}
               onClick={onToggleNotesPanel}
             >
-              📝
+              <FileText size={16} />
             </button>
           </ShortcutTooltip>
         )}
@@ -110,7 +111,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
               className={`toolbar-btn view-mode ${viewMode === 'outline' ? 'active' : ''}`}
               onClick={onToggleViewMode}
             >
-              {viewMode === 'mindmap' ? '📝' : '🗺️'}
+              {viewMode === 'mindmap' ? <FileText size={16} /> : <Map size={16} />}
             </button>
           </ShortcutTooltip>
         )}

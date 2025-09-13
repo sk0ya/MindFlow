@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ChevronUp, ChevronDown, Check, HardDrive, Cloud } from 'lucide-react';
 import { ShortcutTooltip } from '../KeyboardShortcutHelper';
 
 interface StorageModeSwitchProps {
@@ -7,8 +8,8 @@ interface StorageModeSwitchProps {
 }
 
 const STORAGE_MODES = [
-  { id: 'local' as const, label: 'ローカル', icon: '💾', description: 'このデバイスのみ' },
-  { id: 'cloud' as const, label: 'クラウド', icon: '☁️', description: 'デバイス間同期' }
+  { id: 'local' as const, label: 'ローカル', icon: <HardDrive size={16} />, description: 'このデバイスのみ' },
+  { id: 'cloud' as const, label: 'クラウド', icon: <Cloud size={16} />, description: 'デバイス間同期' }
 ];
 
 const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
@@ -33,7 +34,7 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
         >
           <span className="storage-mode-icon">{currentModeInfo?.icon}</span>
           <span className="storage-mode-label">{currentModeInfo?.label}</span>
-          <span className="storage-mode-arrow">{isOpen ? '▲' : '▼'}</span>
+          <span className="storage-mode-arrow">{isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</span>
         </button>
       </ShortcutTooltip>
 
@@ -50,7 +51,7 @@ const StorageModeSwitch: React.FC<StorageModeSwitchProps> = ({
                 <div className="mode-label">{mode.label}</div>
                 <div className="mode-description">{mode.description}</div>
               </div>
-              {currentMode === mode.id && <span className="mode-check">✓</span>}
+              {currentMode === mode.id && <span className="mode-check"><Check size={16} /></span>}
             </button>
           ))}
         </div>

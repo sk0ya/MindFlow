@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { X, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import './KeyboardShortcutHelper.css';
 
 interface ShortcutItem {
-  keys: string[];
+  keys: (string | React.ReactNode)[];
   description: string;
   context: string;
 }
@@ -34,10 +35,10 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
     {
       category: 'ナビゲーション',
       items: [
-        { keys: ['↑'], description: '上のノードに移動', context: 'ノード選択時' },
-        { keys: ['↓'], description: '下のノードに移動', context: 'ノード選択時' },
-        { keys: ['←'], description: '左のノードに移動', context: 'ノード選択時' },
-        { keys: ['→'], description: '右のノードに移動', context: 'ノード選択時' }
+        { keys: [<ArrowUp size={14} />], description: '上のノードに移動', context: 'ノード選択時' },
+        { keys: [<ArrowDown size={14} />], description: '下のノードに移動', context: 'ノード選択時' },
+        { keys: [<ArrowLeft size={14} />], description: '左のノードに移動', context: 'ノード選択時' },
+        { keys: [<ArrowRight size={14} />], description: '右のノードに移動', context: 'ノード選択時' }
       ]
     },
     {
@@ -63,7 +64,7 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
     ...category,
     items: category.items.filter(item => 
       item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.keys.some(key => key.toLowerCase().includes(searchTerm.toLowerCase()))
+      item.keys.some(key => typeof key === 'string' && key.toLowerCase().includes(searchTerm.toLowerCase()))
     )
   })).filter(category => category.items.length > 0);
 
@@ -89,7 +90,7 @@ const KeyboardShortcutHelper: React.FC<KeyboardShortcutHelperProps> = ({ isVisib
         <div className="shortcut-helper-header">
           <h2>キーボードショートカット</h2>
           <button className="shortcut-helper-close" onClick={onClose}>
-            ×
+            <X size={20} />
           </button>
         </div>
 

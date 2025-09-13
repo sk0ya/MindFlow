@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Moon, Sun, Keyboard, HardDrive, Cloud, Trash2, Ruler, TriangleAlert } from 'lucide-react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import { useDataCleanup, type DataCleanupStats } from '../../../../core/hooks/useDataCleanup';
 
@@ -74,7 +75,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 onChange={() => handleSettingChange('theme', 'dark')}
               />
               <span className="settings-radio-label">
-                <span className="settings-icon">🌙</span>
+                <span className="settings-icon"><Moon size={16} /></span>
                 ダーク
               </span>
             </label>
@@ -87,7 +88,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 onChange={() => handleSettingChange('theme', 'light')}
               />
               <span className="settings-radio-label">
-                <span className="settings-icon">☀️</span>
+                <span className="settings-icon"><Sun size={16} /></span>
                 ライト
               </span>
             </label>
@@ -138,7 +139,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               onChange={(e) => handleSettingChange('vimMode', e.target.checked)}
             />
             <label htmlFor="vim-mode" className="settings-toggle-label">
-              <span className="settings-icon">⌨️</span>
+              <span className="settings-icon"><Keyboard size={16} /></span>
               Vimモード
             </label>
           </div>
@@ -161,7 +162,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 onChange={() => onStorageModeChange?.('local')}
               />
               <span className="settings-radio-label">
-                <span className="settings-icon">💾</span>
+                <span className="settings-icon"><HardDrive size={16} /></span>
                 ローカル
               </span>
             </label>
@@ -174,7 +175,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 onChange={() => onStorageModeChange?.('cloud')}
               />
               <span className="settings-radio-label">
-                <span className="settings-icon">☁️</span>
+                <span className="settings-icon"><Cloud size={16} /></span>
                 クラウド
               </span>
             </label>
@@ -200,7 +201,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
           
           {error && (
             <div className="cleanup-error">
-              <span className="cleanup-error-icon">⚠️</span>
+              <span className="cleanup-error-icon"><TriangleAlert size={16} /></span>
               {error}
             </div>
           )}
@@ -212,7 +213,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 onClick={handleClearData}
                 disabled={isClearing}
               >
-                <span className="settings-button-icon">🗑️</span>
+                <span className="settings-button-icon"><Trash2 size={16} /></span>
                 {isClearing ? 'クリア中...' : 'すべてのデータを削除'}
               </button>
             ) : (
@@ -251,7 +252,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 className="settings-button"
                 onClick={onAutoLayout}
               >
-                <span className="settings-button-icon">📐</span>
+                <span className="settings-button-icon"><Ruler size={16} /></span>
                 自動整列
               </button>
             )}
@@ -260,7 +261,7 @@ const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 className="settings-button"
                 onClick={onShowKeyboardHelper}
               >
-                <span className="settings-button-icon">⌨️</span>
+                <span className="settings-button-icon"><Keyboard size={16} /></span>
                 キーボードショートカット
               </button>
             )}

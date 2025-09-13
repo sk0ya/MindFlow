@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Search, X } from 'lucide-react';
 import type { MindMapData } from '../../../../shared/types';
 import { searchNodes, searchMultipleMaps, getMatchPosition, type SearchResult } from '../../../../shared/utils/searchUtils';
 import './SearchSidebar.css';
@@ -141,7 +142,7 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
               onClick={() => setSearchQuery('')}
               title="クリア"
             >
-              ✕
+<X size={16} />
             </button>
           )}
         </div>
@@ -200,7 +201,7 @@ const SearchSidebar: React.FC<SearchSidebarProps> = ({
 
         {!searchQuery && (
           <div className="search-placeholder">
-            <div className="search-placeholder-icon">🔍</div>
+            <div className="search-placeholder-icon"><Search size={24} /></div>
             <div className="search-placeholder-text">
               ノードのテキストやノートを検索できます
             </div>

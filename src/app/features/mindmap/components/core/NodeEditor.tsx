@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
+import { Paperclip, Link } from 'lucide-react';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 import { calculateIconLayout } from '../../../../shared/utils/nodeUtils';
 import type { MindMapNode } from '@shared/types';
@@ -194,20 +195,21 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                     onClick={handleAttachmentClick}
                   />
                   
-                  {/* Unicode 添付ファイルアイコン */}
-                  <text
-                    x={node.x + iconLayout.attachmentIcon.x + 8}
-                    y={textY + iconLayout.attachmentIcon.y + 10}
-                    textAnchor="middle"
-                    fill="#666"
-                    fontSize="12px"
+                  {/* Lucide 添付ファイルアイコン */}
+                  <foreignObject
+                    x={node.x + iconLayout.attachmentIcon.x + 2}
+                    y={textY + iconLayout.attachmentIcon.y + 2}
+                    width="12"
+                    height="12"
                     style={{ 
                       pointerEvents: 'none', 
                       userSelect: 'none'
                     }}
                   >
-                    📎
-                  </text>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                      <Paperclip size={10} />
+                    </div>
+                  </foreignObject>
                   
                   {/* ファイル数 */}
                   <text
@@ -248,26 +250,21 @@ const NodeEditor: React.FC<NodeEditorProps> = ({
                     onClick={handleLinkClick}
                   />
                   
-                  {/* SVGアイコン: リンク */}
-                  <g 
-                    transform={`translate(${node.x + iconLayout.linkIcon.x + 4}, ${textY + iconLayout.linkIcon.y + 2})`}
-                    style={{ pointerEvents: 'none' }}
+                  {/* Lucide リンクアイコン */}
+                  <foreignObject
+                    x={node.x + iconLayout.linkIcon.x + 2}
+                    y={textY + iconLayout.linkIcon.y + 2}
+                    width="12"
+                    height="12"
+                    style={{ 
+                      pointerEvents: 'none', 
+                      userSelect: 'none'
+                    }}
                   >
-                    {/* Unicode リンクアイコン */}
-                    <text
-                      x="8"
-                      y="10"
-                      textAnchor="middle"
-                      fill="#666"
-                      fontSize="12px"
-                      style={{ 
-                        pointerEvents: 'none', 
-                        userSelect: 'none'
-                      }}
-                    >
-                      🔗
-                    </text>
-                  </g>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                      <Link size={10} />
+                    </div>
+                  </foreignObject>
                   
                   {/* リンク数 */}
                   <text

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Workflow, FolderPlus, Plus, Minus } from 'lucide-react';
 
 interface MapControlButtonsProps {
   onAddMap: () => void;
@@ -20,7 +21,7 @@ const MapControlButtons: React.FC<MapControlButtonsProps> = ({
         onClick={onAddMap}
         title="マップ追加"
       >
-        🗺️
+<Workflow size={16} />
       </button>
       
       <button 
@@ -28,7 +29,7 @@ const MapControlButtons: React.FC<MapControlButtonsProps> = ({
         onClick={onAddFolder}
         title="フォルダ追加"
       >
-        📁
+        <FolderPlus size={16} />
       </button>
       
       <button 
@@ -36,7 +37,7 @@ const MapControlButtons: React.FC<MapControlButtonsProps> = ({
         onClick={onExpandAll}
         title="すべて展開"
       >
-        ➕
+        <Plus size={16} />
       </button>
       
       <button 
@@ -44,7 +45,7 @@ const MapControlButtons: React.FC<MapControlButtonsProps> = ({
         onClick={onCollapseAll}
         title="すべて折りたたみ"
       >
-        ➖
+        <Minus size={16} />
       </button>
     </div>
   );

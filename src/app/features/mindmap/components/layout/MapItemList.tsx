@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { Workflow } from 'lucide-react';
 import type { MindMapData, MindMapNode } from '@shared/types';
 import { highlightSearchTerm } from '../../../../shared/utils/highlightUtils';
 
@@ -91,7 +92,7 @@ const MapItemList: React.FC<MapItemListProps> = ({
             />
           ) : (
             <div className="map-info">
-              <span className="map-file-icon">🗺️</span>
+              <span className="map-file-icon"><Workflow size={16} /></span>
               <div className="map-details">
                 <div className="map-title">{highlightSearchTerm(map.title, searchTerm)}</div>
                 <div className="map-meta">

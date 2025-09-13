@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Bot, Plug, CheckCircle, AlertTriangle, RefreshCw, RotateCcw } from 'lucide-react';
 import { useAI } from '../../../../core/hooks/useAI';
 import { useConnectionTest } from '../../../../shared/hooks/useConnectionTest';
 import { useModelLoader } from '../../../../shared/hooks/useModelLoader';
@@ -86,7 +87,7 @@ const AISidebar: React.FC = () => {
   return (
     <div className="ai-sidebar">
       <div className="ai-sidebar-header">
-        <h2 className="ai-sidebar-title">🤖 AI機能</h2>
+        <h2 className="ai-sidebar-title"><Bot size={14} style={{marginRight: '8px', verticalAlign: 'middle', width: '14px', height: '14px'}} />AI機能</h2>
         <p className="ai-sidebar-description">
           ローカルLLMを使用してマインドマップの子ノードを自動生成できます
         </p>
@@ -95,11 +96,11 @@ const AISidebar: React.FC = () => {
       <div className="ai-sidebar-content">
         {/* 拡張機能ステータス */}
         <div className="ai-section">
-          <h3 className="ai-section-title">🔌 接続方法</h3>
+          <h3 className="ai-section-title"><Plug size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />接続方法</h3>
           <div className="ai-section-content">
             {extensionAvailable ? (
               <div className="ai-extension-status success">
-                <span className="ai-status-icon">✅</span>
+                <span className="ai-status-icon"><CheckCircle size={14} color="#4caf50" style={{width: '14px', height: '14px'}} /></span>
                 <div className="ai-status-info">
                   <strong>MindFlow Ollama Bridge が利用可能</strong>
                   <p>本番環境でもローカルLLMにアクセスできます</p>
@@ -107,7 +108,7 @@ const AISidebar: React.FC = () => {
               </div>
             ) : (
               <div className="ai-extension-status warning">
-                <span className="ai-status-icon">⚠️</span>
+                <span className="ai-status-icon"><AlertTriangle size={14} color="#ff9800" style={{width: '14px', height: '14px'}} /></span>
                 <div className="ai-status-info">
                   <strong>拡張機能なし - ローカル開発のみ</strong>
                   <p>
@@ -133,7 +134,7 @@ const AISidebar: React.FC = () => {
                 onChange={toggleAIEnabled}
               />
               <span className="ai-toggle-label">
-                <span className="ai-toggle-icon">🤖</span>
+                <span className="ai-toggle-icon"><Bot size={14} style={{width: '14px', height: '14px'}} /></span>
                 AI子ノード生成を有効にする
               </span>
             </label>
@@ -180,10 +181,10 @@ const AISidebar: React.FC = () => {
                     onClick={handleTestConnection}
                     disabled={connectionStatus === 'testing' || !aiSettings.ollamaUrl.trim()}
                   >
-                    {connectionStatus === 'testing' && '🔄 テスト中...'}
-                    {connectionStatus === 'success' && '✅ 接続成功'}
-                    {connectionStatus === 'error' && '❌ 接続失敗'}
-                    {connectionStatus === 'idle' && '🔌 接続テスト'}
+                    {connectionStatus === 'testing' && <><RefreshCw size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />テスト中...</>}
+                    {connectionStatus === 'success' && <><CheckCircle size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />接続成功</>}
+                    {connectionStatus === 'error' && <><AlertTriangle size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />接続失敗</>}
+                    {connectionStatus === 'idle' && <><Plug size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />接続テスト</>}
                   </button>
                   {connectionError && (
                     <div className="ai-error">{connectionError}</div>
@@ -217,7 +218,7 @@ const AISidebar: React.FC = () => {
                   </label>
                   {availableModels.length === 0 && !isLoadingModels && (
                     <button className="ai-refresh-button" onClick={loadModels}>
-                      🔄 モデル一覧を更新
+<RefreshCw size={16} style={{marginRight: '6px', verticalAlign: 'middle'}} />モデル一覧を更新
                     </button>
                   )}
                 </div>
@@ -317,14 +318,14 @@ const AISidebar: React.FC = () => {
                     }
                   }}
                 >
-                  🔄 設定をデフォルトに戻す
+<RotateCcw size={14} style={{marginRight: '6px', verticalAlign: 'middle', width: '14px', height: '14px'}} />設定をデフォルトに戻す
                 </button>
               </div>
             </div>
             
             {validationErrors.length > 0 && (
               <div className="ai-section">
-                <h3 className="ai-section-title">⚠️ 設定の問題</h3>
+                <h3 className="ai-section-title"><AlertTriangle size={16} style={{marginRight: '6px', verticalAlign: 'middle'}} />設定の問題</h3>
                 <div className="ai-validation-errors">
                   {validationErrors.map((error, index) => (
                     <div key={index} className="ai-error">{error}</div>
@@ -335,7 +336,7 @@ const AISidebar: React.FC = () => {
             
             {generationError && (
               <div className="ai-section">
-                <h3 className="ai-section-title">🚨 エラー</h3>
+                <h3 className="ai-section-title"><AlertTriangle size={16} style={{marginRight: '6px', verticalAlign: 'middle', color: '#f44336'}} />エラー</h3>
                 <div className="ai-section-content">
                   <div className="ai-error">{generationError}</div>
                   <button className="ai-button-secondary" onClick={clearError}>
@@ -367,6 +368,8 @@ const AISidebar: React.FC = () => {
           color: #ffffff;
           font-size: 18px;
           font-weight: 600;
+          display: flex;
+          align-items: center;
         }
 
         .ai-sidebar-description {
@@ -391,6 +394,8 @@ const AISidebar: React.FC = () => {
           margin: 0 0 12px 0;
           padding-bottom: 8px;
           border-bottom: 1px solid #3e3e42;
+          display: flex;
+          align-items: center;
         }
 
         .ai-section-content {
@@ -429,7 +434,6 @@ const AISidebar: React.FC = () => {
 
         .ai-toggle-icon {
           margin-right: 8px;
-          font-size: 16px;
         }
 
         .ai-info-box {
@@ -489,7 +493,6 @@ const AISidebar: React.FC = () => {
         }
 
         .ai-status-icon {
-          font-size: 18px;
           line-height: 1;
           flex-shrink: 0;
         }
@@ -604,6 +607,9 @@ const AISidebar: React.FC = () => {
           font-size: 13px;
           margin-top: 8px;
           font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .ai-test-button:hover,

@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from 'react';
+import { Link } from 'lucide-react';
 import type { MindMapNode, NodeLink } from '@shared/types';
 import { calculateLinkListHeight } from '../../../../shared/utils/listHeightUtils';
 
@@ -177,13 +178,14 @@ const SelectedNodeLinkList: React.FC<SelectedNodeLinkListProps> = ({
                 {/* リンクアイコン */}
                 <span
                   style={{
-                    fontSize: '12px',
-                    marginRight: '4px',
+                    marginRight: '6px',
                     flexShrink: 0,
-                    color: '#0969da'
+                    color: '#0969da',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                 >
-                  🔗
+                  <Link size={12} />
                 </span>
 
                 {/* リンク情報 */}

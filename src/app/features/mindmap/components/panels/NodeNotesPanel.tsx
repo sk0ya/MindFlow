@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 import MarkdownEditor from '../../../../shared/components/MarkdownEditor';
 import type { MindMapNode } from '@shared/types';
 import { STORAGE_KEYS, getLocalStorage, setLocalStorage } from '../../../../shared/utils/localStorage';
@@ -136,7 +137,7 @@ const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
               className="close-button"
               title="閉じる (Esc)"
             >
-              ×
+<X size={20} />
             </button>
           )}
         </div>
@@ -184,7 +185,7 @@ const NodeNotesPanel: React.FC<NodeNotesPanelProps> = ({
               className="close-button"
               title="閉じる (Esc)"
             >
-              ×
+<X size={20} />
             </button>
           )}
         </div>

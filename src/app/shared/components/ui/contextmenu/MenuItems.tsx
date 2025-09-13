@@ -1,9 +1,10 @@
 import React from 'react';
+import { Bot, Palette, Copy, Clipboard, Paperclip, Link, Trash2, Clock } from 'lucide-react';
 import { MindMapNode } from '../../../types';
 import { useMindMapStore } from '../../../../core/store/mindMapStore';
 
 interface MenuItemAction {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   action: () => void;
   shortcut?: string;
@@ -45,7 +46,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
   const isGenerating = store.isGenerating || false;
   const menuItems: MenuItem[] = [
     ...(aiEnabled && onAIGenerate ? [{
-      icon: isGenerating ? '⏳' : '🤖',
+      icon: isGenerating ? <Clock size={16} /> : <Bot size={16} />,
       label: isGenerating ? 'AI生成中...' : 'AI子ノード生成',
       action: () => {
         if (!isGenerating) {
@@ -57,7 +58,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
     }] : []),
     ...(aiEnabled && onAIGenerate ? [{ type: 'separator' as const }] : []),
     {
-      icon: '🎨',
+      icon: <Palette size={16} />,
       label: 'カスタマイズ',
       action: () => {
         onCustomize(selectedNode);
@@ -66,7 +67,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
     },
     { type: 'separator' as const },
     {
-      icon: '📋',
+      icon: <Copy size={16} />,
       label: 'コピー',
       action: () => {
         onCopy(selectedNode);
@@ -75,7 +76,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
       shortcut: 'Ctrl+C'
     },
     {
-      icon: '📄',
+      icon: <Clipboard size={16} />,
       label: '貼り付け',
       action: () => {
         onPaste(selectedNode.id);
@@ -86,7 +87,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
     },
     { type: 'separator' as const },
     ...(onFileUpload ? [{
-      icon: '📎',
+      icon: <Paperclip size={16} />,
       label: 'ファイル添付',
       action: () => {
         const fileInput = document.createElement('input');
@@ -105,7 +106,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
       }
     }] : []),
     ...(onAddLink ? [{
-      icon: '🔗',
+      icon: <Link size={16} />,
       label: 'リンク追加',
       action: () => {
         onAddLink(selectedNode.id);
@@ -114,7 +115,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({
     }] : []),
     { type: 'separator' as const },
     {
-      icon: '🗑️',
+      icon: <Trash2 size={16} />,
       label: '削除',
       action: () => {
         if (selectedNode.id !== 'root') {

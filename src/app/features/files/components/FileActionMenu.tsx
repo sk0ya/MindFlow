@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Eye, Download, Edit3, Trash2, Image, FileText, File, BarChart3, Archive, Paperclip } from 'lucide-react';
 import type { FileAttachment } from '@shared/types';
 
 interface Position {
@@ -176,7 +177,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
             className="file-action-item"
             onClick={handleView}
           >
-            <span className="action-icon">👁️</span>
+            <span className="action-icon"><Eye size={14} /></span>
             <span className="action-text">プレビュー</span>
           </button>
         )}
@@ -185,7 +186,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
           className="file-action-item"
           onClick={handleDownload}
         >
-          <span className="action-icon">💾</span>
+          <span className="action-icon"><Download size={14} /></span>
           <span className="action-text">ダウンロード</span>
         </button>
         
@@ -193,7 +194,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
           className="file-action-item"
           onClick={handleRenameStart}
         >
-          <span className="action-icon">✏️</span>
+          <span className="action-icon"><Edit3 size={14} /></span>
           <span className="action-text">名前を変更</span>
         </button>
         
@@ -203,7 +204,7 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
           className="file-action-item danger"
           onClick={handleDelete}
         >
-          <span className="action-icon">🗑️</span>
+          <span className="action-icon"><Trash2 size={14} /></span>
           <span className="action-text">削除</span>
         </button>
       </div>
@@ -343,20 +344,26 @@ const FileActionMenu: React.FC<FileActionMenuProps> = ({
 };
 
 // ファイルタイプに基づいたアイコンを取得
-const getFileIcon = (fileType: string): string => {
+const getFileIcon = (fileType: string): React.ReactNode => {
   if (fileType.startsWith('image/')) {
-    return '🖼️';
+    return <Image size={16} />;
   }
   
   switch (fileType) {
     case 'text/plain':
-      return '📄';
+      return <FileText size={16} />;
     case 'application/pdf':
-      return '📕';
+      return <FileText size={16} />;
     case 'application/json':
-      return '📋';
+      return <File size={16} />;
+    case 'application/vnd.ms-excel':
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+      return <BarChart3 size={16} />;
     default:
-      return '📎';
+      if (fileType.includes('zip') || fileType.includes('rar')) {
+        return <Archive size={16} />;
+      }
+      return <Paperclip size={16} />;
   }
 };
 

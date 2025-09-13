@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
+import { Link, Edit3, Trash2 } from 'lucide-react';
 import type { NodeLink } from '@shared/types';
 
 interface LinkActionMenuProps {
@@ -160,19 +161,19 @@ const LinkActionMenu: React.FC<LinkActionMenuProps> = ({
 
       <div className="menu-items">
         <button className="menu-item primary" onClick={handleNavigate}>
-          <span className="menu-icon">🔗</span>
+          <span className="menu-icon"><Link size={14} /></span>
           <span className="menu-text">リンク先に移動</span>
         </button>
 
         <button className="menu-item" onClick={handleEdit}>
-          <span className="menu-icon">✏️</span>
+          <span className="menu-icon"><Edit3 size={14} /></span>
           <span className="menu-text">編集</span>
         </button>
 
         <div className="menu-divider" />
 
         <button className="menu-item danger" onClick={handleDelete}>
-          <span className="menu-icon">🗑️</span>
+          <span className="menu-icon"><Trash2 size={14} /></span>
           <span className="menu-text">削除</span>
         </button>
       </div>

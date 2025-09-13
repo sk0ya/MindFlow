@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { useAI } from '../../../../core/hooks/useAI';
 import type { MindMapNode } from '../../../../shared/types';
 
@@ -132,7 +133,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = React.memo(({
       <div className="ai-modal">
         <div className="ai-modal-header">
           <h3>🤖 AI子ノード生成</h3>
-          <button className="ai-modal-close" onClick={onClose}>×</button>
+          <button className="ai-modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         
         <div className="ai-modal-content">

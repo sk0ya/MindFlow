@@ -1,4 +1,5 @@
 import React from 'react';
+import { Workflow, FileText, File, Folder, Package, Inbox } from 'lucide-react';
 import type { MindMapData } from '../../../../shared/types';
 
 interface ExportSidebarProps {
@@ -47,7 +48,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                     </span>
                   </div>
                 </div>
-                <div className="export-map-preview">🗺️</div>
+                <div className="export-map-preview"><Workflow size={16} /></div>
               </div>
             </div>
 
@@ -58,7 +59,9 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                   ZIP形式でマップデータと添付ファイルを一括保存
                 </p>
                 <div className="export-includes">
-                  <span className="export-include-text">📄 JSON • 📝 Markdown • 📁 添付ファイル</span>
+                  <span className="export-include-text">
+                    JSON • Markdown • 添付ファイル
+                  </span>
                 </div>
               </div>
             </div>
@@ -68,7 +71,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                 className="export-button primary"
                 onClick={handleExportClick}
               >
-                <span className="export-button-icon">📦</span>
+                <span className="export-button-icon"><Package size={16} /></span>
                 ZIPファイルでエクスポート
               </button>
             </div>
@@ -76,7 +79,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
           </>
         ) : (
           <div className="export-no-map">
-            <div className="export-no-map-icon">📭</div>
+            <div className="export-no-map-icon"><Inbox size={32} /></div>
             <div className="export-no-map-title">マップが選択されていません</div>
             <div className="export-no-map-description">
               エクスポートするには、まずマップを開いてください
@@ -237,7 +240,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
         }
 
         .export-tips-list li::before {
-          content: "💡";
+          /* content: "💡"; */ /* Replaced with Lucide icons */
           position: absolute;
           left: 0;
           top: 0;

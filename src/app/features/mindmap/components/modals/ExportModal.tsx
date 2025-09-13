@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X, FileText, File, Folder, BookOpen, Lightbulb } from 'lucide-react';
 import './ExportModal.css';
 import { exportToZip } from '../../../../shared/utils/exportUtils';
 import type { MindMapData } from '../../../../shared/types/dataTypes';
@@ -41,7 +42,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
       <div className="export-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="export-modal-header">
           <h2>マップをエクスポート</h2>
-          <button className="export-modal-close" onClick={onClose}>×</button>
+          <button className="export-modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         
         <div className="export-modal-body">
@@ -50,12 +51,12 @@ const ExportModal: React.FC<ExportModalProps> = ({
             <div className="export-info">
               <p>ZIP形式でマップデータ、添付ファイル、ノートを一括保存します。</p>
               <ul>
-                <li>📄 マップ名.json: マップデータ</li>
-                <li>📝 マップ名.md: Markdown形式のマップ</li>
-                <li>📁 attachments/: 添付ファイルとノート（ノードID別フォルダ構造）</li>
-                <li>📖 README.txt: ファイル構造の説明</li>
+                <li><File size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />マップ名.json: マップデータ</li>
+                <li><FileText size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />マップ名.md: Markdown形式のマップ</li>
+                <li><Folder size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />attachments/: 添付ファイルとノート（ノードID別フォルダ構造）</li>
+                <li><BookOpen size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />README.txt: ファイル構造の説明</li>
               </ul>
-              <p className="save-info">💡 エクスポートボタンを押すと、ファイル保存ダイアログが表示されます。</p>
+              <p className="save-info"><Lightbulb size={14} style={{ marginRight: '6px', verticalAlign: 'middle', color: '#facc15' }} />エクスポートボタンを押すと、ファイル保存ダイアログが表示されます。</p>
             </div>
           </div>
         </div>

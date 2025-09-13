@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import { X } from 'lucide-react';
 import { useNotification } from './useNotification';
 import { logger } from '../utils/logger';
 
@@ -120,7 +121,7 @@ const ProgressBarComponent: React.FC<{ upload: UploadProgress; onCancel: () => v
         </div>
         {upload.status === 'uploading' && (
           <button style={cancelButtonStyle} onClick={onCancel} title="キャンセル">
-            ×
+<X size={16} />
           </button>
         )}
       </div>

@@ -1,9 +1,10 @@
 import React from 'react';
+import { Workflow, Search, Paperclip, Download, Upload, Bot, Settings, Keyboard } from 'lucide-react';
 import './ActivityBar.css';
 
 interface ActivityBarItem {
   id: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   isActive?: boolean;
 }
@@ -18,43 +19,43 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange, onS
   const items: ActivityBarItem[] = [
     {
       id: 'maps',
-      icon: '🗺️',
+      icon: <Workflow size={16} />,
       label: 'マップ一覧',
       isActive: activeView === 'maps'
     },
     {
       id: 'search',
-      icon: '🔍',
+      icon: <Search size={16} />,
       label: '検索',
       isActive: activeView === 'search'
     },
     {
       id: 'attachments',
-      icon: '📎',
+      icon: <Paperclip size={16} />,
       label: '添付ファイル',
       isActive: activeView === 'attachments'
     },
     {
       id: 'import',
-      icon: '📥',
+      icon: <Download size={16} />,
       label: 'インポート',
       isActive: activeView === 'import'
     },
     {
       id: 'export',
-      icon: '📤',
+      icon: <Upload size={16} />,
       label: 'エクスポート',
       isActive: activeView === 'export'
     },
     {
       id: 'ai',
-      icon: '🤖',
+      icon: <Bot size={16} />,
       label: 'AI設定',
       isActive: activeView === 'ai'
     },
     {
       id: 'settings',
-      icon: '⚙️',
+      icon: <Settings size={16} />,
       label: '設定',
       isActive: activeView === 'settings'
     }
@@ -92,7 +93,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange, onS
           aria-label="キーボードショートカット"
           onClick={onShowKeyboardHelper}
         >
-          <span className="activity-bar-icon">⌨️</span>
+          <span className="activity-bar-icon"><Keyboard size={16} /></span>
         </button>
       </div>
     </div>

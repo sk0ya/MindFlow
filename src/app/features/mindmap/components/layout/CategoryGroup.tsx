@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import MapItemList from './MapItemList';
 import type { MindMapData } from '@shared/types';
 import { getFolderName } from '../../../../shared/utils/folderUtils';
@@ -149,10 +150,10 @@ const CategoryGroup: React.FC<CategoryGroupProps> = ({
               }}
             >
               <span className="category-expand-icon">
-                {(hasChildren || hasMaps) ? (isExpanded ? '▼' : '▶') : ''}
+                {(hasChildren || hasMaps) ? (isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : ''}
               </span>
               <span className="category-folder-icon">
-                {isExpanded ? '📂' : '📁'}
+                {isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />}
               </span>
               <span className="category-name">{highlightSearchTerm(folderName, searchTerm)}</span>
               {hasMaps && (

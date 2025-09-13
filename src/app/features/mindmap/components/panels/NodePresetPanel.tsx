@@ -1,4 +1,5 @@
 import React from 'react';
+import { Palette, AlertCircle, Lightbulb } from 'lucide-react';
 import type { MindMapNode } from '@shared/types';
 
 interface NodeCustomizations {
@@ -42,7 +43,7 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
           )}
           className="preset-btn"
         >
-          🎨 デフォルト
+<Palette size={14} style={{ marginRight: '4px' }} /> デフォルト
         </button>
         <button
           onClick={() => applyPreset(
@@ -59,7 +60,7 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
           )}
           className="preset-btn"
         >
-          🔴 重要
+<AlertCircle size={14} style={{ marginRight: '4px', color: '#ef4444' }} /> 重要
         </button>
         <button
           onClick={() => applyPreset(
@@ -76,7 +77,7 @@ const NodePresetPanel: React.FC<NodePresetPanelProps> = React.memo(({
           )}
           className="preset-btn"
         >
-          💭 アイデア
+<Lightbulb size={14} style={{ marginRight: '4px', color: '#facc15' }} /> アイデア
         </button>
       </div>
     </div>

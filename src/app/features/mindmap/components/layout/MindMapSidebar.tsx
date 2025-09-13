@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, memo } from 'react';
+import { Workflow, Folder, FolderOpen, Edit3, Trash2, BookOpen } from 'lucide-react';
 import SidebarHeader from './SidebarHeader';
 import CategoryGroup from './CategoryGroup';
 import SidebarCollapsed from './SidebarCollapsed';
@@ -397,18 +398,18 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       return [
         {
           label: 'マップを作成',
-          icon: '🗺️',
+          icon: <Workflow size={14} />,
           onClick: () => handleCreateMap(targetPath)
         },
         {
           label: 'フォルダを作成',
-          icon: '📁',
+          icon: <Folder size={14} />,
           onClick: () => handleCreateFolder(targetPath)
         },
         { separator: true },
         {
           label: 'フォルダを展開',
-          icon: '📂',
+          icon: <FolderOpen size={14} />,
           onClick: () => {
             if (targetPath) {
               toggleCategoryCollapse(targetPath);
@@ -418,7 +419,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         { separator: true },
         {
           label: 'フォルダ名を変更',
-          icon: '✏️',
+          icon: <Edit3 size={14} />,
           onClick: () => {
             if (targetPath) {
               handleRenameFolder(targetPath);
@@ -427,7 +428,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
         },
         {
           label: 'フォルダを削除',
-          icon: '🗑️',
+          icon: <Trash2 size={14} />,
           disabled: !canDelete,
           onClick: () => {
             if (targetPath) {
@@ -441,23 +442,23 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       return [
         {
           label: '同じフォルダにマップを作成',
-          icon: '🗺️',
+          icon: <Workflow size={14} />,
           onClick: () => handleCreateMap(mapCategory)
         },
         { separator: true },
         {
           label: 'マップを開く',
-          icon: '📖',
+          icon: <BookOpen size={14} />,
           onClick: () => onSelectMap(mapData.id)
         },
         {
           label: '名前を変更',
-          icon: '✏️',
+          icon: <Edit3 size={14} />,
           onClick: () => handleStartRename(mapData.id, mapData.title)
         },
         {
           label: 'マップを削除',
-          icon: '🗑️',
+          icon: <Trash2 size={14} />,
           onClick: () => {
             // eslint-disable-next-line no-alert
             if (window.confirm(`「${mapData.title}」を削除しますか？`)) {
@@ -470,12 +471,12 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
       return [
         {
           label: 'マップを作成',
-          icon: '🗺️',
+          icon: <Workflow size={14} />,
           onClick: () => handleCreateMap(null)
         },
         {
           label: 'フォルダを作成',
-          icon: '📁',
+          icon: <Folder size={14} />,
           onClick: () => handleCreateFolder(null)
         }
       ];
@@ -511,7 +512,7 @@ const MindMapSidebar: React.FC<MindMapSidebarProps> = ({
 
       {filteredMaps.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">🗺️</div>
+          <div className="empty-icon"><Workflow size={32} /></div>
           <div className="empty-title">
             {mindMaps.length === 0 ? 'マインドマップがありません' : '検索結果が見つかりません'}
           </div>

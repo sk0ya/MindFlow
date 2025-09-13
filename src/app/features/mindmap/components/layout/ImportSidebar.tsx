@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Download, FileText, File } from 'lucide-react';
 
 interface ImportSidebarProps {
   onImport?: () => void;
@@ -57,7 +58,7 @@ const ImportSidebar: React.FC<ImportSidebarProps> = ({
             onDrop={handleDrop}
           >
             <div className="import-drop-zone-content">
-              <div className="import-drop-zone-icon">📥</div>
+              <div className="import-drop-zone-icon"><Download size={16} /></div>
               <div className="import-drop-zone-text">
                 ファイルをここにドラッグ＆ドロップ
               </div>
@@ -71,7 +72,7 @@ const ImportSidebar: React.FC<ImportSidebarProps> = ({
             className="import-button primary"
             onClick={onImport}
           >
-            <span className="import-button-icon">📄</span>
+            <span className="import-button-icon"><File size={16} /></span>
             ファイルを選択してインポート
           </button>
         </div>
@@ -79,7 +80,9 @@ const ImportSidebar: React.FC<ImportSidebarProps> = ({
         <div className="import-section">
           <h4 className="import-section-title">対応形式</h4>
           <div className="import-formats">
-            <span className="import-format-text">📝 Markdown (.md) • 📄 テキスト (.txt)</span>
+            <div className="import-format-text">
+              Markdown (.md) • テキスト (.txt)
+            </div>
           </div>
         </div>
       </div>
@@ -212,6 +215,9 @@ const ImportSidebar: React.FC<ImportSidebarProps> = ({
           font-size: 12px;
           color: var(--text-secondary);
           line-height: 1.3;
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }
       `}</style>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { X } from 'lucide-react';
 import type { NodeLink, MindMapNode, MindMapData } from '@shared/types';
 
 interface MapOption {
@@ -174,7 +175,7 @@ const NodeLinkModal: React.FC<NodeLinkModalProps> = ({
             onClick={onClose}
             aria-label="モーダルを閉じる"
           >
-            ×
+<X size={20} />
           </button>
         </div>
 

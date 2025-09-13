@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { X } from 'lucide-react';
 import type { MindMapNode } from '@shared/types';
 import NodeFontPanel from './NodeFontPanel';
 import NodePresetPanel from './NodePresetPanel';
@@ -77,7 +78,7 @@ const NodeCustomizationPanel: React.FC<NodeCustomizationPanelProps> = ({
     >
       <div className="panel-header">
         <h3>ノードのカスタマイズ</h3>
-        <button onClick={onClose} className="close-btn">×</button>
+        <button onClick={onClose} className="close-btn"><X size={18} /></button>
       </div>
 
       <div className="panel-content">

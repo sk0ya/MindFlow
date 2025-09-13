@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { X, RefreshCw, Download, Trash2 } from 'lucide-react';
 import { useMindMapStore } from '../../../../core';
 import { useMindMapPersistence } from '../../../../core/hooks/useMindMapPersistence';
 import type { FileAttachment, MindMapNode } from '../../../../shared/types';
@@ -462,7 +463,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
             onClick={loadAllAttachments}
             disabled={loading}
           >
-            🔄
+<RefreshCw size={16} />
           </button>
         </div>
       </div>
@@ -470,7 +471,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
       {error && (
         <div className="attachments-error">
           {error}
-          <button onClick={() => setError(null)}>×</button>
+          <button onClick={() => setError(null)}><X size={16} /></button>
         </div>
       )}
 
@@ -573,7 +574,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
                 disabled={loading}
                 title="ダウンロード"
               >
-                ⬇️
+<Download size={16} />
               </button>
               <button
                 className="delete-button"
@@ -581,7 +582,7 @@ const AttachmentsSidebar: React.FC<AttachmentsSidebarProps> = ({ isVisible }) =>
                 disabled={loading}
                 title="削除"
               >
-                🗑️
+<Trash2 size={16} />
               </button>
             </div>
           </div>

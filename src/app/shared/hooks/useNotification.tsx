@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useCallback, useState, useRef } from 'react';
+import { X } from 'lucide-react';
 import ReactDOM from 'react-dom';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -59,7 +60,7 @@ const NotificationItem: React.FC<{ notification: Notification; onRemove: () => v
   return (
     <div style={baseStyle} onClick={onRemove}>
       <span>{notification.message}</span>
-      <span style={{ marginLeft: '16px', fontSize: '18px' }}>×</span>
+      <span style={{ marginLeft: '16px', fontSize: '18px' }}><X size={18} /></span>
     </div>
   );
 };

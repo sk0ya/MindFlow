@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
+import { X } from 'lucide-react';
 import type { FileAttachment } from '@shared/types';
 import { useOptionalAuth } from '../../../components/auth';
 
@@ -131,7 +132,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, image, onClose }) => {
           onClick={onClose}
           aria-label="画像を閉じる"
         >
-          ×
+<X size={18} />
         </button>
         {image.downloadUrl && image.downloadUrl.includes('/api/files/') ? (
           <CloudModalImage file={image} />

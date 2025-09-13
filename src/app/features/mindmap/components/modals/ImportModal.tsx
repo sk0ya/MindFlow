@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { X } from 'lucide-react';
 import './ImportModal.css';
 import { MarkdownFileImporter, ImportOptions, ImportResult } from '../../../../shared/utils/importUtils';
 import type { MindMapData } from '../../../../shared/types/dataTypes';
@@ -104,7 +105,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
       <div className="import-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="import-modal-header">
           <h2>ファイルをインポート</h2>
-          <button className="import-modal-close" onClick={onClose}>×</button>
+          <button className="import-modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         
         <div className="import-modal-body">
@@ -142,7 +143,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
                       setSelectedFile(null);
                     }}
                   >
-                    ×
+<X size={16} />
                   </button>
                 </div>
               ) : (

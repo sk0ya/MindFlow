@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronLeft } from 'lucide-react';
 import MapControlButtons from './MapControlButtons';
 
 interface SidebarHeaderProps {
@@ -30,7 +31,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
             onClick={onToggleCollapse}
             title="サイドバーを隠す"
           >
-            ◀
+<ChevronLeft size={16} />
           </button>
         )}
         <MapControlButtons
